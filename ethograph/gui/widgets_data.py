@@ -910,6 +910,22 @@ class DataWidget(QWidget):
         dialog.show()
         return dialog
 
+    def open_box_labelling(self):
+        """Open (or raise) the box labelling dialog — OCTRON's workflow over every open camera."""
+        from .dialog_box_labelling import BoxLabellingDialog
+
+        existing = getattr(self, "_box_labelling_dialog", None)
+        if existing is not None and existing.isVisible():
+            existing.raise_()
+            existing.activateWindow()
+            return existing
+
+        dialog = BoxLabellingDialog(self, parent=self.shell)
+        dialog.finished.connect(lambda _=0: setattr(self, "_box_labelling_dialog", None))
+        self._box_labelling_dialog = dialog
+        dialog.show()
+        return dialog
+
     def open_pose_refinement(self):
         """Open (or raise) the pose refinement dialog.
 
@@ -1224,6 +1240,9 @@ class DataWidget(QWidget):
         self._load_trial_with_fallback()
         self._disable_empty_panels()
         self._apply_video_dock_default()
+        # After the trial created the camera views, and after the primary dock
+        # knows whether it is shown: both are cells of the grid.
+        self.meta_widget.arrange_camera_grid_if_default()
 
         if self.navigation_widget:
             self.navigation_widget.set_mappings(self.labels_widget._mappings)

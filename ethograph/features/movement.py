@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 
 import matplotlib
@@ -325,85 +324,103 @@ def get_angle_rgb(xy_pos, smooth_func=None, smoothing_params=None, input_type="p
     return rgb_matrix, angles
 
 
-def _gray_frames(video_path: Path, scale_width: int) -> Iterator[np.ndarray]:
-    """Yield downscaled grayscale frames of a video as ``uint8`` ndarrays.
+#: Frames masked on either side of a keyframe: the frames right after a fresh
+#: I-frame still settle onto it (measured on x264 output).
+KEYFRAME_HALO = 3
 
-    Decodes with PyAV (in-process FFmpeg libraries) and reformats each frame to
-    ``scale_width`` pixels wide, preserving aspect ratio with even height, using
-    nearest-neighbour scaling — the exact equivalent of ffmpeg's
-    ``scale=W:-1:flags=neighbor,format=gray``.
+
+def gop_relative_sizes(sizes: np.ndarray, keyframes: np.ndarray) -> np.ndarray:
+    """Packet size divided by the typical size at the same offset within its GOP.
+
+    An encoder spends bytes by frame *role* before it spends them on motion:
+    the I-frame, then the reference frames of its B-pyramid, then the rest —
+    a pattern that repeats every GOP and dwarfs the motion signal. The
+    median size per offset, pooled over every GOP, is that pattern; the
+    ratio to it is what the frame cost beyond its role, i.e. the change.
     """
-    try:
-        import av
-    except ImportError as e:
-        raise ImportError('av is required. Install it with: uv pip install "ethograph[gui]"') from e
+    sizes = np.asarray(sizes, dtype=np.float32)
+    if len(keyframes) < 2 or len(sizes) == 0:
+        return sizes / (np.median(sizes) or 1.0)
+    starts = np.asarray(keyframes, dtype=int)
+    gop_index = np.searchsorted(starts, np.arange(len(sizes)), side="right") - 1
+    gop_index = np.clip(gop_index, 0, len(starts) - 1)
+    offsets = np.arange(len(sizes)) - starts[gop_index]
+    profile = np.full(int(offsets.max()) + 1, np.nan, dtype=np.float32)
+    for j in np.unique(offsets):
+        members = sizes[offsets == j]
+        if len(members) >= 2:
+            profile[j] = np.median(members)
+    fallback = float(np.nanmedian(profile)) if np.isfinite(profile).any() else float(np.median(sizes)) or 1.0
+    profile = np.where(np.isfinite(profile) & (profile > 0), profile, fallback)
+    return sizes / profile[offsets]
 
+
+def _packets_in_display_order(video_path: Path | str) -> tuple[np.ndarray, np.ndarray]:
+    """``(sizes, is_keyframe)`` per frame in display order, from the container alone.
+
+    Packets come out of the demuxer in decode order; with B-frames that is not
+    the order frames are shown in, so a keyframe's packet index is not its frame
+    index. Sorting by presentation timestamp puts every packet at the frame it
+    belongs to.
+    """
+    import av
+
+    rows: list[tuple[int, int, bool]] = []
     with av.open(str(video_path)) as container:
         stream = container.streams.video[0]
-        stream.thread_type = "AUTO"
-        scale_height: int | None = None
-        for frame in container.decode(stream):
-            if scale_height is None:
-                scale_height = max(2, round(frame.height * scale_width / frame.width / 2) * 2)
-            yield frame.reformat(
-                width=scale_width, height=scale_height, format="gray", interpolation="POINT"
-            ).to_ndarray()
+        for i, packet in enumerate(container.demux(stream)):
+            if packet.size == 0:
+                continue
+            pts = packet.pts if packet.pts is not None else (packet.dts if packet.dts is not None else i)
+            rows.append((int(pts), int(packet.size), bool(packet.is_keyframe)))
+    rows.sort(key=lambda r: r[0])
+    sizes = np.asarray([r[1] for r in rows], dtype=np.float32)
+    keys = np.asarray([r[2] for r in rows], dtype=bool)
+    return sizes, keys
 
 
-def extract_video_motion(
-    video_path: Path | str,
-    fps: float,
-    time_coord_name: str = "time",
-    scale_width: int = 160,
-    verbose: bool = True,
-) -> xr.DataArray:
-    """Compute per-frame pixel difference (motion energy) from a video file.
+def mask_keyframes(motion: np.ndarray, keyframes: np.ndarray, halo: int = KEYFRAME_HALO) -> np.ndarray:
+    """Replace the values at keyframes (± *halo* frames) by interpolation from their neighbours.
 
-    Computes YDIF — the mean absolute difference between consecutive luma
-    planes — over frames decoded in-process via PyAV. Frames are spatially
-    downscaled to ``scale_width`` pixels wide before analysis.
+    A keyframe is a whole picture, encoded afresh: its packet is large whatever
+    moved, and the frames right after it settle onto the new picture. The
+    spikes are periodic (the encoder's GOP) and carry no information about the
+    animal.
+    """
+    motion = np.asarray(motion, dtype=np.float32).copy()
+    if len(keyframes) == 0 or len(motion) == 0:
+        return motion
+    bad = np.zeros(len(motion), dtype=bool)
+    for k in keyframes:
+        bad[max(0, k - halo) : min(len(motion), k + halo + 1)] = True
+    good = ~bad
+    if good.sum() < 2:
+        return motion
+    idx = np.arange(len(motion))
+    motion[bad] = np.interp(idx[bad], idx[good], motion[good])
+    return motion
 
-    Parameters
-    ----------
-    video_path : Path or str
-        Path to the input video file.
-    fps : float
-        Frame rate used to build the time coordinate. Must match the actual
-        video frame rate — do not hard-code a default.
-    time_coord_name : str
-        Name given to the time dimension in the returned DataArray.
-    scale_width : int
-        Width (px) to downscale frames to before computing motion.
-    verbose : bool
-        If True, show a tqdm progress bar over decoded frames.
 
-    Returns
-    -------
-    xarray.DataArray
-        1-D array of motion values with a time coordinate in seconds.
+def extract_packet_motion(video_path: Path | str, fps: float, time_coord_name: str = "time") -> xr.DataArray:
+    """Motion from the compressed stream alone: bytes per frame, no decoding.
+
+    A predicted frame costs the encoder bytes in proportion to what changed
+    since the previous one, so packet size tracks motion at a fraction of the
+    cost of decoding — the whole file is scanned in well under a second.
+    Two corrections, both from the container: sizes are taken relative to
+    their GOP offset (:func:`gop_relative_sizes`) and keyframes are masked
+    (:func:`mask_keyframes`). The scale is the encoder's, so it is only
+    comparable within one file; callers normalise per video.
     """
     video_path = Path(video_path)
     if not video_path.exists():
         raise FileNotFoundError(f"Video not found: {video_path}")
-
-    frames = _gray_frames(video_path, scale_width)
-    if verbose:
-        from tqdm import tqdm
-
-        frames = tqdm(frames, desc=f"motion {video_path.name}", unit="frame")
-
-    motion: list[float] = []
-    previous: np.ndarray | None = None
-    for frame in frames:
-        current = frame.astype(np.int16)
-        motion.append(0.0 if previous is None else float(np.abs(current - previous).mean()))
-        previous = current
-
-    return xr.DataArray(
-        np.asarray(motion, dtype=np.float32),
-        dims=[time_coord_name],
-        coords={time_coord_name: np.arange(len(motion)) / fps},
-    )
+    if fps <= 0:
+        raise ValueError("fps must be positive — read it from the video, do not default it.")
+    sizes, keys = _packets_in_display_order(video_path)
+    keyframes = np.flatnonzero(keys)
+    motion = mask_keyframes(gop_relative_sizes(sizes, keyframes), keyframes)
+    return xr.DataArray(motion, dims=[time_coord_name], coords={time_coord_name: np.arange(len(motion)) / fps})
 
 
 def compute_aux_velocity_and_speed(

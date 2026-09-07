@@ -3,6 +3,7 @@
 projects/*/runs/
 projects/*/sessions/
 projects/*/cross_validation/
+projects/*/octron/
 projects/*/data/
 projects/*/wizard/*.mp4
 !projects/defaults/*

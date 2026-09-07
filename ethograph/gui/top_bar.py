@@ -184,6 +184,9 @@ class TopBarBuilder:
         # Correcting an imported pose file (DLC/SLEAP/…) rather than labelling
         # from scratch — writes {stem}_refined copies beside the sources.
         menu.addAction("Pose correction (DLC, SLEAP, …)…", self._open_pose_refinement)
+        # Bounding boxes + tracking through the OCTRON fork, one time index
+        # across every open camera — see dialog_box_labelling.py.
+        menu.addAction("Box labelling (OCTRON)…", self._open_box_labelling)
 
         menu.addSeparator()
         ephys = getattr(self.meta, "ephys_widget", None)
@@ -307,6 +310,12 @@ class TopBarBuilder:
         """Open the keypoint labelling dialog (owned by the DataWidget, so the
         Tools entry and the Pose sidebar button raise the same instance)."""
         open_dialog = self._first_method(getattr(self.meta, "data_widget", None), "open_keypoint_labelling")
+        if open_dialog is not None:
+            open_dialog()
+
+    def _open_box_labelling(self):
+        """Open the box labelling dialog (owned by the DataWidget)."""
+        open_dialog = self._first_method(getattr(self.meta, "data_widget", None), "open_box_labelling")
         if open_dialog is not None:
             open_dialog()
 

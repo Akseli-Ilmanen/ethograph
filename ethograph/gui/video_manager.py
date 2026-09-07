@@ -11,6 +11,7 @@ Every view — primary included — carries the camera it shows on
 is ever labelled generically ("Video") while its neighbours name a camera.
 """
 
+import math
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -29,6 +30,24 @@ from .notify import notify
 from .proxy_manager import ProxyManager
 from .pygfx_video import CameraView
 from .video_sync import VideoSync
+
+#: Share of the window height the camera grid takes (the plots keep the rest).
+CAMERA_GRID_HEIGHT_RATIO = 0.6
+
+
+def camera_grid_shape(n_views: int) -> tuple[int, int]:
+    """``(rows, cols)`` for *n_views* camera panels with no saved layout.
+
+    Up to three panels stay in one row; beyond that the grid is as square as
+    it gets, wide before tall: 4 → 2×2, 6 → 2 rows × 3, 9 → 3×3, 5 → 3 + 2.
+    """
+    if n_views < 1:
+        raise ValueError("a grid needs at least one view")
+    if n_views <= 3:
+        return 1, n_views
+    cols = math.ceil(math.sqrt(n_views))
+    rows = math.ceil(n_views / cols)
+    return rows, cols
 
 
 def is_url(path: str) -> bool:
@@ -136,6 +155,53 @@ class VideoArea(QWidget):
             self._equalize()
         self.camera_added.emit(view)
         return view
+
+    def camera_docks(self) -> list:
+        """Every docked camera panel, primary first, then extras in creation
+        order — the order :meth:`arrange_grid` fills rows in.
+
+        A panel counts as soon as it exists: a dock added to the shell is not
+        shown until the event loop runs, so asking Qt whether it is visible
+        would miss every view the load just created. The primary is the one
+        panel whose existence is conditional (a session without a video gets
+        no video dock), and ``_video_dock_enabled`` is that answer."""
+        shell = self.shell
+        if shell is None:
+            return []
+        docks = []
+        primary = getattr(shell, "_video_dock", None)
+        if primary is not None and getattr(shell, "_video_dock_enabled", True):
+            docks.append(primary)
+        docks += [dock for view in self._extras.values() if (dock := getattr(view, "dock_widget", None)) is not None]
+        return [d for d in docks if not d.isFloating()]
+
+    def arrange_grid(self) -> tuple[int, int] | None:
+        """Lay the camera docks out as the grid :func:`camera_grid_shape`
+        picks for their count, instead of the one long row Qt gives docks
+        added to the same area. Returns the ``(rows, cols)`` applied, or
+        ``None`` when a single row is already right."""
+        shell = self.shell
+        docks = self.camera_docks()
+        if shell is None or len(docks) <= 3:
+            return None
+        rows, cols = camera_grid_shape(len(docks))
+        cell = lambda r, c: docks[r * cols + c] if r * cols + c < len(docks) else None  # noqa: E731
+        for r in range(1, rows):
+            for c in range(cols):
+                below = cell(r, c)
+                if below is not None:
+                    shell.splitDockWidget(cell(r - 1, c), below, Qt.Vertical)
+
+        def _size():
+            # Equal cells: every dock asks for the same width and height, so
+            # each splitter divides its own row/column evenly.
+            width = max(MEDIA_VIEW_MIN_WIDTH, shell.width() // cols)
+            height = max(MEDIA_VIEW_MIN_HEIGHT, int(shell.height() * CAMERA_GRID_HEIGHT_RATIO) // rows)
+            shell.resizeDocks(docks, [width] * len(docks), Qt.Horizontal)
+            shell.resizeDocks(docks, [height] * len(docks), Qt.Vertical)
+
+        QTimer.singleShot(0, _size)
+        return rows, cols
 
     def eventFilter(self, obj, event):
         key = getattr(obj, "_camera_key", None)

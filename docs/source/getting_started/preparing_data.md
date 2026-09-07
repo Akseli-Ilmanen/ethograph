@@ -389,7 +389,6 @@ for trial_id in range(1, 6):
     )
     ds.attrs["trial"] = trial_id
     ds.attrs["fps"] = 30.0
-    ds.attrs["stimulus"] = "tone_A" if trial_id % 2 else "tone_B"
     datasets.append(ds)
 
 dt = eto.from_datasets(datasets)
@@ -560,8 +559,8 @@ from its own media file (video first, then audio, then pose), with trials laid
 eto.align_media_per_trial(
     trial_table.drop(columns=["start_time", "stop_time"]),
     stream_rates={"video": 30.0, "pose": 30.0, "audio": 48000.0},
-    output_path="my_project/.ethograph/alignment.nwb",
-    media_root="my_project/video",     # needed to open the files for probing
+    output_path="session_01/.ethograph/alignment.nwb",
+    media_root="session_01/video",     # needed to open the files for probing
 )
 ```
 
@@ -631,7 +630,7 @@ folder setup and channel mapping.
 ```python
 from ethograph.io.nwb_alignment import NWBAlignment
 
-alignment = NWBAlignment("my_project/.ethograph/alignment.nwb")
+alignment = NWBAlignment("session_01/.ethograph/alignment.nwb")
 print(alignment.trials_df)
 print(alignment.cameras)          # ["cam-1", "cam-2"]
 print(alignment.mics)             # ["mic-1"]
@@ -683,7 +682,6 @@ for trial_id in range(1, 11):
     )
     ds.attrs["trial"] = trial_id
     ds.attrs["fps"] = 30.0
-    ds.attrs["stimulus"] = "tone_A" if trial_id % 2 else "tone_B"
     datasets.append(ds)
 
 dt = eto.from_datasets(datasets)
@@ -755,27 +753,57 @@ with pynwb.NWBHDF5IO("session.nwb", "w") as io:
 
 ## Folder structure
 
-Nothing here is enforced — media folders are selected in the GUI and can live
-anywhere. But seeing where each piece ends up makes the rest of this page
-concrete: which files you write, which the GUI writes for you, and where
-labels, alignment and settings land.
+Three folders play a part, and only one of them is yours to arrange:
+
+| Folder | Who writes it | What lives there |
+|---|---|---|
+| **Session folder** — one per recording | You: the session file and the media. The GUI: labels, alignment, layout. | The data. Any location; media folders are selected in the GUI and can live elsewhere. |
+| **Project folder** — one per study | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, kept drag & drops. **Never the data** — nothing is copied into it. |
+| `~/.ethograph/` | The GUI. | Your settings, caches, and a starter project used while no project folder is chosen. |
+
+### The project folder
+
+Chosen once on the start page (**Project folder**) and remembered across
+restarts. Sessions are *listed* from wherever they are; the folder holds what
+you build on top of them:
+
+```
+my_study/                              # chosen on the start page
+    ├── mapping.txt                    # the study's label_id → name vocabulary
+    ├── config/
+    │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
+    │   ├── spot.yaml                  # pixel event-spotting config
+    │   └── space/                     # reference geometries for the Space plot
+    ├── runs/
+    │   └── lightgbm/                  # onset models trained from the Model menu
+    ├── workflows/                     # curation workflows
+    ├── wizard/                        # alignment-wizard notebooks
+    └── sessions/                      # drag & drops made with this project set
+        └── 2026-09-06_21-47-12/       # one timestamped folder per drop, reopenable
+```
+
+Without a project folder, `~/.ethograph/defaults/` stands in — it has the same
+shape and ships with a default `mapping.txt`, example configs and geometries.
+See {ref}`target-label-mapping` for how the mapping is resolved between the
+session, the project and that backup.
+
+### The session folder
+
+One per recording, per backend:
 
 ::::{tab-set}
 
 :::{tab-item} xarray (.nc)
 
 ```
-~/.ethograph/                          # Global user defaults
-    ├── mapping.txt                    # Default integer label_id → name mapping
-    └── gui_settings.yaml              # Across-session GUI state
-
-my_project/
+session_01/
     ├── session.nc                     # Behavioural dataset (TrialTree or plain Dataset)
     ├── session_labels.tsv             # Session labels
     ├── session_metadata.tsv           # Trial-level metadata
     ├── .ethograph/
     │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
-    │   └── local_settings.yaml        # Session-specific GUI state
+    │   ├── local_settings.yaml        # Session-specific GUI state
+    │   └── mapping.txt                # Optional: overrides the project's for this session
     │
     ├── labels/
     │   ├── backups/
@@ -809,11 +837,7 @@ my_project/
 :::{tab-item} NWB (.nwb)
 
 ```
-~/.ethograph/                          # Global user defaults
-    ├── mapping.txt                    # Default integer label_id → name mapping
-    └── gui_settings.yaml              # Across-session GUI state
-
-my_project/
+session_01/
     ├── session.nwb                    # Self-contained: trials, time series,
     │                                  # pose (PoseEstimationSeries), video
     │                                  # refs (ImageSeries.external_file)
@@ -823,7 +847,8 @@ my_project/
     │
     ├── .ethograph/
     │   ├── alignment.nwb              # inherit/overwrite alignment in session.nwb
-    │   └── local_settings.yaml        # Session-specific GUI state
+    │   ├── local_settings.yaml        # Session-specific GUI state
+    │   └── mapping.txt                # Optional: overrides the project's for this session
     │
     ├── labels/
     │   ├── backups/
@@ -844,11 +869,7 @@ file — no external tracking folder needed.
 :::{tab-item} Pynapple (.npz / folder)
 
 ```
-~/.ethograph/                          # Global user defaults
-    ├── mapping.txt                    # Default integer label_id → name mapping
-    └── gui_settings.yaml              # Across-session GUI state
-
-my_project/
+session_01/
     ├── position.npz                   # Pynapple Tsd/TsdFrame objects
     ├── speed.npz
     ├── units.npz                      # TsGroup of spike times
@@ -858,7 +879,8 @@ my_project/
     │
     ├── .ethograph/
     │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
-    │   └── local_settings.yaml        # Session-specific GUI state
+    │   ├── local_settings.yaml        # Session-specific GUI state
+    │   └── mapping.txt                # Optional: overrides the project's for this session
     │
     ├── labels/
     │   ├── backups/
@@ -881,6 +903,16 @@ my_project/
 You write the session file and the media folders. Everything under
 `.ethograph/` and `labels/backups/` is created by the GUI on first load and
 first save.
+
+### The home folder
+
+```
+~/.ethograph/
+    ├── gui_settings.yaml              # your layout, playback and dialog folders
+    ├── logs/
+    ├── cache/                         # video proxies, extracted audio, example data — safe to delete
+    └── defaults/                      # the starter project: mapping.txt, config/, …
+```
 
 ---
 

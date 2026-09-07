@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE — throwaway. Variants A-E of the box-labelling mode (E = chosen: OCTRON dock 1:1), switchable via ?variant=
+     (or the floating bar / arrow keys). Mocks the Qt dialog in HTML; nothing here is production. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Box Labelling Mode Variants</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground:#1b1f1d; --panel:#242a27; --panel-2:#2c332f; --rule:#3a423d; --ink:#e6e9e4; --ink-2:#9aa39e;
+    --accent:#5fc2c0; --accent-soft:#1f3a3a; --warn:#dfa66a; --warn-soft:#3a2d1e; --ok:#8fcf8a;
+    --female:#e28aa8; --male:#7fb3f0;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:Manrope,"Segoe UI",sans-serif; font-size:13px; line-height:1.4; }
+  .mono { font-family:"JetBrains Mono",monospace; font-size:12px; }
+  .assume { background:var(--warn-soft); color:var(--warn); padding:8px 14px; font-size:12px; border-bottom:1px solid var(--rule); }
+  .assume b { color:var(--ink); }
+  .app { display:none; height:calc(100vh - 44px); }
+  .app.active { display:grid; }
+  /* shared bits */
+  .titlebar { background:#111413; color:var(--ink-2); padding:4px 10px; font-size:11px; border-bottom:1px solid var(--rule); display:flex; gap:16px; }
+  .cam { background:#0e1110; border:1px solid var(--rule); position:relative; overflow:hidden; cursor:crosshair; }
+  .cam .name { position:absolute; left:6px; top:4px; font-size:11px; color:var(--ink-2); background:rgba(0,0,0,.5); padding:1px 5px; border-radius:2px; }
+  .cam.active-cam { outline:2px solid var(--ok); outline-offset:-2px; }
+  .cam.missing::after { content:"individual not visible here (X to confirm)"; position:absolute; inset:auto 6px 6px 6px; color:var(--ink-2); font-size:10px; }
+  .cam svg { width:100%; height:100%; display:block; }
+  .box { position:absolute; border:2px solid; border-radius:2px; font-size:10px; font-weight:700; padding:1px 3px; pointer-events:none; }
+  .box.female { border-color:var(--female); color:var(--female); }
+  .box.male { border-color:var(--male); color:var(--male); }
+  .box.tentative { border-style:dashed; }
+  .mask { position:absolute; border-radius:45% 55% 50% 50%; opacity:.55; pointer-events:none; }
+  .mask.female { background:var(--female); } .mask.male { background:var(--male); }
+  .pt { position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; border:1.5px solid #fff; pointer-events:none; }
+  .pt.pos { background:#3ddc84; } .pt.neg { background:#ff5252; }
+  .chip { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border:1px solid var(--rule); border-radius:14px; background:var(--panel-2); cursor:pointer; font-weight:700; }
+  .chip .dot { width:9px; height:9px; border-radius:50%; }
+  .chip.female .dot { background:var(--female); } .chip.male .dot { background:var(--male); }
+  .chip.on { outline:2px solid var(--accent); }
+  .chip .k { color:var(--ink-2); font-weight:500; font-family:"JetBrains Mono",monospace; font-size:11px; }
+  button { font:inherit; font-weight:700; padding:6px 10px; border:1px solid var(--rule); border-radius:4px; background:var(--panel-2); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--accent); color:#0f1a1a; border-color:var(--accent); }
+  button.ghost { background:transparent; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  h3 { font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-2); margin:0 0 6px; }
+  table { border-collapse:collapse; width:100%; font-size:12px; font-variant-numeric:tabular-nums; }
+  th,td { text-align:left; padding:3px 6px; border-bottom:1px solid var(--rule); }
+  th { color:var(--ink-2); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; }
+  .warn { color:var(--warn); } .ok { color:var(--ok); }
+  .tab { padding:6px 12px; border-bottom:2px solid transparent; cursor:pointer; color:var(--ink-2); font-weight:700; }
+  .tab.on { color:var(--ink); border-bottom-color:var(--accent); }
+  .strip { display:flex; gap:4px; overflow-x:auto; }
+  .strip .f { width:84px; height:54px; flex:none; background:#0e1110; border:1px solid var(--rule); position:relative; font-size:10px; color:var(--ink-2); }
+  .strip .f span { position:absolute; left:3px; bottom:2px; }
+  .strip .f.hi { outline:2px solid var(--accent); }
+  .strip .f .b { position:absolute; border:1.5px solid var(--female); }
+  .motion { height:36px; position:relative; background:#0e1110; border:1px solid var(--rule); }
+  .motion svg { width:100%; height:100%; display:block; }
+  .motion .mark { position:absolute; top:0; bottom:0; width:2px; background:var(--accent); }
+  .motion .mark.done { background:var(--ok); }
+  .motion .here { position:absolute; top:0; bottom:0; width:2px; background:#fff; }
+  .kbd { display:inline-block; font-family:"JetBrains Mono",monospace; font-size:10.5px; border:1px solid var(--rule); border-radius:3px; padding:0 4px; color:var(--ink-2); }
+  .switcher { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#fff; color:#111; border-radius:20px; padding:6px 10px; display:flex; gap:10px; align-items:center; box-shadow:0 4px 18px rgba(0,0,0,.5); font-weight:800; z-index:99; }
+  .switcher button { background:#111; color:#fff; border:none; border-radius:14px; padding:2px 10px; }
+  /* Variant A */
+  #A { grid-template-columns:1fr 360px; grid-template-rows:auto 1fr; }
+  #A .titlebar { grid-column:1/3; }
+  #A .cams { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; padding:4px; }
+  #A .dlg { background:var(--panel); border-left:1px solid var(--rule); display:flex; flex-direction:column; }
+  #A .dlg .tabs { display:flex; border-bottom:1px solid var(--rule); }
+  #A .dlg .body { padding:10px; overflow:auto; display:flex; flex-direction:column; gap:12px; }
+  #A .grp { background:var(--panel-2); border:1px solid var(--rule); border-radius:4px; padding:8px; }
+  /* Variant D = A + timeline ticks from C */
+  #D { grid-template-columns:1fr 360px; grid-template-rows:auto 1fr auto; }
+  #D .titlebar { grid-column:1/3; }
+  #D .cams { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; padding:4px; }
+  #D .dlg { background:var(--panel); border-left:1px solid var(--rule); display:flex; flex-direction:column; grid-row:2/4; }
+  #D .dlg .tabs { display:flex; border-bottom:1px solid var(--rule); }
+  #D .dlg .body { padding:10px; overflow:auto; display:flex; flex-direction:column; gap:12px; }
+  #D .grp { background:var(--panel-2); border:1px solid var(--rule); border-radius:4px; padding:8px; }
+  #D .timeline { border-top:1px solid var(--rule); background:var(--panel); padding:6px 12px; display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:center; }
+  /* Variant E = OCTRON dock 1:1, label manager swapped for the camera approach */
+  #E { grid-template-columns:1fr 340px; grid-template-rows:auto 1fr auto; }
+  #E .titlebar { grid-column:1/3; }
+  #E .cams { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; padding:4px; }
+  #E .timeline { border-top:1px solid var(--rule); background:var(--panel); padding:6px 12px; display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:center; }
+  #E .dock { grid-row:2/4; background:var(--panel); border-left:1px solid var(--rule); display:flex; flex-direction:column; overflow:auto; font-size:11.5px; }
+  #E .logo { padding:10px 12px; font-weight:800; letter-spacing:.06em; color:var(--ink-2); border-bottom:1px solid var(--rule); }
+  #E .page > summary { list-style:none; cursor:pointer; padding:7px 12px; font-weight:800; background:#1b201e; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); display:flex; gap:8px; align-items:center; }
+  #E .page > summary::before { content:"\25B8"; color:var(--ink-2); }
+  #E .page[open] > summary::before { content:"\25BE"; }
+  #E .page .inner { padding:8px 10px; display:flex; flex-direction:column; gap:8px; }
+  #E fieldset { border:1px solid var(--rule); border-radius:3px; padding:6px 8px 8px; margin:0; }
+  #E legend { font-size:11px; font-weight:800; color:var(--ink-2); padding:0 4px; }
+  #E .row { gap:6px; }
+  #E select, #E input[type=number], #E input[type=text] { font:inherit; background:#0e1110; color:var(--ink); border:1px solid var(--rule); border-radius:3px; padding:3px 6px; }
+  #E input[type=number] { width:58px; }
+  #E button { padding:4px 9px; font-size:12px; }
+  #E .cb { display:inline-flex; gap:4px; align-items:center; }
+  #E .bar { height:9px; background:#0e1110; border:1px solid var(--rule); border-radius:2px; position:relative; }
+  #E .bar i { position:absolute; left:0; top:0; bottom:0; width:38%; background:var(--accent); }
+  #E table td, #E table th { padding:2px 5px; }
+  /* Variant B */
+  #B { grid-template-rows:auto auto 1fr auto; }
+  #B .indiv { padding:8px 12px; border-bottom:1px solid var(--rule); display:flex; gap:14px; align-items:center; background:var(--panel); }
+  #B .sheet { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:4px; }
+  #B .drawer { border-top:1px solid var(--rule); background:var(--panel); display:grid; grid-template-columns:1fr 1fr 1fr; }
+  #B .drawer > div { padding:10px 12px; border-right:1px solid var(--rule); }
+  #B .step { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+  #B .step .n { width:20px; height:20px; border-radius:50%; background:var(--panel-2); border:1px solid var(--rule); display:inline-flex; align-items:center; justify-content:center; font-size:11px; }
+  #B .step.done .n { background:var(--ok); color:#111; border-color:var(--ok); }
+  #B .step.now .n { background:var(--accent); color:#111; border-color:var(--accent); }
+  /* Variant C */
+  #C { grid-template-columns:220px 1fr; grid-template-rows:auto 1fr auto; }
+  #C .titlebar { grid-column:1/3; }
+  #C .side { background:var(--panel); border-right:1px solid var(--rule); padding:10px; display:flex; flex-direction:column; gap:12px; }
+  #C .main { display:grid; grid-template-rows:1fr auto; }
+  #C .primary { padding:4px; }
+  #C .thumbs { display:flex; gap:4px; padding:0 4px 4px; }
+  #C .thumbs .cam { width:180px; height:100px; flex:none; }
+  #C .timeline { grid-column:1/3; border-top:1px solid var(--rule); background:var(--panel); padding:8px 12px; display:grid; grid-template-columns:120px 1fr; gap:10px; align-items:center; }
+</style>
+</head>
+<body>
+<div class="assume"><b>Working assumptions (round 2 recommendations):</b> a sibling dialog to keypoint labelling · labelling copies OCTRON: left click = SAM positive point, right click = negative, mask overlay, predict-next buttons; the persisted label is the mask's box (detect only) · individuals are the dataset's, class = visually distinct group · propagation is a verification filmstrip, not training data · a suggestion is a time index for all cameras · storage is OCTRON-native (one hash folder per camera video: masks zarr + object_organizer.json, via the octron fork installed in the env); the training set is OCTRON's pooled collection, shown with a per-camera balance table · Train = octron.yaml (model size, imgsz, epochs, save period, split + seed, batch/device) run as a separate process outside the GUI · tracks land in the session as per-camera variables.</div>
+
+<!-- ============================== A ============================== -->
+<div class="app" id="A">
+  <div class="titlebar"><span>EthoGraph — BP_2021-05-25 · trial 1</span><span class="mono">frame 4795 / 20000</span><span>Tools ▸ Box labelling…</span></div>
+  <div class="cams" data-cams></div>
+  <div class="dlg">
+    <div class="tabs"><div class="tab on">Label</div><div class="tab">Training set</div><div class="tab">Train</div><div class="tab">Predict</div></div>
+    <div class="body">
+      <div class="grp">
+        <h3>Individual</h3>
+        <div class="row" data-chips></div>
+        <div class="mono" style="margin-top:6px;color:var(--ink-2)">click a camera = box for the active individual · <span class="kbd">Shift</span>+drag = draw by hand · <span class="kbd">X</span> = not visible here · <span class="kbd">Tab</span> = next individual</div>
+      </div>
+      <div class="grp">
+        <h3>This frame</h3>
+        <table data-frame-table></table>
+        <div class="row" style="margin-top:8px"><button class="primary" data-next>Next suggested frame (N)</button><button class="ghost">Approve frame (Shift+H)</button></div>
+      </div>
+      <div class="grp">
+        <h3>Suggest frames</h3>
+        <div class="row"><select><option>Motion + coverage</option><option>Uniform</option><option>Model is unsure</option></select><input type="number" value="24" style="width:56px"><button>Suggest</button></div>
+        <div class="motion" data-motion style="margin-top:8px"></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">24 suggested · 7 labelled · one time index for every camera</div>
+      </div>
+      <div class="grp">
+        <h3>Check the click held (propagation ±12 frames)</h3>
+        <div class="strip" data-strip></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">verification only — these frames are not added to the training set</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== B ============================== -->
+<div class="app" id="B">
+  <div class="titlebar"><span>EthoGraph — Box labelling · contact sheet</span><span class="mono">frame 4795 / 20000</span></div>
+  <div class="indiv">
+    <div class="row" data-chips></div>
+    <div class="mono" style="color:var(--ink-2)">one frame, every camera. Click the active individual in each camera where it is visible, then <span class="kbd">Tab</span>.</div>
+    <div style="margin-left:auto" class="row"><button data-next class="primary">Next suggested frame (N)</button></div>
+  </div>
+  <div class="sheet" data-cams></div>
+  <div class="drawer">
+    <div>
+      <h3>Progress on this frame</h3>
+      <table data-frame-table></table>
+    </div>
+    <div>
+      <h3>Training set · <span class="mono">finches_v2</span></h3>
+      <table>
+        <tr><th>camera</th><th>frames</th><th>female</th><th>male</th></tr>
+        <tr><td>topViewMain</td><td>31</td><td>31</td><td>29</td></tr>
+        <tr><td>backMirror</td><td>31</td><td>30</td><td>27</td></tr>
+        <tr><td>leftMirror</td><td>31</td><td>28</td><td>24</td></tr>
+        <tr><td>topViewNests</td><td>31</td><td class="warn">12</td><td class="warn">3</td></tr>
+      </table>
+      <div class="row" style="margin-top:6px"><button>Add this trial's labelled frames</button><button class="ghost">Open as table</button></div>
+    </div>
+    <div>
+      <h3>Pipeline</h3>
+      <div class="step done"><span class="n">1</span>Label frames (31 of 24 suggested)</div>
+      <div class="step now"><span class="n">2</span>Train <span class="mono" style="color:var(--ink-2)">medium · 1024 px · batch 12</span></div>
+      <div class="step"><span class="n">3</span>Predict + track all cameras</div>
+      <div class="step"><span class="n">4</span>Assign identities</div>
+      <div class="row" style="margin-top:6px"><button class="primary">Start training</button><span class="mono warn">large would force batch 1 on this card</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== C ============================== -->
+<div class="app" id="C">
+  <div class="titlebar"><span>EthoGraph — BP_2021-05-25 · trial 1</span><span class="mono">frame 4795 / 20000</span><span>Labels tab ▸ mode: Boxes</span></div>
+  <div class="side">
+    <div><h3>Individual</h3><div class="row" data-chips style="flex-direction:column;align-items:stretch"></div></div>
+    <div><h3>Cameras on this frame</h3><table data-frame-table></table></div>
+    <div><h3>Model</h3>
+      <div class="mono" style="color:var(--ink-2)">finches_v2 · mAP50 0.71</div>
+      <div class="row" style="margin-top:6px"><button>Train…</button><button>Predict…</button></div>
+    </div>
+    <div class="mono" style="color:var(--ink-2)"><span class="kbd">1</span>/<span class="kbd">2</span> pick individual · click = box · <span class="kbd">←</span> <span class="kbd">→</span> cameras · <span class="kbd">N</span> next suggestion</div>
+  </div>
+  <div class="main">
+    <div class="primary"><div class="cam" data-primary></div></div>
+    <div class="thumbs" data-cams></div>
+  </div>
+  <div class="timeline">
+    <div><h3 style="margin:0">Motion (max over cameras)</h3><div class="mono" style="color:var(--ink-2)">suggestions are ticks</div></div>
+    <div class="motion" data-motion></div>
+  </div>
+</div>
+
+
+<!-- ============================== D ============================== -->
+<div class="app" id="D">
+  <div class="titlebar"><span>EthoGraph — BP_2021-05-25 · trial 1</span><span class="mono">frame 4795 / 20000</span><span>Tools ▸ Box labelling…</span></div>
+  <div class="cams" data-cams></div>
+  <div class="dlg">
+    <div class="tabs"><div class="tab on">Label</div><div class="tab">Training set</div><div class="tab">Train</div><div class="tab">Predict</div></div>
+    <div class="body">
+      <div class="grp">
+        <h3>Individual</h3>
+        <div class="row" data-chips></div>
+        <div class="mono" style="margin-top:6px;color:var(--ink-2)">as in OCTRON: left click = SAM positive point · right click = negative point · mask redraws each time · <span class="kbd">X</span> = not visible in this camera · <span class="kbd">Tab</span> = next individual</div>
+      </div>
+      <div class="grp">
+        <h3>This frame</h3>
+        <table data-frame-table></table>
+        <div class="row" style="margin-top:8px"><button class="primary" data-next>Next suggested frame (N)</button><button class="ghost">Approve frame (Shift+H)</button></div>
+      </div>
+      <div class="grp">
+        <h3>SAM propagation (OCTRON's batch predict)</h3>
+        <div class="row"><button>▷ 1 frame</button><button>▷ 15 frames</button><button class="ghost">Reset predictor</button><span class="mono" style="color:var(--ink-2)">runs in every camera at once</span></div>
+        <div class="strip" data-strip style="margin-top:6px"></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">masks live in this camera's OCTRON hash folder (zarr + object_organizer.json) · Generate training data pools every hash folder, as OCTRON does</div>
+      </div>
+      <div class="grp">
+        <h3>Suggest frames</h3>
+        <div class="row"><select><option>Motion + coverage</option><option>Uniform</option><option>Model is unsure</option></select><input type="number" value="24" style="width:56px"><button>Suggest</button></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">ticks on the time slider below · 7 of 24 labelled</div>
+      </div>
+      <div class="grp">
+        <h3>Train tab (preview) — octron.yaml, run outside the GUI</h3>
+        <pre class="mono" style="margin:0;background:#0e1110;padding:8px;border-radius:3px;color:var(--ink-2);white-space:pre-wrap">training_set: finches_v2      # runs/detect/finches_v2/
+octron_project: octron/        # hash folders + model/, OCTRON-native
+model: yolo26m                # s / m / l — l would force batch 1 on this card
+imgsz: 1024
+epochs: 250
+save_period: 50
+split: {train: 0.7, val: 0.15, seed: 88}
+batch: auto                   # a number overrides AutoBatch
+device: auto</pre>
+        <div class="row" style="margin-top:6px"><button class="primary">Start training (separate process)</button><button class="ghost">Copy command</button></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">python -m ethograph.detect train octron.yaml · log streams here · SAM is released first</div>
+      </div>
+    </div>
+  </div>
+  <div class="timeline">
+    <div><h3 style="margin:0">Time slider</h3><div class="mono" style="color:var(--ink-2)">motion, max over cameras · ticks = suggested · green = labelled</div></div>
+    <div class="motion" data-motion></div>
+  </div>
+</div>
+
+
+<!-- ============================== E ============================== -->
+<div class="app" id="E">
+  <div class="titlebar"><span>EthoGraph — BP_2021-05-25 · trial 1</span><span class="mono">frame 4795 / 20000</span><span>Tools ▸ Box labelling (OCTRON)</span></div>
+  <div class="cams" data-cams></div>
+  <div class="dock">
+    <div class="logo">OCTRON · in EthoGraph</div>
+
+    <details class="page"><summary>Manage project</summary><div class="inner">
+      <fieldset><legend>Project folder</legend>
+        <div class="row"><button>⊕ Choose</button><span class="mono" style="color:var(--ink-2)">my_study/octron</span></div>
+      </fieldset>
+      <fieldset><legend>Cameras of this trial (one video each)</legend>
+        <table><tr><th>camera</th><th>hash</th><th>labelled frames</th></tr>
+          <tr><td>topViewMain</td><td class="mono">f2e41278</td><td>31</td></tr>
+          <tr><td>backMirror</td><td class="mono">df2dd437</td><td>31</td></tr>
+          <tr><td>leftMirror</td><td class="mono">6822e568</td><td>31</td></tr>
+          <tr><td>topViewNests</td><td class="mono">077bb0f0</td><td>31</td></tr></table>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">the session's camera videos are added for you; drop more here</div>
+      </fieldset>
+      <fieldset><legend>Existing data</legend>
+        <table><tr><th>video</th><th>labels</th><th>frames</th></tr>
+          <tr><td>…_cam-topViewMain.mp4</td><td>female, male</td><td>31</td></tr>
+          <tr><td>…_cam-backMirror.mp4</td><td>female, male</td><td>31</td></tr></table>
+      </fieldset>
+    </div></details>
+
+    <details class="page" open><summary>Generate annotation data</summary><div class="inner">
+      <fieldset><legend>Model selection</legend>
+        <div class="row"><select><option>SAM2 L</option><option>SAM2 B+</option><option>SAM2 L HQ</option><option>SAM3</option><option>SAM3 multi</option></select><span>Thresh.</span><input type="number" value="0.5" step="0.1"><button>Load model</button></div>
+      </fieldset>
+      <fieldset><legend>Label manager — by individual and camera</legend>
+        <div class="row"><select><option>Type … Points</option><option>Shapes</option><option>Anchors</option></select><select><option>Label … animal</option><option>⊕ Create</option><option>⊖ Remove</option></select><input type="text" placeholder="Suffix" style="width:70px"><button>⊕ Create</button></div>
+        <div class="row" data-chips style="margin-top:6px"></div>
+        <table data-frame-table style="margin-top:6px"></table>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">left click = include · right click = exclude · <span class="kbd">X</span> = not visible in this camera · <span class="kbd">Tab</span> = next individual</div>
+        <div class="row" style="margin-top:6px"><button>Visualize all</button><button class="ghost">〄 Reset</button></div>
+      </fieldset>
+      <fieldset><legend>Timeline control</legend>
+        <div class="row"><button>≪ Jump to previous</button><button>Jump to next ≫</button><button class="primary" data-next>Next suggested (N)</button></div>
+        <div class="row" style="margin-top:6px"><select><option>Suggest: motion + coverage</option><option>Uniform</option><option>Model is unsure</option></select><input type="number" value="24"><button>Suggest</button><span class="mono" style="color:var(--ink-2)">7 / 24 done · ticks below</span></div>
+      </fieldset>
+      <fieldset><legend>Batch prediction</legend>
+        <div class="row"><button>▷</button><button>▷ 15 frames</button><span>Skip</span><input type="number" value="0"><button class="ghost">〄 Reset</button></div>
+        <div class="bar" style="margin-top:6px"><i></i></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">runs in every camera at once · masks → this camera's hash folder</div>
+      </fieldset>
+    </div></details>
+
+    <details class="page"><summary>Train model</summary><div class="inner">
+      <fieldset><legend>Generate training data</legend>
+        <div class="row"><span class="cb"><input type="checkbox"> Prune</span><span class="cb"><input type="checkbox" checked> Overwrite</span><button>Generate</button></div>
+        <div class="bar" style="margin-top:6px"><i style="width:100%"></i></div>
+        <table style="margin-top:6px"><tr><th>camera</th><th>frames</th><th>female</th><th>male</th></tr>
+          <tr><td>topViewMain</td><td>31</td><td>31</td><td>29</td></tr><tr><td>backMirror</td><td>31</td><td>30</td><td>27</td></tr>
+          <tr><td>leftMirror</td><td>31</td><td>28</td><td>24</td></tr><tr><td>topViewNests</td><td>31</td><td class="warn">12</td><td class="warn">3</td></tr></table>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">detection only (bboxes) — no segmentation choice</div>
+      </fieldset>
+      <fieldset><legend>Train</legend>
+        <div class="row"><select><option>Choose model … yolo26m</option><option>yolo26s</option><option>yolo26l</option></select><select><option>Img. size 1024</option><option>640</option></select></div>
+        <div class="row" style="margin-top:6px"><span>Epochs</span><input type="number" value="250"><span>Save period</span><input type="number" value="50"><span>Batch</span><input type="text" value="auto" style="width:46px"></div>
+        <div class="row" style="margin-top:6px"><span class="cb"><input type="checkbox"> Resume</span><span class="cb"><input type="checkbox"> Overwrite</span><span class="cb"><input type="checkbox"> Tensorbrd</span></div>
+        <div class="row" style="margin-top:6px"><button class="primary">Start</button><span class="mono" style="color:var(--ink-2)">Finish time —</span></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">writes octron.yaml · runs as a separate process · yolo26l would force batch 1 on this card</div>
+      </fieldset>
+    </div></details>
+
+    <details class="page"><summary>Analyze videos</summary><div class="inner">
+      <fieldset><legend>Add video files</legend>
+        <div class="row"><select><option>List of videos to be analyzed … (this trial's 4 cameras)</option><option>⊖ Remove</option></select></div>
+      </fieldset>
+      <fieldset><legend>Create predictions from videos</legend>
+        <div class="row"><select><option>Model … finches_v2 (best.pt)</option></select><select><option>Tracker … ByteTrack</option><option>BoT-SORT</option><option>HybridSort</option></select></div>
+        <div class="row" style="margin-top:6px"><span>IOU</span><input type="number" value="0.7" step="0.1"><span>Confidence</span><input type="number" value="0.5" step="0.1"><span>Skip frames</span><input type="number" value="0"></div>
+        <div class="row" style="margin-top:6px"><span class="cb"><input type="checkbox"> 1 subject</span><span class="cb"><input type="checkbox"> Overwrite</span><span class="cb"><input type="checkbox" checked> View result</span></div>
+        <div class="row" style="margin-top:6px"><button class="primary">Let's go!</button><span class="mono" style="color:var(--ink-2)">Current video finishes: —</span></div>
+        <div class="mono" style="color:var(--ink-2);margin-top:4px">tracks land in the session: position / box / tracklet per camera · Assign identities is the next step</div>
+      </fieldset>
+    </div></details>
+  </div>
+  <div class="timeline">
+    <div><h3 style="margin:0">Time slider</h3><div class="mono" style="color:var(--ink-2)">motion · ticks = suggested · green = labelled</div></div>
+    <div class="motion" data-motion></div>
+  </div>
+</div>
+
+<div class="switcher"><button data-prev>←</button><span data-label></span><button data-nxt>→</button></div>
+
+<script>
+// ---------- fake data ----------
+const CAMS = ["topViewMain", "backMirror", "leftMirror", "topViewNests"];
+const INDIV = [{ name: "female", key: "1" }, { name: "male", key: "2" }];
+// which individual is visible in which camera on this frame (nests: only female)
+const VISIBLE = { female: [1, 1, 1, 1], male: [1, 1, 1, 0] };
+const POS = { female: [[55, 60], [30, 35], [62, 48], [40, 50]], male: [[35, 25], [70, 40], [25, 65], null] };
+const SUGGEST = [0.03, 0.09, 0.14, 0.22, 0.27, 0.31, 0.38, 0.42, 0.47, 0.53, 0.58, 0.61, 0.66, 0.72, 0.77, 0.81, 0.86, 0.9, 0.95];
+const state = { active: "female", boxes: { female: [null, null, null, null], male: [null, null, null, null] }, neg: { female: [0,0,0,0], male: [0,0,0,0] }, notVisible: { female: [0,0,0,0], male: [0,0,0,1] }, frame: 4795 };
+
+function birdSvg(cam, i) {
+  // a placeholder scene: perches + two bird blobs positioned per camera
+  const f = POS.female[i], m = POS.male[i];
+  return `<svg viewBox="0 0 100 60" preserveAspectRatio="none">
+    <rect width="100" height="60" fill="${i === 3 ? '#d9d9d3' : '#c9c0ae'}"/>
+    <line x1="10" y1="30" x2="90" y2="30" stroke="#8a7350" stroke-width="1"/>
+    <line x1="30" y1="10" x2="30" y2="55" stroke="#8a7350" stroke-width="1"/>
+    ${f ? `<ellipse cx="${f[0]}" cy="${f[1]}" rx="4" ry="2.5" fill="#6b6b66"/>` : ""}
+    ${m ? `<ellipse cx="${m[0]}" cy="${m[1]}" rx="4" ry="2.5" fill="#4b4f57"/><circle cx="${m[0]+3}" cy="${m[1]}" r="1" fill="#e0602a"/>` : ""}
+  </svg>`;
+}
+
+function renderCams(container, opts = {}) {
+  container.innerHTML = "";
+  CAMS.forEach((cam, i) => {
+    if (opts.skip === i) return;
+    const d = document.createElement("div"); d.className = "cam" + (opts.activeCam === i ? " active-cam" : "");
+    d.innerHTML = `<span class="name">cam-${cam}</span>` + birdSvg(cam, i);
+    if (state.notVisible[state.active][i]) d.classList.add("missing");
+    for (const ind of INDIV) {
+      const b = state.boxes[ind.name][i];
+      if (b) {
+        const m = document.createElement("div"); m.className = `mask ${ind.name}`; m.style.cssText = `left:${b[0]-5}%;top:${b[1]-6}%;width:10%;height:12%`; d.appendChild(m);
+        const e = document.createElement("div"); e.className = `box ${ind.name}`; e.style.cssText = `left:${b[0]-6}%;top:${b[1]-8}%;width:12%;height:16%`; e.textContent = ind.name + " (box from mask)"; d.appendChild(e);
+        const pt = document.createElement("div"); pt.className = "pt pos"; pt.style.cssText = `left:${b[0]}%;top:${b[1]}%`; d.appendChild(pt);
+        if (state.neg[ind.name][i]) { const n = document.createElement("div"); n.className = "pt neg"; n.style.cssText = `left:${b[0]+7}%;top:${b[1]+2}%`; d.appendChild(n); }
+      }
+    }
+    d.onclick = () => {
+      if (state.notVisible[state.active][i]) return;
+      const p = POS[state.active][i]; if (!p) return;
+      state.boxes[state.active][i] = p; // left click = positive point -> SAM mask -> box
+      renderAll();
+    };
+    d.oncontextmenu = (ev) => { ev.preventDefault(); if (state.boxes[state.active][i]) { state.neg[state.active][i] = 1; renderAll(); } };
+    container.appendChild(d);
+  });
+}
+
+function renderChips(container) {
+  container.innerHTML = "";
+  for (const ind of INDIV) {
+    const c = document.createElement("span"); c.className = `chip ${ind.name}` + (state.active === ind.name ? " on" : "");
+    const done = state.boxes[ind.name].filter(Boolean).length, nv = state.notVisible[ind.name].filter(Boolean).length;
+    c.innerHTML = `<span class="dot"></span>${ind.name} <span class="k">${ind.key}</span> <span class="k">${done}/${CAMS.length - nv}</span>`;
+    c.onclick = () => { state.active = ind.name; renderAll(); };
+    container.appendChild(c);
+  }
+}
+
+function renderFrameTable(t) {
+  let h = `<tr><th>camera</th>${INDIV.map(i => `<th>${i.name}</th>`).join("")}</tr>`;
+  CAMS.forEach((cam, i) => {
+    h += `<tr><td>${cam}</td>${INDIV.map(ind => {
+      if (state.notVisible[ind.name][i]) return `<td class="mono" style="color:var(--ink-2)">not visible</td>`;
+      return state.boxes[ind.name][i] ? `<td class="ok">✓ box</td>` : `<td class="warn">— click</td>`;
+    }).join("")}</tr>`;
+  });
+  t.innerHTML = h;
+}
+
+function renderMotion(m) {
+  const pts = Array.from({ length: 120 }, (_, k) => [k / 119 * 100, 34 - (Math.abs(Math.sin(k * 0.37)) * 18 + Math.abs(Math.sin(k * 1.3)) * 8 + (k % 17 === 0 ? 6 : 0))]);
+  m.innerHTML = `<svg viewBox="0 0 100 36" preserveAspectRatio="none"><polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" stroke="#6b7a75" stroke-width="0.6"/></svg>`
+    + SUGGEST.map((s, k) => `<div class="mark ${k < 7 ? "done" : ""}" style="left:${s*100}%"></div>`).join("")
+    + `<div class="here" style="left:${state.frame/20000*100}%"></div>`;
+}
+
+function renderStrip(s) {
+  s.innerHTML = "";
+  for (let k = -3; k <= 3; k++) {
+    const f = document.createElement("div"); f.className = "f" + (k === 0 ? " hi" : "");
+    const b = state.boxes[state.active][0];
+    if (b) { const e = document.createElement("div"); e.className = "b"; e.style.cssText = `left:${b[0]-6+k*2}%;top:${b[1]-8}%;width:12%;height:16%`; f.appendChild(e); }
+    const sp = document.createElement("span"); sp.textContent = `${state.frame + k*4}${k === 0 ? " (labelled)" : ""}`; f.appendChild(sp);
+    s.appendChild(f);
+  }
+}
+
+function nextFrame() {
+  state.frame = Math.min(20000, state.frame + 1180);
+  for (const ind of INDIV) state.boxes[ind.name] = [null, null, null, null];
+  state.active = "female"; renderAll();
+}
+
+// ---------- per-variant render ----------
+function renderA() {
+  const a = document.getElementById("A");
+  renderCams(a.querySelector("[data-cams]"));
+  renderChips(a.querySelector("[data-chips]"));
+  renderFrameTable(a.querySelector("[data-frame-table]"));
+  renderMotion(a.querySelector("[data-motion]"));
+  renderStrip(a.querySelector("[data-strip]"));
+}
+function renderD() {
+  const d = document.getElementById("D");
+  renderCams(d.querySelector("[data-cams]"));
+  renderChips(d.querySelector("[data-chips]"));
+  renderFrameTable(d.querySelector("[data-frame-table]"));
+  renderMotion(d.querySelector("[data-motion]"));
+  renderStrip(d.querySelector("[data-strip]"));
+}
+function renderE() {
+  const e = document.getElementById("E");
+  renderCams(e.querySelector("[data-cams]"));
+  renderChips(e.querySelector("[data-chips]"));
+  renderFrameTable(e.querySelector("[data-frame-table]"));
+  renderMotion(e.querySelector("[data-motion]"));
+}
+function renderB() {
+  const b = document.getElementById("B");
+  renderCams(b.querySelector("[data-cams]"));
+  renderChips(b.querySelector("[data-chips]"));
+  renderFrameTable(b.querySelector("[data-frame-table]"));
+}
+let cActive = 0;
+function renderC() {
+  const c = document.getElementById("C");
+  const prim = c.querySelector("[data-primary]");
+  const wrap = document.createElement("div"); renderCams(wrap, {});
+  prim.replaceWith(wrap.children[cActive]); wrap.children[0] && null;
+  const p = c.querySelector(".primary .cam"); p.setAttribute("data-primary", ""); p.classList.add("active-cam");
+  renderCams(c.querySelector("[data-cams]"), { activeCam: cActive });
+  c.querySelectorAll("[data-cams] .cam").forEach((el, i) => { const orig = el.onclick; el.onclick = () => { cActive = i; renderAll(); }; el.style.cursor = "pointer"; });
+  renderChips(c.querySelector("[data-chips]"));
+  renderFrameTable(c.querySelector("[data-frame-table]"));
+  renderMotion(c.querySelector("[data-motion]"));
+}
+
+// ---------- switcher ----------
+const VARIANTS = { E: "OCTRON dock 1:1 (collapsible pages), label manager by individual x camera", D: "A + timeline ticks from C", A: "Dialog beside the cameras (keypoint-dialog pattern)", B: "Contact sheet + pipeline drawer", C: "One camera at a time + timeline suggestions" };
+function currentVariant() { const q = new URLSearchParams(location.search).get("variant"); return VARIANTS[q] ? q : (VARIANTS[location.hash.slice(1)] ? location.hash.slice(1) : "E"); }
+function setVariant(v) { try { history.replaceState(null, "", `?variant=${v}`); } catch (e) { location.hash = v; } renderAll(); }
+function renderAll() {
+  const v = currentVariant();
+  document.querySelectorAll(".app").forEach(a => a.classList.toggle("active", a.id === v));
+  document.querySelector("[data-label]").textContent = `${v} — ${VARIANTS[v]}`;
+  ({ A: renderA, B: renderB, C: renderC, D: renderD, E: renderE })[v]();
+  document.querySelectorAll("[data-next]").forEach(b => b.onclick = nextFrame);
+}
+const keys = Object.keys(VARIANTS);
+document.querySelector("[data-prev]").onclick = () => setVariant(keys[(keys.indexOf(currentVariant()) + keys.length - 1) % keys.length]);
+document.querySelector("[data-nxt]").onclick = () => setVariant(keys[(keys.indexOf(currentVariant()) + 1) % keys.length]);
+document.addEventListener("keydown", e => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+  if (e.key === "ArrowLeft") document.querySelector("[data-prev]").click();
+  if (e.key === "ArrowRight") document.querySelector("[data-nxt]").click();
+  if (e.key === "Tab") { e.preventDefault(); state.active = state.active === "female" ? "male" : "female"; renderAll(); }
+  if (e.key === "1") { state.active = "female"; renderAll(); }
+  if (e.key === "2") { state.active = "male"; renderAll(); }
+  if (e.key.toLowerCase() === "n") nextFrame();
+});
+window.addEventListener("hashchange", renderAll);
+renderAll();
+</script>
+</body>
+</html>

@@ -244,6 +244,9 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     labels_redraw_needed = Signal()
     spectrogram_overlay_shown = Signal()
     time_marker_updated = Signal(float)
+    #: Display-clock time under the cursor while a state label is half-placed
+    #: (between its first and second click).
+    pending_label_hovered = Signal(float)
     #: Emitted with the plot widget whenever a dynamic panel (line plot or
     #: audio panel) is created.
     panel_added = Signal(object)
@@ -1387,6 +1390,9 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         for plot in self._panels_of_group("feature") + self._label_ribbons():
             if not self._dyn_docks[plot].isHidden():
                 yield plot
+
+    def _pending_hover_moved(self, t_display: float) -> None:
+        self.pending_label_hovered.emit(t_display)
 
     def update_time_marker_by_time(self, time_s: float):
         for plot in self._visible_plots():

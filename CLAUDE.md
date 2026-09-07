@@ -78,6 +78,9 @@ ethograph/gui/
     dialog_pose_refinement.py # Refine imported poses: correct DLC/SLEAP files, _refined copies
     dialog_onset_model.py     # Model menu: GradBoost onset-detector train/predict dialogs
     dialog_curation_workflow.py # Saved curation routines: step editor + WorkflowRunner
+    dialog_box_labelling.py   # Box labelling (OCTRON): OCTRON's dock over every open camera; one time index, individual-major clicks
+    box_annotate.py           # SamSession — OCTRON's SAM predictor headless, one per camera video
+    box_overlay.py            # Mask + prompt-point overlay on a pygfx view, BoxLabelMode (right click = exclude)
     plots_base.py             # BasePlot, PanelStateMixin
     plots_container.py        # UnifiedPanelContainer
     plots_{audiotrace,spectrogram,ephystrace,lineplot,heatmap,raster,space}.py
@@ -100,6 +103,7 @@ ethograph/labels/
     curation.py               # labeling_method transitions, per-trial verdicts, review queues (Qt-free)
     workflow.py               # Curation workflows: the STEP_KINDS contract + the YAML store (Qt-free)
     tsv_store.py, predictions.py, crowsetta_format.py, converters.py, export.py
+    octron_project.py         # The OCTRON project folder in OCTRON's own layout (hash folders, organizer JSON, octron.yaml, CLI commands)
 
 ethograph/io/
     catalog.py                # DataCatalog + XarrayLoader/PynappleLoader, pose discovery

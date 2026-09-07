@@ -717,6 +717,47 @@ class VideoFrameSource:
             out.append(previous)
         return np.stack(out)
 
+    def iter_frames(self, indices, gray: bool = False, progress=None):
+        """Yield ``(index, frame)`` for *indices* in one forward pass — no seek per frame.
+
+        Random access costs a keyframe seek plus a partial-GOP decode per
+        frame, which is what made scanning thousands of candidate frames slow.
+        Here the container is sought once to the first wanted frame and decoded
+        forward, yielding only the wanted indices, the way the video motion
+        pass in :mod:`ethograph.features.movement` streams. ``gray`` reformats
+        to one channel during decode (``(H, W)`` uint8); otherwise frames are
+        ``(H, W, 3)`` RGB. Indices are delivered in ascending order; *progress*
+        gets the fraction delivered and may return ``False`` to stop early.
+        """
+        wanted = sorted({int(i) for i in indices if 0 <= int(i) < self._n_frames})
+        if not wanted:
+            return
+        remaining = set(wanted)
+        last = wanted[-1]
+        total = len(wanted)
+        done = 0
+        fmt = "gray" if gray else "rgb24"
+        self._seek(wanted[0] + self._start_frame)
+        previous_index: int | None = None
+        for frame in self._container.decode(self._stream):
+            index = self._frame_index(frame) - self._start_frame
+            if index > last:
+                break
+            # Timestamp rounding can skip an index: a wanted index that fell in
+            # a gap is served by the frame that follows it, as ``_decode`` does.
+            first = index if previous_index is None else previous_index + 1
+            hits = [i for i in range(min(first, index), index + 1) if i in remaining]
+            previous_index = index
+            if not hits:
+                continue
+            image = frame.reformat(width=self._size[0], height=self._size[1], format=fmt).to_ndarray()
+            for i in hits:
+                remaining.discard(i)
+                done += 1
+                yield i, image
+                if progress is not None and not progress(done / total):
+                    return
+
     def _seek(self, frame_index: int) -> None:
         target = int(frame_index / self._fps / float(self._stream.time_base))
         offset = int(self._stream.start_time or 0)

@@ -143,6 +143,16 @@ timm = [
 # on first use (see pose_fill.download_cotracker_checkpoint).
 #
 
+# OCTRON headless core (ethograph.segment multi-animal masks/boxes/tracks):
+# SAM2/SAM3 segmentation, YOLO training/prediction and BoxMOT tracking without
+# napari/Qt. Installed from the fork until upstream merges the `gui` extra
+# split (OCTRON-tracking/OCTRON-GUI#87). Needs Python <3.13 and, like `model`,
+# expects a CUDA-matched torch to be installed first. Note the pinned boxmot
+# wheel caps pandas<3 and opencv-python<5.
+octron = [
+    "octron @ git+https://github.com/Akseli-Ilmanen/OCTRON-GUI@main",
+]
+
 # Development
 dev = [
     "pytest",

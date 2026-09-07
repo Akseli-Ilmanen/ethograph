@@ -286,6 +286,7 @@ class LabelsWidget(QWidget):
         # Static-image primary has no frame clock — the marker drives the
         # current-label overlay directly (video sessions use frame_changed).
         plot_container.time_marker_updated.connect(self._on_marker_time_for_overlay)
+        plot_container.pending_label_hovered.connect(self._follow_pending_hover)
 
     def set_meta_widget(self, meta_widget):
         """Set reference to the meta widget for layout refresh."""
@@ -1798,6 +1799,25 @@ class LabelsWidget(QWidget):
             return
         color_rgb = tuple(int(c * 255) for c in mapping["color"])
         self.plot_container.show_pending_label(self._to_display(t_rel), color_rgb)
+
+    def _follow_pending_hover(self, t_display: float) -> None:
+        """Scrub the video to the cursor while a state label's end is being aimed.
+
+        The preview rectangle says where the second click will land on the
+        trace; the video says what the animal is doing there. The seek moves
+        the playhead with it (as any seek does); the anchor stays put on the
+        dashed line. A frame already on screen is not re-decoded, and playback
+        is never interrupted.
+        """
+        if self.first_click is None:
+            return
+        video = getattr(self.app_state, "video", None)
+        if video is None or video.is_playing:
+            return
+        frame = video.time_to_frame(t_display, round_nearest=True)
+        if frame == video.current_frame:
+            return
+        video.seek_to_frame(frame)
 
     def _reset_label_clicks(self) -> None:
         """Forget a half-placed state label and take its preview off the plots."""

@@ -68,6 +68,9 @@ class MetaWidget(GridSectionContainer):
             shell.setLocale(QLocale.c())
 
         self.shell = shell
+        #: Set when a load found no saved layout, cleared once the camera
+        #: docks it tiles have been created (arrange_camera_grid_if_default).
+        self._camera_grid_pending = False
 
         # Set smaller font for this widget and all children
         self._set_compact_font()
@@ -1112,6 +1115,10 @@ class MetaWidget(GridSectionContainer):
         """
         layout = getattr(self.app_state, "panel_layout", None)
         if not layout:
+            # Nothing to honour, so the cameras get tiled instead — but they
+            # do not exist yet (the views are created with the first trial,
+            # after this runs), so only the decision is made here.
+            self._camera_grid_pending = True
             return
         try:
             self.plot_container.apply_layout_state(layout)
@@ -1123,8 +1130,20 @@ class MetaWidget(GridSectionContainer):
         except Exception:
             logger.exception("Saved panel layout could not be applied; resetting to defaults")
             self.app_state.panel_layout = None
+            self._camera_grid_pending = True
             self._rebuild_default_panels()
             notify("Saved panel layout could not be applied and was reset to defaults.", "warning")
+
+    def arrange_camera_grid_if_default(self) -> None:
+        """Tile the camera docks, once, when the dataset brought no layout.
+
+        Called after the first trial created the camera views: every camera is
+        a dock in the same area, so four dropped videos arrive as one row of
+        slivers (4 → 2×2, 6 → 2×3, 9 → 3×3)."""
+        if not self._camera_grid_pending:
+            return
+        self._camera_grid_pending = False
+        self.shell.video_area.arrange_grid()
 
     def _rebuild_default_panels(self):
         """Recover from a saved layout that failed mid-apply: drop whatever

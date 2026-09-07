@@ -738,10 +738,11 @@ class CoverPage(QDialog):
         reopen_layout.addWidget(self._reopen_combo, 1)
         layout.addWidget(self._reopen_row)
 
-        self._video_motion_cb = QCheckBox("Compute video motion — pixel change  (video only)")
+        self._video_motion_cb = QCheckBox("Compute video motion  (video only)")
         self._video_motion_cb.setToolTip(
-            "Adds a motion-energy feature with a (time, camera) shape, so you can "
-            "pick a camera in the Feature controls or view all cameras as a heatmap.\n"
+            "Adds a motion feature with a (time, camera) shape, so you can pick a camera "
+            "in the Feature controls or view all cameras as a heatmap.\n"
+            "Read from the compressed stream (bytes per frame, no decoding — instant).\n"
             "Does nothing if no video is dropped."
         )
         layout.addWidget(self._video_motion_cb)
@@ -1211,14 +1212,17 @@ class CoverPage(QDialog):
     def _build_video_motion_nc(cam_map, out_dir: Path) -> Path:
         """Write a ``(time, camera)`` video-motion feature to a throwaway .nc.
 
-        One motion-energy trace per dropped video, stacked on a ``camera`` dim
+        One motion trace per dropped video, stacked on a ``camera`` dim
         (values ``cam-1``, ``cam-2``, … matching the alignment's video streams),
         so the catalog offers a camera dropdown and a heatmap view for free.
+        The trace is the compressed stream's bytes per frame
+        (:func:`~ethograph.features.movement.extract_packet_motion`): no
+        decoding, so the drop loads in a second instead of a minute per video.
         """
         import numpy as np
         import xarray as xr
 
-        from ethograph.features.movement import extract_video_motion
+        from ethograph.features.movement import extract_packet_motion
         from ethograph.gui.video_manager import probe_video
 
         motions: list[np.ndarray] = []
@@ -1228,7 +1232,7 @@ class CoverPage(QDialog):
             fps = probe_video(video).fps
             if not fps:
                 raise RuntimeError(f"Could not read frame rate from {Path(video).name}.")
-            da = extract_video_motion(video, fps=fps, verbose=False)
+            da = extract_packet_motion(video, fps=fps)
             motions.append(np.asarray(da.values, dtype=float))
             cam_names.append(f"cam-{i + 1}")
             fps_used = fps

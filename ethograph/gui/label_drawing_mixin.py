@@ -474,12 +474,21 @@ class LabelDrawingMixin:
             view_pos = plot.plot_item.vb.mapSceneToView(scene_pos)
         except (RuntimeError, AttributeError):
             return
-        bounds = (self._pending_label_anchor, float(view_pos.x()))
+        t_display = float(view_pos.x())
+        bounds = (self._pending_label_anchor, t_display)
         for region in self._pending_label_regions:
             try:
                 region.setRegion(bounds)
             except RuntimeError:
                 continue
+        self._pending_hover_moved(t_display)
+
+    def _pending_hover_moved(self, t_display: float) -> None:
+        """Hook: the cursor moved to *t_display* while a state label is half-placed.
+
+        The host overrides this to let the video follow the cursor, so the
+        second click can be aimed by watching the frames rather than the trace.
+        """
 
     def clear_pending_label(self) -> None:
         """Drop the anchor + preview (label committed, cancelled or disarmed)."""

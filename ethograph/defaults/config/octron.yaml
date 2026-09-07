@@ -1,0 +1,30 @@
+# Box labelling (OCTRON) — training and prediction settings.
+# Written by Tools ▸ Box labelling (OCTRON)… and read back by it; every key maps
+# onto an option of OCTRON's own `octron train` / `octron predict` CLI, which run
+# as separate processes so the GUI (and SAM) never hold the GPU during training.
+# Detection only: OCTRON trains on the bounding box of each mask.
+
+model: YOLO26m            # YOLO26m / YOLO26l / YOLO11m / YOLO11l — large forces batch 1 on a 10 GB card
+imgsz: 1024
+epochs: 250
+save_period: 50
+train_fraction: 0.7       # OCTRON's split; the rest is val + test
+val_fraction: 0.15
+seed: 88
+batch: auto               # auto = OCTRON's AutoBatch; a number overrides it
+device: auto
+prune: false              # OCTRON's Prune: keep only frames where every label is present
+
+sam_model: sam2_large     # sam2_base_plus / sam2_large / sam2_large_hq — OCTRON's catalogue
+label_scheme: suffix      # suffix = one class, individual as OCTRON's suffix (animals of the same type); per_individual = one class each
+class_name: animal        # the one class under the suffix scheme
+
+tracker: bytetrack        # bytetrack / botsort / ocsort / d-ocsort / hybridsort / boosttrack
+conf_thresh: 0.5
+iou_thresh: 0.7
+skip_frames: 0
+one_object_per_label: false
+
+# Frame suggestion (EthoGraph's side)
+suggest_motion_share: 0.3    # mixed: share of picks taken from the strongest movements
+suggest_motion_gate: 0.5     # mixed: candidates below this motion quantile are not clustered

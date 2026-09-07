@@ -562,7 +562,18 @@ class CameraView(QWidget):
         """
         if self._label_mode is None or event is None or self._label_mode.locked:
             return
-        if method != "handle_move" and getattr(event, "button", 1) != 1:
+        button = getattr(event, "button", 1)
+        if method == "handle_click" and button == 2 and hasattr(self._label_mode, "handle_right_click"):
+            # A mode that declares a right-click handler (box labelling's
+            # "exclude" point) gets the unmodified right press; every other
+            # mode keeps right-drag zoom untouched.
+            if getattr(event, "modifiers", ()):
+                return
+            image_xy = self.screen_to_image(event.x, event.y)
+            if image_xy is not None:
+                self._label_mode.handle_right_click(*image_xy)
+            return
+        if method != "handle_move" and button != 1:
             return
         if method == "handle_click" and getattr(event, "modifiers", ()):
             return

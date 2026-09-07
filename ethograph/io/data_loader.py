@@ -619,9 +619,9 @@ def wizard_single_from_npy_file(
     ds.attrs["fps"] = fps
 
     if video_motion and video_path is not None:
-        from ethograph.features.movement import extract_video_motion
+        from ethograph.features.movement import extract_packet_motion
 
-        ds["video_motion"] = extract_video_motion(video_path, fps=ds.attrs["fps"], time_coord_name="time_video")
+        ds["video_motion"] = extract_packet_motion(video_path, fps=ds.attrs["fps"], time_coord_name="time_video")
 
     nwb_dir = Path(output_nc_path).parent if output_nc_path else None
     _wizard_single_media_helper(ds, video_path=video_path, video_offset=video_offset, nwb_dir=nwb_dir)
@@ -679,9 +679,9 @@ def wizard_single_from_ephys(
     ds.attrs["fps"] = fps
 
     if video_motion and video_path is not None:
-        from ethograph.features.movement import extract_video_motion
+        from ethograph.features.movement import extract_packet_motion
 
-        ds["video_motion"] = extract_video_motion(video_path, fps=ds.attrs["fps"], time_coord_name="time_video")
+        ds["video_motion"] = extract_packet_motion(video_path, fps=ds.attrs["fps"], time_coord_name="time_video")
 
     duration = None
     if not (video_path or audio_path):
@@ -722,9 +722,9 @@ def wizard_single_from_audio(
     ds.attrs["fps"] = fps
 
     if video_motion and video_path is not None:
-        from ethograph.features.movement import extract_video_motion
+        from ethograph.features.movement import extract_packet_motion
 
-        ds["video_motion"] = extract_video_motion(video_path, fps=ds.attrs["fps"], time_coord_name="time_video")
+        ds["video_motion"] = extract_packet_motion(video_path, fps=ds.attrs["fps"], time_coord_name="time_video")
 
     nwb_dir = Path(output_nc_path).parent if output_nc_path else None
     _wizard_single_media_helper(

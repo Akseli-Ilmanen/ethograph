@@ -105,3 +105,16 @@ def test_hover_after_clear_is_inert(container):
     container._on_pending_hover(hovered, scene_pos)  # must not raise
 
     assert container._pending_label_anchor is None
+
+
+def test_hover_reports_the_cursor_time(container):
+    """The host's hook sees the hovered time so the video can follow it."""
+    seen: list[float] = []
+    container._pending_hover_moved = seen.append
+    container.show_pending_label(2.0, (200, 100, 50))
+    hovered = container._plots[0]
+
+    scene_pos = hovered.plot_item.vb.mapViewToScene(pg.Point(7.0, 0.0))
+    container._on_pending_hover(hovered, scene_pos)
+
+    assert seen == [pytest.approx(7.0, abs=1e-6)]

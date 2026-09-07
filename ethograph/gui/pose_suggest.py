@@ -23,8 +23,9 @@ Three methods are offered here:
     so distinct postures are covered rather than whatever the animal did most.
 ``motion``
     Frames with the largest change from the previous frame — where the action
-    is. This is the same signal as EthoGraph's ``extract_video_motion`` (mean
-    absolute luma difference). If the clip holds fewer *distinct* moving moments
+    is. With a trace from ``extract_packet_motion`` (bytes per compressed frame)
+    no decoding is needed; otherwise thumbnails are differenced. If the clip
+    holds fewer *distinct* moving moments
     than you asked for, the remaining slots are filled with the next
     best-scoring frames, so the requested count is always returned; the highest-
     motion moments are simply taken first.
@@ -107,7 +108,28 @@ FEATURE_MAX_SIDE = 64
 #: asking for 20 frames over 2000 keeps suggestions at least 25 frames apart.
 MIN_GAP_FRACTION = 0.25
 
-METHODS = ("uniform", "diverse", "motion", "uncertain", "detection_gaps")
+METHODS = ("uniform", "diverse", "motion", "mixed", "uncertain", "detection_gaps")
+#: ``mixed``: a share of the picks are the strongest movements (motion ranking,
+#: min-gap applied), the rest one k-means pick per cluster over the candidates
+#: whose motion is above the gate quantile and that are not within the gap of a
+#: motion pick. Motion says what is worth looking at, k-means that the picks
+#: do not all show one event; the share sets how many strong events are kept
+#: on purpose rather than left to the clustering.
+MOTION_GATE_QUANTILE = 0.5
+MOTION_SHARE = 0.3
+
+
+def motion_area(motion: np.ndarray, window_frames: int) -> np.ndarray:
+    """Motion summed over a centred window — the area under the curve around each frame.
+
+    A brief spike scores little; movement that lasts scores in proportion to how
+    long it lasts, which is what 'a moment worth labelling' means.
+    """
+    motion = np.asarray(motion, dtype=np.float32)
+    window = max(1, int(window_frames)) | 1  # odd, so the window is centred on the frame
+    if window == 1 or len(motion) == 0:
+        return motion
+    return np.convolve(motion, np.ones(window, dtype=np.float32), mode="same")
 
 
 def default_min_gap(n_frames: int, count: int) -> int:
@@ -152,15 +174,22 @@ def _thumbnails(frames, indices: np.ndarray, progress: Callable[[float], bool] |
     Grayscale by averaging channels — DeepLabCut's choice, and colour rarely
     distinguishes postures.
     """
-    rows = []
-    total = max(len(indices), 1)
-    for position, index in enumerate(indices):
-        if progress is not None and not progress(position / total):
-            break
-        image = np.asarray(frames[int(index)], dtype=np.float32)
-        if image.ndim == 3:
-            image = image.mean(axis=2)
-        rows.append(image.reshape(-1))
+    rows: list[np.ndarray] = []
+    if hasattr(frames, "iter_frames"):
+        # One sequential decode for every candidate. A seek per frame is what
+        # made this scan take minutes on a long recording; *indices* is sorted,
+        # so an early stop leaves rows for its prefix, which the caller trims to.
+        for _index, image in frames.iter_frames(indices, gray=True, progress=progress):
+            rows.append(np.asarray(image, dtype=np.float32).reshape(-1))
+    else:
+        total = max(len(indices), 1)
+        for position, index in enumerate(indices):
+            if progress is not None and not progress(position / total):
+                break
+            image = np.asarray(frames[int(index)], dtype=np.float32)
+            if image.ndim == 3:
+                image = image.mean(axis=2)
+            rows.append(image.reshape(-1))
     if not rows:
         return np.empty((0, 0), dtype=np.float32)
     data = np.asarray(rows, dtype=np.float32)
@@ -311,6 +340,10 @@ def suggest_frames(
     progress: Callable[[float], bool] | None = None,
     confidence: np.ndarray | None = None,
     detected: Sequence[int] | None = None,
+    motion: np.ndarray | None = None,
+    motion_window: int = 1,
+    motion_share: float = MOTION_SHARE,
+    motion_gate: float = MOTION_GATE_QUANTILE,
 ) -> list[int]:
     """Suggest *count* frames to label.
 
@@ -329,6 +362,19 @@ def suggest_frames(
         Minimum spacing; defaults to :func:`default_min_gap`.
     detected
         Frames a detector found a marker on; ``detection_gaps`` needs it.
+    motion
+        A per-frame motion trace over all *n_frames* (``extract_packet_motion``).
+        When given, ``motion`` and ``mixed``
+        score candidates by the area under it over *motion_window* frames —
+        sustained movement, never a one-frame spike — and ``motion`` then
+        needs no decoding at all.
+    motion_window
+        Frames the area is summed over (:func:`motion_area`).
+    motion_share
+        ``mixed`` only: fraction of *count* taken from the top of the motion
+        ranking; the rest is filled by k-means.
+    motion_gate
+        ``mixed`` only: candidates below this motion quantile are not clustered.
     """
     if method not in METHODS:
         raise ValueError(f"Unknown suggestion method {method!r}; expected one of {METHODS}")
@@ -345,23 +391,49 @@ def suggest_frames(
         if detected is None:
             raise ValueError("The 'detection_gaps' method needs a detector to have run first.")
         return suggest_detection_gaps(detected, count, n_frames, exclude, min_gap)
-    if frames is None:
-        raise ValueError(f"The {method!r} method needs video frames.")
-
     indices = _candidate_indices(n_frames, exclude)
     if not len(indices):
         return []
+    gap = default_min_gap(n_frames, count) if min_gap is None else int(min_gap)
+
+    trace = None
+    if motion is not None:
+        motion = np.asarray(motion, dtype=np.float32)
+        if len(motion) < n_frames:
+            raise ValueError(f"motion trace has {len(motion)} frames, the video {n_frames}")
+        trace = motion_area(motion[:n_frames], motion_window)
+        if method == "motion":
+            scores = trace[indices]
+            ranked = [int(indices[i]) for i in np.argsort(scores)[::-1]]
+            return enforce_min_gap(ranked, gap, count)
+
+    if frames is None:
+        raise ValueError(f"The {method!r} method needs video frames.")
     features = _thumbnails(frames, indices, progress)
     if not len(features):
         return []
     indices = indices[: len(features)]
 
-    gap = default_min_gap(n_frames, count) if min_gap is None else int(min_gap)
     if method == "diverse":
         # Cluster picks are already spread across posture space; the gap only
         # breaks ties between near-identical neighbours.
         return enforce_min_gap(_suggest_diverse(features, indices, count), gap, count)
 
-    scores = _motion_scores(features)
+    scores = trace[indices] if trace is not None else _motion_scores(features)
     ranked = [int(indices[i]) for i in np.argsort(scores)[::-1]]
-    return enforce_min_gap(ranked, gap, count)
+    if method == "motion":
+        return enforce_min_gap(ranked, gap, count)
+
+    # mixed: strong events first, then diverse postures among the moving rest
+    if not 0.0 <= motion_share <= 1.0:
+        raise ValueError(f"motion_share must be within [0, 1], got {motion_share}")
+    n_motion = int(round(count * motion_share))
+    strong = enforce_min_gap(ranked, gap, n_motion) if n_motion else []
+    keep = np.flatnonzero(scores >= np.quantile(scores, motion_gate))
+    if strong:
+        near = np.array([min(abs(int(i) - s) for s in strong) < gap for i in indices[keep]])
+        keep = keep[~near]
+    if len(keep) < 2:
+        keep = np.arange(len(scores))
+    diverse = _suggest_diverse(features[keep], indices[keep], count - len(strong))
+    return sorted(set(strong) | set(enforce_min_gap(diverse, gap, count - len(strong))))
