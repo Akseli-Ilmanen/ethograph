@@ -364,6 +364,7 @@ class AppStateSpec:
         "pose_color_by": (str, "keypoint", True),
         "pose_points_use_base": (bool, False, True),
         "pose_points_base_color": (str | None, "#FF3333", True),
+        "pose_individual_colors": (dict, {}, True, SCOPE_LOCAL),
         "skeleton_use_base": (bool, True, True),
         "skeleton_base_color": (str | None, "#00CC66", True),
         "skeleton_config_override": (dict | None, None, True),

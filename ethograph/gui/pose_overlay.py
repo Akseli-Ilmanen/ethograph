@@ -50,12 +50,15 @@ def _tracks_from_properties(properties: pd.DataFrame) -> tuple[np.ndarray, pd.Da
 
     Returns (track_idx per row, track table with one row per track).
     """
-    ind = properties["individual"] if "individual" in properties.columns else pd.Series(["ind_0"] * len(properties))
-    kp = properties["keypoint"] if "keypoint" in properties.columns else pd.Series([""] * len(properties))
-    key = ind.astype(str) + "\x00" + kp.astype(str)
-    codes, uniques = pd.factorize(key)
-    parts = [u.split("\x00") for u in uniques]
-    track_table = pd.DataFrame(parts, columns=["individual", "keypoint"])
+    n = len(properties)
+    ind = properties["individual"].astype(str).to_numpy() if "individual" in properties.columns else ["ind_0"] * n
+    kp = properties["keypoint"].astype(str).to_numpy() if "keypoint" in properties.columns else [""] * n
+    # Two columns, never one joined string: a pyarrow-backed string column
+    # drops a NUL separator, and a name may contain any other character.
+    codes, uniques = pd.factorize(pd.MultiIndex.from_arrays([ind, kp]))
+    track_table = pd.DataFrame(
+        {"individual": list(uniques.get_level_values(0)), "keypoint": list(uniques.get_level_values(1))}
+    )
     return codes, track_table
 
 

@@ -13,7 +13,8 @@ Mapping (per the design brief):
 plot type     sections shown
 ============  ==================================================
 ``video``     Crop (crop/uncrop the clicked camera), Label overlay (hide the
-              label name drawn on the video), Pose (if pose data)
+              label name drawn on the video), Pose (if pose data) — or
+              Bounding boxes instead, when that is what the pose file holds
 ``audio``     Energy envelope, Spectrogram settings, shared axes
 ``lineplot``  Xarray coords, Overlays, Line-plot axes, shared axes
 ``heatmap``   Xarray coords, Overlays, Heatmap, shared axes
@@ -39,7 +40,7 @@ from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 _CONTEXT_MAP: dict[str, list[str]] = {
     # The old napari-era "Space/Cameras" group (slot) is gone — cameras are
     # opened by drag-drop and there is no layers/space-plot toggle.
-    "video": ["videocrop", "videolabel", "pose"],
+    "video": ["videocrop", "videolabel", "pose", "bbox"],
     # Audio trace: channel + envelope controls + shared axes. Spectrogram:
     # channel + its panel.
     "audiotrace": ["audiochannel", "energy", "shared"],
@@ -126,18 +127,25 @@ class RightContextPanel(QWidget):
             widget.setVisible(False)
         layout.addStretch()
 
-    def set_context(self, plot_type: str, has_pose: bool = True) -> bool:
+    def set_context(self, plot_type: str, has_pose: bool = True, pose_kind: str | None = None) -> bool:
         """Show only the sections mapped to *plot_type*.
+
+        *pose_kind* says what the pose overlay draws: ``"bboxes"`` swaps the
+        Pose section for the Bounding boxes one (no skeleton, a colour per
+        individual); anything else keeps the Pose section.
 
         Returns ``True`` if the context changed (so the caller can refresh the
         surrounding layout), ``False`` if it was already showing *plot_type*.
         """
-        if plot_type == self._current:
+        key = (plot_type, has_pose, pose_kind == "bboxes")
+        if key == self._current:
             return False
-        self._current = plot_type
+        self._current = key
         want = set(_CONTEXT_MAP.get(plot_type, []))
+        want.discard("bbox" if pose_kind != "bboxes" else "pose")
         if not has_pose:
             want.discard("pose")
+            want.discard("bbox")
         self._placeholder.setVisible(not want)
         if self._individual is not None:
             self._individual.setVisible(bool(want) and plot_type not in _NO_INDIVIDUAL_CONTEXTS)
@@ -149,4 +157,4 @@ class RightContextPanel(QWidget):
         return True
 
     def current_context(self) -> str | None:
-        return self._current
+        return self._current[0] if self._current is not None else None

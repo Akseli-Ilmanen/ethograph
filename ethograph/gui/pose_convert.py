@@ -106,6 +106,23 @@ def poses_ds_to_points(
     return points, bboxes, properties
 
 
+def individual_color_map(individuals: list[str], overrides: dict[str, str] | None = None) -> dict[str, tuple]:
+    """One colour per individual, by *name*, the same wherever that name is drawn.
+
+    The palette is sampled over the dataset's full individual list, so an
+    animal keeps its colour whether it is drawn alone, with the others, or on
+    a camera that never sees the rest. *overrides* (``name -> "#RRGGBB"``)
+    are the user's own picks and win over the palette.
+    """
+    from ethograph.skeleton.config import hex_to_rgba
+
+    colors = dict(zip(individuals, sample_colormap(len(individuals), "turbo")))
+    for name, hex_color in (overrides or {}).items():
+        if name in colors and hex_color:
+            colors[name] = tuple(hex_to_rgba(hex_color))
+    return colors
+
+
 def sample_colormap(n: int, cmap_name: str = "turbo") -> list[tuple]:
     """Sample n equally-spaced RGBA tuples (0-1 floats) from a colormap."""
     cmap = matplotlib.colormaps[cmap_name]

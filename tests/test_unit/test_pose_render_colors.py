@@ -43,6 +43,10 @@ class _StubState:
         self.pose_color_by = color_by
         self.pose_points_use_base = False
         self.pose_points_base_color = "#FF3333"
+        self.pose_individual_colors = {}
+
+    def label_individuals(self) -> list[str]:
+        return list(INDIVIDUALS)
 
 
 def _manager(color_by=COLOR_BY_KEYPOINT) -> PoseDisplayManager:

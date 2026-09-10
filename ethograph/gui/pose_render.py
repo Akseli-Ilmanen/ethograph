@@ -27,7 +27,13 @@ from movement.io import load_dataset
 
 from ethograph.gui.app_constants import POSE_SOFTWARES
 from ethograph.gui.notify import notify
-from ethograph.gui.pose_convert import COLOR_BY_KEYPOINT, COLOR_BY_MODES, poses_ds_to_points, sample_colormap
+from ethograph.gui.pose_convert import (
+    COLOR_BY_KEYPOINT,
+    COLOR_BY_MODES,
+    individual_color_map,
+    poses_ds_to_points,
+    sample_colormap,
+)
 from ethograph.gui.pose_overlay import OverlayStyle, PoseOverlayData
 from ethograph.io.nwb_alignment import pose_keys_for_cameras, pose_video_links_from_nwb
 from ethograph.io.nwb_import import _get_absolute_timestamps
@@ -533,7 +539,9 @@ class PoseDisplayManager:
                 return None
             try:
                 source_software = self.app_state.source_software or getattr(self.app_state.ds, "source_software", None)
-                if not source_software:
+                if not source_software and Path(pose_path).suffix.lower() != POSES_DATASET_SUFFIX:
+                    # A movement .nc is already a dataset; only a tracking
+                    # tool's own format needs the converter told which tool.
                     if getattr(self, "_pose_software_declined", False):
                         return None
                     source_software = ask_pose_source_software(pose_path)
@@ -694,12 +702,20 @@ class PoseDisplayManager:
 
         if color_prop == "keypoint" and self.all_keypoints:
             values = self.all_keypoints
+        elif color_prop == "individual":
+            # The dataset's own list, in its order, plus any name only the
+            # pose file knows: the colour of an animal never depends on which
+            # animals happen to be drawn beside it.
+            values = self.app_state.label_individuals()
+            values += [v for v in properties["individual"].astype(str).unique().tolist() if v not in values]
         else:
             values = properties[color_prop].unique().tolist()
         if getattr(self.app_state, "pose_points_use_base", False):
             base = getattr(self.app_state, "pose_points_base_color", None) or "#FF3333"
             rgba = hex_to_rgba(base)
             color_map = {v: rgba for v in values}
+        elif color_prop == "individual":
+            color_map = individual_color_map(values, getattr(self.app_state, "pose_individual_colors", None))
         else:
             cycle = sample_colormap(len(values), "turbo")
             color_map = dict(zip(values, cycle))
@@ -846,6 +862,15 @@ class PoseDisplayManager:
 
     def _all_views(self) -> list:
         return [self.video_area.primary, *self.video_mgr.extra_widgets.values()]
+
+    def pose_kind(self) -> str | None:
+        """``"bboxes"`` when what is drawn is bounding boxes, ``"poses"`` for
+        keypoints, ``None`` while nothing is loaded — decides which controls
+        the sidebar shows for the video."""
+        prs = [pr for pr in (self._primary_pr, *self._extra_pr.values()) if pr is not None]
+        if not prs:
+            return None
+        return "bboxes" if all(pr.bbox_data is not None for pr in prs) else "poses"
 
     def clear_pose_display(self) -> None:
         """Remove pose overlays from all camera views."""

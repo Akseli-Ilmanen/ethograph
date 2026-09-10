@@ -298,6 +298,7 @@ class MetaWidget(GridSectionContainer):
             "videocrop": getattr(dp, "videocrop_groupbox", None),
             "videolabel": getattr(dp, "videolabel_groupbox", None),
             "pose": getattr(dp, "pose_groupbox", None),
+            "bbox": getattr(dp, "bbox_groupbox", None),
             "energy": getattr(dp, "energy_group", None),
             "audiochannel": getattr(ps, "audio_channel_group", None),
             "neocontrols": getattr(ps, "neo_controls_group", None),
@@ -858,8 +859,12 @@ class MetaWidget(GridSectionContainer):
         has_pose = bool(getattr(self.app_state, "has_pose", False)) or self._pose_available()
         if self.collapsible_widgets:
             self.collapsible_widgets[0].expand()
-        if self.context_panel.set_context(panel_type, has_pose=has_pose):
+        if self.context_panel.set_context(panel_type, has_pose=has_pose, pose_kind=self._pose_kind()):
             self.refresh_widget_layout(self.context_panel)
+
+    def _pose_kind(self) -> str | None:
+        pose_mgr = getattr(self.data_widget, "pose_mgr", None)
+        return pose_mgr.pose_kind() if pose_mgr is not None else None
 
     def _pose_available(self) -> bool:
         sio = getattr(self.app_state, "nwb_alignment", None)
@@ -878,7 +883,7 @@ class MetaWidget(GridSectionContainer):
             return
         if self.collapsible_widgets:
             self.collapsible_widgets[0].expand()
-        if self.context_panel.set_context("video", has_pose=self._pose_available()):
+        if self.context_panel.set_context("video", has_pose=self._pose_available(), pose_kind=self._pose_kind()):
             self.refresh_widget_layout(self.context_panel)
 
     def _sync_context_to_active(self):
@@ -914,7 +919,7 @@ class MetaWidget(GridSectionContainer):
     def _set_default_context(self):
         """Pick an initial context after load so the Data section isn't empty."""
         if getattr(self.app_state, "video", None) is not None:
-            self.context_panel.set_context("video", has_pose=self._pose_available())
+            self.context_panel.set_context("video", has_pose=self._pose_available(), pose_kind=self._pose_kind())
         else:
             sio = getattr(self.app_state, "nwb_alignment", None)
             if sio is not None and getattr(sio, "mics", None):

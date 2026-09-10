@@ -32,7 +32,7 @@ from qtpy.QtWidgets import (
 
 import ethograph as eto
 from ethograph.gui.notify import notify, notify_dialog
-from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT
+from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, individual_color_map
 from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec
 from ethograph.io.data_loader import load_features_dataset
 from ethograph.io.derived import DerivedLoader
@@ -74,6 +74,25 @@ def _color_swatch_icon(color_hex: str) -> QIcon:
     pix = QPixmap(20, 20)
     pix.fill(QColor(color_hex))
     return QIcon(pix)
+
+
+def _rgba_to_hex(rgba: tuple) -> str:
+    return "#{:02X}{:02X}{:02X}".format(*(int(round(c * 255)) for c in rgba[:3]))
+
+
+def _sync_spin(spin: QDoubleSpinBox, value: float) -> None:
+    """Mirror *value* into a twin widget without re-firing its handler."""
+    if spin.value() != value:
+        spin.blockSignals(True)
+        spin.setValue(value)
+        spin.blockSignals(False)
+
+
+def _sync_check(box: QCheckBox, checked: bool) -> None:
+    if box.isChecked() != checked:
+        box.blockSignals(True)
+        box.setChecked(checked)
+        box.blockSignals(False)
 
 
 def _detect_nwb_pose_keys(nwb_path: str | None) -> list[str] | None:
@@ -527,6 +546,75 @@ class DataPanel(QWidget):
 
         self.pose_groupbox.hide()
         parent_layout.addWidget(self.pose_groupbox, stretch=1)
+        self._create_bbox_section(parent_layout)
+
+    def _create_bbox_section(self, parent_layout):
+        """The video's controls when the pose file holds bounding boxes.
+
+        Shown instead of the Pose section (``RightContextPanel``): a box has no
+        skeleton and no keypoints, and its colour says which individual it is
+        — so the controls are the confidence filter, the text, the line width
+        and one colour swatch per individual. The threshold/text/width widgets
+        drive the same state as the Pose section's, kept in step by
+        ``DataWidget``.
+        """
+        self.bbox_groupbox = QGroupBox("Bounding boxes")
+        layout = QVBoxLayout()
+        layout.setSpacing(4)
+        layout.setContentsMargins(4, 4, 4, 4)
+        self.bbox_groupbox.setLayout(layout)
+
+        grid = QGridLayout()
+        grid.setSpacing(5)
+        grid.addWidget(QLabel("Filter below confidence"), 0, 0)
+        self.bbox_hide_threshold_spin = QDoubleSpinBox()
+        self.bbox_hide_threshold_spin.setObjectName("bbox_hide_threshold_spin")
+        self.bbox_hide_threshold_spin.setRange(0.0, 1.0)
+        self.bbox_hide_threshold_spin.setSingleStep(0.1)
+        self.bbox_hide_threshold_spin.setDecimals(2)
+        self.bbox_hide_threshold_spin.setFixedWidth(60)
+        self.bbox_hide_threshold_spin.setToolTip("Hide boxes whose detector confidence is below this (0.0-1.0).")
+        self.bbox_hide_threshold_spin.setValue(self.app_state.pose_hide_threshold)
+        grid.addWidget(self.bbox_hide_threshold_spin, 0, 1)
+        grid.addWidget(QLabel("Show text"), 1, 0)
+        self.bbox_show_text_checkbox = QCheckBox()
+        self.bbox_show_text_checkbox.setChecked(self.app_state.pose_show_text)
+        self.bbox_show_text_checkbox.setToolTip("Write the individual's name at each box")
+        grid.addWidget(self.bbox_show_text_checkbox, 1, 1)
+        grid.addWidget(QLabel("Text size"), 2, 0)
+        self.bbox_text_size_spin = QDoubleSpinBox()
+        self.bbox_text_size_spin.setObjectName("bbox_text_size_spin")
+        self.bbox_text_size_spin.setRange(4.0, 72.0)
+        self.bbox_text_size_spin.setSingleStep(1.0)
+        self.bbox_text_size_spin.setDecimals(0)
+        self.bbox_text_size_spin.setFixedWidth(55)
+        self.bbox_text_size_spin.setValue(self.app_state.pose_text_size)
+        grid.addWidget(self.bbox_text_size_spin, 2, 1)
+        grid.addWidget(QLabel("Line width"), 3, 0)
+        self.bbox_line_width_spin = QDoubleSpinBox()
+        self.bbox_line_width_spin.setObjectName("bbox_line_width_spin")
+        self.bbox_line_width_spin.setRange(0.5, 20.0)
+        self.bbox_line_width_spin.setSingleStep(0.5)
+        self.bbox_line_width_spin.setDecimals(1)
+        self.bbox_line_width_spin.setFixedWidth(55)
+        self.bbox_line_width_spin.setValue(self.app_state.pose_skeleton_width)
+        grid.addWidget(self.bbox_line_width_spin, 3, 1)
+        grid.setColumnStretch(2, 1)
+        layout.addLayout(grid)
+
+        colors_box = QGroupBox("Colour per individual")
+        colors_box.setToolTip("An individual keeps its colour on every camera, whether or not the others are shown.")
+        self.bbox_colors_form = QFormLayout()
+        self.bbox_colors_form.setSpacing(4)
+        self.bbox_colors_form.setContentsMargins(4, 4, 4, 4)
+        colors_box.setLayout(self.bbox_colors_form)
+        layout.addWidget(colors_box)
+        #: name -> swatch button, rebuilt by ``DataWidget.populate_bbox_colors``.
+        self.bbox_color_buttons: dict[str, QPushButton] = {}
+        layout.addStretch()
+
+        self.bbox_groupbox.hide()
+        parent_layout.addWidget(self.bbox_groupbox, stretch=1)
 
     def _on_pose_match_clicked(self):
         from .dialog_pose_video_matcher import PoseVideoMatcherDialog
@@ -709,6 +797,13 @@ class DataWidget(QWidget):
         self.label_keypoints_btn = panel.label_keypoints_btn
         self.pose_show_keypoints_checkbox = panel.pose_show_keypoints_checkbox
         self.filter_keypoints_btn = panel.filter_keypoints_btn
+        self.bbox_groupbox = panel.bbox_groupbox
+        self.bbox_hide_threshold_spin = panel.bbox_hide_threshold_spin
+        self.bbox_show_text_checkbox = panel.bbox_show_text_checkbox
+        self.bbox_text_size_spin = panel.bbox_text_size_spin
+        self.bbox_line_width_spin = panel.bbox_line_width_spin
+        self.bbox_colors_form = panel.bbox_colors_form
+        self.bbox_color_buttons = panel.bbox_color_buttons
 
         self.pose_mgr = PoseDisplayManager(self.shell.video_area, self.app_state, self.video_mgr, self)
         self.app_state.keypoints_changed.connect(self.populate_keypoints)
@@ -728,6 +823,10 @@ class DataWidget(QWidget):
         panel.pose_color_by_combo.currentIndexChanged.connect(self._on_pose_color_by_changed)
         panel.create_skeleton_btn.clicked.connect(self._on_create_skeleton_clicked)
         panel.label_keypoints_btn.clicked.connect(self.open_keypoint_labelling)
+        panel.bbox_hide_threshold_spin.valueChanged.connect(self._on_bbox_hide_threshold_changed)
+        panel.bbox_show_text_checkbox.stateChanged.connect(self._on_bbox_text_toggled)
+        panel.bbox_text_size_spin.valueChanged.connect(self._on_bbox_text_size_changed)
+        panel.bbox_line_width_spin.valueChanged.connect(self._on_bbox_line_width_changed)
         panel._update_pose_callback = self.update_pose
 
         self.videocrop_groupbox = panel.videocrop_groupbox
@@ -811,10 +910,66 @@ class DataWidget(QWidget):
 
     def _on_pose_hide_threshold_changed(self, value: float):
         self.app_state.pose_hide_threshold = value
+        _sync_spin(self.bbox_hide_threshold_spin, value)
         self.update_pose()
+
+    # ── Bounding boxes section: the same state as the Pose section's widgets ──
+
+    def _on_bbox_hide_threshold_changed(self, value: float):
+        self.app_state.pose_hide_threshold = value
+        _sync_spin(self.pose_hide_threshold_spin, value)
+        self.update_pose()
+
+    def _on_bbox_text_toggled(self, state: int):
+        checked = self.bbox_show_text_checkbox.isChecked()
+        self.app_state.pose_show_text = checked
+        _sync_check(self.pose_show_text_checkbox, checked)
+        self.pose_mgr.apply_pose_style()
+
+    def _on_bbox_text_size_changed(self, value: float):
+        self.app_state.pose_text_size = value
+        _sync_spin(self.pose_text_size_spin, value)
+        self.pose_mgr.apply_pose_style()
+
+    def _on_bbox_line_width_changed(self, value: float):
+        self.app_state.pose_skeleton_width = value
+        _sync_spin(self.pose_skeleton_width_spin, value)
+        self.pose_mgr.apply_skeleton_style()
+
+    def populate_bbox_colors(self, individuals: list[str]) -> None:
+        """One swatch per individual, in the dataset's order, showing the
+        colour the overlay gives that name (the user's pick, else the palette)."""
+        form = self.bbox_colors_form
+        while form.rowCount():
+            form.removeRow(0)
+        self.bbox_color_buttons.clear()
+        overrides = dict(self.app_state.pose_individual_colors or {})
+        colors = individual_color_map([str(n) for n in individuals], overrides)
+        for name, rgba in colors.items():
+            button = QPushButton()
+            button.setObjectName(f"bbox_color_btn_{name}")
+            button.setFixedWidth(40)
+            button.setIcon(_color_swatch_icon(_rgba_to_hex(rgba)))
+            button.setToolTip(f"Colour of the boxes of {name}")
+            button.clicked.connect(lambda _checked=False, n=name: self._on_bbox_color_clicked(n))
+            form.addRow(QLabel(name), button)
+            self.bbox_color_buttons[name] = button
+
+    def _on_bbox_color_clicked(self, name: str):
+        overrides = dict(self.app_state.pose_individual_colors or {})
+        palette = individual_color_map(list(self.bbox_color_buttons), overrides)
+        current = overrides.get(name) or _rgba_to_hex(palette[name])
+        color = QColorDialog.getColor(QColor(current), self, f"Colour of {name}")
+        if not color.isValid():
+            return
+        overrides[name] = color.name().upper()
+        self.app_state.pose_individual_colors = overrides
+        self.bbox_color_buttons[name].setIcon(_color_swatch_icon(overrides[name]))
+        self.pose_mgr.refresh_skeleton()
 
     def _on_pose_text_toggled(self, state: int):
         self.app_state.pose_show_text = self.pose_show_text_checkbox.isChecked()
+        _sync_check(self.bbox_show_text_checkbox, self.app_state.pose_show_text)
         self.pose_mgr.apply_pose_style()
 
     def _on_pose_color_by_changed(self, _index: int):
@@ -835,6 +990,7 @@ class DataWidget(QWidget):
 
     def _on_pose_text_size_changed(self, value: float):
         self.app_state.pose_text_size = value
+        _sync_spin(self.bbox_text_size_spin, value)
         self.pose_mgr.apply_pose_style()
 
     def _on_pose_show_skeleton_toggled(self, state: int):
@@ -843,6 +999,7 @@ class DataWidget(QWidget):
 
     def _on_pose_skeleton_width_changed(self, value: float):
         self.app_state.pose_skeleton_width = value
+        _sync_spin(self.bbox_line_width_spin, value)
         self.pose_mgr.apply_skeleton_style()
 
     def _on_skeleton_color_clicked(self):
@@ -2350,6 +2507,7 @@ class DataWidget(QWidget):
             # a dim combo must never be refilled with.
             self._refill_combo(combo, self.app_state.label_individuals())
         self._set_combo_row_visible(key, True)
+        self.populate_bbox_colors(self.app_state.label_individuals())
         # One animal: nothing to pin, so the control is not there to puzzle over.
         pin_btn = getattr(self, "individual_pin_button", None)
         if pin_btn is not None:

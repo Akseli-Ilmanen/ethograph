@@ -23,7 +23,9 @@ classifiers = [
 
 # Core dependencies — TrialTree, I/O, features, labels, and CLI
 dependencies = [
-    "numpy",
+    # Upper bound is numba's, reached through pynapple: numba refuses to import
+    # against a newer numpy, which takes the whole package down at import time.
+    "numpy<2.5",
     "pandas",
     "xarray",
     "netcdf4",

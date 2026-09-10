@@ -60,6 +60,7 @@ from ethograph.io.validation import (
     IMAGE_EXTENSIONS,
     POSE_EXTENSIONS,
     VIDEO_EXTENSIONS,
+    movement_dataset_info,
 )
 from ethograph.utils.paths import tmp_alignment_base
 
@@ -130,7 +131,11 @@ def classify_files(paths: list[str]) -> dict[str, list[str]]:
                 buckets["session"].append(p)
             continue
         ext = path.suffix.lower()
-        if ext in FEATURE_EXTENSIONS:
+        if ext == ".nc" and movement_dataset_info(p) is not None:
+            # A movement poses/bboxes dataset is a pose file that needs no
+            # conversion: it pairs with a camera like a DLC .h5 does.
+            buckets["pose"].append(p)
+        elif ext in FEATURE_EXTENSIONS:
             buckets["session"].append(p)
         elif ext in NPY_EXTENSIONS:
             buckets["npy"].append(p)
@@ -179,6 +184,26 @@ def _audio_info(path: str) -> tuple[float, float]:
     with wave.open(path, "rb") as w:
         rate = float(w.getframerate())
         return rate, w.getnframes() / rate
+
+
+def _pose_file_fps(pose_path: str) -> float | None:
+    """The frame rate a pose file carries itself: only a movement ``.nc`` has one."""
+    info = movement_dataset_info(pose_path)
+    return info[1] if info is not None else None
+
+
+def _open_pose_dataset(pose_path: str, source_software: str | None, fps: float | None):
+    """A pose file as a movement dataset: a ``.nc`` is opened as is, anything
+    else is converted by ``movement.io.load_dataset`` (which needs *fps*)."""
+    import xarray as xr
+    from movement.io import load_dataset
+
+    if Path(pose_path).suffix.lower() == ".nc":
+        with xr.open_dataset(pose_path) as opened:
+            return opened.load()
+    if not fps:
+        raise RuntimeError("A pose file dropped without a video needs its frame rate.")
+    return load_dataset(pose_path, source_software, fps)
 
 
 def _pose_duration(pose_path: str, source_software: str | None, fps: float) -> float:
@@ -960,8 +985,11 @@ class CoverPage(QDialog):
         need_npy_sr = bool(buckets["npy"])
         ambiguous_pose = any(Path(p).suffix.lower() in AMBIGUOUS_POSE_EXTENSIONS for p in buckets["pose"])
         # Pose without a video (image + pose drop): the fps cannot be read
-        # from anywhere, so it must be asked.
-        need_pose_fps = bool(buckets["pose"]) and not buckets["video"]
+        # from anywhere, so it must be asked — unless every pose file is a
+        # movement dataset carrying its own.
+        need_pose_fps = (
+            bool(buckets["pose"]) and not buckets["video"] and not all(_pose_file_fps(p) for p in buckets["pose"])
+        )
         # Videos with an embedded audio track: ask whether to extract it (npy
         # drops ignore audio, so don't offer it there).
         audio_track_videos = [] if need_npy_sr else [v for v in buckets["video"] if has_embedded_audio(v)]
@@ -1285,12 +1313,11 @@ class CoverPage(QDialog):
         """
         import pandas as pd
         import xarray as xr
-        from movement.io import load_dataset
 
+        datasets = [_open_pose_dataset(p, source_software, fps) for p in poses]
+        fps = fps or next((f for f in (ds.attrs.get("fps") for ds in datasets) if f), None)
         if not fps:
             raise RuntimeError("A pose file dropped without a video needs its frame rate.")
-
-        datasets = [load_dataset(p, source_software, fps) for p in poses]
         if len(datasets) == 1:
             ds = datasets[0]
         else:
@@ -1330,7 +1357,7 @@ class CoverPage(QDialog):
             if video is None:
                 # Standalone pose (no video, no image): the pose stream is the
                 # camera slot's only content, at the user-provided frame rate.
-                pose_fps = details.get("pose_fps")
+                pose_fps = details.get("pose_fps") or (_pose_file_fps(pose) if pose else None)
                 if not pose_fps or not pose:
                     raise RuntimeError("A pose file dropped without a video needs its frame rate.")
                 duration = _pose_duration(pose, details.get("source_software"), pose_fps)
@@ -1344,7 +1371,7 @@ class CoverPage(QDialog):
                 )
                 continue
             if Path(video).suffix.lower() in IMAGE_EXTENSIONS:
-                pose_fps = details.get("pose_fps")
+                pose_fps = details.get("pose_fps") or (_pose_file_fps(pose) if pose else None)
                 if not pose_fps or not pose:
                     raise RuntimeError("An image-backed camera needs a pose file and its frame rate.")
                 duration = _pose_duration(pose, details.get("source_software"), pose_fps)

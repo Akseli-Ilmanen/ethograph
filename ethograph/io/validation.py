@@ -39,6 +39,31 @@ AUDIO_EXTENSIONS = {
 
 POSE_EXTENSIONS = {".h5", ".hdf5", ".csv", ".slp", ".nwb"}
 
+#: ``ds_type`` values of a ``movement`` dataset saved as NetCDF — a pose file
+#: like a DLC ``.h5``, except that it needs no conversion.
+MOVEMENT_DS_TYPES = frozenset({"poses", "bboxes"})
+
+
+def movement_dataset_info(path: str | Path) -> tuple[str, float | None] | None:
+    """``(ds_type, fps)`` of a ``.nc`` holding a ``movement`` poses/bboxes
+    dataset, else ``None`` (any other ``.nc``, or one that cannot be opened).
+
+    Attrs only: the file is opened and closed without reading data. ``fps``
+    is the dataset's own, ``None`` when its time axis is in frames.
+    """
+    p = Path(path)
+    if p.suffix.lower() != ".nc" or not p.is_file():
+        return None
+    try:
+        with xr.open_dataset(p) as ds:
+            if ds.attrs.get("ds_type") not in MOVEMENT_DS_TYPES or "position" not in ds.data_vars:
+                return None
+            fps = ds.attrs.get("fps")
+            return str(ds.attrs["ds_type"]), (float(fps) if fps else None)
+    except (OSError, ValueError):
+        return None
+
+
 # Still images shown as static media views (arena photo, reference frame).
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
