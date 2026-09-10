@@ -112,6 +112,7 @@ ethograph/io/
     time_model.py             # TimeRange, RestrictionWindow, TimeSource, SourceCollection
     time_sources.py           # XarrayTrialSource, PynappleSource
     audio_extract.py          # Container audio (AAC/MP4) → cached WAV, resolve_audio_path
+    nc_drop.py                # A dropped .nc is always features (several concat on a `camera` dim); a pose overlay only in its video's pixels
     schema.py                 # Variable schema: kind / is_egocentric / normalise attrs (movement#978)
     dataset.py, validation.py, pynapple.py, metadata_table.py, ephys_loader.py
 

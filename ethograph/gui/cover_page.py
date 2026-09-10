@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import logging
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+import xarray as xr
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
@@ -53,6 +55,7 @@ from ethograph.gui.dialog_select_template import TEMPLATE_ASSETS_DIR
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.project import DropRecord, list_drops, new_drop_dir, project_dir_of, record_drop, restore_drop
 from ethograph.io.audio_extract import ensure_extracted_audio, has_embedded_audio
+from ethograph.io.nc_drop import concat_on_camera, positions_fit_frame
 from ethograph.io.validation import (
     AUDIO_EXTENSIONS,
     EPHYS_EXTENSIONS,
@@ -66,7 +69,7 @@ from ethograph.utils.paths import tmp_alignment_base
 
 # POSE_SOFTWARES is shared with the pose-overlay prompt in pose_render.
 from .app_constants import POSE_SOFTWARES
-from .notify import notify_dialog
+from .notify import notify, notify_dialog
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +189,25 @@ def _audio_info(path: str) -> tuple[float, float]:
         return rate, w.getnframes() / rate
 
 
+@dataclass(frozen=True)
+class _FeatureEntry:
+    """One feature source of a drop: the camera (or file) it is named after,
+    its path, and the rate of the video it is paired with, if any."""
+
+    camera: str
+    path: str
+    fps: float | None
+
+
+def _is_trial_tree(nc_path: str) -> bool:
+    """A ``.nc`` saved by ethograph holds one child per trial: a session, not a feature file."""
+    try:
+        with xr.open_datatree(nc_path, engine="netcdf4") as tree:
+            return bool(tree.children)
+    except (OSError, ValueError):
+        return False
+
+
 def _pose_file_fps(pose_path: str) -> float | None:
     """The frame rate a pose file carries itself: only a movement ``.nc`` has one."""
     info = movement_dataset_info(pose_path)
@@ -195,7 +217,6 @@ def _pose_file_fps(pose_path: str) -> float | None:
 def _open_pose_dataset(pose_path: str, source_software: str | None, fps: float | None):
     """A pose file as a movement dataset: a ``.nc`` is opened as is, anything
     else is converted by ``movement.io.load_dataset`` (which needs *fps*)."""
-    import xarray as xr
     from movement.io import load_dataset
 
     if Path(pose_path).suffix.lower() == ".nc":
@@ -1063,10 +1084,15 @@ class CoverPage(QDialog):
             for i, p in enumerate(poses):
                 cam_map.append((images[min(i, len(images) - 1)] if images else None, p))
 
-        session_files = buckets["session"]
+        # A .nc holding trials, an .nwb, an .npz or a folder is a session as
+        # it is; a plain .nc is one more feature source (see _feature_entries).
+        nc_sessions = [s for s in buckets["session"] if Path(s).suffix.lower() == ".nc" and not _is_trial_tree(s)]
+        other_sessions = [s for s in buckets["session"] if s not in nc_sessions]
         audio_files = list(buckets["audio"])
         has_media = bool(cam_map or audio_files)
-        if has_media:
+        feature_entries = self._feature_entries(cam_map, nc_sessions)
+        needs_session_file = not other_sessions and self._session_nc_is_written(feature_entries)
+        if has_media or needs_session_file:
             # Fresh per-drop temp dir so throwaway files never share a
             # .ethograph/local_settings.yaml with a previous drop.
             self._drop_tmp_dir = self._prepare_drop_dir()
@@ -1074,32 +1100,30 @@ class CoverPage(QDialog):
             # The user opted to pull the videos' embedded audio: each track
             # becomes a throwaway .wav that joins the dropped audio files.
             audio_files += self._extract_video_audio(details["audio_track_videos"])
-        if session_files:
-            # A real session/feature file was provided — use it directly. Media
-            # dropped alongside it still needs a synthesised alignment (the
-            # session file's folder usually has no .ethograph sidecar); the
-            # loader picks it up via nwb_file_path.
-            app_state.nc_file_path = session_files[0]
-            if has_media:
-                nwb_path = self._build_tmp_alignment(cam_map, audio_files, details)
-                app_state.nwb_file_path = str(nwb_path)
-        else:
-            # Pure media: synthesise a single-trial alignment.tmp.nwb.
+        nwb_path: Path | None = None
+        if has_media:
+            # Media always needs a synthesised alignment (a session file's
+            # folder usually has no .ethograph sidecar); the loader picks it
+            # up via nwb_file_path.
             nwb_path = self._build_tmp_alignment(cam_map, audio_files, details)
             app_state.nwb_file_path = str(nwb_path)
-            standalone_poses = [p for v, p in cam_map if v is None]
-            if standalone_poses:
-                # No camera to overlay on — the pose data IS the session's
-                # data: position/confidence become catalog features, so the
-                # drop is plottable (line/heatmap/space/radial) without video.
-                app_state.nc_file_path = str(self._compute_pose_features_nc(standalone_poses, details))
-            elif cam_map and self._video_motion_cb.isChecked():
-                # Video motion requested → the session is an xarray .nc holding a
-                # (time, camera) motion feature; media still comes from the tmp
-                # alignment above. Feature/camera dropdown + heatmap come for free.
-                app_state.nc_file_path = str(self._compute_video_motion_nc(cam_map))
-            else:
-                app_state.nc_file_path = str(nwb_path)
+        if other_sessions:
+            # A real session file was provided — use it directly.
+            app_state.nc_file_path = other_sessions[0]
+        elif feature_entries:
+            # Every dropped .nc — and any pose file with no camera to draw on —
+            # is the session's data: position/confidence/… become catalog
+            # features, one .nc per drop, stacked on a `camera` dim when there
+            # are several. The overlay reads the same files through the
+            # alignment's pose streams, so a file can be both.
+            app_state.nc_file_path = str(self._compute_session_nc(feature_entries, details))
+        elif cam_map and self._video_motion_cb.isChecked():
+            # Video motion requested → the session is an xarray .nc holding a
+            # (time, camera) motion feature; media still comes from the tmp
+            # alignment above. Feature/camera dropdown + heatmap come for free.
+            app_state.nc_file_path = str(self._compute_video_motion_nc(cam_map))
+        else:
+            app_state.nc_file_path = str(nwb_path)
 
         # Drag & drop never takes a metadata table — setting nc_file_path above
         # reloads local settings, which can restore a stale metadata_path (e.g.
@@ -1248,7 +1272,6 @@ class CoverPage(QDialog):
         decoding, so the drop loads in a second instead of a minute per video.
         """
         import numpy as np
-        import xarray as xr
 
         from ethograph.features.movement import extract_packet_motion
         from ethograph.gui.video_manager import probe_video
@@ -1283,14 +1306,66 @@ class CoverPage(QDialog):
         ds.to_netcdf(out_path)
         return out_path
 
-    def _compute_pose_features_nc(self, poses: list[str], details: dict) -> Path:
-        """Convert standalone pose files to a features .nc behind a busy dialog."""
+    def _feature_entries(
+        self, cam_map: list[tuple[str | None, str | None]], nc_sessions: list[str]
+    ) -> list[_FeatureEntry]:
+        """What feeds the session dataset, and what stays on the video.
+
+        Every dropped ``.nc`` is a feature source, named after its camera when
+        it is paired with one (``cam-N``, the alignment's stream) and after
+        its file otherwise. A pose file with no video is a feature source too
+        (that is all it can be). A pose ``.nc`` paired with a video stays its
+        overlay only while its positions plausibly are that video's pixels
+        (:func:`positions_fit_frame`); otherwise the pairing is dropped in
+        *cam_map* — features, never drawn — and the user is told.
+        """
+        from ethograph.gui.video_manager import probe_video
+
+        entries: list[_FeatureEntry] = []
+        for i, (video, pose) in enumerate(cam_map):
+            if pose is None:
+                continue
+            camera = f"cam-{i + 1}"
+            if video is None:
+                entries.append(_FeatureEntry(camera, pose, None))
+                continue
+            if Path(pose).suffix.lower() != ".nc":
+                continue  # a tracking tool's own file with a video: overlay only, as before
+            if Path(video).suffix.lower() in IMAGE_EXTENSIONS:
+                entries.append(_FeatureEntry(camera, pose, None))
+                continue
+            probe = probe_video(video)
+            entries.append(_FeatureEntry(camera, pose, probe.fps or None))
+            if probe.width and probe.height:
+                with xr.open_dataset(pose) as ds:
+                    fits = positions_fit_frame(ds, probe.width, probe.height)
+                if not fits:
+                    cam_map[i] = (video, None)
+                    notify(
+                        f"{Path(pose).name}: positions are not in {Path(video).name}'s pixels "
+                        f"({probe.width}×{probe.height}) — loaded as features, not drawn on the video.",
+                        "warning",
+                    )
+        for nc in nc_sessions:
+            entries.append(_FeatureEntry(Path(nc).stem, nc, None))
+        return entries
+
+    @staticmethod
+    def _session_nc_is_written(entries: list[_FeatureEntry]) -> bool:
+        """A single ``.nc`` is used in place; anything else is written to the drop dir."""
+        return bool(entries) and not (len(entries) == 1 and Path(entries[0].path).suffix.lower() == ".nc")
+
+    def _compute_session_nc(self, entries: list[_FeatureEntry], details: dict) -> Path:
+        """The session ``.nc`` for *entries*: the file itself when it is one
+        ``.nc``, else the combined file, built behind a busy dialog."""
+        if not self._session_nc_is_written(entries):
+            return Path(entries[0].path)
         from ethograph.gui.dialog_busy_progress import BusyProgressDialog
 
         dlg = BusyProgressDialog("Reading pose data…", parent=self)
         nc_path, error = dlg.execute(
-            self._build_pose_features_nc,
-            poses,
+            self._build_session_nc,
+            entries,
             details.get("source_software"),
             details.get("pose_fps"),
             self._drop_tmp_dir,
@@ -1300,36 +1375,27 @@ class CoverPage(QDialog):
         return nc_path
 
     @staticmethod
-    def _build_pose_features_nc(
-        poses: list[str], source_software: str | None, fps: float | None, out_dir: Path
+    def _build_session_nc(
+        entries: list[_FeatureEntry], source_software: str | None, fps: float | None, out_dir: Path
     ) -> Path:
-        """Write standalone pose files as a plottable features ``.nc``.
+        """Write the drop's feature sources as one plottable ``.nc``.
 
-        With no camera to overlay on, the pose data is the session's data:
-        the movement dataset's ``position``/``confidence`` become auto-detected
-        catalog features, so line/heatmap/space/radial panels work without any
-        video. Several pose files stack on a ``camera`` dim (``cam-1``, …)
-        matching the alignment's ``pose_cam-N`` streams.
+        A ``.nc`` is opened as it is, a tracking tool's file is converted by
+        movement (which needs *fps*, the drop dialog's answer). A file
+        without a rate of its own takes its camera's, then *fps*. Several
+        stack on a ``camera`` dim matching the alignment's ``pose_cam-N``
+        streams (:func:`concat_on_camera`).
         """
-        import pandas as pd
-        import xarray as xr
-
-        datasets = [_open_pose_dataset(p, source_software, fps) for p in poses]
-        fps = fps or next((f for f in (ds.attrs.get("fps") for ds in datasets) if f), None)
-        if not fps:
+        datasets = []
+        for entry in entries:
+            ds = _open_pose_dataset(entry.path, source_software, fps)
+            if not ds.attrs.get("fps") and (entry.fps or fps):
+                ds.attrs["fps"] = float(entry.fps or fps)
+            datasets.append(ds)
+        ds = concat_on_camera(datasets, [e.camera for e in entries])
+        if not ds.attrs.get("fps"):
             raise RuntimeError("A pose file dropped without a video needs its frame rate.")
-        if len(datasets) == 1:
-            ds = datasets[0]
-        else:
-            cams = pd.Index([f"cam-{i + 1}" for i in range(len(datasets))], name="camera")
-            ds = xr.concat(datasets, dim=cams, join="outer")
-        # Movement attrs can hold None values NetCDF cannot store — keep only
-        # what the loader reads.
-        ds.attrs = {"fps": fps}
-        if source_software:
-            ds.attrs["source_software"] = source_software
-
-        out_path = out_dir / f"pose_features-{uuid4().hex[:8]}.nc"
+        out_path = out_dir / f"session-{uuid4().hex[:8]}.nc"
         ds.to_netcdf(out_path)
         return out_path
 

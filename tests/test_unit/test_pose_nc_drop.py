@@ -1,9 +1,10 @@
-"""A movement dataset saved as ``.nc`` is a pose file, not a session file.
+"""A movement dataset saved as ``.nc`` is a pose file as well as a feature source.
 
 Dropped on the cover page it pairs with a camera as a ``pose_cam-N`` stream
 like a DLC ``.h5`` does, so the overlay draws it — points for a poses
 dataset, boxes for a bboxes one — without asking which tracking tool wrote
-it. A ``.nc`` that is *not* a movement dataset stays a session file.
+it; and, like every dropped ``.nc``, it feeds the session dataset too
+(``tests/test_unit/test_nc_drop.py`` for the combining rules).
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from ethograph.gui.cover_page import CoverPage, _open_pose_dataset, _pose_file_fps, classify_files
+from ethograph.gui.cover_page import CoverPage, _FeatureEntry, _open_pose_dataset, _pose_file_fps, classify_files
 from ethograph.gui.pose_overlay import PoseOverlayData
 from ethograph.gui.pose_render import load_pose_from_file
 from ethograph.io.validation import movement_dataset_info
@@ -101,7 +102,8 @@ def test_standalone_nc_poses_become_features_with_their_own_fps(tmp_path):
     _bboxes().to_netcdf(b)
 
     assert _open_pose_dataset(str(a), None, None).attrs["ds_type"] == "bboxes"
-    out = CoverPage._build_pose_features_nc([str(a), str(b)], None, None, tmp_path)
+    entries = [_FeatureEntry("cam-1", str(a), None), _FeatureEntry("cam-2", str(b), None)]
+    out = CoverPage._build_session_nc(entries, None, None, tmp_path)
     with xr.open_dataset(out) as ds:
         assert ds.attrs["fps"] == FPS
         assert list(ds.coords["camera"].values) == ["cam-1", "cam-2"]
