@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import shlex
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -36,7 +37,6 @@ from qtpy.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
     QShortcut,
     QSpinBox,
@@ -63,6 +63,7 @@ from ethograph.labels.octron_project import (
     trackers,
     yolo_models,
 )
+from ethograph.utils.device import resolve_device, torchvision_ops_error
 from ethograph.utils.paths import defaults_dir
 
 logger = logging.getLogger(__name__)
@@ -299,7 +300,7 @@ class BoxLabellingDialog(QDialog):
         ll.addWidget(keys)
         reset_row = QHBoxLayout()
         clear_btn = QPushButton("Clear this frame")
-        clear_btn.setToolTip("Forget the active individual's mask and clicks on this frame in every camera")
+        clear_btn.setToolTip("Forget every individual's mask and clicks on this frame in every camera")
         clear_btn.clicked.connect(self._on_clear_frame)
         reset_row.addWidget(clear_btn)
         ll.addLayout(reset_row)
@@ -450,8 +451,14 @@ class BoxLabellingDialog(QDialog):
         flags = QHBoxLayout()
         self.resume_cb = QCheckBox("Resume")
         self.overwrite_train_cb = QCheckBox("Overwrite")
+        self.regenerate_cb = QCheckBox("Regenerate data")
+        self.regenerate_cb.setToolTip(
+            "Export the frames and labels again before training (octron train's default).\n"
+            "Off: train on what Generate last wrote (--no-split); tick it after labelling more frames."
+        )
         flags.addWidget(self.resume_cb)
         flags.addWidget(self.overwrite_train_cb)
+        flags.addWidget(self.regenerate_cb)
         form.addRow("", flags)
         buttons = QHBoxLayout()
         self.train_btn = QPushButton("Start")
@@ -466,11 +473,7 @@ class BoxLabellingDialog(QDialog):
         form.addRow(self.train_note)
         v.addWidget(train)
 
-        self.log = QPlainTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setMaximumBlockCount(2000)
-        self.log.setPlaceholderText("Process output appears here.")
-        v.addWidget(self.log, 1)
+        v.addStretch()
         return page
 
     # -- page 4 ---------------------------------------------------------------
@@ -578,11 +581,24 @@ class BoxLabellingDialog(QDialog):
                 self._release_camera(self._cameras.pop(name))
         if self._active_camera not in self._cameras:
             self._active_camera = next(iter(self._cameras), None)
+        self._adopt_stored_individuals()
         self._refresh_individual_list()
         self._refresh_frame_table()
         self._refresh_camera_table()
+        self._refresh_balance_table()
         self._refresh_predict_videos()
         self._redraw_all()
+
+    def _adopt_stored_individuals(self) -> None:
+        """Individuals labelled in an earlier session join the list (the organizers hold them)."""
+        entries = [cam.entry for cam in self._cameras.values() if cam.entry is not None]
+        stored = {self.cfg.label_for(ind): ind for ind in self._individuals}
+        for name in self.project.stored_individuals(self.cfg, entries):
+            if self.cfg.label_for(name) not in stored:
+                self._individuals.append(name)
+                stored[self.cfg.label_for(name)] = name
+        if self._active_individual is None and self._individuals:
+            self._active_individual = self._individuals[0]
 
     def _release_camera(self, cam: _Camera) -> None:
         if cam.session is not None:
@@ -848,16 +864,12 @@ class BoxLabellingDialog(QDialog):
         self._refresh_predict_buttons()
 
     def _on_clear_frame(self) -> None:
-        if self._active_individual is None:
-            return
         frame = self._current_frame()
-        label, suffix = self.cfg.label_for(self._active_individual)
         for cam in self._cameras.values():
             if cam.session is None:
                 continue
             for obj in cam.session.objects.values():
-                if obj.label == label and obj.suffix == suffix:
-                    cam.session.clear_frame(obj.obj_id, frame)
+                cam.session.clear_frame(obj.obj_id, frame)
             self._redraw(cam, frame)
         self._refresh_individual_list()
         self._refresh_frame_table()
@@ -880,21 +892,35 @@ class BoxLabellingDialog(QDialog):
                 cam.session.release()
                 cam.session = None
 
+    def _rename_stored_objects(self, **fields: object) -> None:
+        """Change config that decides what an individual is called on disk, moving its masks with it.
+
+        ``label_scheme`` and ``class_name`` both feed ``label_for``, so changing
+        either renames every object; without the migration the masks already
+        labelled would answer to a name nothing asks for any more.
+        """
+        old = replace(self.cfg)
+        for key, value in fields.items():
+            setattr(self.cfg, key, value)
+        for cam in self._cameras.values():  # the sessions hold the stores open under their old names
+            if cam.session is not None:
+                cam.session.release()
+                cam.session = None
+        self.project.migrate_label_scheme(old, self.cfg)
+        self.cfg.save(self.project.config_path)
+        self._refresh_frame_table()
+
     def _on_same_type_toggled(self, checked: bool) -> None:
         self.class_name_edit.setVisible(bool(checked))
         scheme = "suffix" if checked else "per_individual"
         if scheme != self.cfg.label_scheme:
-            self.cfg.label_scheme = scheme
-            self.cfg.save(self.project.config_path)
-            self._refresh_frame_table()
+            self._rename_stored_objects(label_scheme=scheme)
 
     def _on_class_name_edited(self) -> None:
         name = self.class_name_edit.text().strip() or "animal"
         self.class_name_edit.setText(name)
         if name != self.cfg.class_name:
-            self.cfg.class_name = name
-            self.cfg.save(self.project.config_path)
-            self._refresh_frame_table()
+            self._rename_stored_objects(class_name=name)
 
     # ------------------------------------------------------------------
     # Propagation
@@ -1240,8 +1266,10 @@ class BoxLabellingDialog(QDialog):
 
     def _train_command(self) -> list[str]:
         cfg = self._read_config_from_form()
+        # Without exported data there is nothing to reuse, whatever the box says.
+        regenerate = self.regenerate_cb.isChecked() or not self.project.training_data_ready
         return self.project.train_command(
-            cfg, overwrite=self.overwrite_train_cb.isChecked(), resume=self.resume_cb.isChecked()
+            cfg, overwrite=self.overwrite_train_cb.isChecked(), resume=self.resume_cb.isChecked(), regenerate=regenerate
         )
 
     def _predict_command(self) -> list[str]:
@@ -1260,7 +1288,20 @@ class BoxLabellingDialog(QDialog):
                 cam.session.flush()
         self._run_process(self.project.split_command(self._read_config_from_form()), "split")
 
+    def _gpu_build_ok(self) -> bool:
+        """YOLO runs NMS through torchvision; refuse now rather than after minutes of export."""
+        device = self.cfg.device
+        device = resolve_device() if device == "auto" else device
+        error = torchvision_ops_error(device)
+        if error is None:
+            return True
+        notify(f"Cannot run OCTRON on {device}: {error}", severity="error")
+        return False
+
     def _on_train(self) -> None:
+        self._read_config_from_form()
+        if not self._gpu_build_ok():
+            return
         for cam in self._cameras.values():
             if cam.session is not None:
                 cam.session.release()  # free the GPU for the trainer
@@ -1274,17 +1315,19 @@ class BoxLabellingDialog(QDialog):
         if not self.project.weights_path.is_file():
             notify(f"No trained weights at {self.project.weights_path}. Train first.", severity="warning")
             return
+        self._read_config_from_form()
+        if not self._gpu_build_ok():
+            return
         self._run_process(self._predict_command(), "predict")
 
     def _run_process(self, cmd: list[str], what: str) -> None:
         if self._process is not None and self._process.state() != QProcess.NotRunning:
             notify("A process is still running.", severity="warning")
             return
-        self.log.clear()
-        self.log.appendPlainText("$ " + " ".join(shlex.quote(c) for c in cmd))
+        logger.info("$ %s", " ".join(shlex.quote(c) for c in cmd))
         proc = QProcess(self)
-        proc.setProcessChannelMode(QProcess.MergedChannels)
-        proc.readyReadStandardOutput.connect(lambda: self._append_log(proc))
+        # OCTRON's own output goes where every other log line goes: the terminal.
+        proc.setProcessChannelMode(QProcess.ForwardedChannels)
         proc.finished.connect(lambda code, _status: self._on_process_finished(what, code))
         proc.setProgram(cmd[0])
         proc.setArguments(cmd[1:])
@@ -1296,14 +1339,8 @@ class BoxLabellingDialog(QDialog):
             notify(f"Could not start {cmd[0]!r}. Is the octron package installed in this environment?", "error")
             self._process = None
 
-    def _append_log(self, proc: QProcess) -> None:
-        data = bytes(proc.readAllStandardOutput()).decode("utf-8", errors="replace")
-        for line in data.replace("\r", "\n").split("\n"):
-            if line.strip():
-                self.log.appendPlainText(line)
-
     def _on_process_finished(self, what: str, code: int) -> None:
-        self.log.appendPlainText(f"[{what} finished with exit code {code}]")
+        logger.info("octron %s finished with exit code %d", what, code)
         notify(f"octron {what} finished (exit {code})", "info" if code == 0 else "error")
         self._refresh_balance_table()
         self.weights_label.setText(str(self.project.weights_path))

@@ -134,6 +134,10 @@ class OctronConfig:
             return self.class_name, name.lower()
         return name, ""
 
+    def individual_for(self, label: str, suffix: str) -> str:
+        """The individual an OCTRON ``(label, suffix)`` stands for — the inverse of ``label_for``."""
+        return suffix if self.label_scheme == "suffix" else label
+
 
 # ---------------------------------------------------------------------------
 # Project + videos
@@ -170,7 +174,7 @@ class ObjectEntry:
 
     @property
     def layer_name(self) -> str:
-        return f"{self.label} {self.suffix}".strip()
+        return layer_name(self.label, self.suffix)
 
 
 def octron_root(project_dir: Path) -> Path:
@@ -190,8 +194,13 @@ def probe(video_path: Path) -> dict:
     return probe_video(str(video_path), verbose=False)
 
 
+def layer_name(label: str, suffix: str) -> str:
+    """What OCTRON calls the object's layer — the stem of its mask store."""
+    return f"{label} {suffix}".strip()
+
+
 def mask_zarr_path(folder: Path, label: str, suffix: str) -> Path:
-    return folder / (f"{label} {suffix}".strip() + MASK_SUFFIX)
+    return folder / (layer_name(label, suffix) + MASK_SUFFIX)
 
 
 def _relative_posix(path: Path, root: Path) -> str:
@@ -222,6 +231,11 @@ class OctronProject:
     @property
     def weights_path(self) -> Path:
         return self.model_dir / "training" / "weights" / "best.pt"
+
+    @property
+    def training_data_ready(self) -> bool:
+        """``octron split`` has exported frames + labels for this project."""
+        return (self.model_dir / "training_data" / "yolo_config.yaml").is_file()
 
     @property
     def predictions_dir(self) -> Path:
@@ -332,6 +346,20 @@ class OctronProject:
             )
         return objects
 
+    def stored_individuals(self, cfg: OctronConfig, entries: list[VideoEntry]) -> list[str]:
+        """The individuals the videos' organizers already hold, in first-seen order.
+
+        What a reopened project starts its individual list from, so nothing
+        labelled earlier is invisible.
+        """
+        names: list[str] = []
+        for entry in entries:
+            for obj in self.load_objects(entry):
+                name = cfg.individual_for(obj.label, obj.suffix)
+                if name and name not in names:
+                    names.append(name)
+        return names
+
     def ensure_object(
         self, entry: VideoEntry, label: str, suffix: str, color: list[float] | None = None
     ) -> ObjectEntry:
@@ -367,7 +395,8 @@ class OctronProject:
         )
         self.open_mask(entry, label, suffix)
         self.save_organizer(entry, [*existing, new], sam_model=None)
-        return new
+        self.sync_label_ids()  # the label may already have an index in another camera
+        return next(o for o in self.load_objects(entry) if o.label == label and o.suffix == suffix)
 
     def save_organizer(self, entry: VideoEntry, objects: list[ObjectEntry], sam_model: str | None) -> Path:
         """Write ``object_organizer.json`` in the schema OCTRON's training reads."""
@@ -403,6 +432,80 @@ class OctronProject:
         data = {"entries": entries, "settings": settings, "time_last_changed": datetime.now().isoformat()}
         entry.organizer_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return entry.organizer_path
+
+    def migrate_label_scheme(self, old: OctronConfig, new: OctronConfig) -> int:
+        """Rename every stored object from *old*'s ``(label, suffix)`` naming to *new*'s.
+
+        The scheme decides what an individual is called on disk, so changing it
+        without moving the masks leaves them answering to a name nothing asks
+        for any more — the annotations become invisible and the next click
+        starts an empty store beside them. Runs over every registered video,
+        not only the open ones. Returns the number of objects renamed.
+        """
+        renamed = 0
+        for folder in self.video_folders():
+            organizer = folder / ORGANIZER_FILENAME
+            raw = json.loads(organizer.read_text(encoding="utf-8"))
+            entries = raw.get("entries", {})
+            if not entries:
+                continue
+            for entry in entries.values():
+                meta = entry["prediction_layer_metadata"]
+                label, suffix = new.label_for(old.individual_for(str(entry["label"]), str(entry.get("suffix", ""))))
+                source = self.root / str(meta["zarr_path"])
+                target = mask_zarr_path(folder, label, suffix)
+                if source != target and source.exists():
+                    shutil.rmtree(target, ignore_errors=True)
+                    source.rename(target)
+                    renamed += 1
+                entry["label"], entry["suffix"] = label, suffix
+                meta["name"] = f"{layer_name(label, suffix)} masks"
+                meta["zarr_path"] = _relative_posix(target, self.root)
+            raw["time_last_changed"] = datetime.now().isoformat()
+            organizer.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+        self.sync_label_ids()
+        return renamed
+
+    def label_ids(self) -> dict[str, int]:
+        """The project-wide label → YOLO class index, by first appearance.
+
+        Class indices cannot be decided per video: OCTRON's training asserts
+        one label per index across all of them, so a camera whose first object
+        is the other individual would abort the run.
+        """
+        from octron.sam_octron.restore_object_organizer import _compute_colors
+
+        pairs: list[tuple[str, str]] = []
+        for folder in self.video_folders():
+            raw = json.loads((folder / ORGANIZER_FILENAME).read_text(encoding="utf-8"))
+            for _, entry in sorted(raw.get("entries", {}).items(), key=lambda kv: int(kv[0])):
+                pair = (str(entry["label"]), str(entry.get("suffix", "")))
+                if pair not in pairs:
+                    pairs.append(pair)
+        if not pairs:
+            return {}
+        _, label_id_map = _compute_colors(pairs)
+        return {str(label): int(index) for label, index in label_id_map.items()}
+
+    def sync_label_ids(self) -> int:
+        """Rewrite every organizer's ``label_id`` from :meth:`label_ids`. Returns how many changed."""
+        ids = self.label_ids()
+        changed = 0
+        for folder in self.video_folders():
+            organizer = folder / ORGANIZER_FILENAME
+            raw = json.loads(organizer.read_text(encoding="utf-8"))
+            entries = raw.get("entries", {})
+            dirty = False
+            for entry in entries.values():
+                want = ids.get(str(entry["label"]))
+                if want is not None and int(entry["label_id"]) != want:
+                    entry["label_id"] = want
+                    dirty = True
+                    changed += 1
+            if dirty:
+                raw["time_last_changed"] = datetime.now().isoformat()
+                organizer.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+        return changed
 
     def remove_object(self, entry: VideoEntry, label: str, suffix: str) -> bool:
         """Delete the object's mask store and organizer entry — OCTRON's Remove label.
@@ -453,9 +556,13 @@ class OctronProject:
             str(cfg.val_fraction),
             "--seed",
             str(cfg.seed),
+            "--prune" if cfg.prune else "--no-prune",
         ]
 
-    def train_command(self, cfg: OctronConfig, *, overwrite: bool = False, resume: bool = False) -> list[str]:
+    def train_command(
+        self, cfg: OctronConfig, *, overwrite: bool = False, resume: bool = False, regenerate: bool = True
+    ) -> list[str]:
+        """``octron train``; *regenerate* False passes ``--no-split`` so the exported frames are reused."""
         cmd = [
             "octron",
             "train",
@@ -478,9 +585,12 @@ class OctronProject:
             str(cfg.val_fraction),
             "--seed",
             str(cfg.seed),
+            "--prune" if cfg.prune else "--no-prune",
         ]
         if overwrite:
             cmd.append("--overwrite")
+        if not regenerate:
+            cmd.append("--no-split")
         if resume:
             cmd.append("--resume")
         return cmd
@@ -490,7 +600,7 @@ class OctronProject:
             "octron",
             "predict",
             *[str(v) for v in videos],
-            "--model-path",
+            "--model",
             str(self.weights_path),
             "--tracker",
             cfg.tracker,
