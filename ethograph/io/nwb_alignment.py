@@ -1204,7 +1204,14 @@ def align_media_per_trial(
 ) -> NWBFile:
     """Create an alignment.nwb from a trial table.
 
-    This is the primary user-facing function for creating alignment files.
+    .. deprecated::
+        Thin wrapper over :func:`ethograph.io.pairing.pair_media` — kept so
+        existing callers keep working. ``session_description`` is accepted
+        for backward compatibility but is no longer threaded through
+        (``pair_media`` has no per-call description); new code should call
+        :func:`~ethograph.io.pairing.pair_media` (or
+        :func:`~ethograph.io.pairing.discover_media` +
+        :func:`~ethograph.io.pairing.pair_media`) directly.
 
     Parameters
     ----------
@@ -1242,65 +1249,15 @@ def align_media_per_trial(
     ... )
     >>> eto.align_media_per_trial(table, {"video": 30.0, "pose": 30.0}, "out/.ethograph/alignment.nwb")
     """
-    from datetime import datetime
-    from uuid import uuid4
+    from ethograph.io.pairing import pair_media  # local: pairing imports this module at top level
 
-    import pynwb
-    from dateutil.tz import tzlocal
-    from pynwb import NWBHDF5IO
-
-    nwbfile = pynwb.NWBFile(
-        session_description=session_description,
-        identifier=str(uuid4()),
-        session_start_time=datetime.now(tzlocal()),
+    return pair_media(
+        trial_table,
+        stream_rates=stream_rates,
+        output_path=output_path,
+        media_root=media_root,
+        pose_fps=pose_fps,
     )
-
-    reserved = {"trial", "start_time", "stop_time"}
-    media_cols = [c for c in trial_table.columns if c not in reserved]
-    video_cols = [c for c in media_cols if c.startswith("video_")]
-    audio_cols = [c for c in media_cols if c.startswith("audio_")]
-    pose_cols = [c for c in media_cols if c.startswith("pose_")]
-    has_times = {"start_time", "stop_time"}.issubset(trial_table.columns)
-
-    table = (
-        trial_table
-        if has_times
-        else _infer_times_from_media(
-            trial_table,
-            video_cols,
-            audio_cols,
-            Path(media_root) if media_root else None,
-            pose_cols=pose_cols,
-            pose_fps=pose_fps,
-        )
-    )
-
-    if "trial" in table.columns:
-        nwbfile.add_trial_column(name="trial", description="Trial number")
-    for col in media_cols:
-        nwbfile.add_trial_column(name=col, description=f"{col} filename")
-
-    for _, row in table.iterrows():
-        trial_row: dict[str, Any] = {
-            "start_time": float(row["start_time"]),
-            "stop_time": float(row["stop_time"]),
-        }
-        if "trial" in table.columns:
-            trial_row["trial"] = _coerce_trial_id(row["trial"])
-        for col in media_cols:
-            trial_row[col] = str(row[col]) if pd.notna(row[col]) else ""
-        nwbfile.add_trial(**trial_row)
-
-    if stream_rates:
-        sync_acquisition_for_streams(nwbfile, stream_rates)
-
-    if output_path:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with NWBHDF5IO(str(output_path), "w") as io:
-            io.write(nwbfile)
-
-    return nwbfile
 
 
 def trials_df_from_trials_ep(ep) -> pd.DataFrame:
@@ -1401,13 +1358,10 @@ def align_media_from_streams(
                 "starting_time": 0.0,  # when file starts in session time
             }
 
-        For streams with explicit timestamps (irregular)::
-
-            {
-                "name": "ephys_probe-1",
-                "files": ["session.dat"],
-                "timestamps": np.array([0.0, 0.001, ...]),
-            }
+    A spec carrying a ``"timestamps"`` key is refused: per-sample timestamps are
+    neuroconv's job — build the ``.nwb`` with ``ExternalVideoInterface`` (or the
+    matching interface for the stream) and pair over it with
+    :func:`ethograph.io.pairing.pair_media` instead.
 
     output_path
         Where to write the ``.nwb`` file.
@@ -1438,7 +1392,12 @@ def align_media_from_streams(
     import pynwb
     from dateutil.tz import tzlocal
     from pynwb import NWBHDF5IO
-    from pynwb.image import ImageSeries
+
+    for spec in streams:
+        if "timestamps" in spec:
+            raise ValueError(
+                "Per-sample timestamps are neuroconv's job: build the .nwb with ExternalVideoInterface and pair over it"
+            )
 
     nwbfile = pynwb.NWBFile(
         session_description="NWB file for media alignment (ethograph generated).",
@@ -1463,7 +1422,6 @@ def align_media_from_streams(
         name = spec["name"]
         files = spec["files"]
         rate = spec.get("rate")
-        explicit_ts = spec.get("timestamps")
         starting_time = spec.get("starting_time", None)
 
         # Parse stream_device for device creation
@@ -1472,19 +1430,7 @@ def align_media_from_streams(
         if device_name not in [d.name for d in nwbfile.devices.values()]:
             nwbfile.create_device(name=device_name, description=f"Device {device_name}")
 
-        if explicit_ts is not None:
-            # Irregular timestamps provided directly
-            nwbfile.add_acquisition(
-                ImageSeries(
-                    name=name,
-                    description=name,
-                    external_file=files,
-                    format="external",
-                    starting_frame=np.array([0] * len(files), dtype=np.int32),
-                    timestamps=np.asarray(explicit_ts, dtype=np.float64),
-                )
-            )
-        elif len(files) == 1 and n_trials > 1:
+        if len(files) == 1 and n_trials > 1:
             # Session-wide: one file spanning all trials
             t0 = starting_time if starting_time is not None else float(trial_starts[0])
             n_samples = max(1, int((float(trial_stops[-1]) - t0) * rate)) if rate else 1

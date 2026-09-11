@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import get_args
 
-from movement.io import load_dataset
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -26,7 +24,8 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.wizard_media_files import StreamPanel, extract_file_row
-from ethograph.gui.wizard_overview import ModalityConfig, WizardState
+from ethograph.gui.wizard_pages import _muted
+from ethograph.gui.wizard_state import AVAILABLE_SOFTWARES, ModalityConfig, WizardState
 from ethograph.io.validation import (
     AUDIO_FILE_FILTER,
     EPHYS_FILE_FILTER,
@@ -34,7 +33,16 @@ from ethograph.io.validation import (
     VIDEO_FILE_FILTER,
 )
 
-AVAILABLE_SOFTWARES = list(get_args(load_dataset.__annotations__["source_software"]))
+
+def _pattern_device_count(pattern, device_key: str) -> int:
+    """How many distinct devices *pattern* named, or 1 when it named none
+    (no pattern drawn at all, or a pattern with no ``camera``/``mic`` group —
+    every file is then one device, matching ``pairing.discover_media``'s
+    pattern-less natural-sort behaviour)."""
+    if pattern is None:
+        return 1
+    devices = pattern.summary().get(device_key, [])
+    return len(devices) if devices else 1
 
 
 # ─── base tab ─────────────────────────────────────────────────────────────────
@@ -197,6 +205,7 @@ class VideoConfigTab(_BaseConfigTab):
         if self._is_multi:
             _video_roles = [r for r in ["ignore", "camera"] if True] if self._is_irregular else None
             self._stream_panel = StreamPanel("video", allowed_roles=_video_roles)
+            self._stream_panel.set_folder(config.folder_path)
             self._stream_panel.changed.connect(self._detect_and_set_fps_from_folder)
             self._stream_panel.changed.connect(self._refresh_camera_offset_controls)
             if self._is_irregular:
@@ -431,12 +440,13 @@ class VideoConfigTab(_BaseConfigTab):
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
             config.pattern = self._stream_panel.pattern
+            config.n_devices = _pattern_device_count(config.pattern, "camera")
         elif self._file_edit:
             config.single_file_path = self._file_edit.text()
 
     def validate(self) -> str | None:
         if self._is_multi:
-            if self._stream_panel and not self._stream_panel.pattern:
+            if self._stream_panel and not self._stream_panel.get_config():
                 return "Video: select a folder with video files."
         elif self._file_edit and not self._file_edit.text():
             return "Video: select a video file."
@@ -486,11 +496,27 @@ class PoseConfigTab(_BaseConfigTab):
             self._software_combo.setCurrentText(config.source_software)
         form.addRow("Source software:", self._software_combo)
 
+        # A pose file carries no frame rate of its own; without a video to
+        # read it from, it must be given explicitly (never defaulted).
+        self._no_video_fps_spin: QDoubleSpinBox | None = None
+        if not has_video:
+            self._no_video_fps_spin = QDoubleSpinBox()
+            self._no_video_fps_spin.setRange(0.0, 100000.0)
+            self._no_video_fps_spin.setDecimals(3)
+            self._no_video_fps_spin.setSuffix(" fps")
+            self._no_video_fps_spin.setValue(config.fps if config.fps is not None else 0.0)
+            self._no_video_fps_spin.setToolTip("The camera fps the pose was tracked at (no video to read it from)")
+            if config.fps is None:
+                self._mark_required(self._no_video_fps_spin)
+            self._no_video_fps_spin.valueChanged.connect(lambda _: self._clear_required(self._no_video_fps_spin))
+            form.addRow("Frame rate:", self._no_video_fps_spin)
+
         if self._is_multi:
             layout.addLayout(form)
             _pose_roles = ["ignore", "camera"] if self._is_irregular else None
             self._stream_panel = StreamPanel("pose", allowed_roles=_pose_roles)
             self._stream_panel.setMinimumHeight(350)
+            self._stream_panel.set_folder(config.folder_path)
             self._stream_panel.changed.connect(self._on_pose_pattern_changed)
             self._stream_panel.changed.connect(self._refresh_pose_offset_controls)
             if self._is_irregular:
@@ -741,8 +767,8 @@ class PoseConfigTab(_BaseConfigTab):
         if config.fps_by_camera:
             first_key = next(iter(config.fps_by_camera))
             config.fps = config.fps_by_camera[first_key]
-        else:
-            config.fps = config.fps if config.fps is not None else 30
+        elif self._no_video_fps_spin is not None:
+            config.fps = None if self._spin_is_required(self._no_video_fps_spin) else self._no_video_fps_spin.value()
         if self._is_irregular:
             self._collect_offsets(
                 config,
@@ -756,15 +782,18 @@ class PoseConfigTab(_BaseConfigTab):
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
             config.pattern = self._stream_panel.pattern
+            config.n_devices = _pattern_device_count(config.pattern, "camera")
         elif self._file_edit:
             config.single_file_path = self._file_edit.text()
 
     def validate(self) -> str | None:
         if self._is_multi:
-            if self._stream_panel and not self._stream_panel.pattern:
+            if self._stream_panel and not self._stream_panel.get_config():
                 return "Pose: select a folder with pose files."
         elif self._file_edit and not self._file_edit.text():
             return "Pose: select a pose file."
+        if self._no_video_fps_spin is not None and self._spin_is_required(self._no_video_fps_spin):
+            return "Pose: give the frame rate (no video to read it from)."
         return None
 
 
@@ -772,8 +801,12 @@ class PoseConfigTab(_BaseConfigTab):
 
 
 class AudioConfigTab(_BaseConfigTab):
-    def __init__(self, config: ModalityConfig, parent: QWidget | None = None):
+    def __init__(self, config: ModalityConfig, parent: QWidget | None = None, mode: str = "pair"):
         super().__init__(config, parent)
+        #: "Starts at"-style offsets are the one sanctioned fixed-offset
+        #: mechanism, and that is mode 2 (free-running, known offset). Mode 1
+        #: (pair) assumes every file is already perfectly aligned.
+        self._offset_allowed = mode == "free_running"
         self._mic_offset_spins: dict[str, QDoubleSpinBox] = {}
         self._const_offset_cb: QCheckBox | None = None
         self._const_offset_spin: QDoubleSpinBox | None = None
@@ -790,7 +823,9 @@ class AudioConfigTab(_BaseConfigTab):
         if self._is_multi:
             _audio_roles = ["ignore", "mic"] if self._is_irregular else None
             self._stream_panel = StreamPanel("audio", allowed_roles=_audio_roles)
+            self._stream_panel.set_folder(config.folder_path)
             self._stream_panel.changed.connect(self._refresh_mic_offset_controls)
+            self._stream_panel.changed.connect(self._detect_sr_from_folder)
             if self._is_irregular:
                 layout.addWidget(QLabel("<b>Session audio files (one per mic)</b>"))
             else:
@@ -817,11 +852,14 @@ class AudioConfigTab(_BaseConfigTab):
             self._mark_required(self._sr_spin)
         form.addRow("Sample rate:", self._sr_spin)
 
-        # Offset controls (only in continuous mode)
+        # Offset controls (only in continuous mode, and only mode 2 — see
+        # ``_offset_allowed``. Still built for mode 1 so collect_state has
+        # somewhere to read a definite 0.0 from; just not shown or editable.
         if self._is_irregular:
             self._const_offset_cb = QCheckBox("Offset is constant across mics")
             self._const_offset_cb.setChecked(config.offset_constant_across_devices)
             self._const_offset_cb.toggled.connect(self._on_const_offset_toggled)
+            self._const_offset_cb.setVisible(self._offset_allowed)
             form.addRow("", self._const_offset_cb)
 
             self._const_offset_spin = QDoubleSpinBox()
@@ -830,12 +868,19 @@ class AudioConfigTab(_BaseConfigTab):
             self._const_offset_spin.setValue(config.constant_offset or 0.0)
             self._const_offset_spin.setSuffix(" s")
             self._const_offset_spin.setToolTip("Constant time offset for all mics (seconds)")
+            self._const_offset_spin.setVisible(self._offset_allowed)
             form.addRow("Constant offset:", self._const_offset_spin)
 
             self._per_mic_offset_box = QGroupBox("Per-mic offsets")
             self._per_mic_offset_form = QFormLayout(self._per_mic_offset_box)
-            self._per_mic_offset_box.setVisible(not config.offset_constant_across_devices)
+            self._per_mic_offset_box.setVisible(self._offset_allowed and not config.offset_constant_across_devices)
             form.addRow(self._per_mic_offset_box)
+            if not self._offset_allowed:
+                note = _muted(
+                    "A fixed offset only applies in mode 2 (free-running, known offset); "
+                    "mode 1 assumes every file is already aligned."
+                )
+                form.addRow("", note)
 
         layout.addLayout(form)
 
@@ -843,6 +888,23 @@ class AudioConfigTab(_BaseConfigTab):
         from ethograph.utils.audio import get_audio_sr
 
         sr = get_audio_sr(path)
+        self._sr_spin.setValue(sr)
+        self._clear_required(self._sr_spin)
+
+    def _detect_sr_from_folder(self):
+        """Auto-detect the sample rate from the folder's first file (the
+        multi-device path had no auto-detection at all before)."""
+        if not self._stream_panel:
+            return
+        first = self._stream_panel.first_file()
+        if not first:
+            return
+        from ethograph.utils.audio import get_audio_sr
+
+        try:
+            sr = get_audio_sr(first)
+        except (OSError, ValueError):
+            return
         self._sr_spin.setValue(sr)
         self._clear_required(self._sr_spin)
 
@@ -908,12 +970,13 @@ class AudioConfigTab(_BaseConfigTab):
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
             config.pattern = self._stream_panel.pattern
+            config.n_devices = _pattern_device_count(config.pattern, "mic")
         elif self._file_edit:
             config.single_file_path = self._file_edit.text()
 
     def validate(self) -> str | None:
         if self._is_multi:
-            if self._stream_panel and not self._stream_panel.pattern:
+            if self._stream_panel and not self._stream_panel.get_config():
                 return "Audio: select a folder with audio files."
         elif self._file_edit and not self._file_edit.text():
             return "Audio: select an audio file."
@@ -1063,6 +1126,8 @@ class ModalityConfigPage(QWidget):
             if cfg.enabled:
                 if cls == PoseConfigTab:
                     tab = cls(cfg, has_video=state.video.enabled)
+                elif cls == AudioConfigTab:
+                    tab = cls(cfg, mode=state.mode)
                 else:
                     tab = cls(cfg)
                 self._tabs.addTab(tab, label)

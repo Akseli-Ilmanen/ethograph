@@ -41,8 +41,8 @@ examples, and cross-links to the narrative docs.
 
 :doc:`NWB alignment <api/nwb_alignment>`
     :class:`~ethograph.io.nwb_alignment.NWBAlignment`,
-    :func:`~ethograph.io.nwb_alignment.align_media_per_trial`,
-    :func:`~ethograph.io.nwb_alignment.align_media_from_streams`.
+    :func:`~ethograph.io.pairing.discover_media`,
+    :func:`~ethograph.io.pairing.pair_media`.
 
 :doc:`Labels <api/labels>`
     Interval operations, TSV storage, dense ↔ interval conversion,

@@ -1,0 +1,19 @@
+from neuroconv.datainterfaces import ExternalVideoInterface
+
+_video_folder = Path(session_dir) / "{{ video_folder }}"
+videos = {
+    _col: ExternalVideoInterface(
+        file_paths=[_video_folder / f for f in table[_col].dropna()], video_name=_col
+    )
+    for _col in {{ camera_columns }}
+}
+for _video in videos.values():
+    for _key in _video.alignment.keys():
+        _video.alignment[_key].shift_times(rig["offset_s"])
+
+# offset_s applies to every remaining source recorded once for the whole session
+session_wide = {
+{% for col, file, rate, offset in session_wide_entries %}
+    "{{ col }}": (f"{session_dir}/{{ file }}", {{ rate }}, {{ offset }}),
+{% endfor %}
+}

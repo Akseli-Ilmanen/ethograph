@@ -84,7 +84,6 @@ class IOWidget(QWidget):
             self.ephys_path_edit.setText(self.app_state.ephys_path)
         if self.app_state.neurons_path:
             self.neurons_path_edit.setText(self.app_state.neurons_path)
-        self.ephys_offset_edit.setText(f"{float(getattr(self.app_state, 'ephys_offset', 0.0) or 0.0):g}")
 
         # Auto-discover metadata file on startup
         self._auto_discover_metadata()
@@ -98,9 +97,6 @@ class IOWidget(QWidget):
         self.app_state.neurons_path_changed.connect(lambda value: self.neurons_path_edit.setText(value or ""))
         self.app_state.nwb_file_path_changed.connect(lambda value: self.nwb_file_path_edit.setText(value or ""))
         self.app_state.metadata_path_changed.connect(lambda value: self.metadata_path_edit.setText(value or ""))
-        self.app_state.ephys_offset_changed.connect(
-            lambda value: self.ephys_offset_edit.setText(f"{float(value or 0.0):g}")
-        )
         self.app_state.nc_file_path_changed.connect(lambda _: self._auto_discover_metadata())
 
     def _wire_path_edit_signals(self):
@@ -125,26 +121,11 @@ class IOWidget(QWidget):
         self.neurons_path_edit.editingFinished.connect(
             lambda: self._sync_line_edit_to_state(self.neurons_path_edit, "neurons_path")
         )
-        self.ephys_offset_edit.editingFinished.connect(self._sync_ephys_offset_to_state)
 
     def _sync_line_edit_to_state(self, line_edit, attr_name):
         value = line_edit.text().strip() or None
         if getattr(self.app_state, attr_name, None) != value:
             setattr(self.app_state, attr_name, value)
-
-    def _sync_ephys_offset_to_state(self) -> None:
-        text = self.ephys_offset_edit.text().strip()
-        if not text:
-            value = 0.0
-        else:
-            try:
-                value = float(text)
-            except ValueError:
-                notify_dialog("Ephys offset must be a valid number in seconds.", "warning")
-                self.ephys_offset_edit.setText(f"{float(getattr(self.app_state, 'ephys_offset', 0.0) or 0.0):g}")
-                return
-        if getattr(self.app_state, "ephys_offset", 0.0) != value:
-            self.app_state.ephys_offset = value
 
     def restore_subpanel(self, widget):
         """Return a sub-panel borrowed by a top-bar popup to its home slot.
@@ -1250,7 +1231,6 @@ class IOWidget(QWidget):
             state_key = attr.removesuffix("_edit")
             if hasattr(self.app_state, state_key):
                 setattr(self.app_state, state_key, None)
-        self.ephys_offset_edit.setText("0")
         self.app_state.ephys_offset = 0.0
         self.downsample_checkbox.setChecked(False)
 
@@ -1424,12 +1404,6 @@ class IOWidget(QWidget):
         self.downsample_spin.setFixedWidth(70)
         self.downsample_spin.valueChanged.connect(self._on_downsample_value_changed)
 
-        self.ephys_offset_edit = QLineEdit()
-        self.ephys_offset_edit.setObjectName("ephys_offset_edit")
-        self.ephys_offset_edit.setPlaceholderText("0.0")
-        self.ephys_offset_edit.setToolTip("Session-absolute ephys offset in seconds.")
-        self.ephys_offset_edit.setMaximumWidth(110)
-
         self.load_button = QPushButton("Load")
         self.load_button.setObjectName("load_button")
         self.load_button.clicked.connect(self._on_load_clicked)
@@ -1437,8 +1411,6 @@ class IOWidget(QWidget):
         controls_layout.addWidget(self.import_labels_checkbox)
         controls_layout.addWidget(self.downsample_checkbox)
         controls_layout.addWidget(self.downsample_spin)
-        controls_layout.addWidget(QLabel("Ephys offset (s):"))
-        controls_layout.addWidget(self.ephys_offset_edit)
         controls_layout.addStretch()
 
         load_button_layout = QHBoxLayout()

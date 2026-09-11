@@ -373,7 +373,26 @@ class DataPanel(QWidget):
 
         parent_layout.addWidget(self.videolabel_groupbox)
 
+    def _create_overlay_section(self, parent_layout):
+        """Which feature the video draws: ``position`` by default, or any
+        other variable in the camera's pixels (a console result included)."""
+        self.overlay_groupbox = QGroupBox("Overlay source")
+        layout = QHBoxLayout()
+        layout.setSpacing(5)
+        layout.setContentsMargins(4, 4, 4, 4)
+        self.overlay_groupbox.setLayout(layout)
+        layout.addWidget(QLabel("Feature"))
+        self.overlay_feature_combo = QComboBox()
+        self.overlay_feature_combo.setObjectName("overlay_feature_combo")
+        self.overlay_feature_combo.setToolTip(
+            "Any variable with a time dim and x/y in this camera's pixels can be drawn on the video."
+        )
+        layout.addWidget(self.overlay_feature_combo, stretch=1)
+        self.overlay_groupbox.hide()
+        parent_layout.addWidget(self.overlay_groupbox)
+
     def _create_pose_section(self, parent_layout):
+        self._create_overlay_section(parent_layout)
         self.pose_groupbox = QGroupBox("Pose overlay")
         pose_layout = QVBoxLayout()
         pose_layout.setSpacing(4)
@@ -810,6 +829,8 @@ class DataWidget(QWidget):
         self.app_state.keypoints_changed.connect(self.populate_keypoints)
 
         panel.pose_hide_threshold_spin.valueChanged.connect(self._on_pose_hide_threshold_changed)
+        self.overlay_feature_combo = panel.overlay_feature_combo
+        self.overlay_feature_combo.currentTextChanged.connect(self._on_overlay_feature_changed)
         panel.pose_show_keypoints_checkbox.stateChanged.connect(self._on_pose_show_keypoints_toggled)
         panel.filter_keypoints_btn.clicked.connect(self._on_filter_keypoints_clicked)
         panel.pose_show_text_checkbox.stateChanged.connect(self._on_pose_text_toggled)
@@ -3498,6 +3519,34 @@ class DataWidget(QWidget):
         if getattr(self.app_state, "center_playback", False) or current_time < xlim[0] or current_time > xlim[1]:
             self.plot_container.set_x_range(mode="center", center_on_frame=frame_number)
 
+    def refresh_overlay_choices(self) -> None:
+        """Rebuild the overlay combo from what the primary camera can draw."""
+        combo = getattr(self, "overlay_feature_combo", None)
+        if combo is None or self.pose_mgr is None:
+            return
+        primary = getattr(self, "primary_camera_combo", None)
+        name = primary.currentText() if primary is not None else ""
+        sio = self.app_state.nwb_alignment
+        if not name or name not in sio.cameras:
+            choices = []
+        else:
+            choices = self.pose_mgr.overlay_choices(sio.cameras.index(name))
+        names = [c.name for c in choices]
+        wanted = self.app_state.pose_overlay_feature or "position"
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(names)
+        if wanted in names:
+            combo.setCurrentText(wanted)
+        combo.blockSignals(False)
+        combo.setEnabled(len(names) > 1)
+
+    def _on_overlay_feature_changed(self, name: str) -> None:
+        if not name:
+            return
+        self.app_state.pose_overlay_feature = None if name == "position" else name
+        self.update_pose()
+
     def update_pose(self):
         """Refresh primary and extra camera pose layers through PoseDisplayManager.
 
@@ -3511,6 +3560,7 @@ class DataWidget(QWidget):
             return
         if not hasattr(self.app_state, "trials_sel") or self.app_state.trials_sel is None:
             return
+        self.refresh_overlay_choices()
         self.pose_mgr.update_pose(self.get_hidden_keypoints())
 
     def cleanup(self) -> None:

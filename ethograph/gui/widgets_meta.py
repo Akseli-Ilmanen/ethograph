@@ -297,6 +297,7 @@ class MetaWidget(GridSectionContainer):
             "slot": getattr(dp, "slot_groupbox", None),
             "videocrop": getattr(dp, "videocrop_groupbox", None),
             "videolabel": getattr(dp, "videolabel_groupbox", None),
+            "overlay": getattr(dp, "overlay_groupbox", None),
             "pose": getattr(dp, "pose_groupbox", None),
             "bbox": getattr(dp, "bbox_groupbox", None),
             "energy": getattr(dp, "energy_group", None),
@@ -626,6 +627,7 @@ class MetaWidget(GridSectionContainer):
         self.data_widget.refresh_feature_choices()
         self.data_widget.refresh_radial_plots()
         self._close_panels_for_missing_features()
+        self.data_widget.refresh_overlay_choices()
 
     def _close_panels_for_missing_features(self):
         """Close any panel whose feature no longer exists.

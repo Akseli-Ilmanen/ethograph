@@ -11,7 +11,7 @@ from qtpy.QtWidgets import QApplication
 
 from ethograph.datasets import dataset_dir, is_dataset_downloaded
 from ethograph.gui.wizard_multi_timeline import TimelinePage, _normalize_trial_key
-from ethograph.gui.wizard_overview import ModalityConfig, WizardState
+from ethograph.gui.wizard_state import ModalityConfig, WizardState
 
 DATA_DIR = Path(__file__).parents[2] / "data"
 XX_CSV = DATA_DIR / "xx.csv"

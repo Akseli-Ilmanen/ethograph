@@ -26,46 +26,9 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.notify import notify_dialog
-from ethograph.gui.wizard_media_files import extract_file_row
-from ethograph.gui.wizard_overview import ModalityConfig, WizardState
+from ethograph.gui.wizard_state import WizardState
 
 logger = logging.getLogger(__name__)
-
-
-def _build_modality_df(
-    config: ModalityConfig,
-    stream_name: str,
-) -> pd.DataFrame | None:
-    pat = config.pattern
-    if pat is None:
-        return None
-    rows = [extract_file_row(f, pat.segments, pat.tokenize_mode, regex_pattern=pat.regex_pattern) for f in pat.files]
-    df = pd.DataFrame(rows)
-    if "trial" not in df.columns:
-        return None
-    dev = next((c for c in ("camera", "mic") if c in df.columns), None)
-    if dev:
-        piv = df.pivot(index="trial", columns=dev, values="path")
-        piv.columns = [f"{stream_name}_{c}" for c in piv.columns]
-        piv = piv.reset_index()
-    else:
-        piv = df[["trial", "path"]].rename(columns={"path": f"{stream_name}_0"})
-    return piv
-
-
-def _merge_modality_dfs(dfs: list[pd.DataFrame]) -> pd.DataFrame:
-    if not dfs:
-        return pd.DataFrame(columns=["trial"])
-    merged = dfs[0]
-    for d in dfs[1:]:
-        merged = merged.merge(d, on="trial", how="outer")
-    trials = merged["trial"]
-    if trials.apply(lambda v: str(v).isdigit()).all():
-        merged = merged.assign(_sort=merged["trial"].astype(int))
-    else:
-        merged = merged.assign(_sort=merged["trial"].astype(str).str.lower())
-    merged = merged.sort_values("_sort").drop(columns="_sort").reset_index(drop=True)
-    return merged
 
 
 class TrialsPage(QWidget):
@@ -216,31 +179,11 @@ class TrialsPage(QWidget):
         self._imported_path: str | None = None  # Store import path
         self._wizard_state: WizardState | None = None
 
-    def populate_from_state(self, state: WizardState):
+    def populate_from_table(self, state: WizardState, table: pd.DataFrame) -> None:
+        """Show the pairing table :func:`~ethograph.io.pairing.discover_media` built."""
         self._wizard_state = state
-        dfs: list[pd.DataFrame] = []
-        for name, stream in [
-            ("video", "video"),
-            ("pose", "pose"),
-            ("audio", "audio"),
-        ]:
-            cfg: ModalityConfig = getattr(state, name)
-            if not cfg.enabled or cfg.file_mode == "single":
-                continue
-            df = _build_modality_df(cfg, stream)
-            if df is not None:
-                dfs.append(df)
-
-        if dfs:
-            self._auto_df = _merge_modality_dfs(dfs)
-            self._update_auto_table()
-        else:
-            self._auto_df = None
-            self._auto_table.setRowCount(0)
-            self._auto_table.setColumnCount(0)
-            self._auto_status.setText("No multi-file modalities detected")
-            self._auto_status.setStyleSheet("color: #888; font-style: italic;")
-
+        self._auto_df = table
+        self._update_auto_table()
         self._update_requirements_display()
         self._refresh_table()
 

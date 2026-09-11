@@ -42,4 +42,5 @@ user_manual
 installation
 loading_ephys
 preparing_data
+video_and_ephys
 ```

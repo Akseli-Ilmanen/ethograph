@@ -310,6 +310,12 @@ class AppStateSpec:
         # there. SCOPE_GLOBAL so the next start opens on the same project; a
         # folder that no longer exists is dropped on load like any PATH_VAR.
         "project_path": (str | None, None, True),
+        # Cover page drop card: "same_trial" (several files = several cameras
+        # filming one trial, the existing behaviour) or "multi_trial" (several
+        # files of one stream = one file per trial, natural-sort paired like a
+        # single-camera wizard "Pair" run). SCOPE_GLOBAL: a viewing habit, not
+        # a per-dataset fact — the next drop is usually shaped like the last one.
+        "drop_layout": (str, "same_trial", True),
         "_labels_file_path": (
             str | None,
             None,
@@ -356,6 +362,10 @@ class AppStateSpec:
         # WHICH keypoints are drawn, by name — SCOPE_LOCAL, since the keypoint
         # schema belongs to one dataset and a name means nothing in the next.
         "pose_hidden_keypoints": (list[str], [], True, SCOPE_LOCAL),
+        # Which catalog feature the video panel overlays — any variable in the
+        # camera's pixels qualifies (io/overlay_source.py); None means
+        # ``position``. SCOPE_LOCAL: a feature name belongs to one dataset.
+        "pose_overlay_feature": (str | None, None, True, SCOPE_LOCAL),
         # Which axis of the pose hierarchy colour encodes: "keypoint" (one hue
         # per body part, shared across animals) or "individual" (one hue per
         # animal, shared across its keypoints) — SLEAP's toggle. Read by the

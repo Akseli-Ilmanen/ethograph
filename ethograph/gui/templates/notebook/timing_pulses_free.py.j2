@@ -1,0 +1,42 @@
+import numpy as np
+from neuroconv.datainterfaces import {{ digital_interface }}, ExternalVideoInterface
+
+digital = {{ digital_interface }}(
+    file_path=rig["recording_file"],
+    detection_configuration={
+        rig["frame_line"]: [
+            {
+                "signal_conditioning": {"binarize": "midpoint"},
+                "detection": "rising",
+                "event_name": "camera_frame",
+            }
+        ]
+    },
+)
+pulses = digital.get_event_times("camera_frame")
+
+_video_folder = Path(session_dir) / "{{ video_folder }}"
+videos = {
+    _col: ExternalVideoInterface(
+        file_paths=[_video_folder / f for f in table[_col].dropna()], video_name=_col
+    )
+    for _col in {{ camera_columns }}
+}
+
+for _video in videos.values():
+    assert len(pulses) == sum(_video.get_header_frame_counts()), (
+        "pulses != frames: see the how-to's dropped-frame section"
+    )
+{% if split_files %}
+    _frame_counts = np.array(_video.get_header_frame_counts())
+    _durations = _frame_counts / np.array(_video.get_header_frame_rates())
+    _starting_times = np.concatenate([[0.0], np.cumsum(_durations)[:-1]])
+    _boundaries = np.concatenate([[0], np.cumsum(_frame_counts)])
+    for _i, _key in enumerate(_video.alignment.keys()):
+        _video.alignment[_key].start_at(_starting_times[_i])
+        _segment_pulses = pulses[_boundaries[_i] : _boundaries[_i + 1]]
+        if len(_segment_pulses) == _frame_counts[_i]:
+            _video.alignment[_key].set_times(_segment_pulses)
+{% else %}
+    _video.alignment["session"].set_times(pulses)
+{% endif %}

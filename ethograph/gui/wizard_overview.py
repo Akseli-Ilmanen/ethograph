@@ -1,299 +1,34 @@
-"""Multi-step wizard for creating .nc files from multiple trials / modalities."""
+"""The Data wizard: pair media files, or write the notebook that aligns them.
+
+Pages, in order: mode → sources → per-modality folders/patterns → (timing,
+modes 2 and 3) → trial table → write. The per-modality page's filename
+pattern is optional: leaving it blank pairs by natural sort, one device —
+the same answer a single camera would give by hand.
+
+Mode 1 pairs the files in the wizard, writes the session file and the sidecar,
+and saves the notebook as the record. Modes 2 and 3 only write the notebook.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from pathlib import Path
 
-import pandas as pd
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QButtonGroup,
-    QCheckBox,
     QDialog,
-    QGroupBox,
     QHBoxLayout,
-    QLabel,
     QPushButton,
-    QRadioButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from ethograph.gui.make_pretty import styled_link
+from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.notify import notify_dialog
+from ethograph.gui.wizard_pages import ModePage, SourcesPage, TimingPage, WritePage
+from ethograph.gui.wizard_state import ModalityConfig, WizardState
 
-if TYPE_CHECKING:
-    from ethograph.gui.wizard_media_files import FilePattern
-
-
-# ─── shared state ─────────────────────────────────────────────────────────────
-
-
-@dataclass
-class ModalityConfig:
-    enabled: bool = False
-    file_mode: str = "single"  # "single" | "aligned_to_trial" | "aligned_to_session"
-    single_file_path: str = ""
-    folder_path: str = ""
-    pattern: FilePattern | None = None
-    nested_subfolders: bool = False
-    fps: int = None
-    fps_by_camera: dict[str, int] = field(default_factory=dict)
-    audio_sr: float = None
-    n_channels: int = 1
-    source_software: str = "DeepLabCut"
-    constant_offset: float = 0.0
-    video_motion: bool = False
-    neurons_path: str = ""
-    ephys_sr: int = None
-    gap_mode: str = "gap_between"  # "gap_between" | "onset_interval"
-    gap_value: float = 0.0
-    offset_constant_across_devices: bool = True
-    device_offsets: dict[str, float] = field(default_factory=dict)
-
-    @property
-    def is_aligned_mode(self) -> bool:
-        return self.file_mode == "aligned_to_trial"
-
-    @property
-    def is_continuous_mode(self) -> bool:
-        return self.file_mode == "aligned_to_session"
-
-
-@dataclass
-class WizardState:
-    video: ModalityConfig = field(default_factory=ModalityConfig)
-    pose: ModalityConfig = field(default_factory=ModalityConfig)
-    audio: ModalityConfig = field(default_factory=ModalityConfig)
-    npy: ModalityConfig = field(default_factory=ModalityConfig)
-    ephys: ModalityConfig = field(default_factory=ModalityConfig)
-
-    files_aligned_to_trials: bool = True
-    trial_table: pd.DataFrame | None = None
-    trial_table_path: str | None = None  # Path to imported CSV/TSV
-    nwb_alignment: object | None = None
-
-    camera_names: list[str] = field(default_factory=list)
-    mic_names: list[str] = field(default_factory=list)
-    pose_camera_mapping: list[tuple[str, str]] = field(default_factory=list)
-
-    individuals: list[str] = field(default_factory=list)
-    output_path: str = ""
-
-    file_durations: dict[str, dict[str, float]] = field(default_factory=dict)
-
-    def modality_configs(self) -> list[tuple[str, ModalityConfig]]:
-        return [
-            ("video", self.video),
-            ("pose", self.pose),
-            ("audio", self.audio),
-            ("npy", self.npy),
-            ("ephys", self.ephys),
-        ]
-
-    def enabled_modalities(self) -> list[tuple[str, ModalityConfig]]:
-        return [(name, cfg) for name, cfg in self.modality_configs() if cfg.enabled]
-
-    def has_aligned_modalities(self) -> bool:
-        return any(cfg.is_aligned_mode for _, cfg in self.enabled_modalities())
-
-    def has_continuous_modalities(self) -> bool:
-        return any(cfg.is_continuous_mode for _, cfg in self.enabled_modalities())
-
-    def is_fully_aligned(self) -> bool:
-        """Only scenario where is fully aligned, if trial intervals correspond to files, and video, pose, and audio are all aligned."""  # noqa: E501
-        enabled = self.enabled_modalities()
-        non_ephys = [(name, cfg) for name, cfg in enabled if name != "ephys"]
-        return (
-            bool(non_ephys)
-            and all(cfg.is_aligned_mode for _, cfg in non_ephys)
-            and not self.has_continuous_modalities()
-        )
-
-
-# ─── Page 0: mode selection ──────────────────────────────────────────────────
-
-
-class _ModeSelectionPage(QWidget):
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("<b>🧙Data wizard</b><br>Select how your data is organized:"))
-        layout.addSpacing(12)
-
-        self._top_group = QButtonGroup(self)
-
-        # --- Single file section (now handled by drag & drop) ---
-        single_box = QGroupBox("Single trial")
-        sb_lay = QVBoxLayout(single_box)
-        single_note = QLabel(
-            "One file per modality (video / audio / pose / ephys / numpy)? "
-            "Just <b>drag &amp; drop</b> your files onto the start page — ethograph "
-            "sorts them by type and only asks a follow-up question when a value "
-            "can't be read from the file (e.g. a numpy sample rate). No wizard needed."
-        )
-        single_note.setWordWrap(True)
-        sb_lay.addWidget(single_note)
-        layout.addWidget(single_box)
-
-        # --- Multi file section ---
-        multi_box = QGroupBox("Multiple trials")
-        mb_lay = QVBoxLayout(multi_box)
-        self._rb_multi = QRadioButton(
-            "Configure multi-trial dataset from multiple files within/across modalities with custom meta data."
-        )
-        self._rb_multi.setChecked(True)
-        self._top_group.addButton(self._rb_multi)
-        mb_lay.addWidget(self._rb_multi)
-        layout.addWidget(multi_box)
-
-        # --- NWB / DANDI section ---
-        nwb_box = QGroupBox("DANDI archive")
-        nb_lay = QVBoxLayout(nwb_box)
-        self._rb_nwb_dandi = QRadioButton("Download from DANDI")
-        self._top_group.addButton(self._rb_nwb_dandi)
-        nb_lay.addWidget(self._rb_nwb_dandi)
-        layout.addWidget(nwb_box)
-
-        # --- External event-coding software section ---
-        ext_box = QGroupBox("External event-coding software")
-        ext_lay = QVBoxLayout(ext_box)
-        self._rb_boris = QRadioButton(
-            "Import from BORIS project (.boris) — events + media -> alignment.nwb + labels.tsv  (coming soon)"
-        )
-        self._rb_boris.setEnabled(False)
-        self._rb_boris.setToolTip("BORIS import is not available yet.")
-        self._top_group.addButton(self._rb_boris)
-        ext_lay.addWidget(self._rb_boris)
-        layout.addWidget(ext_box)
-
-        layout.addSpacing(10)
-        tut_box = QGroupBox("Examples")
-        tut_lay = QVBoxLayout(tut_box)
-        tut_text = QLabel("These are real-world datasets that have been created or converted to session.nc format:")
-        tut_text.setWordWrap(True)
-        tut_lay.addWidget(tut_text)
-        tut_lay.addSpacing(5)
-        tut_link = QLabel(
-            styled_link(
-                "https://github.com/Akseli-Ilmanen/EthoGraph/tree/main/examples",
-                "View examples for creating custom .nc files",
-            )
-        )
-        tut_link.setOpenExternalLinks(True)
-        tut_link.setTextFormat(Qt.RichText)
-        tut_lay.addWidget(tut_link)
-        layout.addWidget(tut_box)
-        layout.addStretch()
-
-    def get_mode(self) -> str:
-        if self._rb_nwb_dandi.isChecked():
-            return "nwb"
-        if self._rb_boris.isChecked():
-            return "boris"
-        return "multi"
-
-
-# ─── Page 1: modality selection ──────────────────────────────────────────────
-
-
-class _ModalitySelectionPage(QWidget):
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(
-            QLabel(
-                "<b>Step 1 — Select modalities</b><br>"
-                "Check each data type and choose aligned-trial files or continuous-session recording."
-            )
-        )
-        layout.addSpacing(10)
-
-        self._rows: dict[str, dict] = {}
-        for name, label, allow_multi, device_label in [
-            ("video", "Video", True, "Cameras"),
-            ("pose", "Pose", True, "Cameras"),
-            ("audio", "Audio", True, "Mics"),
-            ("ephys", "Ephys", False, ""),
-        ]:
-            row_widget, row_data = self._build_modality_row(name, label, allow_multi, device_label)
-            layout.addWidget(row_widget)
-            self._rows[name] = row_data
-
-        layout.addStretch()
-
-    def _build_modality_row(self, name: str, label: str, allow_multi: bool, device_label: str) -> tuple[QWidget, dict]:
-        box = QGroupBox()
-        box.setCheckable(True)
-        box.setChecked(False)
-        box_lay = QVBoxLayout(box)
-
-        cb_label = QCheckBox(label)
-        cb_label.setChecked(False)
-        box.toggled.connect(cb_label.setChecked)
-        cb_label.toggled.connect(box.setChecked)
-        box_lay.addWidget(cb_label)
-
-        data: dict = {"box": box, "checkbox": cb_label}
-
-        if allow_multi:
-            mode_row = QHBoxLayout()
-            rb_single = QRadioButton("Single file")
-            if name in {"video", "pose", "audio"}:
-                rb_multi_reg = QRadioButton(f"Files aligned to trial period (Trials x {device_label})")
-                rb_multi_irr = QRadioButton(f"Continuous recording across session ({device_label})")
-            else:
-                rb_multi_reg = QRadioButton("Multiple files (regular/no gaps)")
-                rb_multi_irr = QRadioButton("Multiple files (variable gaps)")
-            rb_single.setChecked(True)
-            bg = QButtonGroup(box)
-            bg.addButton(rb_single)
-            bg.addButton(rb_multi_reg)
-            bg.addButton(rb_multi_irr)
-            mode_row.addWidget(rb_single)
-            mode_row.addWidget(rb_multi_reg)
-            mode_row.addWidget(rb_multi_irr)
-            mode_row.addStretch()
-            box_lay.addLayout(mode_row)
-            data["rb_single"] = rb_single
-            data["rb_multi_reg"] = rb_multi_reg
-            data["rb_multi_irr"] = rb_multi_irr
-        else:
-            hint = QLabel("    (continuous recording across session)")
-            hint.setStyleSheet("color: #888;")
-            box_lay.addWidget(hint)
-            data["rb_single"] = None
-
-        return box, data
-
-    def collect_state(self, state: WizardState) -> None:
-        for name in ["video", "pose", "audio", "ephys"]:
-            row = self._rows[name]
-            cfg: ModalityConfig = getattr(state, name)
-            cfg.enabled = row["box"].isChecked()
-            if row.get("rb_single") is None:
-                cfg.file_mode = "aligned_to_session" if cfg.enabled else "single"
-            elif row["rb_single"].isChecked():
-                cfg.file_mode = "single"
-            elif row["rb_multi_reg"].isChecked():
-                cfg.file_mode = "aligned_to_trial"
-                cfg.gap_mode = "gap_between"
-                cfg.gap_value = 0.0
-            else:
-                cfg.file_mode = "aligned_to_session"
-                # Reset gap values for irregular mode
-                cfg.gap_mode = "gap_between"
-                cfg.gap_value = 0.0
-
-    def validate(self) -> str | None:
-        if not any(self._rows[n]["box"].isChecked() for n in self._rows):
-            return "Please select at least one modality."
-        return None
-
-
-# ─── main wizard dialog ─────────────────────────────────────────────────────
+__all__ = ["ModalityConfig", "NCWizardDialog", "WizardState"]
 
 
 class NCWizardDialog(QDialog):
@@ -306,58 +41,43 @@ class NCWizardDialog(QDialog):
         self.setWindowTitle("Data wizard")
         self.setMinimumWidth(950)
         self.setMinimumHeight(750)
-        self.resize(1050, 800)
-
-        self._setup_ui()
-
-    def _setup_ui(self):
-        layout = QVBoxLayout(self)
+        self.resize(1050, 820)
 
         self._stack = QStackedWidget()
-        self._page_mode = _ModeSelectionPage()
-        self._page_modality = _ModalitySelectionPage()
-        self._stack.addWidget(self._page_mode)
-        self._stack.addWidget(self._page_modality)
-
-        # Pages 2-4 are created lazily
-        self._page_config = None
+        self._page_mode = ModePage()
+        self._page_mode.import_requested.connect(self._open_import)
+        self._page_sources = SourcesPage(app_state)
+        self._page_timing = TimingPage(app_state)
+        self._page_write = WritePage(app_state)
+        self._page_patterns = None
         self._page_trials = None
-        self._page_timeline = None
+        for page in (self._page_mode, self._page_sources, self._page_timing, self._page_write):
+            self._stack.addWidget(page)
 
+        #: The pages this run visits, in order; rebuilt whenever an answer changes it.
+        self._route: list[QWidget] = [self._page_mode]
+        self._pos = 0
+
+        layout = QVBoxLayout(self)
         layout.addWidget(self._stack)
-
-        # Navigation bar
         nav = QHBoxLayout()
         self._prev_btn = QPushButton("← Previous")
         self._prev_btn.clicked.connect(self._on_previous)
-        self._prev_btn.setEnabled(False)
-        self._prev_btn.setAutoDefault(False)
-        self._prev_btn.setDefault(False)
-
         self._next_btn = QPushButton("Next →")
         self._next_btn.clicked.connect(self._on_next)
-        self._next_btn.setAutoDefault(False)
-        self._next_btn.setDefault(False)
-
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
-        cancel_btn.setAutoDefault(False)
-        cancel_btn.setDefault(False)
-
+        for btn in (self._prev_btn, self._next_btn, cancel_btn):
+            btn.setAutoDefault(False)
+            btn.setDefault(False)
         nav.addWidget(self._prev_btn)
         nav.addStretch()
         nav.addWidget(self._next_btn)
         nav.addWidget(cancel_btn)
         layout.addLayout(nav)
+        self._show(0)
 
-    def _current_page(self) -> int:
-        return self._stack.currentIndex()
-
-    def _on_previous(self):
-        page = self._current_page()
-        if page > 0:
-            self._stack.setCurrentIndex(page - 1)
-            self._update_nav()
+    # ── navigation ──
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
@@ -365,157 +85,260 @@ class NCWizardDialog(QDialog):
             return
         super().keyPressEvent(event)
 
-    def _on_next(self):
-        page = self._current_page()
+    def _show(self, pos: int) -> None:
+        self._pos = pos
+        page = self._route[pos]
+        self._stack.setCurrentWidget(page)
+        self._prev_btn.setEnabled(pos > 0)
+        last = page is self._page_write
+        if last:
+            self._next_btn.setText("Pair and load" if self._state.mode == "pair" else "Write notebook")
+        else:
+            self._next_btn.setText("Next →")
 
-        if page == 0:
-            self._handle_mode_selection()
-        elif page == 1:
-            err = self._page_modality.validate()
+    def _on_previous(self) -> None:
+        if self._pos > 0:
+            self._show(self._pos - 1)
+
+    def _on_next(self) -> None:
+        page = self._route[self._pos]
+        err = self._leave(page)
+        if err:
+            notify_dialog(err, "warning", "Input error", self)
+            return
+        if page is self._page_write:
+            self._finish()
+            return
+        self._show(self._pos + 1)
+
+    def _leave(self, page: QWidget) -> str | None:
+        """Validate + collect the page being left, and extend the route from it."""
+        state = self._state
+        if page is self._page_mode:
+            self._page_mode.collect_state(state)
+            self._page_sources.set_mode(state.mode)
+            self._route = [self._page_mode, self._page_sources]
+            return None
+        if page is self._page_sources:
+            err = self._page_sources.validate()
             if err:
-                notify_dialog(err, "warning", "Input error", self)
-                return
-            self._page_modality.collect_state(self._state)
-            self._ensure_config_page()
-            self._stack.setCurrentIndex(2)
-            self._update_nav()
-        elif page == 2:
-            err = self._page_config.validate(self._state)
+                return err
+            self._page_sources.collect_state(state)
+            self._route = [self._page_mode, self._page_sources, self._ensure_patterns_page()]
+            if state.mode != "pair":
+                self._page_timing.set_mode(state.mode)
+                self._route.append(self._page_timing)
+            self._route += [self._ensure_trials_page(), self._page_write]
+            return None
+        if page is self._page_patterns:
+            err = self._page_patterns.validate(state)
             if err:
-                notify_dialog(err, "warning", "Input error", self)
-                return
-            self._page_config.collect_state(self._state)
-            self._ensure_trials_page()
-            self._page_trials.populate_from_state(self._state)
-            self._stack.setCurrentIndex(3)
-            self._update_nav()
-        elif page == 3:
-            err = self._page_trials.validate(self._state)
+                return err
+            self._page_patterns.collect_state(state)
+            return self._populate_trials_from_sources()
+        if page is self._page_timing:
+            err = self._page_timing.validate()
             if err:
-                notify_dialog(err, "warning", "Input error", self)
-                return
-            self._page_trials.collect_state(self._state)
-            self._ensure_timeline_page()
-            from ethograph.gui.dialog_busy_progress import BusyProgressDialog
-
-            progress = BusyProgressDialog("Scanning files…", parent=self)
-            _, err = progress.execute(self._page_timeline.populate_from_state, self._state)
+                return err
+            self._page_timing.collect_state(state)
+            return None
+        if page is self._page_trials:
+            err = self._page_trials.validate(state)
             if err:
-                notify_dialog(f"Failed to scan files:\n{err}", "error", "Error", self)
-                return
-            self._stack.setCurrentIndex(4)
-            self._update_nav()
-        elif page == 4:
-            self._page_timeline.collect_state(self._state)
-            self._generate()
+                return err
+            self._page_trials.collect_state(state)
+            self._page_write.populate_from_state(state)
+            return None
+        if page is self._page_write:
+            err = self._page_write.validate(state)
+            if err:
+                return err
+            self._page_write.collect_state(state)
+            return None
+        return None
 
-    def _handle_mode_selection(self):
-        mode = self._page_mode.get_mode()
-
-        if mode == "nwb":
-            self._open_nwb_dialog()
-
-        elif mode == "boris":
-            self._open_boris_dialog()
-
-        elif mode == "multi":
-            self._stack.setCurrentIndex(1)
-            self._update_nav()
-
-    def _open_nwb_dialog(self):
-        from ethograph.gui.wizard_nwb import NWBImportDialog
-
-        dialog = NWBImportDialog(self.app_state, self.io_widget, self)
-        if dialog.exec_():
-            self.accept()
-
-    def _open_boris_dialog(self):
-        from ethograph.gui.wizard_boris import BorisImportDialog
-
-        dialog = BorisImportDialog(self.app_state, self.io_widget, self)
-        if dialog.exec_():
-            self.accept()
-
-    def _ensure_config_page(self):
+    def _ensure_patterns_page(self):
         from ethograph.gui.wizard_multi_tabs import ModalityConfigPage
 
-        if self._page_config is not None:
-            self._stack.removeWidget(self._page_config)
-            self._page_config.deleteLater()
-        self._page_config = ModalityConfigPage(self._state)
-        self._stack.insertWidget(2, self._page_config)
+        if self._page_patterns is not None:
+            self._stack.removeWidget(self._page_patterns)
+            self._page_patterns.deleteLater()
+        self._page_patterns = ModalityConfigPage(self._state)
+        self._stack.addWidget(self._page_patterns)
+        return self._page_patterns
 
     def _ensure_trials_page(self):
         from ethograph.gui.wizard_multi_trials import TrialsPage
 
-        if self._page_trials is not None:
-            self._stack.removeWidget(self._page_trials)
-            self._page_trials.deleteLater()
-        self._page_trials = TrialsPage()
-        self._stack.insertWidget(3, self._page_trials)
+        if self._page_trials is None:
+            self._page_trials = TrialsPage()
+            self._stack.addWidget(self._page_trials)
+        return self._page_trials
 
-    def _ensure_timeline_page(self):
-        from ethograph.gui.wizard_multi_timeline import TimelinePage
+    def _populate_trials_from_sources(self) -> str | None:
+        """The pairing table for every enabled stream: sorted folders (one device),
+        or a drawn filename pattern (2+ devices) — :func:`discover_media` handles both."""
+        from ethograph.io.pairing import discover_media
 
-        if self._page_timeline is not None:
-            self._stack.removeWidget(self._page_timeline)
-            self._page_timeline.deleteLater()
-        self._page_timeline = TimelinePage()
-        self._stack.insertWidget(4, self._page_timeline)
+        state = self._state
+        sources = _source_specs(state)
+        first = next(c.folder_path for c in (state.video, state.pose, state.audio) if c.enabled and c.folder_path)
+        try:
+            table = discover_media(state.session_dir or Path(first).parent, sources)
+        except ValueError as exc:
+            return str(exc)
+        self._page_trials.populate_from_table(state, table)
+        return None
 
-    def _update_nav(self):
-        page = self._current_page()
-        self._prev_btn.setEnabled(page > 0)
-        if page == 4:
-            self._next_btn.setText("Generate .nc file")
-        elif page == 0:
-            self._next_btn.setText("Next →")
+    # ── imports off page 0 ──
+
+    def _open_import(self, kind: str) -> None:
+        if kind == "dandi":
+            from ethograph.gui.wizard_nwb import NWBImportDialog
+
+            if NWBImportDialog(self.app_state, self.io_widget, self).exec_():
+                self.accept()
+        elif kind == "boris":
+            from ethograph.gui.wizard_boris import BorisImportDialog
+
+            if BorisImportDialog(self.app_state, self.io_widget, self).exec_():
+                self.accept()
         else:
-            self._next_btn.setText("Next →")
+            path = browse_open_file(self, self.app_state, "Open an NWB file", "NWB (*.nwb)")
+            if path:
+                self.app_state.nc_file_path = path
+                self.io_widget.nc_file_path_edit.setText(path)
+                self.accept()
 
-    def _generate(self):
+    # ── finish ──
+
+    def _finish(self) -> None:
+        from ethograph.gui.wizard_notebook import write_notebook
+
+        state = self._state
+        notebook = Path(state.notebook_path)
+        try:
+            write_notebook(_rig_spec(state), notebook)
+        except (OSError, ValueError) as exc:
+            notify_dialog(f"Could not write the notebook:\n{exc}", "error", "Error", self)
+            return
+
+        if state.mode != "pair":
+            notify_dialog(
+                f"Notebook written:\n{notebook}\n\nRun it; it writes session.nwb next to your media. "
+                "Then pick that file on the start page.",
+                "info",
+                "Notebook written",
+                self,
+            )
+            self.accept()
+            return
+
         from ethograph.gui.dialog_busy_progress import BusyProgressDialog
         from ethograph.gui.wizard_multi_builder import build_multi_trial_dt
 
-        output_path = self._state.output_path
-        if not output_path:
-            notify_dialog("Please select an output path.", "warning", "Missing output", self)
-            return
-
-        def _build():
-            return build_multi_trial_dt(self._state)
-
-        progress = BusyProgressDialog("Building TrialTree...", parent=self)
-        (dt, error) = progress.execute(_build)
-
+        progress = BusyProgressDialog("Pairing files…", parent=self)
+        dt, error = progress.execute(build_multi_trial_dt, state)
         if progress.was_cancelled or error:
             if error:
-                notify_dialog(f"Failed to 🧙Data wizard:\n{error}", "error", "Error", self)
+                notify_dialog(f"Pairing failed:\n{error}", "error", "Error", self)
             return
-
-        save_progress = BusyProgressDialog("Saving .nc file…", parent=self)
-        _, save_error = save_progress.execute(dt.to_netcdf, output_path)
+        save_progress = BusyProgressDialog("Saving session file…", parent=self)
+        _, save_error = save_progress.execute(dt.to_netcdf, state.output_path)
         if save_error:
             notify_dialog(f"Failed to save:\n{save_error}", "error", "Error", self)
             return
 
-        self.app_state.nwb_alignment = self._state.nwb_alignment
-
+        self.app_state.nwb_alignment = state.nwb_alignment
         self._populate_io_fields()
-        notify_dialog(f"Successfully created:\n{output_path}", "info", "Success", self)
+        notify_dialog(f"Paired and written:\n{state.output_path}\nNotebook: {notebook}", "info", "Done", self)
         self.accept()
 
-    def _populate_io_fields(self):
-        self.app_state.nc_file_path = self._state.output_path
-        self.io_widget.nc_file_path_edit.setText(self._state.output_path)
-
-        if self._state.video.enabled and self._state.video.folder_path:
-            self.app_state.video_folder = self._state.video.folder_path
-            self.io_widget.video_folder_edit.setText(self._state.video.folder_path)
-        if self._state.audio.enabled and self._state.audio.folder_path:
-            self.app_state.audio_folder = self._state.audio.folder_path
+    def _populate_io_fields(self) -> None:
+        state = self._state
+        self.app_state.nc_file_path = state.output_path
+        self.io_widget.nc_file_path_edit.setText(state.output_path)
+        if state.video.enabled and state.video.folder_path:
+            self.app_state.video_folder = state.video.folder_path
+            self.io_widget.video_folder_edit.setText(state.video.folder_path)
+        if state.audio.enabled and state.audio.folder_path:
+            self.app_state.audio_folder = state.audio.folder_path
             if hasattr(self.io_widget, "audio_folder_edit"):
-                self.io_widget.audio_folder_edit.setText(self._state.audio.folder_path)
-        if self._state.pose.enabled and self._state.pose.folder_path:
-            self.app_state.pose_folder = self._state.pose.folder_path
-            self.io_widget.pose_folder_edit.setText(self._state.pose.folder_path)
+                self.io_widget.audio_folder_edit.setText(state.audio.folder_path)
+        if state.pose.enabled and state.pose.folder_path:
+            self.app_state.pose_folder = state.pose.folder_path
+            self.io_widget.pose_folder_edit.setText(state.pose.folder_path)
+
+
+# ─── state → library objects ─────────────────────────────────────────────────
+
+
+def _relative(path: str, session_dir: str) -> str:
+    """*path* relative to *session_dir* when it lies inside it, else as given."""
+    try:
+        return str(Path(path).relative_to(session_dir))
+    except ValueError:
+        return path
+
+
+def _source_specs(state: WizardState) -> list:
+    from ethograph.io.pairing import SourceSpec
+
+    specs = []
+    for stream, cfg in (("video", state.video), ("pose", state.pose), ("audio", state.audio)):
+        if not cfg.enabled or cfg.is_continuous_mode:
+            continue
+        pattern = cfg.pattern.regex_pattern if cfg.pattern is not None and cfg.n_devices > 1 else None
+        specs.append(
+            SourceSpec(
+                stream=stream,
+                folder=cfg.folder_path or None,
+                files=tuple(cfg.files),
+                pattern=pattern,
+                software=cfg.source_software if stream == "pose" else None,
+            )
+        )
+    return specs
+
+
+def _rig_spec(state: WizardState):
+    from ethograph.gui.wizard_notebook import RigSource, RigSpec
+
+    session_dir = state.session_dir
+    sources = []
+    for stream, cfg in (("video", state.video), ("pose", state.pose), ("audio", state.audio)):
+        if not cfg.enabled:
+            continue
+        session_wide = stream == "audio" and cfg.is_continuous_mode
+        if session_wide:
+            file = cfg.files[0] if cfg.files else cfg.single_file_path
+            folder = _relative(file, session_dir)
+        else:
+            folder = _relative(cfg.folder_path, session_dir)
+        sources.append(
+            RigSource(
+                stream=stream,
+                folder=folder,
+                pattern=cfg.pattern.regex_pattern if cfg.pattern is not None and cfg.n_devices > 1 else None,
+                n_devices=cfg.n_devices,
+                rate=cfg.audio_sr if stream == "audio" else None,
+                software=cfg.source_software if stream == "pose" else None,
+                session_wide=session_wide,
+                offset_s=cfg.constant_offset if session_wide else None,
+            )
+        )
+    return RigSpec(
+        rig_name=state.rig_name,
+        session_dir=session_dir,
+        mode=state.mode,
+        sources=sources,
+        timing=state.timing,
+        split_files=state.split_files,
+        offset_s=state.offset_s,
+        recording_file=_relative(state.recording_file, session_dir) if state.recording_file else None,
+        recording_interface=state.recording_interface,
+        frame_line=state.frame_line,
+        trigger_line=state.trigger_line,
+        trial_table_file=state.trial_table_path,
+        burst_gap=state.burst_gap,
+    )

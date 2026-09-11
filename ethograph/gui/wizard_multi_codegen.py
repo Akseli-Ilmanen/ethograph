@@ -18,7 +18,7 @@ from ethograph.io.validation import (
 
 if TYPE_CHECKING:
     from ethograph.gui.wizard_media_files import FilePattern
-    from ethograph.gui.wizard_overview import ModalityConfig, WizardState
+    from ethograph.gui.wizard_state import ModalityConfig, WizardState
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 

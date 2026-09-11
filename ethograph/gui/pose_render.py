@@ -35,8 +35,16 @@ from ethograph.gui.pose_convert import (
     sample_colormap,
 )
 from ethograph.gui.pose_overlay import OverlayStyle, PoseOverlayData
+from ethograph.io.derived import derived_loader_for
 from ethograph.io.nwb_alignment import pose_keys_for_cameras, pose_video_links_from_nwb
 from ethograph.io.nwb_import import _get_absolute_timestamps
+from ethograph.io.overlay_source import (
+    DEFAULT_OVERLAY,
+    OverlayCandidate,
+    frames_for_times,
+    overlay_candidates,
+    overlay_dataset,
+)
 from ethograph.io.time_model import trial_frame_window
 from ethograph.skeleton import nwb_skeleton_to_config
 from ethograph.skeleton.config import hex_to_rgba
@@ -520,9 +528,72 @@ class PoseDisplayManager:
             return camera
         return pose_devices[camera_idx] if camera_idx < len(pose_devices) else None
 
+    # ------------------------------------------------------------------
+    # The session dataset as overlay source
+    # ------------------------------------------------------------------
+
+    def _camera_frame_size(self, camera_idx: int) -> tuple[float, float] | None:
+        """The camera's frame in source pixels, from whichever view shows it."""
+        name = self._camera_name_for_index(camera_idx)
+        views = [self.video_area.primary, *self.video_mgr.extra_widgets.values()]
+        for view in views:
+            if getattr(view, "camera_name", None) == name or view is self.video_area.primary:
+                size = view.image_size()
+                scale = view.overlay_scale() or 1.0
+                if size[0] > 0 and size[1] > 0:
+                    return size[0] / scale, size[1] / scale
+        return None
+
+    def overlay_choices(self, camera_idx: int) -> list[OverlayCandidate]:
+        """What the video panel can draw for this camera, ``position`` first."""
+        loader = derived_loader_for(self.app_state)
+        return overlay_candidates(
+            getattr(self.app_state, "ds", None),
+            loader.derived if loader is not None else None,
+            self._camera_name_for_index(camera_idx),
+            self._camera_frame_size(camera_idx),
+        )
+
+    def _pose_from_session(self, camera_idx: int) -> PoseRenderData | None:
+        """The chosen overlay feature read off the loaded dataset, on the video's frames."""
+        ds = getattr(self.app_state, "ds", None)
+        loader = derived_loader_for(self.app_state)
+        derived = loader.derived if loader is not None else None
+        if ds is None and not derived:
+            return None
+        choices = self.overlay_choices(camera_idx)
+        if not choices:
+            return None
+        wanted = getattr(self.app_state, "pose_overlay_feature", None) or DEFAULT_OVERLAY
+        names = [c.name for c in choices]
+        name = wanted if wanted in names else (DEFAULT_OVERLAY if DEFAULT_OVERLAY in names else None)
+        if name is None:
+            return None
+        camera = self._camera_name_for_index(camera_idx)
+        movement_ds = overlay_dataset(ds, derived, name, camera)
+        pr = movement_ds_to_pose_render(movement_ds, name)
+        fps = self._resolve_camera_fps(camera_idx)
+        offset = float(self.app_state.nwb_alignment.stream_offset_for_trial(self.app_state.trials_sel, "video", camera))
+        frames = frames_for_times(movement_ds.coords["time"].values, fps, offset)
+        row_frames = frames[pr.data[:, 1].astype(int)]
+        data = pr.data.copy()
+        data[:, 1] = row_frames
+        bbox = None
+        if pr.bbox_data is not None:
+            bbox = pr.bbox_data.copy()
+            bbox[:, :, 1] = frames[pr.bbox_data[:, :, 1].astype(int)]
+        shown = pr.data_not_nan & (row_frames >= 0)
+        return PoseRenderData(data, pr.properties, shown, name, bbox, pr.frame_path, pr.skeleton_config)
+
     def _load_pose_for_camera(self, camera_idx: int) -> PoseRenderData | None:
         if self._pose_override is not None and camera_idx == self._primary_camera_index():
             return self._pose_override
+
+        # What the session holds is drawn first; a file is only read when the
+        # dataset has nothing in this camera's pixels.
+        session_pr = self._pose_from_session(camera_idx)
+        if session_pr is not None:
+            return session_pr
 
         trial_id = self.app_state.trials_sel
         sio = self.app_state.nwb_alignment

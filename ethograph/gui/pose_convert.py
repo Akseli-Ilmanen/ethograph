@@ -36,10 +36,12 @@ def _dim(ds: xr.Dataset, singular: str) -> str | None:
 
 
 def _construct_properties_dataframe(ds_stacked: xr.Dataset, kp_dim: str | None, ind_dim: str) -> pd.DataFrame:
+    n = len(ds_stacked.coords[ind_dim].values)
+    confidence = ds_stacked["confidence"].values.flatten() if "confidence" in ds_stacked else np.ones(n)
     data = {
         "individual": ds_stacked.coords[ind_dim].values,
         "time": ds_stacked.coords["time"].values,
-        "confidence": ds_stacked["confidence"].values.flatten(),
+        "confidence": confidence,
     }
     desired_order = list(data.keys())
     if kp_dim is not None:
@@ -78,7 +80,7 @@ def poses_ds_to_points(
     points = np.hstack((track_id_col, time_col, yx_cols))
     bboxes = None
 
-    if ds.attrs.get("ds_type") == "bboxes" and "shape" in ds:
+    if "shape" in ds:
         xmin_ymin = ds.position - (ds["shape"] / 2)
         xmax_ymax = ds.position + (ds["shape"] / 2)
         xmax_ymin = xmin_ymin.copy()

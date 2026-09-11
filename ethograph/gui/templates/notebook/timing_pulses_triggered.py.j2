@@ -1,0 +1,33 @@
+import numpy as np
+from neuroconv.datainterfaces import {{ digital_interface }}, ExternalVideoInterface
+
+digital = {{ digital_interface }}(
+    file_path=rig["recording_file"],
+    detection_configuration={
+        rig["frame_line"]: [
+            {
+                "signal_conditioning": {"binarize": "midpoint"},
+                "detection": "rising",
+                "event_name": "camera_frame",
+            }
+        ]
+    },
+)
+pulses = digital.get_event_times("camera_frame")
+frame_interval = np.median(np.diff(pulses))
+gap_indices = np.flatnonzero(np.diff(pulses) > rig["burst_gap"] * frame_interval) + 1
+bursts = np.split(pulses, gap_indices)
+
+_video_folder = Path(session_dir) / "{{ video_folder }}"
+videos = {
+    _col: ExternalVideoInterface(
+        file_paths=[_video_folder / f for f in table[_col].dropna()], video_name=_col
+    )
+    for _col in {{ camera_columns }}
+}
+
+for _video in videos.values():
+    _segment_keys = _video.alignment.keys()
+    assert len(bursts) == len(_segment_keys), f"{len(bursts)} bursts for {len(_segment_keys)} files."
+    for _key, _burst in zip(_segment_keys, bursts):
+        _video.alignment[_key].set_times(_burst)

@@ -799,6 +799,43 @@ def test_cover_page_audio_only_alignment(gui, birdpark_data_dir):
     assert resolved and Path(resolved).name == audios[0].name
 
 
+def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui):
+    """"Several trials of one device" layout: 2+ video/pose files with no
+    camera-matching dialog — natural-sort paired into a real multi-trial
+    TrialTree, mirroring the Data wizard's single-camera 'Pair' route."""
+    import ethograph as eto
+    from ethograph.datasets import dataset_dir, is_dataset_downloaded
+    from ethograph.gui.cover_page import CoverPage, classify_files
+
+    if not is_dataset_downloaded("moll2025"):
+        pytest.skip("moll2025 not downloaded")
+    data_dir = dataset_dir("moll2025")
+    videos = sorted(data_dir.glob("*.mp4"))
+    poses = sorted(data_dir.glob("*DLC.csv"))
+    if len(videos) < 2 or len(poses) < 2:
+        pytest.skip("moll2025 does not have 2+ video/pose files to pair")
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    page._drop_layout_combo.setCurrentIndex(page._drop_layout_combo.findData("multi_trial"))
+    buckets = classify_files([str(v) for v in videos] + [str(p) for p in poses])
+    assert page._is_multi_trial_drop(buckets)
+
+    page._populate_io_from_buckets(buckets, {"source_software": "DeepLabCut", "pose_fps": None})
+
+    app_state = meta.app_state
+    assert app_state.nc_file_path and app_state.nc_file_path.endswith("session.nc")
+    dt = eto.open(app_state.nc_file_path)
+    assert len(dt.trials) == len(videos)
+    assert app_state.video_folder == str(videos[0].parent)
+    assert app_state.pose_folder == str(poses[0].parent)
+
+    align = app_state.nwb_alignment
+    for trial in range(1, len(videos) + 1):
+        resolved = align.resolve_media_path(trial, "video", device="cam-1")
+        assert resolved and Path(resolved) in videos
+
+
 def test_cover_page_labels_drop_loads_on_first_load(gui, birdpark_data_dir):
     """A dropped labels .tsv with a non-canonical name must still load.
 

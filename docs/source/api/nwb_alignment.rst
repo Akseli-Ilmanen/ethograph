@@ -9,14 +9,29 @@ The NWB alignment file (``<project>/.ethograph/alignment.nwb``) stores trial
 timing, media file paths, and stream offsets. It is the single source of
 truth for "what file corresponds to what trial, and when did it start".
 
-See :ref:`Alignment <target-nwb-alignment>` for the user-facing walkthrough.
+See :ref:`Pairing and alignment <target-nwb-alignment>` for the user-facing walkthrough.
 At runtime the same interface is available via ``dt.nwb_alignment`` on a
 loaded TrialTree.
 
 ----
 
+Pairing media files
+-------------------
+
+.. currentmodule:: ethograph.io.pairing
+
+.. autoclass:: SourceSpec
+
+.. autofunction:: discover_media
+
+.. autofunction:: pair_media
+
+----
+
 Creating alignment files
 ------------------------
+
+.. currentmodule:: ethograph.io.nwb_alignment
 
 .. autofunction:: align_media_per_trial
 

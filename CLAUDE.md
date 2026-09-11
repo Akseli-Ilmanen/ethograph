@@ -216,6 +216,8 @@ ethograph/skeleton/           # PrecomputedRenderer, SkeletonState, config.py, s
 
 Two paths unified into `PoseRenderData`: `load_pose_from_file()` (movement) and `load_pose_from_nwb_direct()` (lazy HDF5). Filtering acts on masks (`data_not_nan`, `shown`) — it never recreates layers.
 
+**The video overlays any catalog feature in the camera's pixels** (`io/overlay_source.py`): a time dim, a `space` dim with x/y, at most keypoint/individual dims, values inside the frame. `position` is the default; the Overlay source combo lists the rest, console results included. Companions by name: `confidence` filters, `shape` means boxes. The loaded dataset is drawn first; a pose file is read only when the dataset has nothing in that camera's pixels. Covered by `tests/test_unit/test_overlay_source.py`.
+
 **Colour encodes one axis, chosen by the user**: `app_state.pose_color_by` ∈ `{"keypoint", "individual"}`; text labels carry the other axis. The same setting drives the labelling canvas. Colour is the only identity channel.
 
 ### Keypoint labelling + fill

@@ -789,6 +789,16 @@ class StreamPanel(QWidget):
         if d:
             self._folder.setText(d)
 
+    def set_folder(self, path: str) -> None:
+        """Seed the folder from what an earlier wizard page already picked.
+
+        Without this, a source already chosen on the Sources page (folder or
+        explicit files) would have to be re-browsed here from scratch —
+        this is the same folder, just re-typed into a different widget.
+        """
+        if path:
+            self._folder.setText(path)
+
     def _on_folder(self, text: str):
         p = Path(text)
         if not p.is_dir():
@@ -845,10 +855,24 @@ class StreamPanel(QWidget):
     def pattern(self) -> FilePattern | None:
         return self._pattern
 
+    def first_file(self) -> str | None:
+        """The first matching file found in the folder, pattern or not — for
+        probing a rate/fps that a single representative file can answer."""
+        return str(self._all_files[0]) if self._all_files else None
+
     def get_config(self) -> StreamConfig | None:
+        """The chosen folder, ready to pair — a drawn pattern is optional.
+
+        No pattern (the user never painted a trial/camera/mic role) is a
+        valid single-device answer: the files pair to trials by natural sort,
+        exactly like a single-camera drop. A pattern is only needed to name
+        more than one device or to disambiguate trial numbering.
+        """
         folder = self._folder.text()
-        if not folder or self._pattern is None:
+        if not folder or not self._all_files:
             return None
+        if self._pattern is None:
+            return StreamConfig(folder=folder, role_map={}, nested=self._nested_cb.isChecked(), regex_pattern=None)
         role_map = {
             seg.position: seg.role
             for seg in self._pattern.segments

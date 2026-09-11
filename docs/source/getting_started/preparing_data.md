@@ -5,13 +5,15 @@
 {ref}`Drag & drop <target-data-loading>` handles one recording session whose
 files all start together. Everything else — trials split across files, media on
 separate clocks — needs a **session file** plus an **alignment file**, built
-from a short Python script.
+in the {doc}`Data wizard <../advanced/data_wizard>` or from a short Python
+script.
 
 This page covers all three pieces:
 
 1. **[Your dataset](#your-dataset)** — the schema EthoGraph expects.
 2. **[Trials](#trials)** — grouping datasets into a trial structure.
-3. **[Alignment](#alignment)** — tying media files and timing to those trials.
+3. **[Pairing and alignment](#pairing-and-alignment)** — tying media files and
+   timing to those trials.
 
 EthoGraph supports three backends. Pick the one matching your workflow; every
 section below has a tab per backend.
@@ -24,11 +26,7 @@ section below has a tab per backend.
 
 ```{note}
 **NWB needs almost none of this.** An `.nwb` file already stores trials, media
-references and features together, so it loads directly — no session file to
-build, no alignment step. Trials come from `nwb.trials`, media from
-{class}`~pynwb.image.ImageSeries` in `nwb.acquisition`. If `nwb.trials` is
-absent the recording is one trial; if a DANDI file lacks local media paths, the
-GUI writes `.ethograph/alignment.nwb` on first load. The NWB tabs below only
+references and features together, so it loads directly. The NWB tabs below only
 note where behaviour differs.
 ```
 
@@ -451,179 +449,192 @@ for each trial.
 ---
 
 (target-nwb-alignment)=
-## Alignment
+## Pairing and alignment
 
-Media filenames, trial timing and stream offsets live in an **NWB alignment
-file**, not inside the data file. This keeps data portable — filenames are
-stored as basename only — and lets you move media without re-exporting
-features.
+You have media files (video, audio, pose), possibly from several cameras or
+microphones. If they are already aligned in time, pair them. Otherwise align
+them to a recording system's clock with neuroconv.
 
-For `.nwb` sources the source file is used directly and edits go back into it.
-Every other format (`.nc`, `.npz`, pynapple folders) gets a sidecar at
-**`.ethograph/alignment.nwb`** next to the data file.
+| Mode | What you have | Where it happens | What you get |
+|---|---|---|---|
+| **1 Pair my media files** | Files that already share a clock: one file per trial, or session-wide files whose start you know | The {doc}`Data wizard <../advanced/data_wizard>`, or {func}`~ethograph.discover_media` + {func}`~ethograph.pair_media` in Python | Trial time exact. Session time laid end to end from the media durations, or as good as your number for `session_wide` offsets |
+| **2 Align media to a recording system, free-running camera** | A camera that ran for the whole session, and a recording system (Intan, Open Ephys, ...) that logged its frames or its start | A notebook the wizard writes; you run it with neuroconv | Every frame on the recording clock |
+| **3 Align media to a recording system, triggered camera** | One file per trial, each started by a pulse from the recording system | Same as mode 2 | Every frame on the recording clock |
 
-For single-trial recordings you never write this yourself —
-{ref}`drag & drop <target-data-loading>` builds it for you. The rest of this
-section is for multi-trial, multi-camera or session-wide media.
+Modes 2 and 3 produce a `session.nwb`. Mode 1 and the drag & drop produce a
+sidecar `.ethograph/alignment.nwb` next to the data file. An `.nwb` source is
+read and edited directly and needs no sidecar; if `nwb.trials` is absent the
+recording is one trial, and a DANDI file without local media paths gets a
+sidecar on first load.
 
-### What it contains
+### Pair my media files
+
+On the start page, click **Data wizard, prepare my data** and choose
+**1 Pair my media files**. Tell it how many cameras and microphones you have
+and where the files are. It builds the pairing table, writes
+`.ethograph/alignment.nwb`, and saves a notebook with the same calls under
+`wizard/` in the project folder. Every page of the wizard is described in
+{doc}`../advanced/data_wizard`.
+
+The same thing in Python is two calls. {func}`~ethograph.discover_media` builds
+the pairing table from folders (files in natural sort order) or from a filename
+pattern with named groups `trial`, `camera` and `mic`.
+{func}`~ethograph.pair_media` writes the alignment file:
+
+```python
+import ethograph as eto
+
+session_dir = "session_01"
+
+sources = [
+    eto.SourceSpec("video", device="cam-1", folder="video/cam1"),
+    eto.SourceSpec("video", device="cam-2", folder="video/cam2"),
+    eto.SourceSpec("pose", device="cam-1", folder="pose/cam1"),
+    eto.SourceSpec("pose", device="cam-2", folder="pose/cam2"),
+    eto.SourceSpec("audio", device="mic-1", folder="audio"),
+]
+trial_table = eto.discover_media(session_dir, sources)
+print(trial_table)
+#    trial  video_cam-1  video_cam-2      pose_cam-1  ...  audio_mic-1
+# 0      1  cam1_t1.mp4  cam2_t1.mp4  dlc_cam1_t1.h5  ...  mic1_t1.wav
+# 1      2  cam1_t2.mp4  cam2_t2.mp4  dlc_cam1_t2.h5  ...  mic1_t2.wav
+
+trial_table["stimulus"] = ["tone_A", "tone_B"]
+
+eto.pair_media(
+    trial_table,
+    stream_rates={"video": 30.0, "pose": 30.0, "audio": 48000.0},
+    output_path=f"{session_dir}/.ethograph/alignment.nwb",
+    media_root=session_dir,
+)
+```
+
+When one folder holds every camera, give a pattern instead of a folder:
+`eto.SourceSpec("video", pattern=r"cam(?P<camera>\d+)_t(?P<trial>\d+)\.mp4")`.
+The `camera` group becomes the device (`cam-1`, `cam-2`) and the `trial` group
+the row.
+
+The pairing table is a plain {class}`~pandas.DataFrame` with a `trial` column
+and one `{stream}_{device}` column per source. You can build it by hand or edit
+it before writing.
+
+- **Files are paired by row, not by name.** Row order is trial order and each
+  `{stream}_{device}` column is that stream's file for that trial. Only the
+  basename is stored; it is resolved against the media folder you select in the
+  GUI at load time.
+- **Camera index pairs video with pose**: device `cam-1` overlays `pose_cam-1`.
+- **Extra columns** (`stimulus`, `condition`, ...) become trial attributes and
+  flow through to label TSV exports.
+- **Multi-camera NWB files** need no table: each camera is already its own
+  {class}`~pynwb.image.ImageSeries` in `nwb.acquisition`.
+
+(target-omitting-trial-times)=
+#### Trial times
+
+`start_time` and `stop_time` columns are optional. Without them each trial's
+duration is probed from its own media (video first, then audio, then pose) and
+the trials are laid **end to end** from `0.0`. Three things follow:
+
+- **The files must be openable at build time.** Pass `media_root` or absolute
+  paths; a name that does not resolve raises `ValueError`.
+- **Inferred trials are contiguous.** The inter-trial gaps of the real
+  recording are erased. Trial-relative time (labels, features, per-trial video)
+  is unaffected, but session time is fiction. Pass real times whenever you have
+  ephys, session-wide media or session-mode navigation to support.
+- **Pose-only tables need `pose_fps=`.** A pose file has no intrinsic duration.
+
+With real `start_time` / `stop_time` the GUI can also navigate in session mode
+and restrict neural data to trial windows.
+
+(target-session-wide-streams)=
+#### Session-wide streams
+
+A file that spans every trial (one continuous audio recording, a probe on its
+own clock) goes in `session_wide`, keyed by stream name, with its rate and the
+session time at which its first sample was taken:
+
+```python
+eto.pair_media(
+    trial_table,
+    stream_rates={"video": 30.0},
+    session_wide={
+        "audio_mic-1": ("session_ch1.wav", 48000.0, 0.0),
+        "ephys_probe-1": ("session.dat", 30000.0, 0.5),
+    },
+    output_path=f"{session_dir}/.ethograph/alignment.nwb",
+)
+```
+
+Session time is then as good as the offset you typed. If you measured the
+offset from a sync line, use mode 2 or 3 instead and let neuroconv place every
+frame.
+
+If `output_path` is an existing `.nwb` with a trials table, such as a file
+neuroconv wrote, the streams are added to it in place. That is how the pose
+and audio of modes 2 and 3 join the video.
+
+{func}`~ethograph.io.nwb_alignment.align_media_per_trial` and
+{func}`~ethograph.io.nwb_alignment.align_media_from_streams` remain as
+compatibility aliases of {func}`~ethograph.pair_media`. The old `timestamps`
+key is gone: per-sample timestamps are neuroconv's job.
+
+Ephys is always session-wide: select the file in the GUI rather than listing it
+in the table. See {doc}`loading_ephys` for supported formats, Kilosort folder
+setup and channel mapping.
+
+### Align to a recording system
+
+When a recording system (Intan, Open Ephys, SpikeGLX, ...) logged the camera,
+its clock is the session clock and the video should sit on it frame by frame.
+That is what [neuroconv](https://neuroconv.readthedocs.io) does. A
+free-running camera starts with the session and stops with it, in one file or
+split into several:
+
+```{figure} ../_static/neuroconv/video_setup_free_running.png
+:alt: A free-running camera, as one file or split into several
+:width: 90%
+
+Free-running camera. Figure from neuroconv's how-to (BSD-3-Clause).
+```
+
+A triggered camera receives a pulse at each trial onset and writes one file per
+trial, with gaps between them:
+
+```{figure} ../_static/neuroconv/video_setup_triggered.png
+:alt: A triggered camera, one file per trial
+:width: 90%
+
+Triggered camera. Figure from neuroconv's how-to (BSD-3-Clause).
+```
+
+Choose **2** or **3** in the Data wizard. It asks how the camera is wired (a
+known offset, a pulse per frame, or a pulse per trial), writes
+`wizard/{rig_name}.ipynb` in the project folder and stops. Run the notebook; it
+writes `session.nwb`, which you then open on the start page. The recipes are
+neuroconv's own, from its
+[how-to on aligning external video](https://neuroconv--2037.org.readthedocs.build/en/2037/how_to/align_external_video.html);
+{doc}`video_and_ephys` walks one rig through end to end. Then pair the rest
+(pose, audio) over the `.nwb` with {func}`~ethograph.pair_media`, as above.
+
+### What the alignment file contains
 
 | Concept | Stored as | Read via |
 |---------|-----------|----------|
-| **Trial timing** | `nwb.trials` table with `start_time`, `stop_time`, and custom columns | `alignment.trials_df`, `alignment.start_time(trial)`, `alignment.stop_time(trial)` |
-| **Media files** | {class}`~pynwb.image.ImageSeries` in `nwb.acquisition` per stream/device | `alignment.resolve_media_path(trial, stream, device)` |
-| **Stream rates** | `rate` field on each ImageSeries | `alignment.get_stream_rate(stream, device)` |
-| **Stream offsets** | `starting_time` on ImageSeries — when sample 0 occurs in session time | `alignment.stream_offset_for_trial(trial, stream, device)` |
-| **Cameras / mics** | Device names parsed from ImageSeries names | `alignment.cameras`, `alignment.mics` |
+| **Trial timing** | `nwb.trials` with `start_time`, `stop_time` and custom columns | `alignment.trials_df`, `alignment.start_time(trial)`, `alignment.stop_time(trial)` |
+| **Media files** | one {class}`~pynwb.image.ImageSeries` per `{stream}_{device}` in `nwb.acquisition` | `alignment.resolve_media_path(trial, stream, device)` |
+| **Stream rates** | `rate` on each ImageSeries | `alignment.get_stream_rate(stream, device)` |
+| **Stream offsets** | `starting_time` on each ImageSeries: when sample 0 occurs in session time | `alignment.stream_offset_for_trial(trial, stream, device)` |
+| **Cameras / mics** | device names parsed from the ImageSeries names | `alignment.cameras`, `alignment.mics` |
 
-Streams are named `{stream}_{device}` throughout — `video_cam-1`, `audio_mic-1`,
-`pose_cam-1`, `ephys_probe-1`.
+Streams are named `{stream}_{device}` throughout: `video_cam-1`, `audio_mic-1`,
+`pose_cam-1`, `ephys_probe-1`. Only basenames are stored, so media can move
+without re-exporting features.
 
-### Trial-relative vs session-absolute time
-
-EthoGraph uses two time conventions, and the alignment file connects them:
-
-- **Trial-relative** (`onset_s`, `offset_s`, internal feature time): each trial
-  starts at `0.0`. This matches pose trackers, video files, and per-trial audio.
-- **Session-absolute** (`onset_global`, `offset_global`, ephys timestamps):
-  measured from the start of the recording session.
-
-Conversion uses the trials table:
+Two time conventions meet here. **Trial-relative** time (`onset_s`, `offset_s`,
+feature time) starts at `0.0` in every trial, like pose trackers and per-trial
+video. **Session** time (`onset_global`, ephys timestamps) is measured from the
+start of the recording. The trials table converts between them:
 `onset_global = alignment.start_time(trial) + onset_s`.
-
-### Choosing a builder
-
-| Function | When to use |
-|----------|-------------|
-| {func}`~ethograph.io.nwb_alignment.align_media_per_trial` | Media files map 1:1 to trials |
-| {func}`~ethograph.io.nwb_alignment.align_media_from_streams` | Session-wide files, mixed per-trial + continuous, or explicit timestamps |
-
-### `align_media_per_trial` — one file per trial
-
-One column per stream, one row per trial. This example covers two cameras, a
-pose file per camera, two microphones and explicit trial timing:
-
-```python
-import pandas as pd
-import ethograph as eto
-
-trial_table = pd.DataFrame({
-    "trial": [1, 2],
-    "start_time": [0.0, 300.0],
-    "stop_time":  [299.5, 599.5],
-    "video_cam-1": ["cam1_t1.mp4", "cam1_t2.mp4"],
-    "video_cam-2": ["cam2_t1.mp4", "cam2_t2.mp4"],
-    "pose_cam-1":  ["dlc_cam1_t1.h5", "dlc_cam1_t2.h5"],
-    "pose_cam-2":  ["dlc_cam2_t1.h5", "dlc_cam2_t2.h5"],
-    "audio_mic-1": ["mic1_t1.wav", "mic1_t2.wav"],
-    "audio_mic-2": ["mic2_t1.wav", "mic2_t2.wav"],
-    "stimulus":    ["tone_A", "tone_B"],
-})
-
-eto.align_media_per_trial(
-    trial_table,
-    stream_rates={"video": 30.0, "pose": 30.0, "audio": 48000.0},
-    output_path=".ethograph/alignment.nwb",
-)
-```
-
-{func}`~ethograph.io.nwb_alignment.align_media_per_trial`,
-{func}`~ethograph.io.nwb_alignment.align_media_from_streams` and
-{class}`~ethograph.io.nwb_alignment.NWBAlignment` are all re-exported at the top
-level, so `eto.align_media_per_trial` and
-`from ethograph.io.nwb_alignment import align_media_per_trial` are the same
-function — use whichever you prefer.
-
-Notes:
-
-- **Files are paired by row, not by name.** Nothing scans a folder: row order
-  is trial order and each `{stream}_{device}` column is that stream's file for
-  that trial. Only the basename is stored; filename matching happens later, at
-  load time, when the GUI resolves each basename against the media folder you
-  select.
-- **Camera index pairs video with pose**: device `cam-1` overlays `pose_cam-1`.
-- **Extra columns** (`stimulus`, `condition`, …) become trial attributes and
-  flow through to label TSV exports.
-- **Multi-camera NWB files** need no table: each camera is already a separate
-  {class}`~pynwb.image.ImageSeries` in `nwb.acquisition`, discovered
-  automatically.
-
-(target-omitting-trial-times)=
-#### Omitting `start_time` / `stop_time`
-
-Both columns are optional. Leave them out and each trial's duration is probed
-from its own media file (video first, then audio, then pose), with trials laid
-**end to end** starting at `0.0`:
-
-```python
-eto.align_media_per_trial(
-    trial_table.drop(columns=["start_time", "stop_time"]),
-    stream_rates={"video": 30.0, "pose": 30.0, "audio": 48000.0},
-    output_path="session_01/.ethograph/alignment.nwb",
-    media_root="session_01/video",     # needed to open the files for probing
-)
-```
-
-Three things to know before relying on this:
-
-- **The files must be openable at build time.** Probing opens the media, so
-  either give absolute paths in the table or pass `media_root`; a filename that
-  doesn't resolve to an existing file raises `ValueError`. This is the one place
-  the builder needs the actual media rather than just its name.
-- **Inferred trials are contiguous.** Trial 2 starts exactly where trial 1
-  ends, so the inter-trial gaps of the real recording are erased. Trial-relative
-  time (labels, features, per-trial video) is unaffected, but session-absolute
-  time is fiction — pass the real `start_time` / `stop_time` whenever you have
-  ephys on a session clock, session-wide media, or session-mode navigation to
-  support.
-- **Pose-only tables need a rate.** A pose file has no intrinsic duration, so
-  probing it also requires `pose_fps=`. Tables with no `video_*`, `audio_*` or
-  `pose_*` column at all cannot infer anything and raise.
-
-When present, `start_time` / `stop_time` also enable session-mode navigation and
-let the GUI restrict neural data to trial windows.
-
-(target-session-wide-streams)=
-### `align_media_from_streams` — session-wide or mixed
-
-Use this when media doesn't map 1:1 to trials: one continuous audio file across
-all trials, ephys on a separate clock, or explicit DAQ timestamps.
-
-```python
-import pandas as pd
-import ethograph as eto
-
-trials = pd.DataFrame({
-    "trial": [1, 2, 3],
-    "start_time": [0.0, 300.0, 600.0],
-    "stop_time": [299.5, 599.5, 899.5],
-})
-
-streams = [
-    # Per-trial: one file per trial, as above
-    {"name": "video_cam-1", "files": ["t1.mp4", "t2.mp4", "t3.mp4"], "rate": 30.0},
-    # Session-wide: one file; starting_time marks when it begins in session time
-    {"name": "audio_mic-1", "files": ["session_ch1.wav"], "rate": 48000.0, "starting_time": 0.0},
-    # Ephys on its own clock, starting 0.5 s after the behavioural reference
-    {"name": "ephys_probe-1", "files": ["session.dat"], "rate": 30000.0, "starting_time": 0.5},
-]
-
-eto.align_media_from_streams(trials, streams, ".ethograph/alignment.nwb")
-```
-
-Each entry in `streams` accepts:
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `name` | `str` | Stream identifier: `{stream}_{device}` (e.g. `video_cam-1`) |
-| `files` | `list[str]` | One file (session-wide) or one per trial |
-| `rate` | `float` | Sampling rate in Hz |
-| `starting_time` | `float` | When the stream begins in session time. Default 0.0 |
-| `timestamps` | `ndarray` | Explicit per-sample timestamps. Overrides `rate` when clocks drift |
-
-Ephys is always session-wide: select the file in the GUI rather than embedding
-it in the dataset. See {doc}`loading_ephys` for supported formats, Kilosort
-folder setup and channel mapping.
 
 ### Reading an existing alignment file
 
@@ -654,7 +665,6 @@ A complete two-camera, ten-trial setup:
 
 ```python
 import numpy as np
-import pandas as pd
 import xarray as xr
 import ethograph as eto
 
@@ -687,18 +697,18 @@ for trial_id in range(1, 11):
 dt = eto.from_datasets(datasets)
 dt.save("session.nc")
 
-# 2) Alignment: media files + trial timing
-trial_table = pd.DataFrame({
-    "trial": list(range(1, 11)),
-    "start_time": [i * 300.0 for i in range(10)],
-    "stop_time": [(i + 1) * 300.0 - 0.5 for i in range(10)],
-    "video_cam-1": [f"cam1_trial{tid:03d}.mp4" for tid in range(1, 11)],
-    "video_cam-2": [f"cam2_trial{tid:03d}.mp4" for tid in range(1, 11)],
-    "pose_cam-1":  [f"dlc_cam1_trial{tid:03d}.h5" for tid in range(1, 11)],
-    "pose_cam-2":  [f"dlc_cam2_trial{tid:03d}.h5" for tid in range(1, 11)],
-})
+# 2) Pairing: media files + trial timing
+sources = [
+    eto.SourceSpec("video", device="cam-1", folder="video/cam1"),
+    eto.SourceSpec("video", device="cam-2", folder="video/cam2"),
+    eto.SourceSpec("pose", device="cam-1", folder="pose/cam1"),
+    eto.SourceSpec("pose", device="cam-2", folder="pose/cam2"),
+]
+trial_table = eto.discover_media(".", sources)       # 10 rows, natural sort order
+trial_table["start_time"] = [i * 300.0 for i in range(10)]
+trial_table["stop_time"] = [(i + 1) * 300.0 - 0.5 for i in range(10)]
 
-eto.align_media_per_trial(
+eto.pair_media(
     trial_table,
     stream_rates={"video": 30.0, "pose": 30.0},
     output_path=".ethograph/alignment.nwb",
@@ -777,7 +787,7 @@ my_study/                              # chosen on the start page
     ├── runs/
     │   └── lightgbm/                  # onset models trained from the Model menu
     ├── workflows/                     # curation workflows
-    ├── wizard/                        # alignment-wizard notebooks
+    ├── wizard/                        # Data wizard notebooks, one per rig
     └── sessions/                      # drag & drops made with this project set
         └── 2026-09-06_21-47-12/       # one timestamped folder per drop, reopenable
 ```
@@ -936,6 +946,8 @@ code:
 
 - {doc}`../api/trialtree` — `from_datasets()`, `from_continuous()`, timing, iteration
 - {doc}`loading_ephys` — ephys formats, Kilosort, channel mapping
+- {doc}`video_and_ephys` — video on a recorder's clock through neuroconv
+- {doc}`../advanced/data_wizard` — the Data wizard, page by page
 - {class}`~ethograph.io.nwb_alignment.NWBAlignment` — alignment reader API
-- {func}`~ethograph.io.nwb_alignment.align_media_per_trial` — per-trial builder
-- {func}`~ethograph.io.nwb_alignment.align_media_from_streams` — session-wide builder
+- {func}`~ethograph.discover_media` — the pairing table from folders or a filename pattern
+- {func}`~ethograph.pair_media` — writes the alignment file (`align_media_per_trial` / `align_media_from_streams` are aliases)

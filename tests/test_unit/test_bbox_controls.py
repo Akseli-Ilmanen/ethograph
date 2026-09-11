@@ -32,12 +32,13 @@ def test_a_users_pick_wins_over_the_palette():
 
 
 def test_video_context_shows_bbox_controls_instead_of_pose_for_boxes(qapp):
-    sections = {name: QWidget() for name in ("videocrop", "videolabel", "pose", "bbox")}
+    sections = {name: QWidget() for name in ("videocrop", "videolabel", "overlay", "pose", "bbox")}
     panel = RightContextPanel(sections)
     assert {"pose", "bbox"} <= set(_CONTEXT_MAP["video"])
 
     assert panel.set_context("video", has_pose=True, pose_kind="bboxes")
     assert not sections["pose"].isVisibleTo(panel) and sections["bbox"].isVisibleTo(panel)
+    assert sections["overlay"].isVisibleTo(panel), "the overlay chooser sits above either section"
 
     # Same plot type, other kind of pose file: still a change.
     assert panel.set_context("video", has_pose=True, pose_kind="poses")
@@ -48,3 +49,4 @@ def test_video_context_shows_bbox_controls_instead_of_pose_for_boxes(qapp):
     # No pose at all: neither, whatever the kind claims.
     panel.set_context("video", has_pose=False, pose_kind="bboxes")
     assert not sections["pose"].isVisibleTo(panel) and not sections["bbox"].isVisibleTo(panel)
+    assert not sections["overlay"].isVisibleTo(panel), "nothing to choose from without pose data"

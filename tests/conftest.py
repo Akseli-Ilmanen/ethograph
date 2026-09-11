@@ -206,6 +206,25 @@ def _suppress_dialogs(monkeypatch):
     monkeypatch.setattr(QMessageBox, "information", _noop)
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_global_settings(monkeypatch, tmp_path):
+    """Never let a test touch the real ``~/.ethograph/gui_settings.yaml``.
+
+    ``ObservableAppState._global_settings_path`` ignores the ``yaml_path``
+    passed to the constructor on every niladic ``save_to_yaml()``/
+    ``load_from_yaml()`` call — autosave included — and always resolves to
+    the real global settings file. Any test that builds an ``ObservableAppState``
+    (directly, or via ``MetaWidget``/the ``gui`` fixture) and lets its
+    10-second autosave timer fire, or calls one of those methods with no
+    argument, would otherwise overwrite the user's real settings — e.g.
+    ``project_path`` — with whatever this test happened to set.
+    """
+    if not GUI_AVAILABLE:
+        return
+    global_path = tmp_path / "gui_settings.yaml"
+    monkeypatch.setattr(ObservableAppState, "_global_settings_path", lambda self: global_path)
+
+
 # ---------------------------------------------------------------------------
 # GUI fixtures
 # ---------------------------------------------------------------------------
@@ -225,6 +244,8 @@ def gui(request, qtbot, tmp_path, monkeypatch):
         lambda data_dir=None: test_config_dir,
     )
 
+    from ethograph.gui.app_state import ObservableAppState
+
     shell = EthographMainWindow()
     qtbot.addWidget(shell)
     meta = MetaWidget(shell)
@@ -233,8 +254,6 @@ def gui(request, qtbot, tmp_path, monkeypatch):
     # Hermetic per-dataset state: local_settings.yaml is read from and written
     # to this test's tmp dir, never the shared example dataset dirs — so a
     # flag left behind by a GUI session (or another test) cannot reach a test.
-    from ethograph.gui.app_state import ObservableAppState
-
     local_dir = tmp_path / "local_settings"
     local_dir.mkdir(exist_ok=True)
 

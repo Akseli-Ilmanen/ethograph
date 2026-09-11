@@ -8,7 +8,7 @@ import pandas as pd
 import xarray as xr
 from movement.io import load_dataset
 
-from ethograph.gui.wizard_overview import ModalityConfig, WizardState
+from ethograph.gui.wizard_state import ModalityConfig, WizardState
 from ethograph.io.trialtree import TrialTree
 
 INTERVAL_COLUMNS = {"trial", "onset_s", "offset_s", "labels", "individual"}
@@ -29,7 +29,7 @@ def build_multi_trial_dt(state: WizardState) -> TrialTree:
     elif state.pose.enabled:
         fps = state.pose.fps
     else:
-        raise ValueError("FPS could not be detected from user/video.")
+        fps = None  # audio-only: no frame clock to record
 
     for i, trial_id in enumerate(trial_ids):
         ds = _build_single_trial_ds(state, trial_table, i, trial_id, fps, individuals)
@@ -52,14 +52,15 @@ def _build_single_trial_ds(
     trial_table: pd.DataFrame,
     trial_idx: int,
     trial_id,
-    fps: int,
+    fps: float | None,
     individuals: list[str],
 ) -> xr.Dataset:
     row = trial_table.iloc[trial_idx]
 
     ds = xr.Dataset(coords={"individuals": individuals})
     ds.attrs["trial"] = trial_id
-    ds.attrs["fps"] = fps
+    if fps is not None:
+        ds.attrs["fps"] = fps
 
     if state.pose.enabled:
         pose_path = _get_file_for_trial(row, "pose")
@@ -114,7 +115,7 @@ def _build_nwb_file(
     Writes to ``.ethograph/alignment.nwb`` relative to the output path,
     or falls back to a temp location.
     """
-    from ethograph.io.nwb_alignment import align_media_per_trial
+    from ethograph.io.pairing import pair_media
 
     if state.output_path:
         output_dir = Path(state.output_path).parent
@@ -128,16 +129,22 @@ def _build_nwb_file(
         stream_rates["video"] = float(fps)
     if state.pose.enabled and fps:
         stream_rates["pose"] = float(fps)
+    session_wide: dict[str, tuple[str, float, float]] = {}
     if state.audio.enabled and state.audio.audio_sr:
-        stream_rates["audio"] = float(state.audio.audio_sr)
+        if state.audio.is_continuous_mode:
+            file = state.audio.files[0] if state.audio.files else state.audio.single_file_path
+            session_wide["audio_mic-1"] = (str(file), float(state.audio.audio_sr), float(state.audio.constant_offset))
+        else:
+            stream_rates["audio"] = float(state.audio.audio_sr)
 
     table = trial_table.copy()
     if not {"start_time", "stop_time"}.issubset(table.columns):
         table = _infer_trial_times(table, state, fps)
 
-    align_media_per_trial(
+    pair_media(
         trial_table=table,
         stream_rates=stream_rates,
+        session_wide=session_wide or None,
         output_path=nwb_path,
     )
 

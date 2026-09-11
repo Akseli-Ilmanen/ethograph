@@ -1,0 +1,17 @@
+{% if session_wide_entries and not session_wide %}
+# One file for the whole session: (file, sample rate, when it starts relative to trial 1)
+session_wide = {
+{% for col, file, rate, offset in session_wide_entries %}
+    "{{ col }}": (f"{session_dir}/{{ file }}", {{ rate }}, {{ offset }}),
+{% endfor %}
+}
+
+{% endif %}
+eto.pair_media(
+    table,
+    stream_rates={{ stream_rates_literal }},
+{% if session_wide or session_wide_entries %}
+    session_wide=session_wide,
+{% endif %}
+    output_path=f"{session_dir}/.ethograph/alignment.nwb",
+)

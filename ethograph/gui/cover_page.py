@@ -3,14 +3,25 @@
 Presents three entry points (matching the design in the project brief):
 
 1. **Template datasets** — reuse :meth:`IOWidget._on_select_template_clicked`.
-2. **Drag & drop files** — drop single, already-aligned media/feature/label
-   files; ethograph classifies them by extension, optionally asks which video
-   belongs to which camera, builds a single-trial alignment NWB so the normal
-   loader can consume loose media, and loads. With a **project folder** chosen
-   (remembered in ``gui_settings.yaml``) the drop lands in the project's
-   ``sessions/{timestamp}/`` and is listed for reopening (``gui/project.py``);
-   without one it is throwaway in the system temp dir (unique name per drop;
-   stale ones are cleaned up best-effort).
+2. **Drag & drop files** — drop already-aligned media/feature/label files;
+   ethograph classifies them by extension and loads. What several files of
+   one stream *mean* is the one question asked up front, via the drop
+   layout combo (``app_state.drop_layout``, remembered across restarts):
+
+   - ``"same_trial"`` (default) — several files are several cameras/mics on
+     one trial; the user is optionally asked which video is which camera,
+     and a single-trial alignment NWB is synthesised so the normal loader
+     can consume the loose media.
+   - ``"multi_trial"`` — several files of one stream are several trials of
+     one device, natural-sort paired (:meth:`CoverPage._populate_io_from_multi_trial`,
+     the Data wizard's single-camera "Pair" route driven headlessly): a
+     folder of ``trial001.mp4, trial002.mp4, ...`` (optionally with matching
+     pose/audio files) becomes a real multi-trial ``TrialTree``.
+
+   With a **project folder** chosen (remembered in ``gui_settings.yaml``) the
+   drop lands in the project's ``sessions/{timestamp}/`` and is listed for
+   reopening (``gui/project.py``); without one it is throwaway in the system
+   temp dir (unique name per drop; stale ones are cleaned up best-effort).
 3. **Data wizard** — reuse :meth:`IOWidget._on_create_nc_clicked`.
 
 The page runs *before* the main window is shown: it accepts once a dataset
@@ -26,6 +37,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+import natsort
+import pandas as pd
 import xarray as xr
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPixmap
@@ -582,6 +595,12 @@ class CoverPage(QDialog):
         row.addWidget(self._project_clear_btn)
         return bar
 
+    def _on_drop_layout_changed(self, index: int) -> None:
+        self.app_state.drop_layout = self._drop_layout_combo.itemData(index)
+
+    def _drop_layout(self) -> str:
+        return self._drop_layout_combo.currentData() or "same_trial"
+
     def _on_browse_project(self) -> None:
         current = getattr(self.app_state, "project_path", None)
         path = browse_open_dir(self, self.app_state, "Choose a project folder", preferred_dir=current)
@@ -767,9 +786,29 @@ class CoverPage(QDialog):
         card, layout = self._make_card(
             2,
             "Drag &amp; drop",
-            "Quick exploration: drop single, already-aligned media / feature / label files (single trial assumed).",
+            "Quick exploration: drop already-aligned media / feature / label files.",
             _ACCENTS["drop"],
         )
+
+        layout_row = QHBoxLayout()
+        layout_row.addWidget(QLabel("Several files of one stream are:"))
+        self._drop_layout_combo = QComboBox()
+        self._drop_layout_combo.addItem("Several cameras/mics filming one trial", "same_trial")
+        self._drop_layout_combo.addItem("Several trials of one device (natural sort)", "multi_trial")
+        self._drop_layout_combo.setToolTip(
+            "Same trial: drop 2+ video files and they become cam-1, cam-2, ... of one trial "
+            "(order them in the dialog that follows).\n"
+            "Multiple trials: drop 2+ video/pose/audio/.nc files and they natural-sort into "
+            "one trial each — a folder of trial001.mp4, trial002.mp4, ... works.\n"
+            "Remembered for next time."
+        )
+        saved = getattr(self.app_state, "drop_layout", "same_trial")
+        index = self._drop_layout_combo.findData(saved)
+        self._drop_layout_combo.setCurrentIndex(index if index >= 0 else 0)
+        self._drop_layout_combo.currentIndexChanged.connect(self._on_drop_layout_changed)
+        layout_row.addWidget(self._drop_layout_combo, 1)
+        layout.addLayout(layout_row)
+
         self._drop = _DropList(accent=_ACCENTS["drop"], min_height=self._px(160))
         layout.addWidget(self._drop, 1)
 
@@ -1043,6 +1082,12 @@ class CoverPage(QDialog):
             "audio_track_videos": audio_track_videos,
         }
 
+    @staticmethod
+    def _is_multi_trial_drop(buckets: dict[str, list[str]]) -> bool:
+        """Whether several files sit in one stream — the signal that this is
+        several trials of one device, not several cameras on one trial."""
+        return any(len(buckets[k]) > 1 for k in ("video", "pose", "audio"))
+
     def _populate_io_from_buckets(self, buckets: dict[str, list[str]], details: dict):
         io = self.io_widget
         app_state = self.app_state
@@ -1050,6 +1095,10 @@ class CoverPage(QDialog):
         videos = buckets["video"]
         poses = buckets["pose"]
         images = buckets["image"]
+
+        if self._drop_layout() == "multi_trial" and self._is_multi_trial_drop(buckets):
+            self._populate_io_from_multi_trial(buckets, details)
+            return
 
         if buckets["npy"]:
             self._populate_io_from_npy(buckets, details)
@@ -1173,6 +1222,87 @@ class CoverPage(QDialog):
             # is never re-guessed from the .nc filename on later loads.
             app_state.labels_import_path = buckets["labels"][0]
             io.import_labels_checkbox.setChecked(True)
+
+    def _populate_io_from_multi_trial(self, buckets: dict[str, list[str]], details: dict) -> None:
+        """Several files of one device = one file per trial, natural-sort paired.
+
+        Drives the Data wizard's single-camera "Pair" route headlessly:
+        :func:`~ethograph.gui.wizard_multi_builder.build_multi_trial_dt` builds
+        the ``TrialTree`` (embedding pose, same as the wizard) and the
+        ``.ethograph/alignment.nwb`` sidecar next to it (video/audio stay pure
+        media, referenced from there). Feature ``.nc`` files and ephys are not
+        supported in this drop path yet — use the Data wizard for those.
+        """
+        from ethograph.gui.video_manager import probe_video
+        from ethograph.gui.wizard_multi_builder import build_multi_trial_dt
+        from ethograph.gui.wizard_state import WizardState
+
+        videos = natsort.natsorted(buckets["video"])
+        poses = natsort.natsorted(buckets["pose"])
+        audios = natsort.natsorted(buckets["audio"])
+        counts = {k: len(v) for k, v in (("video", videos), ("pose", poses), ("audio", audios)) if v}
+        if not counts:
+            raise RuntimeError("Multiple trials needs at least one video, pose or audio file.")
+        if len(set(counts.values())) > 1:
+            detail = ", ".join(f"{k}={n}" for k, n in counts.items())
+            raise RuntimeError(f"Multiple trials: streams disagree on file count ({detail}).")
+        n_trials = next(iter(counts.values()))
+
+        state = WizardState(mode="pair")
+        columns: dict[str, list] = {"trial": list(range(1, n_trials + 1))}
+        if videos:
+            fps = probe_video(videos[0]).fps
+            if not fps:
+                raise RuntimeError(f"Could not read frame rate from {Path(videos[0]).name}.")
+            state.video.enabled = True
+            state.video.files = videos
+            state.video.file_mode = "aligned_to_trial"
+            state.video.fps = fps
+            columns["video_cam-1"] = videos
+        if poses:
+            pose_fps = state.video.fps if videos else details.get("pose_fps")
+            if not pose_fps:
+                raise RuntimeError("A pose file dropped without a video needs its frame rate.")
+            state.pose.enabled = True
+            state.pose.files = poses
+            state.pose.file_mode = "aligned_to_trial"
+            state.pose.fps = pose_fps
+            state.pose.source_software = details.get("source_software") or "DeepLabCut"
+            columns["pose_cam-1"] = poses
+        if audios:
+            rate, _duration = _audio_info(audios[0])
+            state.audio.enabled = True
+            state.audio.files = audios
+            state.audio.file_mode = "aligned_to_trial"
+            state.audio.audio_sr = rate
+            columns["audio_mic-1"] = audios
+
+        state.trial_table = pd.DataFrame(columns)
+        self._drop_tmp_dir = self._prepare_drop_dir()
+        state.session_dir = str(self._drop_tmp_dir)
+        state.output_path = str(self._drop_tmp_dir / "session.nc")
+
+        dt = build_multi_trial_dt(state)
+        dt.to_netcdf(state.output_path)
+
+        app_state = self.app_state
+        app_state.nc_file_path = state.output_path
+        app_state.metadata_path = None
+        app_state.labels_import_path = None
+        app_state.video_folder = None
+        app_state.audio_folder = None
+        app_state.pose_folder = None
+        app_state.ephys_path = None
+        app_state.neurons_path = None
+        app_state.image_paths = []
+        app_state.nwb_alignment = state.nwb_alignment
+        if videos:
+            app_state.video_folder = str(Path(videos[0]).parent)
+        if poses:
+            app_state.pose_folder = str(Path(poses[0]).parent)
+            app_state.source_software = state.pose.source_software
+        if audios:
+            app_state.audio_folder = str(Path(audios[0]).parent)
 
     def _populate_io_from_npy(self, buckets: dict[str, list[str]], details: dict):
         """Convert a dropped .npy into a .nc (the one case that must persist data).

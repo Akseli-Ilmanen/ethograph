@@ -1,0 +1,38 @@
+import numpy as np
+from neuroconv.datainterfaces import {{ digital_interface }}, ExternalVideoInterface
+
+digital = {{ digital_interface }}(
+    file_path=rig["recording_file"],
+    detection_configuration={
+        rig["trigger_line"]: [
+            {
+                "signal_conditioning": {"binarize": "midpoint"},
+                "detection": "rising",
+                "event_name": "camera_trigger",
+            }
+        ]
+    },
+)
+onsets = digital.get_event_times("camera_trigger")
+
+_video_folder = Path(session_dir) / "{{ video_folder }}"
+videos = {
+    _col: ExternalVideoInterface(
+        file_paths=[_video_folder / f for f in table[_col].dropna()], video_name=_col
+    )
+    for _col in {{ camera_columns }}
+}
+
+for _video in videos.values():
+    _segment_keys = _video.alignment.keys()
+    assert len(onsets) == len(_segment_keys), f"{len(onsets)} onsets for {len(_segment_keys)} files."
+    for _key, _onset in zip(_segment_keys, onsets):
+        _video.alignment[_key].start_at(_onset)
+
+# durations + file mapping for the trials table (added to nwbfile in the write cell)
+_primary = videos["{{ primary_camera_column }}"]
+_frame_counts = np.array(_primary.get_header_frame_counts())
+_durations = _frame_counts / np.array(_primary.get_header_frame_rates())
+trial_onsets = onsets
+trial_durations = _durations
+trial_video_files = table["{{ primary_camera_column }}"].dropna().tolist()

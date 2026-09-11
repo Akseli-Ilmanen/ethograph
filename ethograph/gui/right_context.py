@@ -13,8 +13,9 @@ Mapping (per the design brief):
 plot type     sections shown
 ============  ==================================================
 ``video``     Crop (crop/uncrop the clicked camera), Label overlay (hide the
-              label name drawn on the video), Pose (if pose data) — or
-              Bounding boxes instead, when that is what the pose file holds
+              label name drawn on the video), Overlay source (which feature
+              is drawn), Pose (if pose data) — or Bounding boxes instead,
+              when the drawn feature has a ``shape`` companion
 ``audio``     Energy envelope, Spectrogram settings, shared axes
 ``lineplot``  Xarray coords, Overlays, Line-plot axes, shared axes
 ``heatmap``   Xarray coords, Overlays, Heatmap, shared axes
@@ -40,7 +41,7 @@ from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 _CONTEXT_MAP: dict[str, list[str]] = {
     # The old napari-era "Space/Cameras" group (slot) is gone — cameras are
     # opened by drag-drop and there is no layers/space-plot toggle.
-    "video": ["videocrop", "videolabel", "pose", "bbox"],
+    "video": ["videocrop", "videolabel", "overlay", "pose", "bbox"],
     # Audio trace: channel + envelope controls + shared axes. Spectrogram:
     # channel + its panel.
     "audiotrace": ["audiochannel", "energy", "shared"],
@@ -144,6 +145,7 @@ class RightContextPanel(QWidget):
         want = set(_CONTEXT_MAP.get(plot_type, []))
         want.discard("bbox" if pose_kind != "bboxes" else "pose")
         if not has_pose:
+            want.discard("overlay")
             want.discard("pose")
             want.discard("bbox")
         self._placeholder.setVisible(not want)

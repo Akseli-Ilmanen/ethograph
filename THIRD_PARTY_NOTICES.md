@@ -44,6 +44,12 @@ The adapted function says so in its docstring.
 | `ethograph/gui/plots_ephystrace.py` | [phy](https://github.com/cortex-lab/phy), Cortex Lab | BSD-3-Clause | Right-drag box scaling and the trace-view plotting algorithm |
 | `ethograph/segment/archive/batch_gen.py` | [MS-TCN](https://github.com/yabufarha/ms-tcn), Yazan Abu Farha | MIT | Batch generator (archived, not imported) |
 
+## Documentation figures
+
+| Where | Upstream | Licence | What |
+|---|---|---|---|
+| `docs/source/_static/neuroconv/` | [neuroconv](https://github.com/catalystneuro/neuroconv), CatalystNeuro | BSD-3-Clause | `video_setup_free_running.png` and `video_setup_triggered.png`, from the "align external video" how-to added in PR #2037 |
+
 ## Not third-party
 
 `ethograph/segment/models/rnn.py` (the recurrent baseline) is EthoGraph's own

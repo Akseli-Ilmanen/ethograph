@@ -1,0 +1,26 @@
+from neuroconv.converters import ConverterPipe
+from neuroconv.datainterfaces import {{ recording_interface }}
+
+recording = {{ recording_interface }}(file_path=rig["recording_file"])
+data_interfaces = [recording{% if has_digital %}, digital{% endif %}, *videos.values()]
+converter = ConverterPipe(data_interfaces)
+{% if has_trial_metadata %}
+nwbfile = converter.create_nwbfile()
+nwbfile.add_trial_column(name="video_file", description="The external_file entry holding this trial's frames.")
+for _onset, _duration, _file in zip(trial_onsets, trial_durations, trial_video_files):
+    nwbfile.add_trial(start_time=float(_onset), stop_time=float(_onset + _duration), video_file=str(_file))
+converter.run_conversion(nwbfile=nwbfile, nwbfile_path=f"{session_dir}/session.nwb", metadata=converter.get_metadata())
+{% else %}
+converter.run_conversion(nwbfile_path=f"{session_dir}/session.nwb", metadata=converter.get_metadata())
+{% endif %}
+
+# pose/audio aren't referenced from the .nwb's acquisition -- pair them alongside it
+_non_video = [c for c in table.columns if not c.startswith("video_")]
+eto.pair_media(
+    table[_non_video],
+    stream_rates={{ stream_rates_literal }},
+{% if session_wide %}
+    session_wide=session_wide,
+{% endif %}
+    output_path=f"{session_dir}/session.nwb",
+)

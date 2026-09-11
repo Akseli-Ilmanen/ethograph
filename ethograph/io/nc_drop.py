@@ -11,12 +11,12 @@ every one of them reaches the add-panel popup. Qt-free.
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 
-#: ``space_unit`` attr spellings that say "pixels" outright.
-PIXEL_UNITS = frozenset({"px", "pixel", "pixels"})
+from ethograph.io.overlay_source import PIXEL_UNITS, fits_frame
+
+__all__ = ["PIXEL_UNITS", "concat_on_camera", "positions_fit_frame"]
 #: Coordinates whose order is meaningful (a palette is indexed by it).
 _NAMED_DIMS = ("individual", "individuals", "keypoint", "keypoints")
 
@@ -29,22 +29,12 @@ def positions_fit_frame(ds: xr.Dataset, width: int, height: int) -> bool:
     finite y in ``[0, height]``, box edges (``position ± shape/2``) included;
     a dataset with no finite position at all cannot be placed and is refused.
     """
-    unit = str(ds.attrs.get("space_unit", "")).strip().lower()
-    if unit:
-        return unit in PIXEL_UNITS
-    if "position" not in ds or "space" not in ds["position"].dims or width <= 0 or height <= 0:
+    if "position" not in ds or "space" not in ds["position"].dims:
         return False
     pos = ds["position"]
-    lo, hi = pos, pos
-    if ds.attrs.get("ds_type") == "bboxes" and "shape" in ds:
-        half = ds["shape"] / 2
-        lo, hi = pos - half, pos + half
-    xs = np.concatenate([lo.sel(space="x").values.ravel(), hi.sel(space="x").values.ravel()])
-    ys = np.concatenate([lo.sel(space="y").values.ravel(), hi.sel(space="y").values.ravel()])
-    xs, ys = xs[np.isfinite(xs)], ys[np.isfinite(ys)]
-    if len(xs) == 0 or len(ys) == 0:
-        return False
-    return bool(xs.min() >= 0 and xs.max() <= width and ys.min() >= 0 and ys.max() <= height)
+    if "space_unit" in ds.attrs and "space_unit" not in pos.attrs:
+        pos = pos.assign_attrs(space_unit=ds.attrs["space_unit"])
+    return fits_frame(pos, ds["shape"] if "shape" in ds else None, width, height)
 
 
 def concat_on_camera(datasets: list[xr.Dataset], names: list[str]) -> xr.Dataset:

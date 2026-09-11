@@ -27,6 +27,11 @@ from ethograph.io.nwb_alignment import (
     align_media_from_streams,
     align_media_per_trial,
 )
+from ethograph.io.pairing import (
+    SourceSpec,
+    discover_media,
+    pair_media,
+)
 from ethograph.io.pynapple import load_nap_data
 from ethograph.io.time_model import (
     SourceCollection,

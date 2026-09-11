@@ -114,4 +114,4 @@ EthoGraph reads `dat_path`, `n_channels_dat`, and `sample_rate` from it. If the 
 (target-ephys-multi-trial)=
 ## Ephys with multiple trials
 
-Ephys is session-wide. If you have separate video/audio files per trial, build a `session.nc` first (see {doc}`preparing_data`), then select the ephys file separately in the I/O widget.
+The native route is {doc}`video_and_ephys`: neuroconv puts the video on the recorder's clock and writes a `session.nwb` with trials. Without a sync line, {ref}`pair the files <target-nwb-alignment>` into a `session.nc` instead and select the ephys file in the GUI as above.
