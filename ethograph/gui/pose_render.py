@@ -742,6 +742,7 @@ class PoseDisplayManager:
             style,
             img_height=view.image_height(),
             skeleton_config=self._resolved_skeleton_config(pr),
+            scale=view.overlay_scale(),
         )
         overlay.set_frame(int(getattr(self.app_state, "current_frame", 0) or 0))
         view.request_draw()

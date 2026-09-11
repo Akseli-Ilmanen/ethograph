@@ -123,6 +123,7 @@ class PoseOverlay:
     def __init__(self, scene: gfx.Scene):
         self._scene = scene
         self._img_height: float = 0.0
+        self._scale: float = 1.0
         self._data: PoseOverlayData | None = None
         self._style = OverlayStyle()
         self._skeleton_config: dict | None = None
@@ -146,12 +147,19 @@ class PoseOverlay:
         style: OverlayStyle,
         img_height: float,
         skeleton_config: dict | None = None,
+        scale: float = 1.0,
     ) -> None:
-        """(Re)build all graphics for a new pose dataset."""
+        """(Re)build all graphics for a new pose dataset.
+
+        *scale* is texture pixels per pose pixel (``CameraView.overlay_scale``):
+        1 on the source video, less on a downscaled proxy. *img_height* is the
+        texture's, so the y flip happens after scaling.
+        """
         self.clear()
         self._data = data
         self._style = style
         self._img_height = img_height
+        self._scale = float(scale)
         self._skeleton_config = skeleton_config
         if data is None or data.n_tracks == 0:
             return
@@ -285,8 +293,8 @@ class PoseOverlay:
     # ------------------------------------------------------------------
 
     def _to_world(self, xy: np.ndarray) -> np.ndarray:
-        """Map (x, y_img) image coords to world coords (y flipped)."""
-        out = xy.copy()
+        """Map (x, y_img) pose coords to world coords: scaled to the texture, y flipped."""
+        out = xy * self._scale
         out[..., 1] = self._img_height - out[..., 1]
         return out
 

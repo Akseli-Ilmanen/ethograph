@@ -260,6 +260,7 @@ class VideoManager:
         #: state, not saved: re-applied to every view of the camera on each
         #: trial load, so a crop follows the camera across trial navigation.
         self._camera_crops: dict[str, tuple[int, int, int, int]] = {}
+        self._video_reloaded_callback = None
 
     # ------------------------------------------------------------------
     # Display crop (per camera)
@@ -512,6 +513,7 @@ class VideoManager:
         if getattr(self, "_applying_proxies", False):
             return
         self._applying_proxies = True
+        reloaded = False
         try:
             view = self.primary_view
             if getattr(view, "has_video", False):
@@ -520,14 +522,20 @@ class VideoManager:
                     video = getattr(self.app_state, "video", None)
                     if video is None or not video.is_playing:
                         self._reload_primary()
+                        reloaded = True
             for view in list(self.extra_widgets.values()):
                 if not getattr(view, "has_video", False):
                     continue
                 src = getattr(view, "source_video_path", None)
                 if src and self._decode_path(src) != getattr(view, "decode_video_path", None):
                     self._reload_extra(view)
+                    reloaded = True
         finally:
             self._applying_proxies = False
+        if reloaded and self._video_reloaded_callback is not None:
+            # A rebuilt view is a new scene at a new resolution: the pose
+            # overlay has to be drawn again, scaled to it.
+            self._video_reloaded_callback()
 
     def _reload_primary(self) -> None:
         frame = max(0, int(getattr(self.app_state, "current_frame", 0) or 0))
@@ -610,6 +618,7 @@ class VideoManager:
             return
         view.source_video_path = self.app_state.video_path
         view.decode_video_path = decode
+        view.source_size = (probe.width, probe.height)
         view.set_crop(self._camera_crops.get(camera))
         self.refresh_view_title(view)
 
@@ -676,6 +685,10 @@ class VideoManager:
 
     def set_frame_changed_callback(self, callback):
         self._frame_changed_callback = callback
+
+    def set_video_reloaded_callback(self, callback) -> None:
+        """Called after a view is rebuilt in place (proxy on/off): redraw what sits on it."""
+        self._video_reloaded_callback = callback
 
     def _on_primary_frame_changed(self, frame_number: int):
         if hasattr(self, "_frame_changed_callback"):
@@ -811,6 +824,7 @@ class VideoManager:
         view.camera_name = camera_name
         view.source_video_path = video_path
         view.decode_video_path = decode
+        view.source_size = (probe.width, probe.height)
         view.set_crop(self._camera_crops.get(camera_name))
         self.refresh_view_title(view)
 

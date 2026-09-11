@@ -251,6 +251,10 @@ class CameraView(QWidget):
         self._plot: Optional[PlotVideo] = None
         self._static: Optional[_StaticImagePlot] = None
         self._overlay: Optional[PoseOverlay] = None
+        #: ``(width, height)`` of the *source* video — the pixels a pose file
+        #: speaks. Under proxy playback the texture is smaller, and the
+        #: overlay scales by :meth:`overlay_scale`. Set by the video manager.
+        self.source_size: tuple[int, int] | None = None
         #: Active keypoint labelling mode (ethograph.gui.pose_edit_mixin), if any.
         self._label_mode = None
         self._pan_control = None  # saved controls["mouse1"] while labelling
@@ -616,6 +620,18 @@ class CameraView(QWidget):
 
     def image_height(self) -> float:
         return self.image_size()[1]
+
+    def overlay_scale(self) -> float:
+        """Texture pixels per source pixel: 1 on the source, <1 on a proxy.
+
+        What the pose overlay multiplies its source-pixel coordinates by so a
+        box drawn from a full-resolution pose file lands on the downscaled
+        proxy where it belongs.
+        """
+        width = self.image_size()[0]
+        if not self.source_size or not self.source_size[0] or not width:
+            return 1.0
+        return width / float(self.source_size[0])
 
     def image_size(self) -> tuple[float, float]:
         """``(width, height)`` of the texture on screen, in its own pixels.
@@ -986,6 +1002,9 @@ class CameraView(QWidget):
     def clear(self) -> None:
         self._detach_load_state()
         self._crop = None
+        # The overlay lives in the plot's scene: gone with it, or the next
+        # ``ensure_overlay`` hands back graphics nothing renders any more.
+        self._overlay = None
         if self._plot is not None:
             _detach_canvas(self.layout(), self._plot.canvas)
             try:

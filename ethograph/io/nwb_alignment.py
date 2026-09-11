@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -21,6 +22,38 @@ _KNOWN_STREAMS = ("video", "pose", "audio", "ephys")
 _NWB_FILENAME = "alignment.nwb"
 _SETTINGS_DIR = ".ethograph"
 _SENTINEL = object()
+
+
+@dataclass(frozen=True)
+class _FileSpan:
+    """One external file of an ImageSeries and where it sits in session time."""
+
+    index: int
+    path: str
+    t_start: float
+    t_end: float
+
+
+def _span_overlapping(spans: list[_FileSpan], t0: float, t1: float | None) -> _FileSpan | None:
+    """The span overlapping ``[t0, t1]`` most; ``None`` when none does.
+
+    With no ``t1`` the span containing ``t0`` wins. A trial that starts in a
+    gap just before a file (a triggered camera's first frame lands after the
+    trigger) still takes that file when ``t1`` reaches into it.
+    """
+    if t1 is None:
+        for s in spans:
+            if s.t_start <= t0 <= s.t_end:
+                return s
+        return None
+    best: _FileSpan | None = None
+    best_overlap = 0.0
+    for s in spans:
+        overlap = min(s.t_end, t1) - max(s.t_start, t0)
+        if overlap > best_overlap:
+            best, best_overlap = s, overlap
+    return best
+
 
 # Extension → stream mapping, checked in order (first match wins).
 # Video before audio because .mp4/.avi/.mov are in both sets but are
@@ -547,96 +580,98 @@ class NWBAlignment:
         stream: str,
         device: str | None = None,
     ) -> float:
-        """Trial-relative time of sample 0 for a stream's file.
+        """Trial-relative time of sample 0 of the file that holds *trial*.
 
-        For per-trial aligned media returns 0.0.
-        For session-wide media returns the file's start relative to the trial.
-        Reads timing from the acquisition ImageSeries.
+        0.0 for per-trial files, negative for a session-wide file that
+        started before the trial. The file is found by time (the trial's
+        start falls in its span), never by position -- see ``_file_for_trial``.
         """
-        trial_start = self.start_time(trial)
-        trial_idx = self._trial_index(trial)
-
         acq = self._find_acquisition(stream, device)
         if acq is None:
             return 0.0
-
-        starting_frame = getattr(acq, "starting_frame", None)
-        timestamps = getattr(acq, "timestamps", None)
-        rate = getattr(acq, "rate", None)
-
-        if starting_frame is not None and trial_idx is not None and trial_idx < len(starting_frame):
-            frame_idx = int(starting_frame[trial_idx])
-
-            if timestamps is not None and frame_idx < len(timestamps):
-                # Timestamps mode: read directly
-                file_start_time = float(timestamps[frame_idx])
-            elif rate and rate > 0:
-                # Rate mode: compute from starting_time + frame/rate
-                t0 = float(acq.starting_time) if acq.starting_time is not None else 0.0
-                file_start_time = t0 + frame_idx / rate
-            else:
-                return 0.0
-
-            return file_start_time - trial_start
-
-        # No starting_frame or trial not found — use first timestamp
-        if timestamps is not None and len(timestamps) > 0:
-            return float(timestamps[0]) - trial_start
-        if rate and rate > 0:
-            t0 = float(acq.starting_time) if acq.starting_time is not None else 0.0
-            return t0 - trial_start
-
-        return 0.0
+        found = self._file_for_trial(acq, trial)
+        if found is None:
+            return 0.0
+        return found.t_start - self.start_time(trial)
 
     # ── File time spans ──
 
-    def file_time_spans(self, stream: str, device: str | None = None) -> list[tuple[str, float, float]]:
-        """Return [(filepath, t_start, t_end), ...] for each external file in the stream.
+    def _acq_spans(self, acq) -> list[_FileSpan]:
+        """Every external file of *acq* with its session-time span.
 
-        Handles both NWB timing schemes (``timestamps`` and ``rate``).
-        Files with unresolvable timing are silently skipped.
+        Handles both NWB timing schemes (``timestamps`` and ``rate``). A last
+        file whose end is unknown (rate mode, no ``num_samples``, no trials
+        table) gets ``t_end = inf``; a file with no start at all is dropped.
         """
-        acq = self._find_acquisition(stream, device)
-        if acq is None or not getattr(acq, "external_file", None):
+        files = list(getattr(acq, "external_file", None) or [])
+        if not files:
             return []
-
-        files = list(acq.external_file)
         raw_sf = getattr(acq, "starting_frame", None)
         starting_frame = [int(f) for f in raw_sf] if raw_sf is not None else [0] * len(files)
         timestamps = getattr(acq, "timestamps", None)
         rate = getattr(acq, "rate", None)
         starting_time = float(acq.starting_time) if getattr(acq, "starting_time", None) is not None else 0.0
+        ts = np.asarray(timestamps) if timestamps is not None and len(timestamps) > 0 else None
 
-        spans: list[tuple[str, float, float]] = []
+        spans: list[_FileSpan] = []
         for i, filepath in enumerate(files):
             frame_start = starting_frame[i] if i < len(starting_frame) else 0
             frame_end = starting_frame[i + 1] if i + 1 < len(starting_frame) else None
 
-            if timestamps is not None and len(timestamps) > 0:
-                ts = np.asarray(timestamps)
+            if ts is not None:
                 t_start = float(ts[frame_start]) if frame_start < len(ts) else float(ts[0])
-                t_end = float(ts[frame_end - 1]) if frame_end is not None and frame_end <= len(ts) else float(ts[-1])
+                if frame_end is not None and frame_end <= len(ts):
+                    t_end = float(ts[frame_end - 1])
+                else:
+                    t_end = float(ts[-1])
             elif rate and rate > 0:
                 t_start = starting_time + frame_start / rate
                 if frame_end is not None:
                     t_end = starting_time + frame_end / rate
                 else:
-                    # Last/only file: end from num_samples (written for rate
-                    # mode), falling back to the trials table's session end.
                     num = getattr(acq, "num_samples", None)
                     if num:
                         t_end = starting_time + int(num) / rate
                     else:
-                        t_end = self._session_end_time()
-                    if t_end is None:
-                        continue
+                        session_end = self._session_end_time()
+                        t_end = session_end if session_end is not None else float("inf")
             else:
                 continue
-
-            if t_end > t_start:
-                spans.append((str(filepath), t_start, t_end))
-
+            spans.append(_FileSpan(i, str(filepath), t_start, t_end))
         return spans
+
+    def _file_for_trial(self, acq, trial) -> _FileSpan | None:
+        """The external file of *acq* that holds *trial*.
+
+        With real trial timing the file is the one overlapping the trial most
+        (the trial's start lies in it; a trial that starts in a gap before a
+        triggered file takes that file). Without timing every trial starts at
+        0.0 and time says nothing, so the trial's position is used -- one file
+        per trial when the counts agree, else the first file.
+        """
+        spans = self._acq_spans(acq)
+        if not spans:
+            return None
+        if self.has_real_timing:
+            best = _span_overlapping(spans, self.start_time(trial), self.stop_time(trial))
+            if best is not None:
+                return best
+        trial_idx = self._trial_index(trial)
+        if trial_idx is not None and len(spans) == len(self.trials_df) and trial_idx < len(spans):
+            return spans[trial_idx]
+        return spans[0]
+
+    def file_time_spans(self, stream: str, device: str | None = None) -> list[tuple[str, float, float]]:
+        """Return [(filepath, t_start, t_end), ...] for each external file in the stream.
+
+        Files whose end cannot be determined are skipped.
+        """
+        acq = self._find_acquisition(stream, device)
+        if acq is None:
+            return []
+        return [
+            (s.path, s.t_start, s.t_end) for s in self._acq_spans(acq) if np.isfinite(s.t_end) and s.t_end > s.t_start
+        ]
 
     # ── Stream rate ──
 
@@ -705,11 +740,10 @@ class NWBAlignment:
         nwb_base_dir = self._path.parent
 
         if acq is not None and hasattr(acq, "external_file") and acq.external_file:
-            starting_frame = getattr(acq, "starting_frame", None)
             files = list(acq.external_file)
-
-            if trial_idx is not None and starting_frame is not None and trial_idx < len(starting_frame):
-                file_idx = _file_index_for_trial(starting_frame, trial_idx, len(files))
+            found = self._file_for_trial(acq, trial)
+            if found is not None:
+                file_idx = found.index
             elif trial_idx is not None and trial_idx < len(files):
                 file_idx = trial_idx
             else:
@@ -928,22 +962,6 @@ def _build_trials_ep(df: pd.DataFrame, session_end: float | None = None):
             "has_stop": has_stop.astype(float),
         },
     )
-
-
-def _file_index_for_trial(
-    starting_frames: list | np.ndarray,
-    trial_idx: int,
-    n_files: int,
-) -> int:
-    """Map a trial index to the corresponding file index via starting_frame."""
-    sf = [int(f) for f in starting_frames]
-    if trial_idx >= len(sf):
-        return min(trial_idx, n_files - 1)
-    target_frame = sf[trial_idx]
-    for i in range(n_files - 1, -1, -1):
-        if i < len(sf) and sf[i] <= target_frame:
-            return i
-    return 0
 
 
 def _parse_stream_devices(columns: list[str]) -> dict[str, list[str]]:

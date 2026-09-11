@@ -744,6 +744,7 @@ class DataWidget(QWidget):
 
         self.video_mgr = VideoManager(shell.video_area, app_state)
         self.video_mgr.set_frame_changed_callback(self._on_primary_frame_changed)
+        self.video_mgr.set_video_reloaded_callback(self.update_pose)
         shell.video_area.camera_view_removed.connect(self._on_camera_view_removed)
 
         # Session-basis auto-follow: after the marker settles in another
