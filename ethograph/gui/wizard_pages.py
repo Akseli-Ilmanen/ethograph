@@ -39,11 +39,10 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ethograph.gui.file_dialogs import browse_open_dir, browse_open_file, browse_save_file
+from ethograph.gui.file_dialogs import browse_open_file, browse_save_file
 from ethograph.gui.make_pretty import styled_link
 from ethograph.gui.project import project_dir_of
 from ethograph.gui.wizard_state import WizardState
-from ethograph.io.validation import AUDIO_EXTENSIONS, POSE_EXTENSIONS, VIDEO_EXTENSIONS
 from ethograph.utils.paths import defaults_dir
 
 ASSETS = Path(__file__).parent / "assets" / "wizard"
@@ -82,11 +81,6 @@ def _muted(text: str) -> QLabel:
     label.setWordWrap(True)
     label.setStyleSheet("color: #9aa0ac;")
     return label
-
-
-def _extensions_filter(stream: str) -> str:
-    exts = {"video": VIDEO_EXTENSIONS, "pose": POSE_EXTENSIONS, "audio": AUDIO_EXTENSIONS}[stream]
-    return f"{stream.title()} files ({' '.join('*' + e for e in sorted(exts))})"
 
 
 # ─── Page 0: mode ─────────────────────────────────────────────────────────────
@@ -229,236 +223,13 @@ class ModePage(QWidget):
 
 
 # ─── Page 1: sources ──────────────────────────────────────────────────────────
-
-
-class _FolderOrFiles(QWidget):
-    """A folder path or an explicit file list, with a count readout.
-
-    Doubles as its own drop target: dragging a folder or files from Explorer
-    fills it exactly like ``Folder…``/``Files…`` would, so a single camera's
-    source needs no dialog at all.
-    """
-
-    changed = Signal()
-
-    def __init__(self, app_state, stream: str, parent: QWidget | None = None):
-        super().__init__(parent)
-        self._app_state = app_state
-        self._stream = stream
-        self.files: list[str] = []
-        self.setAcceptDrops(True)
-        lay = QHBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        self._edit = QLineEdit()
-        self._edit.setPlaceholderText(f"drag & drop {stream} folder or files here, or browse")
-        self._edit.textChanged.connect(self._on_folder_typed)
-        folder_btn = QPushButton("Folder…")
-        folder_btn.setAutoDefault(False)
-        folder_btn.clicked.connect(self._browse_folder)
-        files_btn = QPushButton("Files…")
-        files_btn.setAutoDefault(False)
-        files_btn.clicked.connect(self._browse_files)
-        self._count = _muted("")
-        lay.addWidget(self._edit, 1)
-        lay.addWidget(folder_btn)
-        lay.addWidget(files_btn)
-        lay.addWidget(self._count)
-
-    # ── drag & drop ──
-
-    def dragEnterEvent(self, event) -> None:
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
-    def dropEvent(self, event) -> None:
-        paths = [url.toLocalFile() for url in event.mimeData().urls() if url.isLocalFile()]
-        if not paths:
-            return
-        if len(paths) == 1 and Path(paths[0]).is_dir():
-            self.set_folder(paths[0])
-            event.acceptProposedAction()
-            return
-        exts = {"video": VIDEO_EXTENSIONS, "pose": POSE_EXTENSIONS, "audio": AUDIO_EXTENSIONS}[self._stream]
-        matching = [p for p in paths if Path(p).is_file() and Path(p).suffix.lower() in exts]
-        if not matching:
-            return
-        from ethograph.gui.file_dialogs import remember_browse_dir
-
-        remember_browse_dir(self._app_state, matching[0])
-        self.files = sorted(matching)
-        self._edit.blockSignals(True)
-        self._edit.setText(str(Path(self.files[0]).parent) + f"  ({len(self.files)} files dropped)")
-        self._edit.blockSignals(False)
-        self._count.setText(f"{len(self.files)} files")
-        self.changed.emit()
-        event.acceptProposedAction()
-
-    @property
-    def folder(self) -> str:
-        return self._edit.text().strip() if not self.files else ""
-
-    def set_folder(self, path: str) -> None:
-        self.files = []
-        self._edit.setText(path)
-
-    def _on_folder_typed(self, text: str) -> None:
-        if self.files:
-            return
-        n = len(self._matching_files(text))
-        self._count.setText(f"{n} files" if text else "")
-        self.changed.emit()
-
-    def _matching_files(self, folder: str) -> list[Path]:
-        p = Path(folder)
-        if not p.is_dir():
-            return []
-        exts = {"video": VIDEO_EXTENSIONS, "pose": POSE_EXTENSIONS, "audio": AUDIO_EXTENSIONS}[self._stream]
-        return sorted(f for f in p.iterdir() if f.suffix.lower() in exts)
-
-    def first_file(self) -> str | None:
-        if self.files:
-            return self.files[0]
-        found = self._matching_files(self._edit.text().strip())
-        return str(found[0]) if found else None
-
-    def _browse_folder(self) -> None:
-        path = browse_open_dir(self, self._app_state, f"Select the {self._stream} folder")
-        if path:
-            self.set_folder(path)
-
-    def _browse_files(self) -> None:
-        from qtpy.QtWidgets import QFileDialog
-
-        from ethograph.gui.file_dialogs import browse_start_dir, remember_browse_dir
-
-        paths, _ = QFileDialog.getOpenFileNames(
-            self,
-            caption=f"Select the {self._stream} files",
-            dir=browse_start_dir(self._app_state),
-            filter=_extensions_filter(self._stream),
-        )
-        if not paths:
-            return
-        remember_browse_dir(self._app_state, paths[0])
-        self.files = list(paths)
-        self._edit.blockSignals(True)
-        self._edit.setText(str(Path(paths[0]).parent) + f"  ({len(paths)} files picked)")
-        self._edit.blockSignals(False)
-        self._count.setText(f"{len(paths)} files")
-        self.changed.emit()
-
-
-class SourcesPage(QWidget):
-    """Page 1: what was recorded, and nothing more. The same page in every mode.
-
-    No camera-count question here — a rig may have any number of cameras or
-    microphones, so folders, patterns and per-device settings are all decided
-    on the next page (:class:`~ethograph.gui.wizard_multi_tabs.ModalityConfigPage`),
-    which a single camera answers just as well by leaving its pattern blank
-    (natural sort, one device). This page only says *which* streams exist and
-    the one thing that must be known before that page's shape is built: audio's
-    per-trial-vs-whole-session layout.
-    """
-
-    def __init__(self, app_state, parent: QWidget | None = None):
-        super().__init__(parent)
-        self._app_state = app_state
-        self._mode = "pair"
-        lay = QVBoxLayout(self)
-        self._title = QLabel("<b>What did you record?</b>")
-        lay.addWidget(self._title)
-        self._mode_note = _muted("")
-        lay.addWidget(self._mode_note)
-
-        sources_row = QHBoxLayout()
-        self._video_cb = QCheckBox("Video")
-        self._video_cb.setChecked(True)
-        self._video_cb.toggled.connect(self._on_video_toggled)
-        self._pose_cb = QCheckBox("Pose")
-        self._audio_cb = QCheckBox("Audio")
-        self._audio_cb.toggled.connect(self._on_audio_toggled)
-        for cb in (self._video_cb, self._pose_cb, self._audio_cb):
-            sources_row.addWidget(cb)
-        sources_row.addStretch()
-        lay.addLayout(sources_row)
-
-        # Audio's only structural question here: whether each trial has its
-        # own file, or the whole session is one file (a different tab shape
-        # on the next page — file_mode "aligned_to_trial" vs "aligned_to_session").
-        self._audio_layout_row = QWidget()
-        af = QHBoxLayout(self._audio_layout_row)
-        af.setContentsMargins(0, 0, 0, 0)
-        af.addWidget(QLabel("Audio files:"))
-        self._audio_per_trial = QRadioButton("one file per trial")
-        self._audio_session = QRadioButton("one file for the whole session")
-        self._audio_per_trial.setChecked(True)
-        agroup = QButtonGroup(self)
-        agroup.addButton(self._audio_per_trial)
-        agroup.addButton(self._audio_session)
-        af.addWidget(self._audio_per_trial)
-        af.addWidget(self._audio_session)
-        af.addStretch()
-        lay.addWidget(self._audio_layout_row)
-
-        self._note = _muted(
-            "Folders, filename patterns (for 2+ cameras/mics) and rates are all on the next page."
-        )
-        lay.addWidget(self._note)
-        lay.addStretch()
-
-        self._on_audio_toggled(False)
-        self._on_video_toggled(True)
-
-    # ── mode-dependent wording ──
-
-    def set_mode(self, mode: str) -> None:
-        self._mode = mode
-        self._video_cb.setChecked(True)
-        if mode == "pair":
-            self._mode_note.setText("Every file starts with its trial.")
-            self._audio_per_trial.setEnabled(True)
-        elif mode == "free_running":
-            self._mode_note.setText(
-                "The camera ran for the whole session: one video file, or the parts the recorder split "
-                "it into."
-            )
-            self._audio_session.setChecked(True)
-            self._audio_per_trial.setEnabled(False)
-        else:
-            self._mode_note.setText("One video file per trial. The recording system knows when each one started.")
-            self._audio_per_trial.setEnabled(True)
-
-    def _on_video_toggled(self, checked: bool) -> None:
-        if not checked and self._mode != "pair":
-            # Modes 2 and 3 align the video; there is nothing to align without it.
-            self._video_cb.setChecked(True)
-
-    def _on_audio_toggled(self, checked: bool) -> None:
-        self._audio_layout_row.setVisible(checked)
-
-    # ── state ──
-
-    def validate(self) -> str | None:
-        if not (self._video_cb.isChecked() or self._pose_cb.isChecked() or self._audio_cb.isChecked()):
-            return "Tick at least one source."
-        return None
-
-    def collect_state(self, state: WizardState) -> None:
-        per_trial_video = self._mode != "free_running"
-        state.video.enabled = self._video_cb.isChecked()
-        if state.video.enabled:
-            state.video.file_mode = "aligned_to_trial" if per_trial_video else "aligned_to_session"
-
-        state.pose.enabled = self._pose_cb.isChecked()
-        if state.pose.enabled:
-            state.pose.file_mode = "aligned_to_trial" if per_trial_video else "aligned_to_session"
-
-        state.audio.enabled = self._audio_cb.isChecked()
-        if state.audio.enabled:
-            session = self._audio_session.isChecked()
-            state.audio.file_mode = "aligned_to_session" if session else "aligned_to_trial"
-
-        state.ephys.enabled = False
+#
+# There is no dedicated Sources page any more — video/pose/audio each get a
+# folder+pattern tab unconditionally on the next page
+# (``wizard_multi_tabs.ModalityConfigPage``), and "enabled" is read back from
+# whether that tab has a folder in it. The cover page's own drag-and-drop
+# card (``gui/cover_page.py``) is the simple, dialog-free path for a single
+# device; this file's remaining pages are mode / timing / write.
 
 
 # ─── Page 2: timing (modes 2 and 3) ──────────────────────────────────────────

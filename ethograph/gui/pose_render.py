@@ -470,6 +470,7 @@ class PoseDisplayManager:
         #: one — set by the keypoint labelling dialog so filled keypoints are
         #: indistinguishable from imported predictions.
         self._pose_override: PoseRenderData | None = None
+        self._filter_warned: set[tuple[str, str]] = set()
 
     @property
     def all_keypoints(self) -> list[str]:
@@ -684,9 +685,26 @@ class PoseDisplayManager:
         if pr is None:
             return None
         # Apply filters driven by UI keypoints table
-        pr = apply_confidence_filter(pr, self.app_state.pose_hide_threshold)
-        pr = apply_keypoint_filter(pr, hidden_keypoints)
+        threshold = self.app_state.pose_hide_threshold
+        filtered = apply_confidence_filter(pr, threshold)
+        if np.any(pr.data_not_nan) and not np.any(filtered.data_not_nan):
+            self._warn_all_filtered(camera_idx, pr, threshold)
+        pr = apply_keypoint_filter(filtered, hidden_keypoints)
         return pr if np.any(pr.data_not_nan) else None
+
+    def _warn_all_filtered(self, camera_idx: int, pr: PoseRenderData, threshold: float) -> None:
+        """Say so once when the confidence filter hides every point of a source."""
+        key = (self._camera_name_for_index(camera_idx), pr.file_name)
+        if key in self._filter_warned:
+            return
+        self._filter_warned.add(key)
+        conf = pr.properties["confidence"].to_numpy()[pr.data_not_nan]
+        highest = float(np.nanmax(conf)) if len(conf) else float("nan")
+        notify(
+            f"{pr.file_name}: every point is below the confidence filter ({threshold:.2f}); "
+            f"the highest confidence is {highest:.2f}. Lower the filter in the Pose or Bounding boxes section.",
+            "warning",
+        )
 
     # ------------------------------------------------------------------
     # Per-camera keypoint tracking

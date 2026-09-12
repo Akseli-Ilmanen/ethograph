@@ -1,9 +1,12 @@
 """The Data wizard: pair media files, or write the notebook that aligns them.
 
-Pages, in order: mode → sources → per-modality folders/patterns → (timing,
-modes 2 and 3) → trial table → write. The per-modality page's filename
-pattern is optional: leaving it blank pairs by natural sort, one device —
-the same answer a single camera would give by hand.
+Pages, in order: mode → per-modality folders/patterns (video/pose/audio,
+always all three — a stream with no folder given is simply not enabled) →
+(timing, modes 2 and 3) → trial table → write. The per-modality page's
+filename pattern is optional: leaving it blank pairs by natural sort, one
+device — the same answer a single camera would give by hand. Whether files
+are trial-aligned or session-wide follows the mode picked on page 0, not a
+separate question.
 
 Mode 1 pairs the files in the wizard, writes the session file and the sidecar,
 and saves the notebook as the record. Modes 2 and 3 only write the notebook.
@@ -25,7 +28,7 @@ from qtpy.QtWidgets import (
 
 from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.notify import notify_dialog
-from ethograph.gui.wizard_pages import ModePage, SourcesPage, TimingPage, WritePage
+from ethograph.gui.wizard_pages import ModePage, TimingPage, WritePage
 from ethograph.gui.wizard_state import ModalityConfig, WizardState
 
 __all__ = ["ModalityConfig", "NCWizardDialog", "WizardState"]
@@ -46,12 +49,11 @@ class NCWizardDialog(QDialog):
         self._stack = QStackedWidget()
         self._page_mode = ModePage()
         self._page_mode.import_requested.connect(self._open_import)
-        self._page_sources = SourcesPage(app_state)
         self._page_timing = TimingPage(app_state)
         self._page_write = WritePage(app_state)
         self._page_patterns = None
         self._page_trials = None
-        for page in (self._page_mode, self._page_sources, self._page_timing, self._page_write):
+        for page in (self._page_mode, self._page_timing, self._page_write):
             self._stack.addWidget(page)
 
         #: The pages this run visits, in order; rebuilt whenever an answer changes it.
@@ -116,15 +118,14 @@ class NCWizardDialog(QDialog):
         state = self._state
         if page is self._page_mode:
             self._page_mode.collect_state(state)
-            self._page_sources.set_mode(state.mode)
-            self._route = [self._page_mode, self._page_sources]
-            return None
-        if page is self._page_sources:
-            err = self._page_sources.validate()
-            if err:
-                return err
-            self._page_sources.collect_state(state)
-            self._route = [self._page_mode, self._page_sources, self._ensure_patterns_page()]
+            # Trial-aligned vs session-wide follows the mode alone: modes 1
+            # and 3 are one file per trial, mode 2 is one continuous file —
+            # never a separate per-stream question.
+            file_mode = "aligned_to_session" if state.mode == "free_running" else "aligned_to_trial"
+            state.video.file_mode = file_mode
+            state.pose.file_mode = file_mode
+            state.audio.file_mode = file_mode
+            self._route = [self._page_mode, self._ensure_patterns_page()]
             if state.mode != "pair":
                 self._page_timing.set_mode(state.mode)
                 self._route.append(self._page_timing)

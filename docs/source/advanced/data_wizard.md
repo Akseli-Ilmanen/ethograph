@@ -19,18 +19,14 @@ Three modes, each with a figure of the set-up it covers:
 
 Modes 2 and 3 need `neuroconv` installed; the wizard says so if it is missing.
 
-## Sources
-
-The same page in every mode, and it asks nothing about camera or microphone
-count — just which streams exist: **Video**, **Pose**, **Audio** checkboxes,
-plus (audio only) whether each trial has its own file or the whole session is
-one file. Everything else — the folder, an optional filename pattern, rates,
-offsets — is on the next page, one tab per stream.
-
 ## Per-modality folders and patterns
 
-One tab per enabled stream (video/pose/audio/ephys). Drop a folder or the
-files themselves. A filename pattern is **optional**:
+Straight after picking a mode: one tab each for **Video**, **Pose**, **Audio**
+— always all three, with no upfront question about which streams exist or
+how many cameras/microphones there are. A tab left empty (no folder given)
+simply isn't enabled; a folder that resolves to no files at all is flagged as
+a mistake, not treated as "no source of this kind". Drop a folder or the
+files themselves in the tab(s) you need. A filename pattern is **optional**:
 
 - No pattern drawn: files pair to trials by natural sort (so `t2` comes
   before `t10`) as one device — the answer a single camera gives without
@@ -40,10 +36,12 @@ files themselves. A filename pattern is **optional**:
   trial numbering; the wizard shows which file lands in which cell of the
   table before you go on.
 
-A pose file with no video needs its frame rate given explicitly here (never
-defaulted). Audio's offset controls (constant, or per-mic) only take effect
-in mode 2 (free-running/known offset) — mode 1 (pair) assumes every file is
-already aligned.
+Whether each stream is one file per trial or one file for the whole session
+follows the mode picked on page 0 (modes 1 and 3: per trial; mode 2: whole
+session) — not a separate question per stream. A pose file with no video
+needs its frame rate given explicitly here (never defaulted). Audio's offset
+controls (constant, or per-mic) only take effect in mode 2 (free-running/known
+offset) — mode 1 (pair) assumes every file is already aligned.
 
 The result is the pairing table: a `trial` column and one `{stream}_{device}`
 column per source. Rows are trials.

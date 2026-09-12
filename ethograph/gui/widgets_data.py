@@ -3,6 +3,7 @@
 import gc
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
@@ -776,6 +777,8 @@ class DataWidget(QWidget):
         self._follow_pending_time: float | None = None
         self._follow_pending_trial = None
         self.pose_mgr: PoseDisplayManager | None = None  # created after set_data_panel
+        #: Called after every pose refresh; the sidebar re-reads what is drawn (boxes or points).
+        self.on_pose_updated: Callable[[], None] | None = None
         self._keypoint_labelling_dialog = None
         self.app_state.audio_video_sync = None
         self.catalog = None  # DataCatalog set after load
@@ -3562,6 +3565,8 @@ class DataWidget(QWidget):
             return
         self.refresh_overlay_choices()
         self.pose_mgr.update_pose(self.get_hidden_keypoints())
+        if self.on_pose_updated is not None:
+            self.on_pose_updated()
 
     def cleanup(self) -> None:
         """Release what a loaded session holds: caches, the video, the cycles.

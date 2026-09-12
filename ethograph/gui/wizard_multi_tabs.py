@@ -436,18 +436,24 @@ class VideoConfigTab(_BaseConfigTab):
             )
         if self._is_multi and self._stream_panel:
             sc = self._stream_panel.get_config()
+            # No upfront checkbox any more: a tab with nothing dropped in it
+            # simply isn't enabled — the presence of a folder is the answer.
+            config.enabled = bool(sc)
             if sc:
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
             config.pattern = self._stream_panel.pattern
             config.n_devices = _pattern_device_count(config.pattern, "camera")
         elif self._file_edit:
+            config.enabled = bool(self._file_edit.text())
             config.single_file_path = self._file_edit.text()
 
     def validate(self) -> str | None:
+        # An empty tab is fine — it's just not enabled (see collect_state).
+        # A folder that resolved to no files at all is a mistake, not that.
         if self._is_multi:
-            if self._stream_panel and not self._stream_panel.get_config():
-                return "Video: select a folder with video files."
+            if self._stream_panel and self._stream_panel.has_unresolved_folder():
+                return "Video: no video files found in that folder."
         elif self._file_edit and not self._file_edit.text():
             return "Video: select a video file."
         return None
@@ -457,14 +463,13 @@ class VideoConfigTab(_BaseConfigTab):
 
 
 class PoseConfigTab(_BaseConfigTab):
-    def __init__(
-        self,
-        config: ModalityConfig,
-        parent: QWidget | None = None,
-        has_video: bool = False,
-    ):
+    def __init__(self, config: ModalityConfig, parent: QWidget | None = None):
         super().__init__(config, parent)
-        self._has_video = has_video
+        #: Whether the Video tab currently has a folder — every tab now
+        #: exists unconditionally, so this can't be known at construction; it
+        #: starts pessimistic (no video) and is corrected live by
+        #: ``ModalityConfigPage`` via :meth:`set_has_video`.
+        self._has_video = False
         self._pose_fps_by_camera_spins: dict[str, QSpinBox] = {}
         self._pose_offset_spins: dict[str, QDoubleSpinBox] = {}
         self._pose_to_video_map: dict[str, str] = {}
@@ -497,19 +502,20 @@ class PoseConfigTab(_BaseConfigTab):
         form.addRow("Source software:", self._software_combo)
 
         # A pose file carries no frame rate of its own; without a video to
-        # read it from, it must be given explicitly (never defaulted).
-        self._no_video_fps_spin: QDoubleSpinBox | None = None
-        if not has_video:
-            self._no_video_fps_spin = QDoubleSpinBox()
-            self._no_video_fps_spin.setRange(0.0, 100000.0)
-            self._no_video_fps_spin.setDecimals(3)
-            self._no_video_fps_spin.setSuffix(" fps")
-            self._no_video_fps_spin.setValue(config.fps if config.fps is not None else 0.0)
-            self._no_video_fps_spin.setToolTip("The camera fps the pose was tracked at (no video to read it from)")
-            if config.fps is None:
-                self._mark_required(self._no_video_fps_spin)
-            self._no_video_fps_spin.valueChanged.connect(lambda _: self._clear_required(self._no_video_fps_spin))
-            form.addRow("Frame rate:", self._no_video_fps_spin)
+        # read it from, it must be given explicitly (never defaulted). Built
+        # unconditionally and shown/required by ``set_has_video``, since
+        # whether the Video tab has anything in it can change live.
+        self._no_video_fps_spin = QDoubleSpinBox()
+        self._no_video_fps_spin.setRange(0.0, 100000.0)
+        self._no_video_fps_spin.setDecimals(3)
+        self._no_video_fps_spin.setSuffix(" fps")
+        self._no_video_fps_spin.setValue(config.fps if config.fps is not None else 0.0)
+        self._no_video_fps_spin.setToolTip("The camera fps the pose was tracked at (no video to read it from)")
+        if config.fps is None:
+            self._mark_required(self._no_video_fps_spin)
+        self._no_video_fps_spin.valueChanged.connect(lambda _: self._clear_required(self._no_video_fps_spin))
+        form.addRow("Frame rate:", self._no_video_fps_spin)
+        self._pose_form = form
 
         if self._is_multi:
             layout.addLayout(form)
@@ -649,6 +655,21 @@ class PoseConfigTab(_BaseConfigTab):
             self._matcher._video_list.set_items(cameras)
             self._matcher.mapping_changed.emit(self._matcher.get_mapping())
 
+    def set_has_video(self, has_video: bool) -> None:
+        """Called live by ``ModalityConfigPage`` whenever the Video tab's
+        folder changes — with no upfront checkbox, this is the only way to
+        know whether pose needs its own explicit frame rate."""
+        if has_video == self._has_video:
+            return
+        self._has_video = has_video
+        self._no_video_fps_spin.setVisible(not has_video)
+        label = self._pose_form.labelForField(self._no_video_fps_spin)
+        if label is not None:
+            label.setVisible(not has_video)
+        if self._match_with_camera_cb is not None:
+            self._match_with_camera_cb.setChecked(has_video)
+            self._match_with_camera_cb.setEnabled(has_video and self._is_irregular)
+
     def set_pose_fps_controls(
         self,
         mapping: list[tuple[str, str]],
@@ -767,7 +788,7 @@ class PoseConfigTab(_BaseConfigTab):
         if config.fps_by_camera:
             first_key = next(iter(config.fps_by_camera))
             config.fps = config.fps_by_camera[first_key]
-        elif self._no_video_fps_spin is not None:
+        elif not self._has_video:
             config.fps = None if self._spin_is_required(self._no_video_fps_spin) else self._no_video_fps_spin.value()
         if self._is_irregular:
             self._collect_offsets(
@@ -778,21 +799,26 @@ class PoseConfigTab(_BaseConfigTab):
             )
         if self._is_multi and self._stream_panel:
             sc = self._stream_panel.get_config()
+            config.enabled = bool(sc)
             if sc:
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
             config.pattern = self._stream_panel.pattern
             config.n_devices = _pattern_device_count(config.pattern, "camera")
         elif self._file_edit:
+            config.enabled = bool(self._file_edit.text())
             config.single_file_path = self._file_edit.text()
 
     def validate(self) -> str | None:
+        # An empty tab is fine — it's just not enabled (see collect_state).
+        enabled = False
         if self._is_multi:
-            if self._stream_panel and not self._stream_panel.get_config():
-                return "Pose: select a folder with pose files."
-        elif self._file_edit and not self._file_edit.text():
-            return "Pose: select a pose file."
-        if self._no_video_fps_spin is not None and self._spin_is_required(self._no_video_fps_spin):
+            if self._stream_panel and self._stream_panel.has_unresolved_folder():
+                return "Pose: no pose files found in that folder."
+            enabled = bool(self._stream_panel and self._stream_panel.get_config())
+        else:
+            enabled = bool(self._file_edit and self._file_edit.text())
+        if enabled and not self._has_video and self._spin_is_required(self._no_video_fps_spin):
             return "Pose: give the frame rate (no video to read it from)."
         return None
 
@@ -966,18 +992,21 @@ class AudioConfigTab(_BaseConfigTab):
             )
         if self._is_multi and self._stream_panel:
             sc = self._stream_panel.get_config()
+            config.enabled = bool(sc)
             if sc:
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
             config.pattern = self._stream_panel.pattern
             config.n_devices = _pattern_device_count(config.pattern, "mic")
         elif self._file_edit:
+            config.enabled = bool(self._file_edit.text())
             config.single_file_path = self._file_edit.text()
 
     def validate(self) -> str | None:
+        # An empty tab is fine — it's just not enabled (see collect_state).
         if self._is_multi:
-            if self._stream_panel and not self._stream_panel.get_config():
-                return "Audio: select a folder with audio files."
+            if self._stream_panel and self._stream_panel.has_unresolved_folder():
+                return "Audio: no audio files found in that folder."
         elif self._file_edit and not self._file_edit.text():
             return "Audio: select an audio file."
         return None
@@ -1114,49 +1143,40 @@ class ModalityConfigPage(QWidget):
         self._tabs.setStyleSheet("QTabBar::tab { min-width: 100px; padding: 6px 16px; }")
         layout.addWidget(self._tabs)
 
+        # No upfront "which streams do you have" question any more: video,
+        # pose and audio always get a tab, and whether a stream ends up
+        # enabled is read back from whether its tab has anything in it
+        # (each tab's collect_state). Ephys stays opt-in — it is not part
+        # of this flow (mode "pair" never sets it, modes 2/3 configure it
+        # entirely through the Timing page's recording-system fields).
         self._tab_map: dict[str, _BaseConfigTab] = {}
-        tab_builders: list[tuple[str, str, type]] = [
-            ("video", "Video", VideoConfigTab),
-            ("pose", "Pose", PoseConfigTab),
-            ("audio", "Audio", AudioConfigTab),
-            ("ephys", "Ephys", EphysConfigTab),
-        ]
-        for name, label, cls in tab_builders:
-            cfg: ModalityConfig = getattr(state, name)
-            if cfg.enabled:
-                if cls == PoseConfigTab:
-                    tab = cls(cfg, has_video=state.video.enabled)
-                elif cls == AudioConfigTab:
-                    tab = cls(cfg, mode=state.mode)
-                else:
-                    tab = cls(cfg)
-                self._tabs.addTab(tab, label)
-                self._tab_map[name] = tab
+        self._tab_map["video"] = VideoConfigTab(state.video)
+        self._tabs.addTab(self._tab_map["video"], "Video")
+        self._tab_map["pose"] = PoseConfigTab(state.pose)
+        self._tabs.addTab(self._tab_map["pose"], "Pose")
+        self._tab_map["audio"] = AudioConfigTab(state.audio, mode=state.mode)
+        self._tabs.addTab(self._tab_map["audio"], "Audio")
+        if state.ephys.enabled:
+            self._tab_map["ephys"] = EphysConfigTab(state.ephys)
+            self._tabs.addTab(self._tab_map["ephys"], "Ephys")
 
         # Wire video-pose matching list updates
-        video_tab = self._tab_map.get("video")
-        pose_tab = self._tab_map.get("pose")
+        video_tab = self._tab_map["video"]
+        pose_tab = self._tab_map["pose"]
 
-        if video_tab and pose_tab:
-            # When video pattern changes, update camera list in pose matcher
-            if isinstance(video_tab, VideoConfigTab) and video_tab._stream_panel:
-                video_tab._stream_panel.changed.connect(lambda: self._sync_cameras_to_pose())
-                video_tab._stream_panel.changed.connect(lambda: self._refresh_per_camera_fps_controls())
-                video_tab.fps_changed.connect(lambda: self._refresh_per_camera_fps_controls())
-            if isinstance(pose_tab, PoseConfigTab):
-                pose_tab._matcher.mapping_changed.connect(lambda _m: self._refresh_per_camera_fps_controls())
-            # Pose pattern changes are already handled within PoseConfigTab via _on_pose_pattern_changed()
+        if video_tab._stream_panel:
+            video_tab._stream_panel.changed.connect(lambda: self._sync_cameras_to_pose())
+            video_tab._stream_panel.changed.connect(lambda: self._refresh_per_camera_fps_controls())
+            video_tab.fps_changed.connect(lambda: self._refresh_per_camera_fps_controls())
+        pose_tab._matcher.mapping_changed.connect(lambda _m: self._refresh_per_camera_fps_controls())
+        # Pose pattern changes are already handled within PoseConfigTab via _on_pose_pattern_changed()
 
         self._refresh_per_camera_fps_controls()
 
     def _sync_cameras_to_pose(self):
         """Update camera (video) list in pose matcher when video pattern changes."""
-        video_tab = self._tab_map.get("video")
-        pose_tab = self._tab_map.get("pose")
-        if not (video_tab and pose_tab):
-            return
-        if not isinstance(video_tab, VideoConfigTab) or not isinstance(pose_tab, PoseConfigTab):
-            return
+        video_tab: VideoConfigTab = self._tab_map["video"]
+        pose_tab: PoseConfigTab = self._tab_map["pose"]
         pat = video_tab._stream_panel.pattern if video_tab._stream_panel else None
         if pat:
             summary = pat.summary()
@@ -1165,15 +1185,13 @@ class ModalityConfigPage(QWidget):
                 pose_tab.set_camera_names(cameras)
 
     def _refresh_per_camera_fps_controls(self):
-        video_tab = self._tab_map.get("video")
-        pose_tab = self._tab_map.get("pose")
-        if not isinstance(video_tab, VideoConfigTab):
-            return
+        video_tab: VideoConfigTab = self._tab_map["video"]
+        pose_tab: PoseConfigTab = self._tab_map["pose"]
+
+        pose_tab.set_has_video(bool(video_tab._stream_panel and video_tab._stream_panel.get_config()))
 
         video_tab._refresh_detected_video_fps()
-        mapping: list[tuple[str, str]] = []
-        if isinstance(pose_tab, PoseConfigTab):
-            mapping = pose_tab._matcher.get_mapping()
+        mapping = pose_tab._matcher.get_mapping()
 
         camera_names: list[str] = []
         for video_name, _pose_name in mapping:
@@ -1186,9 +1204,7 @@ class ModalityConfigPage(QWidget):
                 camera_names = pat.summary().get("camera", [])
 
         video_tab.set_camera_fps_controls(camera_names)
-
-        if isinstance(pose_tab, PoseConfigTab):
-            pose_tab.set_pose_fps_controls(mapping, video_tab.get_detected_fps_by_camera())
+        pose_tab.set_pose_fps_controls(mapping, video_tab.get_detected_fps_by_camera())
 
     def collect_state(self, state: WizardState):
         for name, tab in self._tab_map.items():
@@ -1196,27 +1212,27 @@ class ModalityConfigPage(QWidget):
             tab.collect_state(cfg)
 
         # Collect camera/mic names from patterns
-        video_tab = self._tab_map.get("video")
-        if video_tab and isinstance(video_tab, VideoConfigTab) and video_tab._stream_panel:
-            pat = video_tab._stream_panel.pattern
-            if pat:
-                summary = pat.summary()
-                state.camera_names = summary.get("camera", [])
+        video_tab: VideoConfigTab = self._tab_map["video"]
+        if video_tab._stream_panel and video_tab._stream_panel.pattern:
+            state.camera_names = video_tab._stream_panel.pattern.summary().get("camera", [])
 
-        audio_tab = self._tab_map.get("audio")
-        if audio_tab and isinstance(audio_tab, AudioConfigTab) and audio_tab._stream_panel:
-            pat = audio_tab._stream_panel.pattern
-            if pat:
-                summary = pat.summary()
-                state.mic_names = summary.get("mic", [])
+        audio_tab: AudioConfigTab = self._tab_map["audio"]
+        if audio_tab._stream_panel and audio_tab._stream_panel.pattern:
+            state.mic_names = audio_tab._stream_panel.pattern.summary().get("mic", [])
 
-        pose_tab = self._tab_map.get("pose")
-        if pose_tab and isinstance(pose_tab, PoseConfigTab):
-            state.pose_camera_mapping = pose_tab._matcher.get_mapping()
+        pose_tab: PoseConfigTab = self._tab_map["pose"]
+        state.pose_camera_mapping = pose_tab._matcher.get_mapping()
 
     def validate(self, state: WizardState) -> str | None:
-        for name, tab in self._tab_map.items():
+        for tab in self._tab_map.values():
             err = tab.validate()
             if err:
                 return err
+        video_tab: VideoConfigTab = self._tab_map["video"]
+        has_video = bool(video_tab._stream_panel and video_tab._stream_panel.get_config())
+        if state.mode != "pair" and not has_video:
+            return "Video: modes 2 and 3 align the camera to the recording system; give it a folder."
+        tabs = (video_tab, self._tab_map["pose"], self._tab_map["audio"])
+        if not any(t._stream_panel and t._stream_panel.get_config() for t in tabs):
+            return "Give at least one of video, pose or audio a folder."
         return None

@@ -25,6 +25,16 @@ def test_an_individual_keeps_its_colour_regardless_of_who_else_is_drawn():
     assert len({tuple(c) for c in individual_color_map(everyone).values()}) == 3
 
 
+def test_individuals_get_bright_contrasting_colours():
+    from ethograph.gui.pose_convert import INDIVIDUAL_PALETTE
+
+    colors = individual_color_map(["a", "b"])
+    assert colors["a"][:3] == (1.0, 59 / 255, 48 / 255), "first individual is red"
+    assert colors["b"][:3] == (10 / 255, 132 / 255, 1.0), "second is blue"
+    many = individual_color_map([str(i) for i in range(len(INDIVIDUAL_PALETTE) + 1)])
+    assert many["0"] == many[str(len(INDIVIDUAL_PALETTE))], "the palette cycles"
+
+
 def test_a_users_pick_wins_over_the_palette():
     colors = individual_color_map(["a", "b"], {"b": "#FF0000", "ghost": "#00FF00"})
     assert colors["b"][:3] == (1.0, 0.0, 0.0)

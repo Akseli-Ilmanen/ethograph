@@ -66,7 +66,7 @@ def test_pose_without_video_requires_an_explicit_frame_rate(qapp, tmp_path: Path
     (pose_dir / "trial001.h5").touch()
 
     config = ModalityConfig(enabled=True, file_mode="aligned_to_trial", folder_path=str(pose_dir))
-    tab = PoseConfigTab(config, has_video=False)
+    tab = PoseConfigTab(config)
     assert "frame rate" in tab.validate()
 
     tab._no_video_fps_spin.setValue(60.0)

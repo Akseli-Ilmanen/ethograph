@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ethograph.gui.wizard_pages import FIGURES, ModePage, SourcesPage, TimingPage, WritePage
+from ethograph.gui.wizard_pages import FIGURES, ModePage, TimingPage, WritePage
 from ethograph.gui.wizard_state import WizardState
 
 
@@ -31,130 +31,6 @@ def test_mode_page_defaults_to_pairing(qapp):
     page.collect_state(state)
     assert state.mode == "pair"
     assert state.timing == "none"
-
-
-class TestSourcesPage:
-    """No camera/mic-count question here any more: every source's folder,
-    optional filename pattern, and per-device settings live on the next
-    page (``ModalityConfigPage``), which answers a single device just as
-    well by leaving the pattern blank."""
-
-    def test_pair_mode_never_enables_ephys(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page.set_mode("pair")
-        state = WizardState()
-        page.collect_state(state)
-        assert state.ephys.enabled is False
-        assert state.video.enabled and state.video.is_aligned_mode
-        assert state.audio.enabled is False
-
-    def test_free_running_makes_video_session_wide(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page.set_mode("free_running")
-        state = WizardState()
-        page.collect_state(state)
-        assert state.video.is_continuous_mode
-
-    def test_validation_needs_at_least_one_source(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page.set_mode("pair")
-        assert page.validate() is None  # video ticked by default
-        page._video_cb.setChecked(False)
-        assert page.validate() is not None
-        page._pose_cb.setChecked(True)
-        assert page.validate() is None
-
-    def test_video_is_optional(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page.set_mode("pair")
-        page._video_cb.setChecked(False)
-        page._pose_cb.setChecked(True)
-        assert page.validate() is None
-        state = WizardState()
-        page.collect_state(state)
-        assert state.video.enabled is False
-        assert state.pose.enabled and state.pose.is_aligned_mode
-
-    def test_modes_two_and_three_require_video(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page.set_mode("triggered")
-        page._video_cb.setChecked(False)
-        assert page._video_cb.isChecked()
-
-    def test_audio_layout_choice_sets_file_mode(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page.set_mode("pair")
-        page._audio_cb.setChecked(True)
-        state = WizardState()
-        page.collect_state(state)
-        assert state.audio.is_aligned_mode  # "one file per trial" is the default
-
-        page._audio_session.setChecked(True)
-        page.collect_state(state)
-        assert state.audio.is_continuous_mode
-
-    def test_free_running_forces_audio_session_wide(self, qapp, app_state):
-        page = SourcesPage(app_state)
-        page._audio_cb.setChecked(True)
-        page.set_mode("free_running")
-        assert page._audio_session.isChecked()
-        assert not page._audio_per_trial.isEnabled()
-
-
-class TestFolderOrFilesDragAndDrop:
-    def test_dropping_a_folder_seeds_it(self, qapp, app_state, tmp_path: Path):
-        from ethograph.gui.wizard_pages import _FolderOrFiles
-
-        video_dir = tmp_path / "video"
-        video_dir.mkdir()
-        picker = _FolderOrFiles(app_state, "video")
-
-        class _FakeMime:
-            def hasUrls(self_inner):
-                return True
-
-            def urls(self_inner):
-                from qtpy.QtCore import QUrl
-
-                return [QUrl.fromLocalFile(str(video_dir))]
-
-        class _FakeEvent:
-            def mimeData(self_inner):
-                return _FakeMime()
-
-            def acceptProposedAction(self_inner):
-                pass
-
-        picker.dropEvent(_FakeEvent())
-        assert Path(picker.folder) == video_dir
-
-    def test_dropping_files_matching_the_stream_sets_the_file_list(self, qapp, app_state, tmp_path: Path):
-        from ethograph.gui.wizard_pages import _FolderOrFiles
-
-        a = tmp_path / "cam1_trial001.mp4"
-        b = tmp_path / "cam1_trial002.mp4"
-        a.touch()
-        b.touch()
-        picker = _FolderOrFiles(app_state, "video")
-
-        class _FakeMime:
-            def hasUrls(self_inner):
-                return True
-
-            def urls(self_inner):
-                from qtpy.QtCore import QUrl
-
-                return [QUrl.fromLocalFile(str(a)), QUrl.fromLocalFile(str(b))]
-
-        class _FakeEvent:
-            def mimeData(self_inner):
-                return _FakeMime()
-
-            def acceptProposedAction(self_inner):
-                pass
-
-        picker.dropEvent(_FakeEvent())
-        assert sorted(Path(f) for f in picker.files) == sorted([a, b])
 
 
 class TestTimingPage:

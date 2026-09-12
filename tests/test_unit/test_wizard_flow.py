@@ -119,10 +119,7 @@ class TestDialogRoute:
         dlg = NCWizardDialog(app_state, _IOWidget())
         qtbot.addWidget(dlg)
 
-        dlg._on_next()  # mode → sources
-        assert dlg._route[dlg._pos] is dlg._page_sources
-        dlg._page_sources._pose_cb.setChecked(True)
-        dlg._on_next()  # sources → per-modality folders/patterns
+        dlg._on_next()  # mode → per-modality folders/patterns
         assert dlg._route[dlg._pos] is dlg._page_patterns
         dlg._page_patterns._tab_map["video"]._stream_panel.set_folder(str(session / "video"))
         dlg._page_patterns._tab_map["pose"]._stream_panel.set_folder(str(session / "pose"))
@@ -150,8 +147,7 @@ class TestDialogRoute:
         dlg = NCWizardDialog(app_state, _IOWidget())
         qtbot.addWidget(dlg)
         dlg._page_mode._blocks["triggered"].radio.setChecked(True)
-        dlg._on_next()
-        dlg._on_next()  # sources → per-modality folders/patterns
+        dlg._on_next()  # mode → per-modality folders/patterns
         assert dlg._route[dlg._pos] is dlg._page_patterns
         dlg._page_patterns._tab_map["video"]._stream_panel.set_folder(str(session / "video"))
         dlg._on_next()

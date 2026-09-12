@@ -76,6 +76,7 @@ def test_boxes_come_from_the_session_dataset(gui, tmp_path: Path, qtbot):
     combo = meta.data_widget.overlay_feature_combo
     assert [combo.itemText(i) for i in range(combo.count())] == ["position"]
 
-    meta.focus_video_context()
+    # No click needed: the sidebar re-reads what is drawn after every pose refresh.
+    assert meta.context_panel.current_context() == "video"
     assert meta.context_panel._sections["bbox"].isVisibleTo(meta.context_panel)
     assert not meta.context_panel._sections["pose"].isVisibleTo(meta.context_panel)

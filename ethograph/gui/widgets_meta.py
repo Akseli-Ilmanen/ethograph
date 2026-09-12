@@ -191,6 +191,7 @@ class MetaWidget(GridSectionContainer):
             layout_mgr=self.layout_mgr,
             trials_widget=self.trials_widget,
         )
+        self.data_widget.on_pose_updated = self._on_pose_updated
 
         for widget in [
             self.help_widget,
@@ -876,6 +877,12 @@ class MetaWidget(GridSectionContainer):
         if ds is not None:
             return any("position" in str(v) for v in getattr(ds, "data_vars", {}))
         return False
+
+    def _on_pose_updated(self):
+        """The overlay was redrawn: if the video's settings are showing, re-read
+        what is drawn, so boxes get the Bounding boxes section without a click."""
+        if self.context_panel.current_context() == "video":
+            self.focus_video_context()
 
     def focus_video_context(self):
         """Called when the video viewer is clicked → show pose + playback."""

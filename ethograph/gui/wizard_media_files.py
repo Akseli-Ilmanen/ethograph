@@ -860,6 +860,11 @@ class StreamPanel(QWidget):
         probing a rate/fps that a single representative file can answer."""
         return str(self._all_files[0]) if self._all_files else None
 
+    def has_unresolved_folder(self) -> bool:
+        """A folder was typed/dropped but it resolved to no files — almost
+        always a mistake (typo, empty folder), not "no source of this kind"."""
+        return bool(self._folder.text()) and not self._all_files
+
     def get_config(self) -> StreamConfig | None:
         """The chosen folder, ready to pair — a drawn pattern is optional.
 

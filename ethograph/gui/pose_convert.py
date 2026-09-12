@@ -108,17 +108,34 @@ def poses_ds_to_points(
     return points, bboxes, properties
 
 
+#: Bright, saturated, far apart in hue — an animal must be told from its
+#: neighbour at a glance on top of video. Indexed by the individual's position
+#: in the dataset's list; cycles past eight.
+INDIVIDUAL_PALETTE: tuple[str, ...] = (
+    "#FF3B30",  # red
+    "#0A84FF",  # blue
+    "#34C759",  # green
+    "#FFD60A",  # yellow
+    "#FF2DE5",  # magenta
+    "#00E5FF",  # cyan
+    "#FF9F0A",  # orange
+    "#BF5AF2",  # purple
+)
+
+
 def individual_color_map(individuals: list[str], overrides: dict[str, str] | None = None) -> dict[str, tuple]:
     """One colour per individual, by *name*, the same wherever that name is drawn.
 
-    The palette is sampled over the dataset's full individual list, so an
+    The palette is indexed over the dataset's full individual list, so an
     animal keeps its colour whether it is drawn alone, with the others, or on
     a camera that never sees the rest. *overrides* (``name -> "#RRGGBB"``)
     are the user's own picks and win over the palette.
     """
     from ethograph.skeleton.config import hex_to_rgba
 
-    colors = dict(zip(individuals, sample_colormap(len(individuals), "turbo")))
+    colors = {
+        name: tuple(hex_to_rgba(INDIVIDUAL_PALETTE[i % len(INDIVIDUAL_PALETTE)])) for i, name in enumerate(individuals)
+    }
     for name, hex_color in (overrides or {}).items():
         if name in colors and hex_color:
             colors[name] = tuple(hex_to_rgba(hex_color))
