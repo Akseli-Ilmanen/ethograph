@@ -1,0 +1,38 @@
+"""Throwaway: reproduce dropping the whole octron folder (nc + wav + 2 mp4 +
+the visible .ethograph sidecar dir) exactly as the user selected it."""
+
+from pathlib import Path
+
+from ethograph.gui.cover_page import CoverPage, classify_files
+
+FOLDER = Path(r"C:\Users\aksel\Documents\octron\VIDEOS for eth ppt")
+
+
+def test_folder_drop_including_ethograph_dir(gui):
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+
+    dropped = [str(p) for p in FOLDER.iterdir() if p.suffix.lower() != ".txt"]
+    print("dropped paths:", dropped)
+    buckets = classify_files(dropped)
+    print("buckets:", buckets)
+
+    try:
+        page._populate_io_from_buckets(
+            buckets,
+            {
+                "data_sr": None,
+                "source_software": None,
+                "pose_fps": None,
+                "extract_audio": False,
+                "audio_track_videos": [],
+            },
+        )
+    except Exception as e:
+        print("EXCEPTION:", type(e).__name__, e)
+        raise
+    finally:
+        app_state = meta.app_state
+        print("nc_file_path", app_state.nc_file_path)
+        print("audio_folder", app_state.audio_folder)
+        print("video_folder", app_state.video_folder)

@@ -78,7 +78,7 @@ from ethograph.io.validation import (
     VIDEO_EXTENSIONS,
     movement_dataset_info,
 )
-from ethograph.utils.paths import tmp_alignment_base
+from ethograph.utils.paths import SETTINGS_DIR, tmp_alignment_base
 
 # POSE_SOFTWARES is shared with the pose-overlay prompt in pose_render.
 from .app_constants import POSE_SOFTWARES
@@ -141,6 +141,14 @@ def classify_files(paths: list[str]) -> dict[str, list[str]]:
     for p in paths:
         path = Path(p)
         if path.is_dir():
+            if path.name == SETTINGS_DIR:
+                # ethograph's own sidecar folder (local_settings.yaml,
+                # alignment.nwb, …), never a loadable session on its own. It
+                # is not hidden on Windows, so "drop everything in this
+                # folder" picks it up too — bucketing it as a session would
+                # otherwise steal nc_file_path from the real dataset dropped
+                # alongside it.
+                continue
             if (path / "spike_times.npy").exists():
                 buckets["neurons"].append(p)
             else:
@@ -170,6 +178,30 @@ def classify_files(paths: list[str]) -> dict[str, list[str]]:
         else:
             buckets["unknown"].append(p)
     return buckets
+
+
+def _reject_mixed_session_folder(dropped: list[str], buckets: dict[str, list[str]]) -> None:
+    """A complete session folder (pynapple) must never share a drop with
+    anything else — file or folder.
+
+    "Load this whole pre-built session" and "here are loose pieces, build me
+    one" are contradictory instructions; the previous silent
+    ``other_sessions[0]`` pick let a stray directory (or a second real
+    session) hijack ``nc_file_path`` with no error. A Kilosort folder
+    (``neurons`` bucket) is not a complete session on its own and is exempt —
+    ephys + video is an intentional combination.
+    """
+    session_dirs = [s for s in buckets["session"] if Path(s).is_dir()]
+    if not session_dirs:
+        return
+    others = [p for p in dropped if p not in session_dirs]
+    if others:
+        raise RuntimeError(
+            f"'{Path(session_dirs[0]).name}' is a complete session folder — it cannot be "
+            f"dropped together with anything else ({', '.join(Path(p).name for p in others)}). "
+            "Drop the session folder alone to load it as is, or drop loose files without it "
+            "to build a new session."
+        )
 
 
 def _audio_info(path: str) -> tuple[float, float]:
@@ -1019,6 +1051,7 @@ class CoverPage(QDialog):
         dropped = list(self._drop.paths)
         buckets = classify_files(dropped)
         try:
+            _reject_mixed_session_folder(dropped, buckets)
             details = self._collect_drop_details(buckets)
             if details is None:
                 return False  # user cancelled the follow-up prompt

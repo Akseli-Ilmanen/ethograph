@@ -586,6 +586,61 @@ def test_cover_page_classify_files():
     assert buckets["unknown"] == ["junk.xyz"]
 
 
+def test_cover_page_classify_files_skips_settings_dir(tmp_path):
+    """A dropped ``.ethograph`` sidecar folder must never be bucketed as a
+    session — it is not hidden on Windows, so "drop everything in this
+    folder" (Explorer, Ctrl+A) picks it up alongside the real dataset, and
+    bucketing it as a session would steal ``nc_file_path`` from the real one
+    (dict order is arbitrary; a dotfile can even sort first)."""
+    from ethograph.gui.cover_page import classify_files
+
+    settings_dir = tmp_path / ".ethograph"
+    settings_dir.mkdir()
+    (settings_dir / "local_settings.yaml").write_text("video_folder: /somewhere\n")
+    real_session = tmp_path / "session.nc"
+    real_session.touch()
+
+    buckets = classify_files([str(settings_dir), str(real_session)])
+    assert buckets["session"] == [str(real_session)]
+
+
+def test_cover_page_rejects_session_folder_mixed_with_anything(tmp_path):
+    """A complete pynapple session folder dropped alongside other files (or
+    another session) must raise, not silently pick one via list order —
+    "load this whole session" and "assemble one from loose files" are
+    contradictory instructions."""
+    from ethograph.gui.cover_page import _reject_mixed_session_folder, classify_files
+
+    session_dir = tmp_path / "my_session"
+    session_dir.mkdir()
+    video = tmp_path / "cam1.mp4"
+    video.touch()
+
+    dropped = [str(session_dir), str(video)]
+    buckets = classify_files(dropped)
+    with pytest.raises(RuntimeError, match="complete session folder"):
+        _reject_mixed_session_folder(dropped, buckets)
+
+    # The folder alone is fine.
+    _reject_mixed_session_folder([str(session_dir)], classify_files([str(session_dir)]))
+
+
+def test_cover_page_allows_kilosort_folder_with_media(tmp_path):
+    """A Kilosort folder is never a complete session on its own — ephys +
+    video is an intentional combination and must not be rejected."""
+    from ethograph.gui.cover_page import _reject_mixed_session_folder, classify_files
+
+    kilosort_dir = tmp_path / "kilosort_output"
+    kilosort_dir.mkdir()
+    (kilosort_dir / "spike_times.npy").touch()
+    video = tmp_path / "cam1.mp4"
+    video.touch()
+
+    dropped = [str(kilosort_dir), str(video)]
+    buckets = classify_files(dropped)
+    _reject_mixed_session_folder(dropped, buckets)  # must not raise
+
+
 def test_sidebar_can_be_widened_on_a_small_window(gui, qtbot):
     """The right sidebar must stay draggable on small screens.
 

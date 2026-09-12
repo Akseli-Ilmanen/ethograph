@@ -51,6 +51,13 @@ class PlotSettingsWidget(QWidget):
         self.plot_container = None
         self.meta_widget = None
         self._needs_auto_levels = True
+        #: Source (spectrogram buffer) identity last auto-leveled. Mirrors
+        #: audian's ``BufferedSpectrogram.init`` flag: the noise-level estimate
+        #: is computed once per opened source, not on every pan/zoom buffer
+        #: refresh — a source with a few loud transients amid a quiet baseline
+        #: (real animal-sound dynamic range) would otherwise flicker between
+        #: whatever transient happens to be in the current buffer window.
+        self._auto_leveled_identity: str | None = None
 
         self.setAttribute(Qt.WA_AlwaysShowToolTips)
 
@@ -910,8 +917,21 @@ class PlotSettingsWidget(QWidget):
         self._auto_levels()
 
     def _on_buffer_updated(self):
-        if self._is_auto_levels_mode():
-            self._auto_levels()
+        if not self._is_auto_levels_mode():
+            return
+        spec_plot = next(
+            (p for p in self.plot_container.spectrogram_plots if p.isVisible() and p.buffer.Sxx_db is not None),
+            None,
+        )
+        if spec_plot is None:
+            return
+        # One estimate per opened source (mirrors audian's ``init`` flag):
+        # a source with a quiet baseline and a few loud transients would
+        # otherwise re-level on every pan/zoom to whatever transient the
+        # current buffer window happens to contain.
+        if spec_plot.buffer.current_identity == self._auto_leveled_identity:
+            return
+        self._auto_levels()
 
     def _on_overlay_shown(self):
         colormap_name = self.app_state.get_with_default("spec_colormap")
@@ -982,6 +1002,7 @@ class PlotSettingsWidget(QWidget):
 
         self.vmin_db_edit.setText(str(zmin))
         self.vmax_db_edit.setText(str(zmax))
+        self._auto_leveled_identity = spec_plot.buffer.current_identity
 
         self.app_state.vmin_db = zmin
         self.app_state.vmax_db = zmax

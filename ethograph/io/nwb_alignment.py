@@ -175,6 +175,9 @@ class EmpytAlignment:
     def get_media(self, trial, stream: str, device: str | None = None) -> str | None:
         return None
 
+    def media_filename(self, trial, stream: str, device: str | None = None) -> str | None:
+        return None
+
     def devices(self, stream: str) -> list[str]:
         return []
 
@@ -320,6 +323,7 @@ class NWBAlignment:
         self._nwb: Any = None
         self._trials_df_cache: pd.DataFrame | None = None
         self._rate_dict: dict[tuple[str, str | None], float] = {}
+        self._span_cache: dict[str, list[_FileSpan]] = {}
 
     @classmethod
     def from_nwb_object(cls, nwb_obj) -> "NWBAlignment":
@@ -330,6 +334,7 @@ class NWBAlignment:
         instance._nwb = nwb_obj
         instance._trials_df_cache = None
         instance._rate_dict = {}
+        instance._span_cache = {}
         return instance
 
     def _open(self) -> None:
@@ -444,6 +449,28 @@ class NWBAlignment:
                     return os.path.basename(val)
                 return val
         return None
+
+    def media_filename(self, trial, stream: str, device: str | None = None) -> str | None:
+        """The name of the file *trial* plays for *stream*/*device*.
+
+        Picks the same file :meth:`resolve_media_path` would, but names it
+        without resolving it on disk — the trials table reads the same whether
+        or not the media folder is currently attached.
+        """
+        acq = self._find_acquisition(stream, device)
+        if acq is not None and getattr(acq, "external_file", None):
+            files = list(acq.external_file)
+            found = self._file_for_trial(acq, trial)
+            if found is not None:
+                idx = found.index
+            else:
+                trial_idx = self._trial_index(trial)
+                idx = trial_idx if trial_idx is not None and trial_idx < len(files) else 0
+            if idx < len(files):
+                return _filename_from_url_or_path(str(files[idx]))
+
+        media = self.get_media(trial, stream, device)
+        return _filename_from_url_or_path(media) if media else None
 
     def devices(self, stream: str) -> list[str]:
         """Discover devices from trials table columns AND acquisition items.
@@ -602,7 +629,14 @@ class NWBAlignment:
         Handles both NWB timing schemes (``timestamps`` and ``rate``). A last
         file whose end is unknown (rate mode, no ``num_samples``, no trials
         table) gets ``t_end = inf``; a file with no start at all is dropped.
+
+        Cached per acquisition — the trials table asks once per trial for a
+        filename; :meth:`reload` clears it.
         """
+        cached = self._span_cache.get(acq.name)
+        if cached is not None:
+            return cached
+
         files = list(getattr(acq, "external_file", None) or [])
         if not files:
             return []
@@ -638,6 +672,7 @@ class NWBAlignment:
             else:
                 continue
             spans.append(_FileSpan(i, str(filepath), t_start, t_end))
+        self._span_cache[acq.name] = spans
         return spans
 
     def _file_for_trial(self, acq, trial) -> _FileSpan | None:
@@ -864,6 +899,7 @@ class NWBAlignment:
         self.close()
         self._trials_df_cache = None
         self._rate_dict.clear()
+        self._span_cache.clear()
 
 
 # ---------------------------------------------------------------------------

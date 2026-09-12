@@ -149,6 +149,14 @@ def test_tabular_write_round_trips(tmp_path):
     assert pd.read_csv(path, sep="\t").equals(df)
 
 
+def test_tabular_write_leaves_media_filenames_out(tmp_path):
+    """Filenames are the alignment's; a copy in the file would go stale."""
+    df = pd.DataFrame({"trial": [1], "outcome": ["hit"], "video_cam-1": ["a.mp4"]})
+    path = tmp_path / "session_metadata.tsv"
+    write_metadata(MetadataTarget(path, TARGET_TABULAR), df)
+    assert list(pd.read_csv(path, sep="	").columns) == ["trial", "outcome"]
+
+
 def test_csv_target_is_written_comma_separated(tmp_path):
     df = pd.DataFrame({"trial": [1], "outcome": ["hit"]})
     path = tmp_path / "meta.csv"

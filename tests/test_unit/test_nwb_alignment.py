@@ -167,3 +167,65 @@ class TestInferSliderRange:
         scope, tr = infer_slider_range(alignment, 1)
         assert scope == "session"
         assert tr is None
+
+
+# ---------------------------------------------------------------------------
+# Media filenames (the trials table's rightmost columns)
+# ---------------------------------------------------------------------------
+
+
+class TestMediaFilename:
+    """A per-trial stream names one file per trial, a session-wide one names
+    the same file for every trial — and neither needs the media on disk."""
+
+    def _alignment(self, tmp_path):
+        from ethograph.io.nwb_alignment import align_media_from_streams, make_nwb_alignment
+
+        trials = pd.DataFrame({"trial": [1, 2, 3], "start_time": [0.0, 10.5, 22.3], "stop_time": [8.2, 19.1, 30.0]})
+        streams = [
+            {"name": "video_cam-1", "files": ["/media/t1.mp4", "/media/t2.mp4", "/media/t3.mp4"], "rate": 30.0},
+            {"name": "audio_mic-1", "files": ["/media/session.wav"], "rate": 48000.0, "starting_time": 0.0},
+        ]
+        return make_nwb_alignment(align_media_from_streams(trials, streams, tmp_path / "alignment.nwb"))
+
+    def test_per_trial_stream(self, tmp_path):
+        alignment = self._alignment(tmp_path)
+        assert [alignment.media_filename(t, "video", "cam-1") for t in (1, 2, 3)] == [
+            "t1.mp4",
+            "t2.mp4",
+            "t3.mp4",
+        ]
+
+    def test_session_wide_stream(self, tmp_path):
+        alignment = self._alignment(tmp_path)
+        assert [alignment.media_filename(t, "audio", "mic-1") for t in (1, 3)] == [
+            "session.wav",
+            "session.wav",
+        ]
+
+    def test_filenames_stored_as_trial_columns(self, tmp_path):
+        """The other spelling: a drop paired per trial writes filename columns,
+        and the table must name the file, not the authoring machine's path."""
+        from ethograph.io.metadata_table import load_metadata_df
+        from ethograph.io.nwb_alignment import make_nwb_alignment
+        from ethograph.io.pairing import pair_media
+
+        table = pd.DataFrame(
+            {
+                "trial": [1, 2],
+                "video_cam-1": ["/media/clip_1.mp4", "/media/clip_2.mp4"],
+                "start_time": [0.0, 5.0],
+                "stop_time": [5.0, 10.0],
+            }
+        )
+        nwb = tmp_path / "alignment.nwb"
+        pair_media(trial_table=table, stream_rates={"video": 30.0}, output_path=nwb)
+
+        df, _ = load_metadata_df(nwb_alignment=make_nwb_alignment(nwb), trial_ids=[1, 2])
+        assert list(df["video_cam-1"]) == ["clip_1.mp4", "clip_2.mp4"]
+
+    def test_metadata_table_carries_them(self, tmp_path):
+        from ethograph.io.metadata_table import load_metadata_df
+
+        df, _ = load_metadata_df(nwb_alignment=self._alignment(tmp_path), trial_ids=[1, 2, 3])
+        assert list(df.columns) == ["trial", "video_cam-1", "audio_mic-1"]

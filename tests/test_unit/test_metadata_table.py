@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from ethograph.io.metadata_table import (
+    attach_media_columns,
     condition_columns,
     empty_metadata_df,
     load_metadata_df,
@@ -14,6 +15,7 @@ from ethograph.io.metadata_table import (
     metadata_from_intervalset,
     metadata_from_nwb_trials,
     metadata_tsv_path,
+    order_metadata_columns,
     save_metadata_tsv,
 )
 
@@ -65,19 +67,64 @@ def test_load_metadata_df_empty_fallback():
     assert list(mdf["trial"]) == [1, 2]
 
 
-def test_metadata_from_nwb_trials_filters_infrastructure():
+def test_metadata_from_nwb_trials_drops_timing_keeps_filenames():
     trials_df = pd.DataFrame(
         {
             "trial": [1, 2],
             "start_time": [0.0, 1.0],
             "stop_time": [0.5, 1.5],
-            "genotype": ["WT", "KO"],
             "video_cam-1": ["a.mp4", "b.mp4"],
+            "genotype": ["WT", "KO"],
         }
     )
     mdf = metadata_from_nwb_trials(trials_df)
-    assert list(mdf.columns) == ["trial", "genotype"]
-    assert list(mdf["genotype"]) == ["WT", "KO"]
+    assert list(mdf.columns) == ["trial", "genotype", "video_cam-1"]
+    assert list(mdf["video_cam-1"]) == ["a.mp4", "b.mp4"]
+
+
+def test_order_metadata_columns_puts_filenames_last():
+    df = pd.DataFrame(
+        {
+            "audio_mic-1": ["a.wav", "b.wav"],
+            "video_cam-1": ["a.mp4", "b.mp4"],
+            "trial": [1, 2],
+            "genotype": ["WT", "KO"],
+        }
+    )
+    assert list(order_metadata_columns(df).columns) == [
+        "trial",
+        "genotype",
+        "video_cam-1",
+        "audio_mic-1",
+    ]
+
+
+class _FakeAlignment:
+    """An alignment that names one video file per trial."""
+
+    def devices(self, stream):
+        return ["cam-1"] if stream == "video" else []
+
+    def media_filename(self, trial, stream, device=None):
+        return f"trial{trial}.mp4"
+
+
+def test_attach_media_columns_from_alignment():
+    df = pd.DataFrame({"trial": [1, 2], "genotype": ["WT", "KO"]})
+    out = attach_media_columns(df, _FakeAlignment())
+    assert list(out.columns) == ["trial", "genotype", "video_cam-1"]
+    assert list(out["video_cam-1"]) == ["trial1.mp4", "trial2.mp4"]
+
+
+def test_attach_media_columns_alignment_wins_over_stale_copy():
+    df = pd.DataFrame({"trial": [1, 2], "video_cam-1": ["old1.mp4", "old2.mp4"]})
+    out = attach_media_columns(df, _FakeAlignment())
+    assert list(out["video_cam-1"]) == ["trial1.mp4", "trial2.mp4"]
+
+
+def test_media_columns_are_not_editable_conditions():
+    df = pd.DataFrame({"trial": [1], "genotype": ["WT"], "video_cam-1": ["a.mp4"]})
+    assert condition_columns(df) == ["genotype"]
 
 
 def test_metadata_from_intervalset():
@@ -113,6 +160,9 @@ def test_load_metadata_df_uses_nwb_source_when_trials_present(monkeypatch, tmp_p
                     "stop_time": [0.5, 1.5],
                 }
             )
+
+        def devices(self, stream):
+            return []
 
     monkeypatch.setattr("ethograph.io.metadata_table.make_nwb_alignment", lambda _: _FakeAlignment())
 

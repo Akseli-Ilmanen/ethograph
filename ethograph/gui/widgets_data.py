@@ -1323,8 +1323,14 @@ class DataWidget(QWidget):
         result = ctx.result
 
         self.app_state.dt = ctx.dt
-        self.app_state.metadata_df = result.metadata_df
+        # Alignment, then path, then table. Assigning metadata_path re-reads
+        # that source (and a load with no metadata *file* clears it), so the
+        # loader's own table has to be the last word — an alignment's trials
+        # table is metadata too, media filenames included, and it arrives with
+        # metadata_path None.
+        self.app_state.nwb_alignment = result.nwb_alignment
         self.app_state.metadata_path = result.metadata_path
+        self.app_state.metadata_df = result.metadata_df
         self.catalog = ctx.catalog
 
         if ctx.video_folder_override:
@@ -1332,7 +1338,6 @@ class DataWidget(QWidget):
 
         self.app_state.trial_conditions = ctx.catalog.trial_conditions
         self.app_state.source_collection = result.source_collection
-        self.app_state.nwb_alignment = result.nwb_alignment
 
         self.app_state.has_audio = ctx.has_audio
 

@@ -31,6 +31,7 @@ from ethograph.io.metadata_table import (
     condition_columns,
     empty_metadata_df,
     metadata_tsv_path,
+    stored_columns,
 )
 from ethograph.labels.curation import CURATED_COLUMN
 
@@ -179,8 +180,12 @@ def fits_dtype(series: pd.Series, value) -> bool:
 
 
 def save_metadata_table(path: str | Path, df: pd.DataFrame) -> None:
-    """Write a metadata table, honouring the target's format (atomic)."""
+    """Write a metadata table, honouring the target's format (atomic).
+
+    Media filename columns are left out (:func:`stored_columns`).
+    """
     path = Path(path)
+    df = stored_columns(df)
     path.parent.mkdir(parents=True, exist_ok=True)
     suffix = path.suffix.lower()
     tmp = path.with_name(path.name + ".tmp")

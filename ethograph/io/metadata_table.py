@@ -24,7 +24,10 @@ from ethograph.io.pynapple import load_nap_data
 
 logger = logging.getLogger(__name__)
 
-_STREAM_COL_RE = re.compile(r"^(video|pose|audio|ephys)_(.+)$")
+#: Media streams whose per-trial filename the trials table shows.
+MEDIA_STREAMS = ("video", "pose", "audio", "ephys")
+
+_STREAM_COL_RE = re.compile(rf"^({'|'.join(MEDIA_STREAMS)})_(.+)$")
 
 TABULAR_METADATA_EXTS = frozenset({".tsv", ".csv", ".xlsx", ".xls"})
 
@@ -134,8 +137,12 @@ def load_metadata_tsv(path: str | Path) -> pd.DataFrame:
 
 
 def save_metadata_tsv(path: str | Path, df: pd.DataFrame) -> None:
-    """Save a metadata TSV file (atomic write)."""
+    """Save a metadata TSV file (atomic write), minus the media filenames.
+
+    See :func:`stored_columns` — a filename is the alignment's to state.
+    """
     path = Path(path)
+    df = stored_columns(df)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tsv.tmp")
     df.to_csv(tmp, sep="\t", index=False)
@@ -143,23 +150,93 @@ def save_metadata_tsv(path: str | Path, df: pd.DataFrame) -> None:
 
 
 def condition_columns(df: pd.DataFrame) -> list[str]:
-    """Return user-defined condition column names.
+    """Return user-defined condition column names — the editable ones.
 
-    Excludes structural NWB timing/media columns so the trials widget only
-    shows actual metadata fields.
+    Excludes structural NWB timing columns and the media filename columns:
+    a filename is the alignment's to state, not the metadata file's.
     """
     return [c for c in df.columns if c != "trial" and not _is_nwb_infrastructure_col(c)]
 
 
+def stored_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """*df* without its media filename columns — what a metadata file holds.
+
+    Filenames are joined on from the alignment at load
+    (:func:`attach_media_columns`); a copy in the metadata file would only go
+    stale the moment the media is re-aligned or moved.
+    """
+    return df.drop(columns=media_columns(df))
+
+
+def is_media_column(col: str) -> bool:
+    """True if *col* names a trial's media file (``video_cam-1``, ``pose_cam-1``)."""
+    return bool(_STREAM_COL_RE.match(col)) and not col.endswith("_start")
+
+
+def media_columns(df: pd.DataFrame) -> list[str]:
+    """Media filename columns present in *df*, in the order it holds them."""
+    return [c for c in df.columns if is_media_column(str(c))]
+
+
+def _media_sort_key(col: str) -> tuple[int, str]:
+    match = _STREAM_COL_RE.match(col)
+    assert match is not None
+    return MEDIA_STREAMS.index(match.group(1)), match.group(2)
+
+
+def order_metadata_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """``trial``, then the conditions, then the media filenames.
+
+    Filenames are the least discriminating column in the table, so they sit on
+    the right — visible (and filterable) without pushing a condition out of
+    view.
+    """
+    media = media_columns(df)
+    lead = ["trial"] if "trial" in df.columns else []
+    rest = [c for c in df.columns if c != "trial" and c not in media]
+    return df.loc[:, lead + rest + sorted(media, key=_media_sort_key)]
+
+
+def media_columns_from_alignment(alignment, trial_ids: list[int | str]) -> pd.DataFrame:
+    """One ``{stream}_{device}`` column per media device, a filename per trial.
+
+    Read off the alignment rather than a metadata file: the alignment is the
+    one holder of which file a trial plays, and it names that file whether it
+    lives in a trials-table column or in an acquisition's ``external_file``.
+    """
+    columns: dict[str, list[str | None]] = {}
+    for stream in MEDIA_STREAMS:
+        for device in alignment.devices(stream):
+            names = [alignment.media_filename(t, stream, device) for t in trial_ids]
+            if any(names):
+                columns[f"{stream}_{device}"] = names
+    return pd.DataFrame(columns, index=pd.RangeIndex(len(trial_ids)))
+
+
+def attach_media_columns(df: pd.DataFrame, alignment=None) -> pd.DataFrame:
+    """Add the alignment's media filenames to *df* and order the table.
+
+    An existing column of the same name is replaced: the alignment wins over a
+    copy that ended up in a metadata file.
+    """
+    if alignment is None or df.empty or "trial" not in df.columns:
+        return order_metadata_columns(df)
+
+    media = media_columns_from_alignment(alignment, list(df["trial"]))
+    result = df.drop(columns=[c for c in media.columns if c in df.columns])
+    for col in media.columns:
+        result[col] = media[col].to_numpy()
+    return order_metadata_columns(result)
+
+
 def _is_nwb_infrastructure_col(col: str) -> bool:
-    """True if column is structural (timing, media, offsets) rather than metadata."""
-    if col in _NWB_STRUCTURAL_COLUMNS:
-        return True
-    if _STREAM_COL_RE.match(col):
-        return True
-    if col.endswith("_start"):
-        return True
-    return False
+    """True if column is structural or a filename rather than a condition."""
+    return _is_structural_col(col) or is_media_column(col)
+
+
+def _is_structural_col(col: str) -> bool:
+    """True for timing/offset columns — dropped from the metadata table."""
+    return col in _NWB_STRUCTURAL_COLUMNS or col.endswith("_start")
 
 
 def empty_metadata_df(trials: list[int | str]) -> pd.DataFrame:
@@ -195,8 +272,8 @@ def metadata_from_nwb_trials(trials_df: pd.DataFrame, trial_ids: list[int | str]
         return empty_metadata_df(trial_ids or [])
 
     df = _normalise_trial_column(trials_df, trial_ids)
-    keep_cols = ["trial"] + [c for c in df.columns if c != "trial" and not _is_nwb_infrastructure_col(c)]
-    return df.loc[:, [c for c in keep_cols if c in df.columns]].copy()
+    keep_cols = ["trial"] + [c for c in df.columns if c != "trial" and not _is_structural_col(c)]
+    return order_metadata_columns(df.loc[:, [c for c in keep_cols if c in df.columns]].copy())
 
 
 def metadata_from_intervalset(trials_ep, trial_ids: list[int | str] | None = None) -> pd.DataFrame:
@@ -211,8 +288,8 @@ def metadata_from_intervalset(trials_ep, trial_ids: list[int | str] | None = Non
     if df.empty:
         return empty_metadata_df(trial_ids or [])
 
-    keep_cols = ["trial"] + [c for c in df.columns if c != "trial" and not _is_nwb_infrastructure_col(c)]
-    return df.loc[:, [c for c in keep_cols if c in df.columns]].copy()
+    keep_cols = ["trial"] + [c for c in df.columns if c != "trial" and not _is_structural_col(c)]
+    return order_metadata_columns(df.loc[:, [c for c in keep_cols if c in df.columns]].copy())
 
 
 def load_metadata_df(
@@ -232,41 +309,64 @@ def load_metadata_df(
     4. Metadata embedded in the loaded NWB alignment object.
     5. Metadata stored on a pynapple IntervalSet.
     6. Empty table with one row per trial.
+
+    Whatever the source, the alignment's media filenames are joined on as the
+    rightmost columns (:func:`attach_media_columns`).
     """
+    df, path, opened = _resolve_metadata_source(
+        source_path,
+        metadata_path=metadata_path,
+        nwb_alignment=nwb_alignment,
+        trials_ep=trials_ep,
+        trial_ids=trial_ids,
+    )
+    return attach_media_columns(df, nwb_alignment or opened), path
+
+
+def _resolve_metadata_source(
+    source_path: str | Path | None = None,
+    *,
+    metadata_path: str | Path | None = None,
+    nwb_alignment=None,
+    trials_ep=None,
+    trial_ids: list[int | str] | None = None,
+) -> tuple[pd.DataFrame, str | None, object | None]:
+    """The metadata table, its path, and any alignment opened to read it."""
+    opened = None
     if metadata_path is not None:
         path = Path(metadata_path)
         if path.suffix.lower() in TABULAR_METADATA_EXTS and path.exists():
-            return _normalise_trial_column(load_metadata_tsv(path), trial_ids), str(path)
+            return _normalise_trial_column(load_metadata_tsv(path), trial_ids), str(path), None
         if path.suffix.lower() == ".nwb" and path.exists():
-            alignment = make_nwb_alignment(path)
-            return metadata_from_nwb_trials(alignment.trials_df, trial_ids), str(path)
+            opened = make_nwb_alignment(path)
+            return metadata_from_nwb_trials(opened.trials_df, trial_ids), str(path), opened
         if (path.suffix.lower() == ".npz" or path.is_dir()) and path.exists():
             _, trials_ep = load_nap_data(str(path))
-            return metadata_from_intervalset(trials_ep, trial_ids), str(path)
+            return metadata_from_intervalset(trials_ep, trial_ids), str(path), None
 
     if source_path is not None:
         source = Path(source_path)
         if source.suffix.lower() in TABULAR_METADATA_EXTS and source.exists():
-            return _normalise_trial_column(load_metadata_tsv(source), trial_ids), str(source)
+            return _normalise_trial_column(load_metadata_tsv(source), trial_ids), str(source), None
         if source.suffix.lower() == ".nwb" and source.exists():
-            alignment = make_nwb_alignment(source)
-            if alignment.trials_df is not None and not alignment.trials_df.empty:
-                return metadata_from_nwb_trials(alignment.trials_df, trial_ids), str(source)
+            opened = make_nwb_alignment(source)
+            if opened.trials_df is not None and not opened.trials_df.empty:
+                return metadata_from_nwb_trials(opened.trials_df, trial_ids), str(source), opened
         if source.is_file():
             sidecar = metadata_tsv_path(source)
             if sidecar.exists():
-                return _normalise_trial_column(load_metadata_tsv(sidecar), trial_ids), str(sidecar)
+                return _normalise_trial_column(load_metadata_tsv(sidecar), trial_ids), str(sidecar), opened
         if source.suffix.lower() == ".npz" and source.exists():
             _, trials_ep = load_nap_data(str(source))
-            return metadata_from_intervalset(trials_ep, trial_ids), str(source)
+            return metadata_from_intervalset(trials_ep, trial_ids), str(source), opened
         if source.is_dir() and source.exists():
             _, trials_ep = load_nap_data(str(source))
-            return metadata_from_intervalset(trials_ep, trial_ids), str(source)
+            return metadata_from_intervalset(trials_ep, trial_ids), str(source), opened
 
     if nwb_alignment is not None:
-        return metadata_from_nwb_trials(nwb_alignment.trials_df, trial_ids), None
+        return metadata_from_nwb_trials(nwb_alignment.trials_df, trial_ids), None, None
 
     if trials_ep is not None:
-        return metadata_from_intervalset(trials_ep, trial_ids), None
+        return metadata_from_intervalset(trials_ep, trial_ids), None, None
 
-    return empty_metadata_df(trial_ids or []), None
+    return empty_metadata_df(trial_ids or []), None, opened

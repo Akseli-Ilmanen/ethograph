@@ -1,0 +1,38 @@
+"""Throwaway: does dropping the quiet WAV alone populate app_state.audio_folder?"""
+
+from ethograph.gui.cover_page import CoverPage, classify_files
+from tests.conftest import BIRDPARK_NC
+
+QUIET_WAV = r"C:\Users\aksel\Documents\octron\VIDEOS for eth ppt\BP_2021-05-25_08-12-51_655154_0380000.wav"
+
+
+def test_audio_dropped_with_existing_session(gui):
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    buckets = classify_files([str(BIRDPARK_NC), QUIET_WAV])
+    print("buckets", buckets)
+    page._populate_io_from_buckets(
+        buckets,
+        {"data_sr": None, "source_software": None, "pose_fps": None, "extract_audio": False, "audio_track_videos": []},
+    )
+    app_state = meta.app_state
+    print("audio_folder", app_state.audio_folder)
+    print("nc_file_path", app_state.nc_file_path)
+    print("nwb_file_path", getattr(app_state, "nwb_file_path", None))
+    assert app_state.audio_folder is not None
+
+
+def test_audio_only_drop_sets_audio_folder(gui):
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    buckets = classify_files([QUIET_WAV])
+    print("buckets", buckets)
+    page._populate_io_from_buckets(
+        buckets,
+        {"data_sr": None, "source_software": None, "pose_fps": None, "extract_audio": False, "audio_track_videos": []},
+    )
+    app_state = meta.app_state
+    print("audio_folder", app_state.audio_folder)
+    print("nc_file_path", app_state.nc_file_path)
+    print("nwb_file_path", getattr(app_state, "nwb_file_path", None))
+    assert app_state.audio_folder is not None
