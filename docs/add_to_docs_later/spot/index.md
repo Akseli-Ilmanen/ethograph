@@ -115,8 +115,8 @@ new labelled data — the fingerprint in the run name tells those apart.
 
 **Every pose input is a variable in your session file**, spelled the way the
 segmentation pipeline spells feature columns — `velocity: {space: [x, y],
-keypoint: [stickTip]}`, `pellet_stickClosest_dist: {}`. Build it with 
-`movement.kinematics` or `features/geometry.py` or your own code, 
+keypoint: [stickTip]}`, `pellet_stickClosest_dist: {}`. Build it with
+`movement.kinematics` or `features/geometry.py` or your own code,
 plot it in the GUI, list it. The model gets exactly that; there is no graph, no adjacency, no learned
 geometry to reason about. Options 3 and 4 are described in {doc}`multimodal`.
 

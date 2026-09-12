@@ -26,13 +26,13 @@ sessions:
   - source: C:\Users\aksel\Documents\AI_data\derivatives\sub-01_id-Ivy\ses-000_date-20260416_01\behav\pynapple\units.npz
     labels_path: C:\Users\aksel\Documents\AI_data\derivatives\sub-01_id-Ivy\ses-000_date-20260416_01\behav\Trial_data_labels.tsv
 
-individual: Ivy                                             
+individual: Ivy
 
 
 #   - source: C:\Users\aksel\Documents\AI_data\derivatives\sub-02_id-Poppy\ses-000_date-20260308_01\behav\pynapple\units.npz
 #     labels_path: C:\Users\aksel\Documents\AI_data\derivatives\sub-02_id-Poppy\ses-000_date-20260308_01\behav\Trial_data_labels.tsv
 
-# individual: Poppy                                             
+# individual: Poppy
 
 features:
   name: rate_5ms_boxcar25ms                                   # materialised dataset -> data/rate_5ms_boxcar25ms/

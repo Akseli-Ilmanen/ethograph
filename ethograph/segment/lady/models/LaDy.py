@@ -37,15 +37,15 @@ class Linear_Attention(nn.Module):
     def elu(self, x):
         return torch.sigmoid(x)
         # return torch.nn.functional.elu(x) + 1
-        
+
     def forward(self, queries, keys, values, mask):
 
         B, L, _ = queries.shape
         _, S, _ = keys.shape
-        queries = self.query_projection(queries).view(B, L, self.n_heads, -1) 
-        keys = self.key_projection(keys).view(B, S, self.n_heads, -1)         
-        values = self.value_projection(values).view(B, S, self.n_heads, -1)   
-        
+        queries = self.query_projection(queries).view(B, L, self.n_heads, -1)
+        keys = self.key_projection(keys).view(B, S, self.n_heads, -1)
+        values = self.value_projection(values).view(B, S, self.n_heads, -1)
+
         queries = queries.transpose(1, 2)
         keys = keys.transpose(1, 2)
         values = values.transpose(1, 2) #（n,head,t,c）
@@ -75,10 +75,10 @@ class AttModule(nn.Module):
             ) #膨胀卷积
         self.instance_norm = nn.InstanceNorm1d(out_channel, track_running_stats=False)
         self.att_layer = Linear_Attention(out_channel, out_channel, out_channel)
-        
+
         self.conv_out = nn.Conv1d(out_channel, out_channel, 1)
         self.dropout = nn.Dropout()
-        
+
     def forward(self, x, f, mask):
 
         out = self.feed_forward(x)
@@ -90,7 +90,7 @@ class AttModule(nn.Module):
             q = self.instance_norm(out).permute(0, 2, 1)
             f = f.permute(0, 2, 1)
             out = self.alpha * self.att_layer(q, q, f, mask).permute(0, 2, 1) + out
-       
+
         out = self.conv_out(out)
         out = self.dropout(out)
 
@@ -106,7 +106,7 @@ class SFI(nn.Module):
                                 nn.Dropout(0.3),
                                 nn.Linear(n_features, n_features))
         self.conv_fusion = nn.Conv1d(2 * n_features, n_features, 1)
-        
+
     def forward(self, feature_s, feature_t, mask): #feature_s （n,t,v) feature_t (n,t,c)
         n, c, t, v = feature_s.shape
         feature_s = feature_s.permute(0, 3, 1, 2).contiguous().view(n, v * c, t)  # (n,8,t,v) -->(n,v*8,t)
@@ -149,7 +149,7 @@ class DynamicFeatureFusion(nn.Module):
 
 
 
-    
+
 class STI(nn.Module):
     def __init__(self, node, in_channel, n_features, out_channel, num_layers, SFI_layer, channel_masking_rate=0.3, alpha=1):
         super().__init__()
@@ -163,7 +163,7 @@ class STI(nn.Module):
         self.SFI_layers = nn.ModuleList(
             [SFI(node * 8, n_features) for i in range(num_SFI_layers)])
         self.layers = nn.ModuleList(
-            [AttModule(2 ** i, n_features, n_features, 'encoder', alpha) for i in 
+            [AttModule(2 ** i, n_features, n_features, 'encoder', alpha) for i in
                 range(num_layers)]) #10层扩张注意力
         self.dynamic_gates = nn.ModuleList(
             [DynamicFeatureFusion(n_features, n_features, 2 ** i) for i in range(num_layers)]) #10
@@ -191,14 +191,14 @@ class STI(nn.Module):
 
         feature_st = self.conv_out(feature_st)
         return feature_st * mask
-       
+
 class Decoder(nn.Module):
     def __init__(self, in_channel, n_features, out_channel, num_layers, alpha=1):
         super().__init__()
-        
+
         self.conv_in = nn.Conv1d(in_channel, n_features, 1)
         self.layers = nn.ModuleList(
-            [AttModule(2 ** i, n_features, n_features, 'decoder', alpha) for i in 
+            [AttModule(2 ** i, n_features, n_features, 'decoder', alpha) for i in
              range(num_layers)])
         self.conv_out = nn.Conv1d(n_features, out_channel, 1)
 
@@ -207,16 +207,16 @@ class Decoder(nn.Module):
         for layer in self.layers:
             feature = layer(feature, fencoder, mask)
         out = self.conv_out(feature)
-        
+
         return out, feature
 
 
-    
+
 class Model(nn.Module):
     """
     this model predicts both frame-level classes and boundaries.
     Args:
-        in_channel: 
+        in_channel:
         n_feature: 64
         n_classes: the number of action classes
         n_layers: 10
@@ -264,7 +264,7 @@ class Model(nn.Module):
 
 
         self.STI = STI(node, n_features * 2, n_features, n_features, n_layers, SFI_layer)
- 
+
         self.conv_cls = nn.Conv1d(n_features, n_classes, 1)
         self.conv_bound = nn.Conv1d(n_features, 1, 1)
         self.conv_feature = nn.Conv1d(n_features, 768, 1)
@@ -313,11 +313,11 @@ class Model(nn.Module):
         F_fused = torch.cat([F_s0, F_dyn], dim=1)
 
         feature = self.STI(F_fused, Dyn_gate, mask)
-        
+
         out_cls = self.conv_cls(feature)
         out_bound = self.conv_bound(feature)
         out_feature = self.conv_feature(feature)
-        
+
         if self.training:
             outputs_cls = [out_cls]
             outputs_bound = [out_bound]

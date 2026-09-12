@@ -53,7 +53,9 @@ class Skeleton:
             if a == b:
                 raise ValueError(f"Skeleton edge {a!r}-{b!r} joins a node to itself")
             if a not in known or b not in known:
-                raise ValueError(f"Skeleton edge {a!r}-{b!r} names a node the skeleton does not declare ({sorted(known)})")
+                raise ValueError(
+                    f"Skeleton edge {a!r}-{b!r} names a node the skeleton does not declare ({sorted(known)})"
+                )
         object.__setattr__(self, "nodes", nodes)
         object.__setattr__(self, "edges", edges)
 
@@ -116,8 +118,12 @@ class Skeleton:
         for name, skeleton in found.items():
             distinct.setdefault(skeleton, []).append(name)
         if len(distinct) > 1:
-            listing = "; ".join(f"{sorted(groups)}: {len(s.nodes)} nodes, {len(s.edges)} edges" for s, groups in distinct.items())
-            raise ValueError(f"{path} holds {len(distinct)} different skeletons — {listing}. Export the one you mean to a YAML.")
+            listing = "; ".join(
+                f"{sorted(groups)}: {len(s.nodes)} nodes, {len(s.edges)} edges" for s, groups in distinct.items()
+            )
+            raise ValueError(
+                f"{path} holds {len(distinct)} different skeletons — {listing}. Export the one you mean to a YAML."
+            )
         return next(iter(distinct))
 
     @classmethod

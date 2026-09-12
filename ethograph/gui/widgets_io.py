@@ -532,7 +532,9 @@ class IOWidget(QWidget):
         self.import_predictions_btn = QPushButton("Import…")
         self.import_predictions_btn.setToolTip("Import a prediction set — from a run's folder, or a plain .tsv")
         self.import_predictions_menu = QMenu(self.import_predictions_btn)
-        self.import_predictions_from_folder_action = QAction("From folder (segmentation run)…", self.import_predictions_menu)
+        self.import_predictions_from_folder_action = QAction(
+            "From folder (segmentation run)…", self.import_predictions_menu
+        )
         self.import_predictions_from_folder_action.setToolTip(
             "Select a segmentation run's prediction folder (labels/predictions_{run}_{timestamp}/)"
         )

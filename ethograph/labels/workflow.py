@@ -151,7 +151,6 @@ GRID_METHOD_CHOICES = {
     "curated": "Curated only",
     "human": "Manual or curated",
     "all": "All labels",
-    
 }
 
 #: The ``methods`` parameter both grid steps take: which half of the labels

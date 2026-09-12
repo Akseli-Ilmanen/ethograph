@@ -36,7 +36,7 @@ uv tool install --python 3.12 "ethograph[gui,audio]"
 Then launch it from any terminal:
 
 ```bash
-ethograph check # Linux only : Check for missing libraries 
+ethograph check # Linux only : Check for missing libraries
 ethograph launch
 ```
 

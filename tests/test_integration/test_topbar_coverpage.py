@@ -855,7 +855,7 @@ def test_cover_page_audio_only_alignment(gui, birdpark_data_dir):
 
 
 def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui):
-    """"Several trials of one device" layout: 2+ video/pose files with no
+    """ "Several trials of one device" layout: 2+ video/pose files with no
     camera-matching dialog — natural-sort paired into a real multi-trial
     TrialTree, mirroring the Data wizard's single-camera 'Pair' route."""
     import ethograph as eto

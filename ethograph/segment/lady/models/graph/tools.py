@@ -8,7 +8,7 @@ def edge2mat(link, num_node):
         A[j, i] = 1
     return A
 
-def normalize_digraph(A):  
+def normalize_digraph(A):
     Dl = np.sum(A, 0)
     h, w = A.shape
     Dn = np.zeros((w, w))

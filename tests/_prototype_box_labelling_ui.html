@@ -459,7 +459,7 @@ function renderA() {
   renderMotion(a.querySelector("[data-motion]"));
   renderStrip(a.querySelector("[data-strip]"));
 }
-function renderD() {
+function rendered() {
   const d = document.getElementById("D");
   renderCams(d.querySelector("[data-cams]"));
   renderChips(d.querySelector("[data-chips]"));
@@ -502,7 +502,7 @@ function renderAll() {
   const v = currentVariant();
   document.querySelectorAll(".app").forEach(a => a.classList.toggle("active", a.id === v));
   document.querySelector("[data-label]").textContent = `${v} — ${VARIANTS[v]}`;
-  ({ A: renderA, B: renderB, C: renderC, D: renderD, E: renderE })[v]();
+  ({ A: renderA, B: renderB, C: renderC, D: rendered, E: renderE })[v]();
   document.querySelectorAll("[data-next]").forEach(b => b.onclick = nextFrame);
 }
 const keys = Object.keys(VARIANTS);

@@ -22,9 +22,9 @@ in increasing order of how much they change the product:
 ### The claim
 
 Claude proposed *pick a class → click start → play → click end*.
-Better (do this instead): Use shortcut to set a class, e.g. letters 4 or w as before. but here the clciking of "4" already place the point event at the current frame. If 4 or w belogns to a state event, then the user can click 4 will show start point (label onset) at the current frame and then they can naivgate the gui with playback (click space) or timeline or manual frame-by-frame navigation with <> buttons. Second time they click 4 they confirmtm the label offset. 
+Better (do this instead): Use shortcut to set a class, e.g. letters 4 or w as before. but here the clciking of "4" already place the point event at the current frame. If 4 or w belogns to a state event, then the user can click 4 will show start point (label onset) at the current frame and then they can naivgate the gui with playback (click space) or timeline or manual frame-by-frame navigation with <> buttons. Second time they click 4 they confirmtm the label offset.
 
-in Labels tab at the top there should be a combo box where hte user can controlw aht labelling mode they are in Label on time series (Ethograph-style) or Label at current frame (Classic-Style) - maybe reprhase this
+in Labels tab at the top there should be a combo box where the user can controlw aht labelling mode they are in Label on time series (Ethograph-style) or Label at current frame (Classic-Style) - maybe reprhase this
 
 
 
@@ -48,7 +48,7 @@ plot *type* → render mode and `schedule_labels_redraw` runs over panels. A use
 has no panels, so no visible labels, so no way to see or re-click what they just placed. The real
 deliverable is a `BasePlot` with an empty y-axis — a label ribbon over the trial — shown by default
 when a dataset has no features. Useful beyond this case as a label-only overview.
-- this empty plot can be the first option alwas visible in add panels button, and maybe we next to the Label current frame checkbox have a checkbox, create empty plot checkbox ticked, which loads this empty plot (if no panel curerntly exists). 
+- this empty plot can be the first option always visible in add panels button, and maybe we next to the Label current frame checkbox have a checkbox, create empty plot checkbox ticked, which loads this empty plot (if no panel currently exists).
 
 **Opening a folder of videos.** Loading assumes NetCDF/NWB/pynapple plus `.ethograph/alignment.nwb`
 for timing. A user with `videos/*.mp4` has no dataset, no trials, no clock. Something must
@@ -316,5 +316,3 @@ Third appearance of the same fact: a pure-video model cannot see inter-animal di
 labeller with the trace can.
 
 ---
-
-

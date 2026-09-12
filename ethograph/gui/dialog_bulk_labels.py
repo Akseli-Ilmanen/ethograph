@@ -245,9 +245,7 @@ class LabelBulkEditDialog(QDialog):
         run(label_ids)
 
     def _curate(self) -> None:
-        self._guarded(
-            lambda label_ids: self.panel.curate_trial_labels(self._trial_scope(), label_ids, confirm=True)
-        )
+        self._guarded(lambda label_ids: self.panel.curate_trial_labels(self._trial_scope(), label_ids, confirm=True))
 
     def _delete(self) -> None:
         self._guarded(lambda label_ids: self.panel.delete_trial_labels(self._trial_scope(), label_ids, confirm=True))

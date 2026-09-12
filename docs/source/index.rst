@@ -409,7 +409,7 @@ To open the GUI, run:
 
 .. code-block:: bash
 
-   ethograph check # Linux only : Check for missing libraries 
+   ethograph check # Linux only : Check for missing libraries
    ethograph launch
 
 .. note::

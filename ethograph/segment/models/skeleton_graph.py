@@ -370,9 +370,7 @@ class LaDyModel(SkeletonGraphModel):
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         pos = _to_joint_layout(x, self.num_keypoints)
-        q = pose_to_generalised_coordinates(
-            pos, self.parents, self.root, self.spine, self.left, self.right, self.ndim
-        )
+        q = pose_to_generalised_coordinates(pos, self.parents, self.root, self.spine, self.left, self.right, self.ndim)
         result = self.inner(pos, q, mask, self.joint_graph)
         return _stack_stages(result, mask)
 

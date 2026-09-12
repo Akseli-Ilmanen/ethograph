@@ -178,7 +178,7 @@ def manual_matrix_to_axis_angle(matrix: torch.Tensor) -> torch.Tensor:
         # sin(angle)  is not 0
         sin_angle = torch.sin(angle_general)
 
-        # caculate axis
+        # calculate axis
         axis_unnormalized = torch.stack([
             R_general[:, 2, 1] - R_general[:, 1, 2],
             R_general[:, 0, 2] - R_general[:, 2, 0],

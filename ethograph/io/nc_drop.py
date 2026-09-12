@@ -53,7 +53,7 @@ def concat_on_camera(datasets: list[xr.Dataset], names: list[str]) -> xr.Dataset
     rates = {float(ds.attrs["fps"]) for ds in datasets if ds.attrs.get("fps")}
     if len(rates) > 1:
         raise ValueError(f"The dropped .nc files disagree on fps: {sorted(rates)}")
-    softwares = {str(ds.attrs["source_software"]) for ds in datasets if ds.attrs.get("source_software")}
+    software = {str(ds.attrs["source_software"]) for ds in datasets if ds.attrs.get("source_software")}
 
     if len(datasets) == 1:
         ds = datasets[0].copy()
@@ -69,6 +69,6 @@ def concat_on_camera(datasets: list[xr.Dataset], names: list[str]) -> xr.Dataset
     ds.attrs = {}
     if rates:
         ds.attrs["fps"] = rates.pop()
-    if len(softwares) == 1:
-        ds.attrs["source_software"] = softwares.pop()
+    if len(software) == 1:
+        ds.attrs["source_software"] = software.pop()
     return ds

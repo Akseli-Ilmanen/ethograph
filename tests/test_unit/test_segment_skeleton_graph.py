@@ -98,7 +98,9 @@ def test_eval_is_deterministic(name: str) -> None:
 
 def test_lady_runs_on_2d_pose() -> None:
     """The dynamics coordinates have a 2D path (heading + signed joint angles)."""
-    model = build_model("lady", {"keypoints": KEYPOINTS, "skeleton": EDGES, "root": "tail", "spine": "neck"}, _n_features(2), N_CLASSES)
+    model = build_model(
+        "lady", {"keypoints": KEYPOINTS, "skeleton": EDGES, "root": "tail", "spine": "neck"}, _n_features(2), N_CLASSES
+    )
     x, mask = _inputs(channels=2)
     out = as_output(model(x, mask)).logits
     assert tuple(out.shape[1:]) == (B, N_CLASSES, T)
@@ -144,7 +146,12 @@ def test_lady_refuses_a_skeleton_with_no_articulated_joint() -> None:
     # has a grandparent and the dynamics stream has no articulated joint.
     star = [["tail", k] for k in KEYPOINTS if k != "tail"]
     with pytest.raises(ValueError, match="no articulated joint"):
-        build_model("lady", {"keypoints": KEYPOINTS, "skeleton": star, "root": "tail", "spine": "neck"}, _n_features(2), N_CLASSES)
+        build_model(
+            "lady",
+            {"keypoints": KEYPOINTS, "skeleton": star, "root": "tail", "spine": "neck"},
+            _n_features(2),
+            N_CLASSES,
+        )
 
 
 @pytest.mark.parametrize("name", SKELETON_GRAPH)
@@ -198,7 +205,14 @@ def test_generalised_coordinates_are_invariant_to_a_global_translation() -> None
     torch.manual_seed(1)
     pos = torch.randn(1, 3, len(KEYPOINTS), 8)
     shifted = pos + torch.tensor([1.5, -2.0, 0.7]).view(1, 3, 1, 1)
-    args = (parents, KEYPOINTS.index("tail"), KEYPOINTS.index("neck"), KEYPOINTS.index("hipL"), KEYPOINTS.index("hipR"), 3)
+    args = (
+        parents,
+        KEYPOINTS.index("tail"),
+        KEYPOINTS.index("neck"),
+        KEYPOINTS.index("hipL"),
+        KEYPOINTS.index("hipR"),
+        3,
+    )
     q0 = pose_to_generalised_coordinates(pos, *args)
     q1 = pose_to_generalised_coordinates(shifted, *args)
     assert torch.allclose(q0, q1, atol=1e-5)
