@@ -41,6 +41,7 @@ dependencies = [
     "crowsetta",
     "pynwb",
     "h5py",
+    "natsort",
 ]
 
 [project.urls]
@@ -73,7 +74,6 @@ gui = [
     "movement>=0.14",
     "ruptures",
     "jinja2",
-    "natsort",
     "tqdm",
     "nwb-video-widgets",
     "phylib>=2.6.4",
