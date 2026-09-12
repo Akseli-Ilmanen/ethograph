@@ -34,6 +34,10 @@ if TYPE_CHECKING:
 #: a dim free in the loader.
 INDIVIDUAL_DIMS = ("individual", "individuals")
 
+#: Dim spellings that select a keypoint, most-preferred first — movement's
+#: singular and the older plural, read as they are (see ``INDIVIDUAL_DIMS``).
+KEYPOINT_DIMS = ("keypoint", "keypoints")
+
 #: movement's name for the x/y/z axis. Pynapple columns spelling exactly that
 #: get the same dim name, so a space plot, a panel combo and a saved selection
 #: mean the same thing whichever backend the session came from.

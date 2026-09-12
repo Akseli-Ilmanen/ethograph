@@ -362,20 +362,20 @@ def _segment_lengths(changepoint_indices: np.ndarray, seq_length: int, max_lengt
     return np.minimum(np.log1p(out) / np.log1p(max_length), 1.0)
 
 
+#: ``max_length`` default, in horizons: the length column saturates at ``16 * horizon`` samples.
 LENGTH_HORIZONS = 16.0
-"""``max_length`` default, in horizons: the length column saturates at ``16 * horizon`` samples."""
 
+#: The short end of the label durations the horizon is read off.
 SHORT_PERCENTILE = 5.0
-"""The short end of the label durations the horizon is read off."""
 
+#: The long end of the label durations ``max_length`` is read off.
 LONG_PERCENTILE = 95.0
-"""The long end of the label durations ``max_length`` is read off."""
 
+#: ``horizon = HORIZON_FRACTION * p5(duration)``: the largest radius that keeps the shortest label's edges apart.
 HORIZON_FRACTION = 0.5
-"""``horizon = HORIZON_FRACTION * p5(duration)``: the largest radius that keeps the shortest label's edges apart."""
 
+#: The derived kernel ladder, ``horizon / k`` — the widest fades at the horizon (``e^-4``).
 SIGMA_DIVISORS: tuple[float, ...] = (16.0, 8.0, 4.0)
-"""The derived kernel ladder, ``horizon / k`` — the widest fades at the horizon (``e^-4``)."""
 
 
 @dataclass(frozen=True)
@@ -528,8 +528,8 @@ def more_changepoint_features(
 #: the narrowest), never by the sigma value: the values may be derived from
 #: the labels after the column names are fixed.
 CP_BINARY = "binary"
+#: How mask ``var``'s ``binary`` column is named (``{var}_cp_binary``): what a layout looks for to find candidates.
 CP_BINARY_SUFFIX = "_cp_binary"
-"""How mask ``var``'s ``binary`` column is named (``{var}_cp_binary``): what a layout looks for to find candidates."""
 CP_PROXIMITY = "proximity"
 CP_OFFSET = "offset"
 CP_LENGTH = "length"

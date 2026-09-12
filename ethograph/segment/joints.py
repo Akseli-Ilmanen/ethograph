@@ -26,6 +26,9 @@ from ethograph.io.catalog import INDIVIDUAL_DIMS, KEYPOINT_DIMS, SPACE_DIM
 SELF_TOKEN = "self"
 """The sample's own individual, as the layout spells it (``samples.SELF_TOKEN``)."""
 
+#: The order a coordinate group lists its space channels in.
+SPACE_ORDER = ("x", "y", "z")
+
 
 @dataclass(frozen=True)
 class ChannelKey:
@@ -34,10 +37,11 @@ class ChannelKey:
     feature: str
     selections: tuple[tuple[str, str], ...]
     derivative: bool = False
+    circular: str | None = None
 
     @property
     def label(self) -> str:
-        return column_name(self.feature, dict(self.selections), self.derivative)
+        return column_name(self.feature, dict(self.selections), self.derivative, self.circular)
 
     def value(self, dim: str) -> str | None:
         return dict(self.selections).get(dim)
@@ -100,6 +104,7 @@ class JointLayout:
                 col.feature,
                 tuple(sorted((d, v) for d, v in col.selections.items() if d != kp_dim)),
                 col.derivative,
+                col.circular,
             )
             if keypoint not in per_keypoint:
                 keypoints.append(keypoint)
@@ -126,4 +131,24 @@ class JointLayout:
                     f"missing {missing}, extra {extra}. Every keypoint must select the same features and dims."
                 )
         index = np.array([[per_keypoint[kp][ch] for ch in channels] for kp in keypoints], dtype=np.int64)
-        return cls(tuple(keypo
+        return cls(tuple(keypoints), channels, index)
+
+    def coordinate_groups(self) -> tuple[CoordinateGroup, ...]:
+        """The raw coordinate channels, one group per (individual, feature), each in x, y[, z] order.
+
+        A derivative or a sin/cos component is not a coordinate, and is left out.
+        """
+        grouped: dict[tuple[str | None, str, tuple[tuple[str, str], ...]], dict[str, int]] = {}
+        for c, key in enumerate(self.channels):
+            space = key.value(SPACE_DIM)
+            if space is None or key.derivative or key.circular is not None:
+                continue
+            if space not in SPACE_ORDER:
+                raise ValueError(f"Channel {key.label!r} has space={space!r}; a coordinate is one of {SPACE_ORDER}")
+            rest = tuple((d, v) for d, v in key.selections if d != SPACE_DIM)
+            grouped.setdefault((key.individual, key.feature, rest), {})[space] = c
+        groups = []
+        for (individual, feature, _), by_space in grouped.items():
+            space = tuple(s for s in SPACE_ORDER if s in by_space)
+            groups.append(CoordinateGroup(individual, feature, tuple(by_space[s] for s in space), space))
+        return tuple(groups)

@@ -103,6 +103,19 @@ def column_name(
     return f"{name}|{DERIVATIVE_SUFFIX}" if derivative else name
 
 
+def parse_column_name(name: str) -> FeatureColumn:
+    """The inverse of :func:`column_name`: what a materialised column name selects."""
+    feature, *parts = name.split("|")
+    derivative = bool(parts) and parts[-1] == DERIVATIVE_SUFFIX
+    if derivative:
+        parts.pop()
+    circular = parts.pop() if parts and parts[-1] in CIRCULAR_COMPONENTS else None
+    if len(parts) > 1:
+        raise ValueError(f"Column name {name!r} is not one column_name() writes")
+    selections = dict(pair.split("=", 1) for pair in parts[0].split(",")) if parts else {}
+    return FeatureColumn(feature, selections, name, derivative, circular)
+
+
 def time_derivative(values: np.ndarray, time: np.ndarray) -> np.ndarray:
     """``d(values)/dt`` by second-order central differences (``np.gradient``).
 

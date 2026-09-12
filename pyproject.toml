@@ -242,6 +242,7 @@ ignore = [
     "Usersaksel.pypirc",
     "tests/*",
     "docs/*",
+    "notes/**",
     "configs/*",
     "scripts/*",
     "scripts/**",

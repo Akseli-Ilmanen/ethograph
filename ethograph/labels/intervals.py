@@ -79,14 +79,14 @@ INTERVAL_DTYPES = {
 }
 
 #: The columns identifying whose label a row is — the actor and the recipient.
+#: What identifies a label row's subject: who acted, and towards whom.
 SUBJECT_COLUMNS = ["individual", "individual_rec"]
-"""What identifies a label row's subject: who acted, and towards whom."""
 
+#: The unit of exclusivity: one actor never does two things at once (within a
+#: branch). The receiver is an attribute of the label, not a second track — a
+#: label directed at another animal and a solo one of the same actor exclude
+#: each other exactly like two solo ones do.
 TRACK_COLUMNS = ["individual"]
-"""The unit of exclusivity: one actor never does two things at once (within a
-branch). The receiver is an attribute of the label, not a second track — a
-label directed at another animal and a solo one of the same actor exclude
-each other exactly like two solo ones do."""
 
 
 # ── Empty DataFrame ──────────────────────────────────────────────────────
