@@ -30,11 +30,6 @@ dependencies = [
     "xarray",
     "netcdf4",
     "scipy",
-    # scikit-learn: the LightGBM-style onset detector (labels/onset_model.py).
-    # joblib is sklearn's own dependency but we import it directly to store
-    # trained bundles.
-    "scikit-learn",
-    "joblib",
     "matplotlib",
     "pynapple>=0.10",
     "pyyaml",
@@ -78,6 +73,11 @@ gui = [
     "nwb-video-widgets",
     "phylib>=2.6.4",
     "neo",
+    # The onset detector (labels/onset_model.py, Model menu) and frame
+    # suggestion (gui/pose_suggest.py). joblib is sklearn's own dependency but
+    # we import it directly to store trained bundles.
+    "scikit-learn",
+    "joblib",
     # Keypoint labelling: the optical-flow fill backend, and rendering the tag
     # sheet. Headless because plain opencv-python ships Qt plugins that conflict
     # with PyQt6; contrib because cv2.aruco is not in the base wheel.

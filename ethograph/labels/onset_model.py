@@ -87,7 +87,6 @@ opposite things on the two sides.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
 from dataclasses import asdict, dataclass, field, replace
@@ -363,18 +362,6 @@ def retarget_individual(config: OnsetModelConfig, individual: str | None) -> Ons
     if features is config.features and label_inputs == config.label_inputs:
         return config
     return replace(config, features=features, label_inputs=label_inputs)
-
-
-def session_id(source_path: str | Path) -> str:
-    """Stable, filesystem-safe identifier for one loaded session.
-
-    ``{stem}-{hash}``: the stem keeps the folder recognisable, the hash of the
-    resolved path keeps two same-named sessions apart.
-    """
-    p = Path(source_path)
-    digest = hashlib.sha1(str(p.resolve()).encode("utf-8")).hexdigest()[:8]
-    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", p.stem) or "session"
-    return f"{stem}-{digest}"
 
 
 def session_dir(name: str, session: str) -> Path:

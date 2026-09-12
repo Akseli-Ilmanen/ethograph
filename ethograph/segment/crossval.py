@@ -44,7 +44,6 @@ from typing import Any, Iterable
 
 import pandas as pd
 
-from ethograph.labels.onset_model import session_id
 from ethograph.segment.config import (
     SegmentConfig,
     SessionSpec,
@@ -58,6 +57,7 @@ from ethograph.segment.materialise import COLUMNS_FILE, materialise, read_index,
 from ethograph.segment.metrics import EVAL_ARRAYS_FILE
 from ethograph.segment.train import RunResult, run_name_for, train
 from ethograph.utils.logging import log_to_file
+from ethograph.utils.paths import session_id
 
 logger = logging.getLogger(__name__)
 

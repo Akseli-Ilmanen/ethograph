@@ -82,6 +82,7 @@ from ethograph.labels.intervals import (
 from ethograph.labels.label_inputs import POINT_SIGMAS_S, LabelInput
 from ethograph.labels.tsv_store import get_trial_from_tsv
 from ethograph.labels.workflow import DEFAULT_CONFIDENCE
+from ethograph.utils.paths import session_id
 
 logger = logging.getLogger(__name__)
 
@@ -991,7 +992,7 @@ class TrainOnsetDialog(QDialog):
             notify("This session has no labels.", severity="warning")
             return
 
-        session = om.session_id(source_path)
+        session = session_id(source_path)
         n_written = 0
         n_multi = 0
         per_target: dict[int, int] = {label: 0 for label in config.targets}

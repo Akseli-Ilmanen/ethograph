@@ -23,7 +23,6 @@ from ethograph.io import schema
 from ethograph.io.catalog import INDIVIDUAL_DIMS, PynappleLoader, XarrayLoader, catalog_from_pynapple
 from ethograph.io.data_loader import LoadResult, load_features_dataset
 from ethograph.labels.intervals import LABELING_AUTOMATED
-from ethograph.labels.onset_model import session_id
 from ethograph.labels.tsv_store import get_trial_from_tsv
 from ethograph.segment.config import (
     MERGED_CHANGEPOINTS,
@@ -32,6 +31,7 @@ from ethograph.segment.config import (
     SessionSpec,
     TrialsConfig,
 )
+from ethograph.utils.paths import session_id
 
 logger = logging.getLogger(__name__)
 

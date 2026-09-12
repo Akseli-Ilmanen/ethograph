@@ -18,11 +18,11 @@ import yaml
 
 import ethograph as eto
 from ethograph.labels.intervals import LABELING_AUTOMATED, LABELING_MANUAL
-from ethograph.labels.onset_model import session_id
 from ethograph.labels.tsv_store import load_labels_tsv, save_labels_tsv
 from ethograph.segment.config import apply_overrides, load_config
 from ethograph.segment.materialise import materialise, read_index, read_layout
 from ethograph.segment.samples import class_table, dense_targets
+from ethograph.utils.paths import session_id
 
 torch = pytest.importorskip("torch")
 

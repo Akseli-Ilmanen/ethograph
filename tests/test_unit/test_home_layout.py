@@ -15,6 +15,7 @@ from ethograph.utils.paths import (
     find_config,
     logs_dir,
     migrate_home_layout,
+    session_id,
 )
 
 
@@ -167,3 +168,11 @@ class TestMappingResolution:
 
         (session / ".ethograph" / "mapping.txt").write_text("0 Background\n1 Mine\n")
         assert find_config("mapping.txt", session, project_dir=project) == session / ".ethograph" / "mapping.txt"
+
+
+def test_session_id_stable_and_distinct(tmp_path):
+    a = tmp_path / "sess_a.nc"
+    b = tmp_path / "sub" / "sess_a.nc"
+    assert session_id(a) == session_id(a)
+    assert session_id(a) != session_id(b)
+    assert session_id(a).startswith("sess_a-")

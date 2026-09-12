@@ -72,6 +72,12 @@ def main() -> None:
     preds = json.loads(inference_json.read_text(encoding="utf-8"))["preds"]
     videos = pd.read_csv(out / "videos.tsv", sep="\t")
     test = videos[videos["role"] == "test"]
+    bundle = set((segment_run / "splits" / "test.bundle").read_text(encoding="utf-8").split())
+    if set(test["key"]) != bundle:
+        raise ValueError(
+            f"FERAL's test split has {len(test)} of the segment run's {len(bundle)} test trials "
+            "(see videos_missing.tsv) — the two would be scored on different trials."
+        )
 
     gt: dict[str, np.ndarray] = {}
     pred: dict[str, np.ndarray] = {}
@@ -120,7 +126,9 @@ def main() -> None:
             individual = str(index.loc[row.key, "individual"])
             p = probs[row.key]
             time = np.arange(len(p)) / fs
-            intervals = postprocess_intervals(dense_to_intervals(classes.ids(pred[row.key]), [individual], time_coord=time), pcfg)
+            intervals = postprocess_intervals(
+                dense_to_intervals(classes.ids(pred[row.key]), [individual], time_coord=time), pcfg
+            )
             arrays[row.key] = p.astype(np.float16)
             for seg in intervals.itertuples():
                 lid = int(seg.labels)

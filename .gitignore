@@ -15,6 +15,7 @@ weights/
 *.avi
 *.mkv
 *.mov
+*.pt
 !docs/source/_static/media/*.mp4
 docs/build_preview/
 # pynaviz/

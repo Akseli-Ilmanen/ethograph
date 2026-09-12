@@ -94,14 +94,6 @@ def test_legacy_single_target_config_upgrades(tmp_path):
     assert config.target_name(7) == "land"
 
 
-def test_session_id_stable_and_distinct(tmp_path):
-    a = tmp_path / "sess_a.nc"
-    b = tmp_path / "sub" / "sess_a.nc"
-    assert om.session_id(a) == om.session_id(a)
-    assert om.session_id(a) != om.session_id(b)
-    assert om.session_id(a).startswith("sess_a-")
-
-
 # ---------------------------------------------------------------------------
 # Windowing + targets
 # ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ no cutting, no re-encoding. Labels are the materialised ``groundTruth`` (the
 exact rasterisation the segment run trained on), class indices unchanged, class
 0 renamed ``"other"`` so FERAL treats it as background. The split is the run's
 own ``splits/*.bundle``, less the trials that have no video (``videos_missing.tsv``;
-score_feral.py re-scores the segment run on the same subset); test trials are also listed as FERAL's ``inference``
+score_feral.py refuses a test split that lost one); test trials are also listed as FERAL's ``inference``
 split, which is the only output FERAL writes with per-frame probabilities.
 
 Usage (ethograph env):
@@ -67,9 +67,7 @@ def main() -> None:
     data_dir = config.data_dir
     classes = read_classes(data_dir)
     index = read_index(data_dir).set_index("key")
-    roles = {
-        role: (run_dir / "splits" / f"{role}.bundle").read_text(encoding="utf-8").split() for role in ROLES
-    }
+    roles = {role: (run_dir / "splits" / f"{role}.bundle").read_text(encoding="utf-8").split() for role in ROLES}
 
     sessions: dict[str, Session] = {}
     for spec in config.sessions:
@@ -136,7 +134,8 @@ def main() -> None:
             "chunk_shift": span // 2,  # lite's 50 % overlap, in frames of the span
         },
         "model": {"gradient_checkpointing": True},
-        "training": {"compile": False},
+        # FERAL's auto (16) decord workers exhaust the Windows page file (error 1455)
+        "training": {"compile": False, "num_workers": 4},
         "segment_run": str(run_dir),
         "video_fps": fps,
         "context_s": span / fps,

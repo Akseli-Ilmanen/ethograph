@@ -291,6 +291,18 @@ def check_paths_exist(nc_paths):
         exit(1)
 
 
+def session_id(source_path: str | Path) -> str:
+    """Stable, filesystem-safe identifier for one loaded session.
+
+    ``{stem}-{hash}``: the stem keeps the folder recognisable, the hash of the
+    resolved path keeps two same-named sessions apart.
+    """
+    p = Path(source_path)
+    digest = hashlib.sha1(str(p.resolve()).encode("utf-8")).hexdigest()[:8]
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", p.stem) or "session"
+    return f"{stem}-{digest}"
+
+
 def media_cache_key(media_path: Path | str, recipe_version: int) -> str:
     """Deterministic cache key from source identity (path, size, mtime).
 

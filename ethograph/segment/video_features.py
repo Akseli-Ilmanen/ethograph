@@ -159,7 +159,7 @@ def session_video_features_dir(session: Session, config: SegmentConfig) -> Path:
     """Where *session*'s video-feature sidecars live: ``video_features_dir/{hash}``.
 
     Namespaced by a hash of the session's resolved source path (the same
-    hashing scheme as :func:`ethograph.labels.onset_model.session_id`, minus
+    hashing scheme as :func:`ethograph.utils.paths.session_id`, minus
     the stem prefix) so that sessions whose video files happen to share a
     name don't overwrite each other's sidecars.
     """

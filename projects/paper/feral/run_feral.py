@@ -4,7 +4,7 @@ FERAL writes ``answers/`` and ``checkpoints/`` into the working directory, so th
 export folder is made the working directory. W&B stays off.
 
 Usage:
-    python run_feral.py OUT_DIR
+    python run_feral.py OUT_DIR [dotted.key=value ...]   # e.g. max_batches=5 training.epochs=1 for a smoke run
 """
 
 from __future__ import annotations
@@ -22,13 +22,22 @@ from feral.train import main as train_main
 def deep_merge(base: dict, overlay: dict) -> dict:
     merged = dict(base)
     for key, value in overlay.items():
-        merged[key] = deep_merge(merged[key], value) if isinstance(value, dict) and isinstance(merged.get(key), dict) else value
+        merged[key] = (
+            deep_merge(merged[key], value) if isinstance(value, dict) and isinstance(merged.get(key), dict) else value
+        )
     return merged
 
 
 def main() -> None:
     out = Path(sys.argv[1]).resolve()
     overrides = yaml.safe_load((out / "feral_overrides.yaml").read_text(encoding="utf-8"))
+    for item in sys.argv[2:]:
+        dotted, value = item.split("=", 1)
+        *parents, leaf = dotted.split(".")
+        node = overrides
+        for part in parents:
+            node = node.setdefault(part, {})
+        node[leaf] = yaml.safe_load(value)
     cfg = deep_merge(apply_mode(_load_default_config(), "lite"), overrides)
     cfg.pop("wandb", None)
     (out / "feral_config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")

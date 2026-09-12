@@ -1,0 +1,13 @@
+run_name: feral_lite_c2f_tcn_classic_cp_offset_new_mseloss_20260912-2052
+data:
+  prefix: C:\Users\aksel\Documents\VidData
+  label_json: C:\Users\aksel\Documents\Code\ethograph\projects\paper\feral\crow1\labels.json
+  chunk_step: 6
+  chunk_shift: 189
+model:
+  gradient_checkpointing: true
+training:
+  compile: false
+segment_run: C:\Users\aksel\Documents\Code\ethograph\projects\paper\data\runs\c2f_tcn_classic_cp_offset_new_mseloss_20260912-2052
+video_fps: 200.0
+context_s: 1.895
