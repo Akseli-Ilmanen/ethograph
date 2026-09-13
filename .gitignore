@@ -1,5 +1,6 @@
 
 
+projects/paper/feral/*
 projects/*/runs/
 projects/*/sessions/
 projects/*/cross_validation/

@@ -4,8 +4,9 @@ FERAL (repos/feral) learns per-frame classes from whole video files. Each sample
 of the materialised dataset is one trial of one individual, and each trial has
 its own camera file, so a FERAL "video" is a trial's camera file as recorded —
 no cutting, no re-encoding. Labels are the materialised ``groundTruth`` (the
-exact rasterisation the segment run trained on), class indices unchanged, class
-0 renamed ``"other"`` so FERAL treats it as background. The split is the run's
+exact rasterisation the segment run trained on), restricted to the classes the
+training split holds (``class_indices`` maps FERAL's back), class 0 renamed
+``"other"`` so FERAL treats it as background. The split is the run's
 own ``splits/*.bundle``, less the trials that have no video (``videos_missing.tsv``;
 score_feral.py refuses a test split that lost one); test trials are also listed as FERAL's ``inference``
 split, which is the only output FERAL writes with per-frame probabilities.
@@ -60,6 +61,9 @@ def main() -> None:
     parser.add_argument("--video-root", type=Path, required=True)
     parser.add_argument("--camera", default="cam-1")
     parser.add_argument("--context-s", type=float, default=2.0, help="Seconds one FERAL chunk should span")
+    parser.add_argument(
+        "--chunk-step", type=int, default=None, help="Frame stride within a chunk (overrides --context-s)"
+    )
     args = parser.parse_args()
 
     run_dir: Path = args.run_dir.resolve()
@@ -105,16 +109,27 @@ def main() -> None:
     if len(rates) != 1:
         raise ValueError(f"Videos disagree on frame rate: {sorted(rates)}")
     fps = rates.pop()
-    chunk_step = max(1, round(args.context_s * fps / (CHUNK_LENGTH - 1)))
+    chunk_step = args.chunk_step or max(1, round(args.context_s * fps / (CHUNK_LENGTH - 1)))
     span = (CHUNK_LENGTH - 1) * chunk_step + 1
 
     out: Path = args.out_dir.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    class_names = {str(i): ("other" if i == 0 else name) for i, name in enumerate(classes.names)}
+    # Only classes the training split holds: FERAL weights a class by inverse train
+    # frequency, and an absent class's clamped weight (1000) swamps the loss.
+    train_classes = {v for name in splits["train"] for v in labels[name]}
+    used = sorted(train_classes | {0})
+    compact = {index: i for i, index in enumerate(used)}
+    dropped = [classes.names[i] for i in range(len(classes.names)) if i not in compact]
+    unseen = sorted({v for name in labels for v in labels[name]} - set(used))
+    if unseen:
+        # Only FERAL's own val selection reads these; score_feral.py scores against the real ground truth.
+        print(f"Classes {[classes.names[i] for i in unseen]} occur in val/test but never in train → 'other' for FERAL")
+    compact.update({index: 0 for index in unseen})
+    class_names = {str(i): ("other" if index == 0 else classes.names[index]) for i, index in enumerate(used)}
     label_json = {
         "class_names": class_names,
         "is_multilabel": False,
-        "labels": labels,
+        "labels": {name: [compact[v] for v in y] for name, y in labels.items()},
         "splits": {**splits, "inference": list(splits["test"])},
     }
     (out / "labels.json").write_text(json.dumps(label_json), encoding="utf-8")
@@ -126,21 +141,27 @@ def main() -> None:
         by_role = pd.DataFrame(missing)["role"].value_counts().to_dict()
         print(f"{len(missing)} trials have no {args.camera} video and are left out: {by_role} (videos_missing.tsv)")
     overrides = {
-        "run_name": f"feral_lite_{run_dir.name}",
+        "run_name": f"feral_lite_step{chunk_step}_{run_dir.name}",
         "data": {
             "prefix": str(args.video_root.resolve()),
             "label_json": str(out / "labels.json"),
             "chunk_step": chunk_step,
-            "chunk_shift": span // 2,  # lite's 50 % overlap, in frames of the span
+            # Shifts are multiples of the step, so overlapping chunks predict the same frames and
+            # get averaged: 50 % overlap to train (FERAL's default), 80 % to evaluate (its max preset).
+            "chunk_shift": CHUNK_LENGTH // 2 * chunk_step,
+            "eval_chunk_shift": CHUNK_LENGTH // 5 * chunk_step,
         },
         "model": {"gradient_checkpointing": True},
         # FERAL's auto (16) decord workers exhaust the Windows page file (error 1455)
         "training": {"compile": False, "num_workers": 4},
         "segment_run": str(run_dir),
+        "class_indices": used,  # FERAL class i is the materialised dataset's class used[i]
         "video_fps": fps,
         "context_s": span / fps,
     }
     (out / "feral_overrides.yaml").write_text(yaml.safe_dump(overrides, sort_keys=False), encoding="utf-8")
+    if dropped:
+        print(f"{len(dropped)} classes never occur in train and are left out: {dropped}")
     print(
         f"{sum(len(v) for v in splits.values())} videos ({', '.join(f'{r} {len(splits[r])}' for r in ROLES)}), "
         f"{len(class_names)} classes, {fps:g} fps → chunk_step {chunk_step}, span {span} frames "

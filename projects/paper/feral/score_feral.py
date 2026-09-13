@@ -42,9 +42,24 @@ from ethograph.segment.plotting import write_eval_pdf
 from ethograph.segment.postprocess import postprocess_dense, postprocess_intervals
 from ethograph.segment.train import EVAL_ARRAYS_FILE, TEST_METRICS_FILE, compare_runs, evaluate_dense
 
+PREDICTION_COLUMNS = [
+    "trial",
+    "individual",
+    "individual_rec",
+    "labels",
+    "onset_s",
+    "offset_s",
+    "event_type",
+    "confidence",
+    "labeling_method",
+    "changepoint_corrected",
+    "prediction_source",
+    "n_samples",
+]
+
 
 def latest_inference_json(out: Path) -> Path:
-    found = sorted((out / "answers").glob("_inference_*.json"))
+    found = sorted((out / "answers").glob("_inference_*.json"), key=lambda p: p.stat().st_mtime)
     if not found:
         raise FileNotFoundError(f"No FERAL inference JSON under {out / 'answers'} — has run_feral.py finished?")
     return found[-1]
@@ -82,11 +97,14 @@ def main() -> None:
     gt: dict[str, np.ndarray] = {}
     pred: dict[str, np.ndarray] = {}
     probs: dict[str, np.ndarray] = {}
+    class_indices = overrides["class_indices"]
     for row in test.itertuples():
         _, y = load_sample(data_dir, row.key, classes)
-        p = np.asarray(preds[row.video], dtype=np.float32)
-        if p.shape != (len(y), len(classes.names)):
-            raise ValueError(f"{row.key}: FERAL predicted {p.shape}, ground truth is ({len(y)}, {len(classes.names)})")
+        compact = np.asarray(preds[row.video], dtype=np.float32)
+        if compact.shape != (len(y), len(class_indices)):
+            raise ValueError(f"{row.key}: FERAL predicted {compact.shape}, expected ({len(y)}, {len(class_indices)})")
+        p = np.zeros((len(y), len(classes.names)), dtype=np.float32)
+        p[:, class_indices] = compact
         gt[row.key], pred[row.key], probs[row.key] = y, p.argmax(axis=1), p
 
     processed_pred = {key: postprocess_dense(value, fs, classes, pcfg) for key, value in pred.items()}
@@ -152,7 +170,7 @@ def main() -> None:
                 )
         pred_dir = prediction_run_dir(source, run_name, timestamp)
         pred_dir.mkdir(parents=True, exist_ok=True)
-        save_labels_tsv(pred_dir / f"{source.stem}_predictions.tsv", pd.DataFrame(records))
+        save_labels_tsv(pred_dir / f"{source.stem}_predictions.tsv", pd.DataFrame(records, columns=PREDICTION_COLUMNS))
         np.savez_compressed(pred_dir / f"{source.stem}_probs.npz", **arrays)
         write_provenance(
             pred_dir,

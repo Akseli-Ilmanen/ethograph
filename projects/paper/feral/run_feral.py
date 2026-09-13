@@ -13,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 
+import matplotlib
 import yaml
 from feral.cli import _load_default_config
 from feral.presets import apply_mode
@@ -29,6 +30,8 @@ def deep_merge(base: dict, overlay: dict) -> dict:
 
 
 def main() -> None:
+    # FERAL draws raster plots off the main thread; Tk (the Windows default) aborts the process there
+    matplotlib.use("Agg")
     out = Path(sys.argv[1]).resolve()
     overrides = yaml.safe_load((out / "feral_overrides.yaml").read_text(encoding="utf-8"))
     for item in sys.argv[2:]:

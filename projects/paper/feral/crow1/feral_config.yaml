@@ -24,7 +24,7 @@ training:
   epochs: 10
   train_bs: 4
   val_bs: 8
-  num_workers: -1
+  num_workers: 4
   part_warmup: 0.2
   lr: 4.0e-05
   weight_decay: 0.1
@@ -42,5 +42,22 @@ starting_checkpoint: null
 max_batches: null
 multilabel_threshold: 0.85
 segment_run: C:\Users\aksel\Documents\Code\ethograph\projects\paper\data\runs\c2f_tcn_classic_cp_offset_new_mseloss_20260912-2052
+class_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
 video_fps: 200.0
 context_s: 1.895

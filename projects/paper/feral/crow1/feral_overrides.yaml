@@ -8,6 +8,24 @@ model:
   gradient_checkpointing: true
 training:
   compile: false
+  num_workers: 4
 segment_run: C:\Users\aksel\Documents\Code\ethograph\projects\paper\data\runs\c2f_tcn_classic_cp_offset_new_mseloss_20260912-2052
+class_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
 video_fps: 200.0
 context_s: 1.895
