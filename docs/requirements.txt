@@ -8,3 +8,5 @@ sphinx-autobuild
 sphinx-autodoc-typehints
 sphinx-design
 sphinx-sitemap
+sphinxcontrib-bibtex
+sphinxcontrib-mermaid

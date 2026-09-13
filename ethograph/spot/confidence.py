@@ -1,7 +1,7 @@
 """How confident a spotted event is: the curve's shape, not its height.
 
 The statistics themselves live in :mod:`ethograph.labels.curve_confidence`,
-shared with the onset model; this module fixes which one the pixel spotter
+shared with the lightgbm model; this module fixes which one the pixel spotter
 writes and adds the one helper only it needs (:func:`densify`).
 
 E2E-Spot's curve is a per-frame softmax over ``K + 1`` classes. It normalises

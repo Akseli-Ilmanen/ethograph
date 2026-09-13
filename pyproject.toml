@@ -125,11 +125,13 @@ model = [
     # on the validation split and stored in searches/{name}/study.db, so a
     # search resumes rather than restarting.
     "optuna",
+    # Frame-wise video features (ethograph/video_features/timm_extract.py,
+    # `video_features.extractor: timm`): any timm image backbone, DINOv2 by
+    # default. Pure Python on top of the torch `model` already expects.
+    "timm>=1.0",
 ]
 
-# Frame-wise video features (ethograph/video_features/timm_extract.py,
-# `video_features.extractor: timm`): any timm image backbone, DINOv2 by
-# default. Depends on torch, so install the CUDA build first (above).
+# Kept so `ethograph[timm]` still resolves; `model` already includes it.
 timm = [
     "timm>=1.0",
 ]
@@ -175,6 +177,7 @@ docs = [
     "sphinx-autodoc-typehints",
     "sphinx-sitemap",
     "sphinx-design",
+    "sphinxcontrib-mermaid",
     "myst-nb",
     "linkify-it-py",
     "setuptools-scm",

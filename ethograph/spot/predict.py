@@ -8,7 +8,7 @@ two things the GUI already knows how to read:
 * an ``onset_curves.npz`` beside the session, so frame-by-frame review draws
   the curve under the label it is on.
 
-Both formats are the ones the LightGBM onset model writes, unchanged. The
+Both formats are the ones the LightGBM lightgbm model writes, unchanged. The
 curves file is model-agnostic by design (``(time, {label: curve})``, numpy
 only), and every model's run folder follows
 :data:`~ethograph.labels.onset_curves.RUN_PREFIX` — ``predictions_{model}_{timestamp}``.

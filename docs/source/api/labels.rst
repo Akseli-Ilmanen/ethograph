@@ -119,7 +119,7 @@ Crowsetta / pynapple converters
 
 .. autofunction:: extract_crowsetta_labels
 
-.. autofunction:: resolve_crowsetta_mapping
+.. autofunction:: extend_mapping
 
 .. autofunction:: build_mapping_from_labels
 

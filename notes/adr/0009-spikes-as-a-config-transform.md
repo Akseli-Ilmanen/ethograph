@@ -4,7 +4,7 @@
 
 ## Context
 
-The segmentation pipeline learns state labels from features that already
+The segmentation pipeline learns state events from features that already
 exist in the session file: "features are built with the session, never by
 the pipeline" (ADR 0008 for the pose side). Neural decoding wants the same
 models, split, metrics and prediction sets, but its input is a pynapple

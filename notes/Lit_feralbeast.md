@@ -26,7 +26,7 @@
 5. **Vendor nothing new; extractors are pip-installed** (ADR 0009). E2E-Spot stays vendored; everything else is a pip extra plus an adapter, or an importer. The S3D checkpoint in the package is the grandfathered exception.
 6. **BEAST: out entirely** — no pretraining, no checkpoint import, no lightning-action head. Its
    findings are cited below as literature only. The one it left behind — Δ-features help every
-   stream — is already the onset model's `derivatives` spelling and needs nothing new.
+   stream — is already the lightgbm model's `derivatives` spelling and needs nothing new.
 
 ---
 

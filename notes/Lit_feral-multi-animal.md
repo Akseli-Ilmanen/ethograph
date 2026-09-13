@@ -77,7 +77,7 @@ Where it lands — almost nowhere new:
 - **Panel**: a lineplot. Tag `kind="changepoint_feature"` and it flows into
   `features/changepoints.py`, so **click-to-snap works on it** — pass 2 becomes available to
   someone with only video.
-- **Model**: `features/columns.py` picks it up, so the LightGBM onset model and the segment
+- **Model**: `features/columns.py` picks it up, so the LightGBM lightgbm model and the segment
   pipeline can train on it. A video-only user can train a real model with no pose and no CUDA.
 
 Design decisions:

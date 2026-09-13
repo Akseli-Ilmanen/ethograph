@@ -140,12 +140,12 @@ def add_changepoints_to_nap(
     Examples
     --------
     >>> import ethograph as eto
-    >>> from ethograph.features.changepoints import find_troughs
+    >>> from ethograph.features.changepoints import find_troughs_binary
     >>> data = eto.load_nap_data("experiment.nwb")
     >>> cp_group = eto.add_changepoints_to_nap(
     ...     data["speed"],
     ...     target_feature="speed",
-    ...     changepoint_func=find_troughs,
+    ...     changepoint_func=find_troughs_binary,
     ...     prominence=0.3,
     ... )
     """
@@ -273,6 +273,12 @@ def detect_trials(data: dict) -> nap.IntervalSet | None:
         if isinstance(obj, nap.IntervalSet) and "trial" in key.lower():
             return obj
     return None
+
+
+def label_intervalsets(data: dict) -> dict[str, nap.IntervalSet]:
+    """Every IntervalSet in *data* except the one :func:`detect_trials` reads as trials."""
+    trials = detect_trials(data)
+    return {key: obj for key, obj in data.items() if isinstance(obj, nap.IntervalSet) and obj is not trials}
 
 
 def _nwb_to_dict(nwb: nap.NWBFile) -> dict:

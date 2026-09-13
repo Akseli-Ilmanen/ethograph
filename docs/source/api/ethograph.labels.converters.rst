@@ -31,6 +31,6 @@
 
     extract_crowsetta_labels
 
-    resolve_crowsetta_mapping
+    extend_mapping
 
     write_mapping_file

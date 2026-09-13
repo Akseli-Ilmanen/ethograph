@@ -2,7 +2,7 @@
 
 One run, one folder, beside the session's own ``labels/`` (see
 :mod:`ethograph.labels.onset_curves` for the sibling convention the LightGBM
-onset model uses)::
+lightgbm model uses)::
 
     labels/
         predictions_{run_name}_{timestamp}/
@@ -66,7 +66,7 @@ def merge_as_labels(existing: pd.DataFrame | None, predicted: pd.DataFrame) -> p
     """*predicted* rows added onto *existing*, ground truth left untouched.
 
     A row is skipped when *existing* already has an interval for the same
-    ``(trial, labels, individual, individual_rec)`` — the onset model's own
+    ``(trial, labels, individual, individual_rec)`` — the lightgbm model's own
     rule (:func:`~ethograph.gui.dialog_onset_model.predict_onsets`): a trial
     already carrying an event for a class is never overridden, whichever
     pipeline predicted it. The alternative to merging is a plain replace,

@@ -418,7 +418,7 @@ class AppStateSpec:
         "detect_quad_decimate": (float, 1.0, True, SCOPE_LOCAL),
         "detect_decode_sharpening": (float, 0.25, True),
         "detect_tag_corners": (bool, False, True),
-        # Printing the tags (Tools ▸ Print tag sheet…). Page setup is a property
+        # Printing the tags (cover page Pre-recording tools ▸ Print tag sheet…). Page setup is a property
         # of the *printer*, so it is global; the camera figures the minimum tag
         # size is computed from describe THIS rig, so they are local. The rows of
         # a sheet are not settings at all.

@@ -45,7 +45,7 @@ original dataset:
   - 3-channel WAV around `24.414 kHz`,
   - 6-channel WAV in the empty-label annotation smoke test.
 - Labels: imported diagnostic label set has 51 rows for the main experimental
-  trial, with point and state labels split across three branches.
+  trial, with point and state events split across three branches.
 
 ## What Works Now
 

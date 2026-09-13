@@ -28,7 +28,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.notify import notify_dialog
-from ethograph.io.nwb_alignment import align_media_from_streams
+from ethograph.io.pairing import pair_media
 from ethograph.labels.boris import (
     behavior_event_types,
     build_trial_table,
@@ -273,33 +273,19 @@ class BorisImportDialog(QDialog):
             search_dirs.insert(0, Path(video_folder))
         video_paths = resolve_media_paths(observation, search_dirs)
 
-        streams = [
-            {
-                "name": "video_cam-1",
-                "files": video_paths,
-                "rate": rate,
-            }
-        ]
+        pairing = trials_df[["trial", "start_time", "stop_time"]].assign(**{"video_cam-1": video_paths})
+        stream_rates = {"video": rate}
 
         if pose_folder:
             pose_paths = match_pose_files(Path(pose_folder), video_paths)
             if pose_paths:
-                streams.append(
-                    {
-                        "name": "pose_cam-1",
-                        "files": pose_paths,
-                        "rate": rate,
-                    }
-                )
+                pairing["pose_cam-1"] = pose_paths
+                stream_rates["pose"] = rate
             else:
                 logger.warning("No pose files matched any video in %s", pose_folder)
 
         nwb_out = ethograph_dir / "alignment.nwb"
-        align_media_from_streams(
-            trials_df[["trial", "start_time", "stop_time"]],
-            streams,
-            nwb_out,
-        )
+        pair_media(pairing, stream_rates=stream_rates, output_path=nwb_out)
 
         labels_df = extract_intervals(observation, name_to_id)
         keep_cols = [c for c in TSV_COLUMNS if c in labels_df.columns]

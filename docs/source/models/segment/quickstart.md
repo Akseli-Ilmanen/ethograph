@@ -1,14 +1,18 @@
 (target-segment-quickstart)=
 # Quickstart
 
-The smallest thing that works: three curated sessions, three kinematic
-features, one `c2f_tcn` trained on two of them and judged on the third — whose
+Here is a minimalistic setup for training an action segmentation model: Three curated sessions, three kinematic
+features, one `c2f_tcn` {cite:p}`singhania2021c2ftcn` trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.
 
 Everything here is a default. {doc}`index` is the same pipeline with the
 choices put back in.
 
+ethograph does not install PyTorch for you. Install it first, then the extra
+(see *Train models* in {doc}`../../getting_started/installation`):
+
 ```bash
+uv pip install --torch-backend=auto torch torchvision
 uv pip install "ethograph[model]"
 ```
 
@@ -83,7 +87,7 @@ Three things worth knowing about it:
   wrote. If yours lives beside the data instead, say so:
   `labels: {mapping: .ethograph/mapping.txt, branch: 0}`.
 - **Only `manual` and `curated` labels are training targets**, and point
-  events are skipped — they belong to the {doc}`onset model <../labels/onset_model>`.
+  events are skipped — they belong to the {doc}`lightgbm model <../onset_model>`.
 
 ## 3. Train
 
@@ -102,7 +106,7 @@ split it drew, the weights, `metrics.tsv` and `test_metrics.yaml`.
 
 ```{note}
 `c2f_tcn` needs trials of at least 384 frames — it pools the time axis in
-half six times. If yours are shorter, `model.architecture: mstcn` works at any
+half six times. If yours are shorter, `model.architecture: mstcn` {cite:p}`kozlova2025dlc2action,li2020mstcnpp` works at any
 length and is the usual baseline; nothing else in the config changes.
 ```
 
@@ -122,7 +126,7 @@ re-run never overwrites an earlier one — and the TSV in it is the GUI's own
 labels format. Open ses-03 in the GUI and load it
 with **File ▸ Import labels…**: every row arrives as `automated`, drawn dotted
 next to your curated labels, and confirming one makes it `curated`. See
-{doc}`../labels/curation`.
+{doc}`../curation`.
 
 ## Where to go from here
 
@@ -150,3 +154,4 @@ next to your curated labels, and confirming one makes it `curated`. See
   in turn — so every session ends up with predictions from a model that never
   saw it, not just ses-03. That is {doc}`index`.
 - **Every key**, with its default: {doc}`config`.
+

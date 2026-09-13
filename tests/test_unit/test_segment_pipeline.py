@@ -314,7 +314,7 @@ def test_materialise_writes_literature_layout(project: Path):
     assert len(index) == (4 + 2) * len(INDIVIDUALS)
     assert set(index["individual"]) == set(INDIVIDUALS)
     layout = read_layout(data_dir)
-    # config order, first dim slowest (the onset model's convention)
+    # config order, first dim slowest (the lightgbm model's convention)
     assert layout.names == [
         "position|space=x,keypoint=beak,individual=self",
         "position|space=x,keypoint=tail,individual=self",

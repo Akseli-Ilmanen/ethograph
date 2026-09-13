@@ -664,7 +664,7 @@ class LabelInputTree(QTreeWidget):
 
 
 class TrainOnsetDialog(QDialog):
-    """Create a LightGBM onset model, collect training data, and train it."""
+    """Create a LightGBM lightgbm model, collect training data, and train it."""
 
     def __init__(self, meta, parent=None):
         super().__init__(parent)
@@ -1086,7 +1086,7 @@ class TrainOnsetDialog(QDialog):
 
 
 class PredictOnsetDialog(QDialog):
-    """Apply a trained onset model to the current session.
+    """Apply a trained lightgbm model to the current session.
 
     Every class the model was trained on is predicted in one pass, over the
     trials the trials table shows. A trial that already carries a class is

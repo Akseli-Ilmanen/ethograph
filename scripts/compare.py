@@ -55,9 +55,8 @@ CONFIG =  Path(r"D:\Akseli\Code\ethograph\data\project.yaml")
 RUNS: list[str] = []
 
 #: Which metric picks an architecture's best run, read off the post-processed
-#: test scores. ``f1@90`` is what ``bench.py``'s own search selects on and what
-#: docs/add_to_docs_later/segment/boundaries.md calls "the metric that still
-#: moves" -- f1@50 saturates too early to tell close runs apart. ``frame_f1``
+#: test scores. ``f1@90`` is what ``bench.py``'s own search selects on, the metric
+#: that still moves -- f1@50 saturates too early to tell close runs apart. ``frame_f1``
 #: or ``acc`` work the same way as either.
 SELECT_ON = "f1@90"
 

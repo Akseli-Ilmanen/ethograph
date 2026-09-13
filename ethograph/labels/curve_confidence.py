@@ -6,7 +6,7 @@ trust it. Which number is **an empirical question per model**, and the
 answer must stay readable off the curve the review draws. Measured on this
 repo's models (AUC for "the event is misplaced"):
 
-* the LightGBM onset model's curve is shape-constrained by construction — a
+* the LightGBM lightgbm model's curve is shape-constrained by construction — a
   Gaussian-weighted target smoothed with the matching kernel — so its bumps
   all look alike and the **peak height** carries the information (0.67–0.76);
   the shape terms tie or hurt;
@@ -35,7 +35,7 @@ from scipy.stats import rankdata
 #: the label precision is smeared by the user's own definition, a peak
 #: further away than that is a rival. At a 50 ms tolerance this is the
 #: 100 ms that measured flat-optimal (50–200 ms); the user's timescale sets
-#: it, not a constant. Every model resolves its own — the onset model from
+#: it, not a constant. Every model resolves its own — the lightgbm model from
 #: ``tolerance_s``, the pixel spotter from ``infer.focus_window_ms``.
 FOCUS_WINDOW_TOLERANCES = 2.0
 

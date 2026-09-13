@@ -43,6 +43,7 @@ from ethograph.gui.dialog_function_params import _do_open_source
 from ethograph.gui.wizard_media_files import extract_file_row
 from ethograph.gui.wizard_multi_codegen import generate_alignment_code
 from ethograph.gui.wizard_state import ModalityConfig, WizardState
+from ethograph.io.time_sources import PynappleSource
 from ethograph.utils.paths import defaults_dir
 
 logger = logging.getLogger(__name__)
@@ -322,6 +323,29 @@ def _collect_ephys_rows(
     return rows
 
 
+def _collect_session_feature_rows(app_state) -> list[tuple[str, list[tuple[float, float]]]]:
+    """Session-clock features (pynapple), one ``(label, epochs)`` row per unique time support.
+
+    Xarray trial sources live on a trial-relative clock, so they have no place
+    on the session timeline.
+    """
+    sc = getattr(app_state, "source_collection", None) if app_state is not None else None
+    if sc is None:
+        return []
+    groups: dict[tuple[tuple[float, float], ...], list[str]] = {}
+    for source in sc.sources.values():
+        if not isinstance(source, PynappleSource):
+            continue
+        epochs = tuple((s, e) for s, e in source.time_support if e > s)
+        if epochs:
+            groups.setdefault(epochs, []).append(source.name)
+    rows = []
+    for epochs, names in groups.items():
+        label = names[0] if len(names) == 1 else f"{names[0]} +{len(names) - 1}"
+        rows.append((f"feature: {label}", list(epochs)))
+    return rows
+
+
 def draw_session_timeline(
     plot: pg.PlotWidget,
     nwb_alignment,
@@ -348,12 +372,14 @@ def draw_session_timeline(
 
     # Collect ephys rows
     ephys_rows = _collect_ephys_rows(sio, app_state)
+    feature_rows = _collect_session_feature_rows(app_state)
 
-    if not acq_names and not ephys_rows:
+    if not acq_names and not ephys_rows and not feature_rows:
         return 0.0
 
-    # Build combined row list: media acquisitions + ephys
-    all_row_names = list(acq_names) + [label for label, _, _ in ephys_rows]
+    all_row_names = (
+        list(acq_names) + [label for label, _, _ in ephys_rows] + [label for label, _ in feature_rows]
+    )
     n_rows = len(all_row_names)
     rows_rev = list(reversed(all_row_names))
     y_ticks = [(i + 0.5, rows_rev[i]) for i in range(n_rows)]
@@ -395,6 +421,23 @@ def draw_session_timeline(
         plot.addItem(bar)
         items.append(bar)
         max_t = max(max_t, t_end)
+
+    feature_color = pg.mkColor(MODALITY_COLORS.get("features", "#6fbf73"))
+    feature_color.setAlpha(160)
+    for feature_label, epochs in feature_rows:
+        y_base = rows_rev.index(feature_label)
+        for t_start, t_end in epochs:
+            bar = _make_rounded_bar(
+                t_start,
+                t_end,
+                y_base + 0.3,
+                y_base + 0.7,
+                pg.mkBrush(feature_color),
+                pg.mkPen(feature_color.lighter(130), width=1),
+            )
+            plot.addItem(bar)
+            items.append(bar)
+            max_t = max(max_t, t_end)
 
     # Trial boundary lines
     trial_df = getattr(sio, "trials_df", pd.DataFrame())
@@ -905,11 +948,11 @@ class TimelinePage(QWidget):
     # ------------------------------------------------------------------
 
     def configure_for_standalone(self):
-        """Hide wizard-specific controls; call before populate_from_trialtree()."""
+        """Hide wizard-specific controls; call before populate_from_session()."""
         self._out_widget.hide()
 
-    def populate_from_trialtree(self, dt, app_state):
-        """Populate from a loaded TrialTree's NWB session data.
+    def populate_from_session(self, app_state):
+        """Populate from the loaded session's alignment (xarray or pynapple).
 
         Aligned mode (table view): trials table has ``{stream}_{device}``
         filename columns.
@@ -921,9 +964,7 @@ class TimelinePage(QWidget):
         self._code_editor.setPlainText("# Open via the New Dataset Wizard to generate alignment code.")
 
         # Detect mode: timeline if start_time exists or no filename columns
-        sio = getattr(app_state, "nwb_alignment", None)
-        if sio is None:
-            sio = getattr(dt, "nwb_alignment", None)
+        sio = app_state.nwb_alignment
         if sio is None:
             from ethograph.io.nwb_alignment import EmpytAlignment
 

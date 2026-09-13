@@ -1,6 +1,6 @@
 """Existing labels as classifier inputs.
 
-The onset model reads a session's own labels the same way it reads a feature:
+The lightgbm model reads a session's own labels the same way it reads a feature:
 one input column per (class, individual), rendered onto the feature time base.
 What a class already tells you about *when* is often the strongest evidence
 there is — a peck rarely happens before the head has turned, a landing never

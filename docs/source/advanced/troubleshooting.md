@@ -1,7 +1,11 @@
 (target-troubleshooting)=
 # Troubleshooting
 
-Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issues).
+Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issues). If possible:
+
+1) In the top bar, **Help ▸ Print current state**. Share this message along with your error.
+2) If you have data loading problems, send some sample data to akseli.ilmanen@gmail.com, so I can test it myself.
+
 
 ---
 
@@ -10,7 +14,7 @@ Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issue
 | Problem | Solution |
 |---------|----------|
 | Unexpected error in the GUI | Save labels (`Ctrl + S`), then restart the GUI. Save semi-regularly! |
-| Error during data loading | Click **Reset gui_settings.yaml** in the I/O widget to reset the state of the GUI. |
+| Error with user settings | In the top bar, first try **Help ▸ Reset local settings (this dataset)**. If that does not help, use **Help ▸ Reset global settings (gui_settings.yaml)**. |
 
 ---
 
@@ -172,7 +176,7 @@ never read in place** — libsndfile reads no video container, and an AAC track
 has no sample-exact random access. The first time a video is used as an audio
 source, its track is decoded once (through PyAV, bundled with the `gui` extra)
 into `~/.ethograph/cache/audio_tracks/` and every reader opens that file instead.
-This happens both when dropping a video with the **"extract audio"** box ticked
+This happens both when dropping a video with the **"Extract the audio for audio trace / spectrogram plots"** box ticked
 and when an alignment or `.nwb` audio stream points at the video itself. The
 cache is keyed by path, size and mtime, so a re-recorded video is never served
 a stale extract; delete the folder any time to reclaim the space. A file that

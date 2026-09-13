@@ -1,4 +1,4 @@
-# Single-trial neural decoding: predict this session's curated state labels
+# Single-trial neural decoding: predict this session's curated state events
 # from its spike trains, with the segmentation models.
 #
 #   import ethograph as eto

@@ -74,7 +74,7 @@ Last updated: 2026-08-18
   `mic1.wav (Ch 3)` as literal filenames. The loader should split these into
   base audio file plus channel index before opening the audio file.
 - Fresh annotation from an empty labels file preserves the label
-  categories/template, but drawing state labels has a usability issue: after
+  categories/template, but drawing state events has a usability issue: after
   the first click, there is no obvious temporary start marker or preview
   interval while choosing the end time. A transient shaded interval/anchor would
   make state annotation easier to control.

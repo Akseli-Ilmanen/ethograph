@@ -1,6 +1,6 @@
 # Pixel event spotting (E2E-Spot) — a starting config. Copy it into your
 # project, list your sessions and the point-event classes, pick the camera and
-# crop (Tools > Video: Pick a crop for spot config), and run:
+# crop (Tools > Video: Pick a crop for a config…), and run:
 #
 #   import ethograph as eto
 #   project = eto.spot.Project("config/spot.yaml")
@@ -8,7 +8,7 @@
 #   project.train()            # runs/
 #   project.cross_validate()   # one fold per session
 #
-# Reference: docs/add_to_docs_later/spot/config.md. Every temporal setting is a
+# Reference: docs/source/models/spot/config.md. Every temporal setting is a
 # duration; frame counts are derived from each video's own rate.
 
 root: ..                                   # dataset/, features/, teacher/, runs/ land in the project folder

@@ -147,7 +147,7 @@ def derive_changepoint_scales(config: SegmentConfig, sessions: list[Session]) ->
     """The config with ``features.changepoint_features``'s scales read off the labels.
 
     Every unset one of ``sigmas`` / ``horizon`` / ``max_length`` is derived
-    from the durations of the curated state labels of the branch's classes,
+    from the durations of the curated state events of the branch's classes,
     over the trials the config selects in every session, at the rate of the
     first mask being expanded (:func:`~ethograph.features.changepoints.scales_from_durations`).
     A config that is already resolved, or has no changepoint section, comes
@@ -170,7 +170,7 @@ def derive_changepoint_scales(config: SegmentConfig, sessions: list[Session]) ->
             durations.append((df["offset_s"] - df["onset_s"]).to_numpy(dtype=float))
     d = np.concatenate(durations) if durations else np.array([], dtype=float)
     fs = _mask_rate(sessions[0], next(iter(cpf.inputs)))
-    context = f"{d.size} manual/curated state labels of {n_sessions} session(s)"
+    context = f"{d.size} manual/curated state events of {n_sessions} session(s)"
     resolved = cpf.resolve(d, fs, context)
     logger.info("features.changepoint_features: %s", resolved.note)
     return replace(config, features=replace(config.features, changepoint_features=resolved))

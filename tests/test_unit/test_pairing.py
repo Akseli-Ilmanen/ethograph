@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from dateutil.tz import tzlocal
 
-from ethograph.io.nwb_alignment import NWBAlignment, align_media_from_streams
+from ethograph.io.nwb_alignment import NWBAlignment
 from ethograph.io.pairing import SourceSpec, discover_media, pair_media
 
 
@@ -200,9 +200,21 @@ class TestPairMedia:
             pair_media(trial_table, output_path=path)
 
 
-class TestAlignMediaFromStreamsTimestampsRefused:
-    def test_timestamps_key_raises(self, tmp_path: Path):
-        trials = pd.DataFrame({"trial": [1], "start_time": [0.0], "stop_time": [1.0]})
-        streams = [{"name": "ephys_probe-1", "files": ["x.dat"], "timestamps": np.array([0.0, 0.1])}]
-        with pytest.raises(ValueError, match="neuroconv"):
-            align_media_from_streams(trials, streams, tmp_path / "out.nwb")
+class TestPerDeviceRate:
+    def test_device_key_overrides_stream_rate(self, tmp_path: Path):
+        table = pd.DataFrame(
+            {
+                "trial": [1],
+                "start_time": [0.0],
+                "stop_time": [2.0],
+                "video_cam-1": ["a.mp4"],
+                "video_cam-2": ["b.mp4"],
+            }
+        )
+        out = tmp_path / "out.nwb"
+        pair_media(table, stream_rates={"video": 30.0, "video_cam-2": 60.0}, output_path=out)
+
+        alignment = NWBAlignment(out)
+        assert alignment.get_stream_rate("video", "cam-1") == 30.0
+        assert alignment.get_stream_rate("video", "cam-2") == 60.0
+        alignment.close()

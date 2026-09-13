@@ -947,7 +947,7 @@ class LabelsWidget(QWidget):
         Merge (the panel's checkbox) keeps every existing row and only adds
         predictions for (trial, class, individual) pairs the current labels
         don't already cover (:func:`~ethograph.labels.predictions.merge_as_labels`,
-        the onset model's own "never override" rule); unticked, the prediction
+        the lightgbm model's own "never override" rule); unticked, the prediction
         set replaces the working labels outright. What this is about to do is
         said in the panel itself (``IOWidget.pred_labels_warning_label``, red
         text beside the combo) rather than a confirmation popup here — it

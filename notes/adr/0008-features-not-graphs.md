@@ -18,7 +18,7 @@ Measured on 590 trials, share of held-out events within 20 ms
 
 | model | input | first | last |
 |---|---|---|---|
-| LightGBM onset model on hand-picked distances | pose | 94 % | 46 % |
+| LightGBM lightgbm model on hand-picked distances | pose | 94 % | 46 % |
 | E2E-Spot baseline | video | 86 % | 65 % |
 | graph teacher (17 nodes, edge distances, extras) | pose | 81 % | 48 % |
 | distilled student | video | 86 % | 57 % |

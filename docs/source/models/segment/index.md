@@ -1,14 +1,14 @@
 (target-segment)=
 # Segmentation pipeline
 
-Learn the **state labels** you curated in the GUI from trial-structured
+Learn the **state events** you curated in the GUI from trial-structured
 sessions, and predict them back into the GUI. A code-first pipeline — one
 YAML config, one object with a method per stage — that reads every backend
 the GUI reads (`.nc`, pynapple, NWB) through the same loaders and writes its
 predictions in the GUI's own labels format.
 
 ```python
-import ethograph as eto                   # after `uv pip install "ethograph[model]"`
+import ethograph as eto                   # after installing PyTorch, then `uv pip install "ethograph[model]"`
 
 project = eto.segment.Project("project.yaml")
 project.materialise()   # feature engineering → materialised dataset
@@ -26,27 +26,6 @@ New here? {doc}`quickstart` is this page cut down to one architecture, three
 kinematic features and two sessions — a config you can copy and a model
 trained in four lines. Come back when you want the choices back.
 ```
-
-```{note}
-There is no command line. A run is a script, so it is diffable, re-runnable
-and reviewable next to the results it produced — and a setting has exactly
-one name (see `docs/adr/0004-scripted-not-cli.md`).
-```
-
-```{note}
-Progress (sessions opened, samples materialised, per-epoch loss/metrics, each
-search trial, each fold) prints to the console by default — importing
-`ethograph.segment` turns on INFO-level logging. Every stage also writes its
-own log file beside its other outputs regardless of the console:
-`materialise.log` in the materialised dataset folder, `train.log` /
-`infer.log` in the run directory, `search.log` under `searches/{name}/`,
-`crossval.log` under `cross_validation/{name}/`, `extract.log` under
-`video_features/`.
-```
-
-For **point events** (a single moment per trial) use the GUI's LightGBM
-{doc}`onset model <../labels/onset_model>` instead — it is the right tool for
-that shape of label.
 
 ## The two stages of a workflow
 
@@ -80,13 +59,9 @@ divided, and that is the only thing that changes between them.
   - A prediction set beside **every** session, each written by a model that
     never saw it. Load them in the GUI.
 ```
-
-Stage 2 is the one you can actually look at. A random trial split flatters
-the model — its test trials share a recording day, lighting and animal with
-the trials it trained on, and they are scattered across sessions rather than
-making up one you can open. Leave-one-session-out gives you a session's worth
-of honest predictions, in the GUI's own labels format, next to the curated
-labels you drew.
+In stage 2 (cross-validation), we recommend taking an entire behavioural session 
+as the held-out test set. This is convenient as you can use the GUI to open any trial 
+in that session and compare your ground truth labels with predictions visually.
 
 ### The stages themselves
 
@@ -94,7 +69,7 @@ labels you drew.
 :header-rows: 1
 :widths: 18 42 40
 
-* - Stage
+* - Stage 
   - What it does
   - Writes
 * - **Feature engineering**
@@ -102,8 +77,10 @@ labels you drew.
     `project.materialise()`
   - Selects every configured *feature column* of every *sample* (one
     trial × one individual), applies the fixed preprocessing chain, encodes
-    the branch's curated labels per frame. Returns the dataset's path.
-  - `{root}/data/{name}/` — the materialised dataset
+    the branch's curated labels per frame.
+  - `{root}/data/{name}/`
+
+    the materialised dataset
 * - **Train**
 
     `project.train()`
@@ -111,28 +88,35 @@ labels you drew.
     epochs, keeps the best checkpoint, evaluates the test samples once (raw
     and post-processed). Materialises first if needed. Returns a `RunResult`
     (`run_dir`, `best_epoch`, `best_score`, `test_metrics`).
-  - `{root}/runs/{run}/` — config, layout, stats, weights, metrics
+  - `{root}/runs/{run}/`
+
+    config, layout, stats, weights, metrics
 * - **Search**
 
     `project.search()`
   - Optuna over `search.params`: each trial is a training run, scored by
     `train.select_on` **on the validation trials**. Resumable — the study
     lives in a SQLite file. Returns a `SearchResult`.
-  - `{root}/searches/{name}/` — `study.db`, `trials.tsv`, `best.yaml`
+  - `{root}/searches/{name}/`
+
+    `study.db`, `trials.tsv`, `best.yaml`
 * - **Cross-validate**
 
     `project.cross_validate()`
   - One fold per session: train on the rest, predict the held-out one.
     `folds=` runs only some of them. Returns one DataFrame row per fold.
-  - `{root}/cross_validation/{name}/folds.tsv`, plus a prediction set per
-    held-out session
+  - `{root}/cross_validation/{name}/folds.tsv`
+
+    plus a prediction set per held-out session
 * - **Inference**
 
     `project.inference()`
   - Runs a run over the sessions and post-processes the predictions (purge →
     stitch → snap to changepoints → purge). Returns the prediction paths;
     `run=` picks another run, `sessions=` narrows to a few.
-  - `{session folder}/labels/predictions_{run}_{timestamp}/{stem}_predictions.tsv` + `_probs.npz`
+  - `{session folder}/labels/predictions_{run}_{timestamp}/{stem}_predictions.tsv`
+
+    plus `_probs.npz`
 ```
 
 `project.config` is the resolved config and `project.root` the project
@@ -178,7 +162,7 @@ single-trial neural decoding with the same models and prediction sets. See
 {doc}`config` (`features.neural`).
 
 Video features are the one exception in mechanics, not in principle — a
-pretrained network (S3D by default, a timm backbone such as DINOv2 by name) is expensive enough to
+pretrained network (S3D {cite:p}`xie2018s3d` by default, a timm {cite:p}`wightman2019timm` backbone such as DINOv2 {cite:p}`oquab2024dinov2` by name) is expensive enough to
 run once per video and cache. See {doc}`video_features`; the short version is
 
 ```python
@@ -335,7 +319,7 @@ carry the same number of individuals.
 
 Only **`manual` and `curated` labels** ever become training targets; an
 `automated` label — the output of any model — never does. Point events are
-skipped (the onset model owns them). One branch per model is the exclusive
+skipped (the lightgbm model owns them). One branch per model is the exclusive
 target; `features.labels.branches` lists several and the target becomes
 multi-label — one binary channel per (subject, class), decoded one *track*
 (subject, branch) at a time, so labels of different branches overlap and
@@ -343,9 +327,7 @@ labels of one branch never do (see the config reference).
 
 ## The materialised dataset
 
-`{root}/data/{features.name}/` uses the layout of the action-segmentation
-literature (MS-TCN, MS-TCN++, ASFormer, DiffAct, FACT, LTContext …), so a new
-model from a paper can be pointed at it directly:
+`{root}/data/{features.name}/` uses the layout of the [action-segmentation literature](https://github.com/nus-cvml/awesome-temporal-action-segmentation) for interopability with newer architectures.
 
 ```
 features/{key}.npy       (F, T) float32, session-level preprocessed
@@ -363,25 +345,29 @@ a run (`runs/{run}/splits/*.bundle`, `stats.npz`).
 
 ## Architectures
 
-Nine networks are available; `eto.segment.architectures()` lists them.
+Ten networks are available; `eto.segment.architectures()` lists them.
 Switching between them is a one-line change, and `project.compare()` puts the
 runs side by side, so trying two or three is cheap.
 
 | Name | Shape | When to reach for it |
 |---|---|---|
-| `c2f_tcn` | U-Net over time | The default. Fast, and sees long-range context cheaply. Needs trials of at least 384 frames. |
-| `c2f_transformer` | `c2f_tcn` + attention | Same size limit; worth a run when `c2f_tcn` misses long-range structure. |
-| `mstcn` | Dilated TCN, refined in stages | Works at any trial length. The usual baseline. |
-| `asformer` | Sliding-window attention + decoders | Strongest context modelling, several times slower per epoch. |
-| `edtcn` | Encoder–decoder, wide kernels | Small and quick. |
-| `mlp` | Per-frame, no temporal context | A floor to compare against: how much is time actually buying you? |
-| `motionbert` | Attention across joints, then across time | For pose columns that factor into joints: set `model.params.num_joints` (it has no default and must divide the column count). Reads a fixed 128-frame window at a time. |
-| `specscalpel` | Skeleton graph + frequency-selective filtering | **Pose-native.** Reads a skeleton of keypoints and sharpens the boundaries between adjacent behaviours in the frequency domain. Needs `model.params.keypoints` and (optionally) `skeleton`. |
-| `lady` | `specscalpel` + a learned Lagrangian-dynamics stream | **Pose-native.** Adds a physics-informed stream (torque, power, energy) over the skeleton's generalised coordinates. Needs `keypoints`, a `skeleton` with edges, and the root-frame landmarks `root`/`spine` (+ `left`/`right` in 3D); reads raw positions only. |
+| `c2f_tcn` {cite:p}`singhania2021c2ftcn` | U-Net over time | The default. Fast, and sees long-range context cheaply. Needs trials of at least 384 frames. |
+| `c2f_transformer` {cite:p}`kozlova2025dlc2action` | `c2f_tcn` + attention | Same size limit; worth a run when `c2f_tcn` misses long-range structure. |
+| `mstcn` (MS-TCN3) {cite:p}`kozlova2025dlc2action` | Dilated TCN, refined in stages | Works at any trial length. The usual baseline. |
+| `asformer` {cite:p}`yi2021asformer` | Sliding-window attention + decoders | Strongest context modelling, several times slower per epoch. |
+| `edtcn` {cite:p}`lea2017edtcn` | Encoder–decoder, wide kernels | Small and quick. |
+| `rnn` | Bidirectional GRU or LSTM over the trial | Ours: a recurrent baseline, any trial length. Defaults in `ethograph/segment/models/config/rnn.yaml`. |
+| `mlp` {cite:p}`kozlova2025dlc2action` | Per-frame, no temporal context | A floor to compare against: how much is temporal context buying you? |
+| `motionbert` {cite:p}`zhu2023motionbert` | Attention across joints, then across time | For pose columns that factor into joints: set `model.params.num_joints` (it has no default and must divide the column count). Reads a fixed 128-frame window at a time. |
+| `specscalpel` {cite:p}`ji2026specscalpel` | Skeleton graph + frequency-selective filtering | **Pose-native.** Reads a skeleton of keypoints and sharpens the boundaries between adjacent behaviours in the frequency domain. Needs `model.params.keypoints` and (optionally) `skeleton`. |
+| `lady` {cite:p}`ji2026lady` | `specscalpel` + a learned Lagrangian-dynamics stream | **Pose-native.** Adds a physics-informed stream (torque, power, energy) over the skeleton's generalised coordinates. Needs `keypoints`, a `skeleton` with edges, and the root-frame landmarks `root`/`spine` (+ `left`/`right` in 3D); reads raw positions only. |
 
-Each one's hyperparameters, with a comment on each and its default, are in
-`ethograph/segment/dlc2action/config/model/{architecture}.yaml` — set only the
-ones you want to change under `model.params`. The loss is configured the same
+`eto.segment.tunable_params(name)` lists each one's hyperparameters; set only
+the ones you want to change under `model.params`. For the vendored models they
+come, with a comment on each and its default, from
+`ethograph/segment/dlc2action/config/model/{file}.yaml` (`mstcn` reads
+`ms_tcn3.yaml`); `specscalpel` and `lady` read their skeleton-graph defaults, and
+`rnn` reads `ethograph/segment/models/config/rnn.yaml`. The loss is configured the same
 way under `train.loss`, from `config/losses.yaml`. See {doc}`config`.
 
 ```{note}
@@ -397,7 +383,7 @@ logits.
 
 ## Stage 1: find the settings
 
-`project.search()` runs an [Optuna](https://optuna.org) study over
+`project.search()` runs an Optuna study over
 `search.params`. Every trial is a full training run, and its score is
 `train.select_on` measured on the **validation** trials — the one thing
 validation is for. `test` is never read, so it is still an honest number at
@@ -521,7 +507,7 @@ session, and the path of the prediction set:
 
 | session | run | postprocessed.f1@50 | predictions |
 |---|---|---|---|
-| ses-01 | fold-ses-01_… | 0.71 | …/ses-01/behav/predictions/fold-ses-01_…/Trial_data_labels.tsv |
+| ses-01 | fold-ses-01_… | 0.71 | …/ses-01/behav/labels/predictions_fold-ses-01_…_{timestamp}/Trial_data_predictions.tsv |
 
 Folds are independent, so you can run some of them:
 
@@ -600,7 +586,7 @@ trial is worth training on and `best.pt` is the last epoch. Pass
 
 A prediction set is a labels TSV in the GUI's own format, every row
 `labeling_method = automated` with the model's confidence. Load it with
-**File ▸ Import labels…** and it enters the {doc}`curation <../labels/curation>`
+**File ▸ Import labels…** and it enters the {doc}`curation <../curation>`
 workflow: automated labels draw dotted, the grid views rank them by
 confidence, and every label you confirm becomes `curated`. Loading several
 runs side by side for comparison is noted in {doc}`later`.
@@ -608,6 +594,7 @@ runs side by side for comparison is noted in {doc}`later`.
 This is what makes stage 2 worth its cost: the fold's predictions and the
 labels you drew are the same kind of object on the same axis, so "60% F1"
 becomes *which* class, *which* trials and *how far off* the boundaries are.
+
 
 ```{toctree}
 :maxdepth: 1

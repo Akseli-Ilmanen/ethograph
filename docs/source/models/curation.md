@@ -19,8 +19,8 @@ A **trial is curated** when none of its labels is still automated. That
 verdict is everywhere you navigate — the trial combo in the Navigation section
 and the `Trial 12 (12/173)` counter in the bottom bar are green for a curated
 trial and red for one with automated labels left — and it is written to the
-metadata table's `curated` column (`1` / `0`), refreshed every few seconds
-while you work (see {doc}`../metadata`). Predicting new labels into a curated
+metadata table's `curated` column (`yes` / `no`), refreshed every few seconds
+while you work (see {doc}`../advanced/metadata`). Predicting new labels into a curated
 trial turns it red again until those are curated too.
 
 Everything about curation lives in one place: the **Curation** section at the
@@ -52,12 +52,12 @@ so other labels can be dragged in. The scope is remembered per dataset.
 ## Modes: how a label gets curated
 
 **Manual (trial level)** — the default. Placing, moving or deleting a label
-makes it manual, as always. Press `Ctrl+C` (or **Curate trial**) and every
+makes it manual, as always. Press `Ctrl+C` (or use **Tools ▸ Labels: Bulk editing…**) and every
 automated label in scope of the current trial becomes curated; manual labels
 stay manual.
 
-**Curate visible trials…** next to it does the same across *every* trial the
-trials table shows. It asks first, because one click here says a human
+**Curate…** in **Tools ▸ Labels: Bulk editing…** does the same across the trials
+and label classes you pick there. It asks first, because one click here says a human
 approved labels nobody looked at, and **curating cannot be undone** — `Ctrl+Z`
 takes back label edits, not curations. (Nothing reaches disk until you save,
 so closing without saving still discards it.) Reach for it when a review left
@@ -71,18 +71,24 @@ silently into another one.
 
 (target-curation-frame)=
 **Frame-by-frame review** — the labels in scope become a queue of boundaries
-(one per point event, a start then an end per state event, in time order,
-trial by trial) walked one at a time, each centred in a small **View window**
+(one per point event, a start then an end per state event, in time order)
+walked one at a time, each centred in a small **View window**
 (untick **Locked around label** to pan the whole trial). The boundary being
 reviewed is named in large coloured text; the keys are drawn in the section,
-and **Shortcuts…** spells them out:
+and **Shortcuts…** spells them out. By default the queue holds only automated
+boundaries — a human already vouched for manual and curated ones — untick
+**Show automated only** to walk those too. The **Order** combo walks the queue
+*Trial-by-trial* (every boundary of a trial, then the next trial) or
+*Label-by-label* (one class across every trial, then the next class), and with
+**Jump to next after Enter/Backspace** ticked (the default) confirming or
+deleting moves straight on to the next boundary:
 
 | Key | Action |
 |-----|--------|
 | `←` / `→` | Step the video one frame |
 | `Enter` | Confirm: the frame on screen becomes the boundary. A boundary that moved makes the label **manual** (`confidence = 1.0`); one confirmed where it stood becomes **curated** |
 | `Backspace` / `Delete` | The event should not exist — delete it (both boundaries of a state event) and move on |
-| `N` | Next boundary. With **N (next) = seen, mark curated** ticked (the default) the boundary you leave is curated |
+| `N` | Next boundary. With **Click N curates current** ticked (the default) the boundary you leave is curated |
 | `B` | Back to the previous boundary |
 | `Space` | Play / pause |
 
@@ -90,7 +96,7 @@ Navigating trials the normal way (trial combo, `Up`/`Down`) pulls the review
 along to that trial's first boundary. Nothing reaches disk until you save with
 `Ctrl+S`.
 
-Reviewing what an onset model (LightGBM) predicted, you also get the
+Reviewing what an lightgbm model (LightGBM {cite:p}`ke2017lightgbm`) predicted, you also get the
 **curve it predicted from**: a dashed line per label class, in the class's own
 colour, on a 0–1 right-hand axis. Only the classes **in scope** are drawn, so
 dragging in one class shows that class's belief and nothing else. A low
@@ -110,19 +116,19 @@ than either alone.
 (target-curation-grids)=
 ## The grids
 
-<<<<<<< HEAD
 Two buttons in the section open review grids on the scope; both come with the
 same **mode** combo and a **Done** button. Their *Setup* tab lists the labels
 in scope for clarity but cannot change them — the scope area is the one place
 labels are chosen, so close the grid, drag other rows in, and open it again.
 
 Setup's **Labeling method** combo picks which labels of those classes the grid
-is about: *All labels*, *Automated only* — a model's output that nobody has
-looked at, which is what a prediction review is for — or *Manual or curated*,
-for checking your own work. Manual and curated are one choice on purpose: both
-mean a human vouched for the label, and which of the two it is says only how
-it got there. Like the rest of the grid setup the choice is remembered across
-sessions, and a {doc}`workflow <workflows>` step sets it per grid.
+is about: *All labels*, *Manual only*, *Curated only*, *Manual or curated*, or
+*Automated only* — a model's output that nobody has looked at, which is what a
+prediction review is for. *Manual or curated* is there for checking your own
+work: both mean a human vouched for the label, and which of the two it is says
+only how it got there — *Manual only* and *Curated only* are available
+alongside it when you want to isolate one. Like the rest of the grid setup the choice is remembered across
+sessions, and a {doc}`workflow <../advanced/labels/workflows>` step sets it per grid.
 
 Both grids take a **Sort**: by trial (the default in the label grid) or by
 **confidence**, lowest or highest first. Sorting by confidence is the point of
@@ -176,8 +182,8 @@ through the rest), and the view never scrolls — one **Play** button and one
 slider spanning the longest clip on screen drive every tile at once, played
 once and stopped, shorter clips holding their last frame; **←/→** pause and
 step every tile one frame back or forward. The **speed** field
-next to Play opens at the GUI's current playback speed and can be changed
-for the grid alone, as a percentage of real time. The layout choices —
+next to Play opens at the speed last used in the grid (100 % the first time),
+independent of the GUI's playback speed, as a percentage of real time. The layout choices —
 window around point events (0.5 s by default), clips on screen, columns —
 are remembered across sessions and datasets, like the label grid's column
 count. Each tile's caption says where in the
@@ -192,10 +198,8 @@ is quick. Clicks mean the same as in the label grid.
 ## Doing all of that again next session
 
 Scope, mode, grid layout and review window are settings you will set the same
-way every time you review the same behaviour. **Workflows…** at the bottom of
-the section records that whole routine — filters, prediction, scope, grid,
+way every time you review the same behaviour. **Model ▸ Curation workflows…**
+records that whole routine — filters, prediction, scope, grid,
 review, save — and replays it in one press. See
-{doc}`workflows`.
-=======
-TODO: Add visual guide.
->>>>>>> b5e49dad75c10cbaab9adb0b13f42c4012b844c9
+{doc}`../advanced/labels/workflows`.
+

@@ -484,7 +484,7 @@ def _wizard_single_media_helper(
         is supplied (e.g. an ephys-only drop), since the alignment cannot
         then infer timing from media files.
     """
-    from ethograph.io.nwb_alignment import align_media_per_trial
+    from ethograph.io.pairing import pair_media
 
     row: dict = {"trial": 1, "start_time": 0.0}
     if duration is not None:
@@ -526,7 +526,7 @@ def _wizard_single_media_helper(
     output_dir = nwb_dir if nwb_dir is not None else (media_root or Path.cwd())
 
     nwb_path = output_dir / ".ethograph" / "alignment.nwb"
-    align_media_per_trial(
+    pair_media(
         trial_table,
         stream_rates=stream_rates,
         output_path=nwb_path,

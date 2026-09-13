@@ -20,14 +20,15 @@ format** combo offers:
 
 Selecting **`pynapple (.npz)`** or **`pynapple (.nwb)`** loads the file with
 {func}`pynapple.load_file` and extracts every
-{class}`~pynapple.IntervalSet` in the data dict **except** those named
-`"trials"` or `"epochs"` (those are treated as trial boundaries, not labels).
+{class}`~pynapple.IntervalSet` in the data dict **except** the one used as the
+trial boundaries: `trials` if present, otherwise `epochs`, then `intervals`,
+then the first set with `trial` in its name. Every other set, `epochs` included
+when `trials` exists, is imported as labels.
 Each `IntervalSet` name becomes a label class.
 
-The GUI auto-generates a `mapping_pynapple.txt` file with integer IDs for
-each label name (see {doc}`mapping` for the file format and resolution
-order) and writes the result to the canonical `_labels.tsv` alongside the
-`.nc`.
+Label names already in the active `mapping.txt` keep their IDs; new names are
+appended to it (see {ref}`target-auto-mapping`). The labels are written to the
+canonical `_labels.tsv` alongside the `.nc`.
 
 Global-time intervals are split across trials using the `trials` /
 `epochs` `IntervalSet` (or the session's trial table). See
@@ -79,11 +80,9 @@ scribe = crowsetta.Transcriber(format="ethograph-seq")
 annot = scribe.from_file("labels_for_sharing.tsv").to_annot()
 ```
 
-On import, the GUI checks the active `mapping.txt` against the labels found
-in the file. If some labels are missing from the mapping, it auto-generates
-a new `mapping_{format}.txt` alongside the data file and warns about
-unmatched labels. See
-{func}`~ethograph.labels.converters.resolve_crowsetta_mapping` for details.
+On import, label names already in the active `mapping.txt` keep their IDs and
+new names are appended to it (see {ref}`target-auto-mapping`); `background` and
+`sil` count as background.
 
 ---
 

@@ -5,13 +5,13 @@ animal *looks like it is doing*, which pose keypoints alone do not capture.
 The network is an **extractor**, chosen by name; every extractor writes the
 same kind of file, and downstream nothing cares which one made it.
 
-| `extractor` | Kind | What one frame's feature is | Docs | Default |
-|---|---|---|---|---|
-| `s3d` | clip-wise | the `stack_s` window of frames centred on it, embedded by S3D (Kinetics-400) — motion is in the feature | [video_features › S3D](https://v-iashin.github.io/video_features/models/s3d/) | yes |
-| `timm` | frame-wise | the frame on its own, embedded by an image backbone — DINOv2 ViT-B/14 (`vit_base_patch14_reg4_dinov2.lvd142m`) unless `model_name` says otherwise; needs `pip install 'ethograph[timm]'` | [video_features › timm](https://v-iashin.github.io/video_features/models/timm/) | |
+| `extractor` | Kind | What one frame's feature is | Docs |
+|---|---|---|---|
+| `s3d` (default) | clip-wise | the `stack_s` window of frames centred on it, embedded by S3D {cite:p}`xie2018s3d` (Kinetics-400 {cite:p}`kay2017kinetics`) — motion is in the feature | [video_features › S3D](https://v-iashin.github.io/video_features/models/s3d/) |
+| `timm` | frame-wise | the frame on its own, embedded by an image backbone — DINOv2 {cite:p}`oquab2024dinov2` ViT-B/14 (`vit_base_patch14_reg4_dinov2.lvd142m`) unless `model_name` says otherwise; needs `pip install 'ethograph[timm]'` | [video_features › timm](https://v-iashin.github.io/video_features/models/timm/) |
 
 Both follow the recipes of
-[v-iashin/video_features](https://v-iashin.github.io/video_features/), which
+[v-iashin/video_features](https://v-iashin.github.io/video_features/) {cite:p}`iashin2020videofeatures`, which
 documents each network and links on to its weights; our config exposes only
 what changes the *features*, so read there for the rest.
 
@@ -54,7 +54,7 @@ unless you pass `overwrite=True`, so re-running after adding footage is cheap.
 | Parameter | Meaning |
 |---|---|
 | `extractor` | `s3d` (default) or `timm`. |
-| `model_name` | `timm` only: any timm model with pretrained weights — valid names are the [timm model list](https://huggingface.co/docs/timm/models) (or `timm.list_models(pretrained=True)`). `None` = DINOv2 ViT-B/14. |
+| `model_name` | `timm` only: any timm model with pretrained weights {cite:p}`wightman2019timm` — valid names are the [timm model list](https://huggingface.co/docs/timm/models) (or `timm.list_models(pretrained=True)`). `None` = DINOv2 ViT-B/14. |
 | `stack_s` | `s3d` only: window length in seconds. Must be ≥ 13 frames at the effective rate. |
 | `analysis_fps` | Rate the network sees; `None` = every frame. |
 | `crop` | A pixel box cut from every frame before the network sees it (`{x0, y0, x1, y1}`, the crop tool's numbers). |
@@ -72,7 +72,7 @@ size, decode chunk, `fp16` and the device live on the extractor's own config
 
 Resolution on the animal matters more than resolution on the arena. `crop`
 cuts one rectangle from every decoded frame before the resize, in the same
-numbers the GUI's crop tool reports (*Tools ▸ Video: Pick a crop…*), so they
+numbers the GUI's crop tool reports (*Tools ▸ Video: Pick a crop for a config…*), so they
 copy straight across:
 
 ```yaml
@@ -190,7 +190,7 @@ features:
 1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of
 kinematic ones, and they dominate the input — in practice a small, well-chosen
 subset does *better* than all of them. Two tools, both leaning on
-`kind="video_feature"` (see {doc}`../variable_schema`), which every extractor
+`kind="video_feature"`, which every extractor
 stamps for you.
 
 **Is the whole group pulling its weight?** That is a question about the
@@ -264,13 +264,6 @@ features:
     s3d: {s3d_dims: [492, 734, 671, 640, 585, ...]}
 ```
 
-```{important}
-The ranking is supervised: it reads your curated labels, so it is only as
-good as the trials you have labelled, and it uses `manual`/`curated` rows
-only — never another model's `automated` output. Rank on your training
-sessions, not on the sessions you intend to report on, or the selection
-leaks the test set.
-```
 
 ## One video, no ethograph at all
 
@@ -288,5 +281,6 @@ da = build_extractor("timm").extract("clip.mp4")             # (time_video, timm
 An extractor is an entry in `ethograph.video_features.EXTRACTORS` — a name
 mapped to a class with `name`, `plan(video_fps)` and `extract(video)` — whose
 `extract` returns `to_dataarray(...)`. Its package is pip-installed, never
-copied into the tree (ADR 0009); if the package cannot share the GUI
+copied into the tree (`notes/adr/0009-extractors-pip-installed-not-vendored.md`); if the package cannot share the GUI
 environment, the extractor runs it by subprocess and reads the file back.
+

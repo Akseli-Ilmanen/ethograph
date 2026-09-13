@@ -1,7 +1,7 @@
 """Run the spot pipeline on data/spot/project.yaml, stage by stage — you name the stages.
 
 Which stages you need is decided by what is available when the model runs
-(docs/add_to_docs_later/spot/index.md, "Which stages to run"):
+(docs/source/models/spot/index.md, "Which stages to run"):
 
     # pose in every session, now and later: features ride into the GRU, no teacher, no distil
     python scripts/spot.py materialise baseline evaluate

@@ -25,8 +25,6 @@
 
     correct_changepoints_automatic
 
-    correct_changepoints_dense
-
     dataset_changepoint_times
 
     find_nearest_turning_points_binary

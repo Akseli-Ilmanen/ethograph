@@ -22,11 +22,7 @@ from ethograph.io.dataset import (
     add_changepoints_to_ds,
     downsample_trialtree,
 )
-from ethograph.io.nwb_alignment import (
-    NWBAlignment,
-    align_media_from_streams,
-    align_media_per_trial,
-)
+from ethograph.io.nwb_alignment import NWBAlignment
 from ethograph.io.pairing import (
     SourceSpec,
     discover_media,

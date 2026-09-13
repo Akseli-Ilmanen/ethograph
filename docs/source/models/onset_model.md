@@ -1,27 +1,15 @@
 (target-onset-model)=
-# Predicting point events (LightGBM)
+# LightGBM for point events
 
 EthoGraph includes a lightweight model for predicting **point events**, built
-on scikit-learn's histogram-based gradient boosting — its implementation of
-Microsoft's LightGBM. It is a small classifier that detects the onset of an
+on scikit-learn's {cite:p}`pedregosa2011sklearn` histogram-based gradient boosting (`HistGradientBoostingClassifier`), inspired by
+Microsoft's LightGBM {cite:p}`ke2017lightgbm`. It is a small classifier that detects the onset of an
 event from a local window of hand-crafted features: the first time a mouse
 touches a lever, the frame a bird lands, the moment a beak opens. You label
 the moment in a handful of trials, tick the features it should look at, and it
 fills in the rest.
 
 **Model ▸ LightGBM: Train…** and **Model ▸ LightGBM: Predict…**
-
-```{admonition} Scope — read this first
-:class: important
-
-**Point events only**, and **at most one event per class per trial**.
-Inference takes the tallest peak of the trial's smoothed probability curve, so
-it returns exactly one time per class per trial and cannot return two.
-
-**State events are out of scope**: a state event has two boundaries ("start" and "stop") whose
-order and non-overlap have to be respected, which is a different problem from
-"when did this happen?". Use an external action-segmentation model for those.
-```
 
 ---
 
@@ -47,7 +35,7 @@ predicting five classes costs barely more than predicting one.
 1. **Name the model** — leave the combo on *New model…* and type a name, or
    pick an existing model to add more training data to it.
 2. **Tick the point events to predict.** Only classes marked as point events
-   in {doc}`mapping.txt <mapping>` are listed; tick as many as you like.
+   in {doc}`mapping.txt <../advanced/labels/mapping>` are listed; tick as many as you like.
 3. **Tick the features.** Ticking `speed ▸ keypoints ▸ beak, head` gives two
    input columns. **Every dim has to be pinned to explicit values** — that
    frozen list *is* the model's input layout, which is what lets the model run
@@ -88,7 +76,7 @@ You can also pass existing labels as features to the model.
   interval of that class, `0` outside. That is the whole of what a state says.
 * a **point** class becomes a **Laplacian bump** centred on the event, at two
   hard-coded widths (0.1 s and 1 s), one column each — the same kernel
-  EthoGraph puts on {doc}`changepoints <../changepoints>`, for the same reason:
+  EthoGraph puts on {doc}`changepoints <../advanced/changepoints/index>`, for the same reason:
   the narrow peak points straight at the moment while the long tails stay
   readable from far away, so one column carries both *it is here* and *it was
   a while ago*.
@@ -104,7 +92,7 @@ never touched:
   gaps, it never overrides. A trial that already has *one* class can still
   receive the others.
 * **Trials the trials table hides.** Training and prediction both run over
-  exactly the trials the {doc}`trials table <../metadata>` shows — its filters
+  exactly the trials the {doc}`trials table <../advanced/metadata>` shows — its filters
   are the one trial filter in EthoGraph, so filtering `genotype = wt` there
   trains on and predicts into wild-type trials only. The dialog has no
   filters of its own; it says how many trials it will run over, read off the
@@ -127,8 +115,9 @@ A predicted label's **`confidence`** is a statistic of that class's
 probability curve around its tallest peak — its height, or how concentrated
 the curve is there and whether a rival peak stands elsewhere — chosen per
 class on the trials the model did not see, and named in the training
-message. The curve is the **dotted line** frame-by-frame review draws under
+message. The curve is the **dashed line** frame-by-frame review draws under
 the label, so the number is always something you can see. The statistics,
 the equations and how they compare with the segmentation pipeline's entropy
-are in {doc}`the confidence page <../confidence>`, together with reviewing
+are in {doc}`the confidence page <confidence>`, together with reviewing
 by confidence in the label grid.
+

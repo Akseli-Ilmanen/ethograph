@@ -539,10 +539,8 @@ def test_cover_page_borrows_and_returns_load_panel(gui, qtbot):
     page.show()
     qtbot.waitExposed(page)
     assert page._load_host.isAncestorOf(io.load_panel)  # borrowed
-    assert io.load_buttons_row.isHidden()  # no duplicate wizard/template buttons
     page.close()
     assert io.isAncestorOf(io.load_panel)  # returned
-    assert not io.load_buttons_row.isHidden()
 
 
 def test_cover_page_custom_load_accepts_page(gui, qtbot, monkeypatch):

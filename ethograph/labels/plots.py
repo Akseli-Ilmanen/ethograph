@@ -276,7 +276,7 @@ def plot_confidence_pdf(
                 0.10,
                 rf"Segment threshold (red dotted, $\tau_{{seg}}={segment_confidence_threshold:.2f}$): "
                 r"segments whose mean frame confidence $\bar{{c}} < \tau_{{seg}}$ are shaded red — "
-                r"state labels only, a point event has no span to average over. "
+                r"state events only, a point event has no span to average over. "
                 r"A trial is marked low-confidence (red border) if its overall mean $< \tau_{{frame}}$ or any segment $< \tau_{{seg}}$.",  # noqa: E501
                 10,
                 "red",

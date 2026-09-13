@@ -186,7 +186,8 @@ class TopBarBuilder:
         menu.addAction("Pose correction (DLC, SLEAP, …)…", self._open_pose_refinement)
         # Bounding boxes + tracking through the OCTRON fork, one time index
         # across every open camera — see dialog_box_labelling.py.
-        menu.addAction("Box labelling (OCTRON)…", self._open_box_labelling)
+        box_action = menu.addAction("Box labelling (OCTRON) — paused", self._open_box_labelling)
+        box_action.setEnabled(False)
 
         menu.addSeparator()
         ephys = getattr(self.meta, "ephys_widget", None)
@@ -324,12 +325,6 @@ class TopBarBuilder:
         open_dialog = self._first_method(getattr(self.meta, "data_widget", None), "open_pose_refinement")
         if open_dialog is not None:
             open_dialog()
-
-    def _reset_video_view(self):
-        """Rebuild the primary video panel — recovery for a frozen image."""
-        vm = getattr(getattr(self.meta, "data_widget", None), "video_mgr", None)
-        if vm is not None:
-            vm.reset_primary_video()
 
     def _on_record_state(self, state: str):
         """Relabel the single Tools entry as the recorder changes state."""
@@ -501,13 +496,10 @@ class TopBarBuilder:
             menu.addAction("Visualize data alignment", show_align)
 
         menu.addSeparator()
-        # Escape hatch for a frozen video image (dead pynaviz render chain):
-        # rebuilds the primary PlotVideo without closing/re-adding the panel.
-        menu.addAction("Reset video view", self._reset_video_view)
+        menu.addAction("Reset local settings (this dataset)", self._reset_local_settings)
         reset_gui = self._first_method(getattr(self.meta, "io_widget", None), "_on_reset_gui_clicked")
         if reset_gui is not None:
             menu.addAction("Reset global settings (gui_settings.yaml)", reset_gui)
-        menu.addAction("Reset local settings (this dataset)", self._reset_local_settings)
 
     def _reset_local_settings(self):
         """Clear the loaded dataset's local_settings.yaml + in-memory local vars."""

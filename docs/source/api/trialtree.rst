@@ -42,7 +42,7 @@ then access each trial by ID or index:
    dt = eto.open("session.nc")
 
 For the :class:`xarray.Dataset` structure expected inside each trial, see
-:doc:`../getting_started/preparing_data`.
+:doc:`../getting_started/your_data/index`.
 
 .. autoclass:: TrialTree
    :no-members:

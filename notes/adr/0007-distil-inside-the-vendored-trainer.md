@@ -52,5 +52,5 @@ switches, **off by default**.
   skeleton, a different architecture), the student, the embeddings file and
   the two stages do not change.
 - `teacher.extra_features` couples the teacher to the session's variables the
-  way the onset model already is. That is deliberate: a user who knows a
+  way the lightgbm model already is. That is deliberate: a user who knows a
   distance matters can say so without touching the model.

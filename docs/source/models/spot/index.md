@@ -1,9 +1,9 @@
 (target-spot)=
-# Precise event spotting from pixels
+# Precise event spotting (PES) from pixels
 
 Learn the **point events** you curated in the GUI directly from video, and
 predict them back into the GUI. Where {doc}`the segmentation pipeline
-<../segment/index>` learns state labels from engineered features, this learns
+<../segment/index>` learns state events from engineered features, this learns
 a single moment per trial from the frames themselves — and, optionally, from
 pose features you already have.
 
@@ -21,14 +21,14 @@ project.train_teacher()      # option 4: the pose-only teacher
 project.distil()             # option 4: the student, taught by the teacher, video only at inference
 ```
 
-The model is **E2E-Spot** (Hong et al., ECCV 2022): a RegNetY-008 backbone
-with Gate Shift Modules for temporal mixing and a bi-GRU head emitting a
-per-frame softmax over `K + 1` classes. It is vendored the way DLC2Action is —
+The model is **E2E-Spot** {cite:p}`hong2022e2espot`: a RegNetY-008 backbone {cite:p}`radosavovic2020regnet`
+with Gate Shift Modules {cite:p}`sudhakaran2020gsn` for temporal mixing and a bi-GRU head emitting a
+per-frame softmax over `K + 1` classes. It is vendored the way [DLC2Action](https://github.com/amathislab/DLC2Action) is —
 upstream's own layout, unedited beyond what its `NOTICE.md` lists.
 
 ```{note}
 There is no command line, for the same reason the segmentation pipeline has
-none: a run is a config file you can diff (`docs/adr/0004-scripted-not-cli.md`).
+none: a run is a config file you can diff (`notes/adr/0004-scripted-not-cli.md`).
 ```
 
 ## Four ways to spot a point event
@@ -45,13 +45,13 @@ Which one to use is decided by **what is available when the model runs**.
   - Reads at inference
   - Where
 * - 1
-  - **LightGBM onset model** — a boosted-tree classifier on a window of the
+  - **LightGBM lightgbm model** {cite:p}`ke2017lightgbm` — a boosted-tree classifier on a window of the
     features you tick
   - pose features
   - pose features
-  - the GUI, `Model ▸ LightGBM` ({doc}`../labels/onset_model`)
+  - the GUI, `Model ▸ LightGBM: Train…` ({doc}`../onset_model`)
 * - 2
-  - **E2E-Spot** — pixels only; `rny008_msagsm` widens its temporal aperture
+  - **E2E-Spot** {cite:p}`hong2022e2espot` — pixels only; `rny008_msagsm` {cite:p}`msagsm2025` widens its temporal aperture
   - video
   - video
   - `eto.spot`, no `features:`
@@ -62,7 +62,7 @@ Which one to use is decided by **what is available when the model runs**.
   - video + pose
   - `eto.spot`, `features:` listed
 * - 4
-  - **Pose teacher → distilled E2E-Spot** — a small pose-only model on the
+  - **Pose teacher → distilled E2E-Spot** {cite:p}`umegnet2026` — a small pose-only model on the
     listed features teaches the pixel model, then is set aside
   - video + pose
   - video
@@ -133,7 +133,7 @@ models. What they share is everything *around* the model:
   - **`eto.segment`**
   - **`eto.spot`**
 * - Learns
-  - State labels (spans)
+  - state events (spans)
   - Point events (moments)
 * - Reads
   - Feature columns you choose
@@ -375,7 +375,7 @@ on. `infer.jpeg_roundtrip: false` skips that pass; leave it on.
 ## Confidence
 
 A predicted event carries a `confidence` in the labels TSV, and the review
-tools threshold on it. For this model the number is **`focus × ratio`**: how much of the class's curve sits within the window of its peak,
+tools threshold on it. For this model the number is by default **`focus × ratio`** (`infer.confidence`): how much of the class's curve sits within the window of its peak,
 times one minus the tallest *rival* peak over it. A lone sharp bump reads
 near 1; a second candidate or a smeared bump pulls it down. Why not the
 peak's height, the equations, and how this compares with the segmentation
@@ -388,8 +388,8 @@ with no new GUI code. Every model writes under one convention,
 
 ## MSAGSM
 
-[MSAGSM](https://arxiv.org/abs/2507.07381) is a drop-in replacement for the
-Gate Shift Module: the same gated split-and-shift, applied at **several
+MSAGSM {cite:p}`msagsm2025` is a drop-in replacement for the
+Gate Shift Module {cite:p}`sudhakaran2020gsn`: the same gated split-and-shift, applied at **several
 temporal dilations at once** and preceded by channel-grouped spatial
 attention. GSM shifts by ±1 frame — at a high frame rate, a very narrow
 aperture in real time. Widening it with `stride` costs label resolution;
@@ -412,3 +412,13 @@ clock. Three choices the paper leaves open are made deliberately: the branch
 weights are a softmax; the module starts as the identity up to a uniform
 scale, so a pretrained backbone is not perturbed at step 0; and the defaults
 are the paper's (`{1, 2, 3}`, 2 groups).
+
+
+```{toctree}
+:maxdepth: 1
+:hidden:
+
+quickstart
+multimodal
+config
+```

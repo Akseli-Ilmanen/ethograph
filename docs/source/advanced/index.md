@@ -10,7 +10,7 @@ the {doc}`user manual <../getting_started/user_manual>`.
 :link: metadata
 :link-type: doc
 
-Per-trial conditions (metadata.tsv) and the trials table filter UI.
+Per-trial conditions (metadata table) and the trials table filter UI.
 :::
 
 :::{grid-item-card} {fas}`tags` Labels
@@ -63,11 +63,10 @@ Common issues and fixes.
 :maxdepth: 2
 :hidden:
 
-metadata
-time_slider_trial_session
 labels/index
 changepoints/index
 keypoint_labelling/index
+metadata
 playback
 shortcuts
 troubleshooting

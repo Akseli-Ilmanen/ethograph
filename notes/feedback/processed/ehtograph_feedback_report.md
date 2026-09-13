@@ -17,7 +17,7 @@ Our annotation workflow needs:
 
 - short video windows around behaviour events, usually about 2 minutes,
 - reliable imported-label inspection,
-- manual creation/editing of point and state labels,
+- manual creation/editing of point and state events,
 - accurate audio/video synchronization,
 - responsive timeline zooming and repeated play/pause during fine annotation,
 - ideally side-by-side behavioural lanes for Male and Female,
@@ -314,7 +314,7 @@ Useful synthetic media content:
 
 - video with a moving timestamp/grid/counter,
 - audio click train or chirp aligned to visible flashes,
-- a few state labels around known audio/video events.
+- a few state events around known audio/video events.
 
 ### GUI Reproduction Actions
 

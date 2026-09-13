@@ -1,8 +1,8 @@
 # Labels
 
-Labelling behavioural events in the GUI, curating what a model predicted,
-predicting point events with a small supervised model, importing from external
-annotation tools, and exporting to TSV / Crowsetta formats.
+Labelling behavioural events in the GUI, importing from external annotation
+tools, and exporting to TSV / Crowsetta formats. Curating and predicting labels
+live under {doc}`../../models/index`.
 
 ```{toctree}
 :maxdepth: 1
@@ -12,7 +12,5 @@ mapping
 branches
 importing
 exporting
-curation
-onset_model
 workflows
 ```

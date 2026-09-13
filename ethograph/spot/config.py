@@ -12,7 +12,7 @@ identical numbers at 200 fps give the model an eighth of the real-time
 aperture and it collapses to background. So the config asks for
 :attr:`ClipConfig.context_s` and :attr:`ClipConfig.resolution_ms` and derives
 the frame counts from each video's own rate (:meth:`ClipConfig.resolve`).
-Docs: ``docs/add_to_docs_later/spot/index.md``.
+Docs: ``docs/source/models/spot/index.md``.
 """
 
 from __future__ import annotations
@@ -286,7 +286,7 @@ class DistilConfig:
     """
 
     #: The teacher run under ``teacher/`` to distil from; ``None`` = the one
-    #: whose embeddings are under ``keypoints/embeddings``. (Not ``teacher``:
+    #: whose embeddings are under ``features/embeddings``. (Not ``teacher``:
     #: the config builder resolves nesting by field name, and that one names
     #: the teacher's own section.)
     teacher_run: str | None = None
@@ -376,7 +376,7 @@ class InferConfig:
 
     #: Milliseconds around the tallest peak that count as the same event when
     #: reading ``focus``/``ratio`` off a curve — the timescale you care about
-    #: (twice the precision you believe your labels to, as the onset model
+    #: (twice the precision you believe your labels to, as the lightgbm model
     #: takes it from its ``tolerance_s``). Flat across 50-200 ms on a 200 fps
     #: rig; set it for yours.
     focus_window_ms: float = 100.0

@@ -1,7 +1,7 @@
 """Which loss terms and which feature groups earn their place — per individual, per architecture.
 
 Two axes, crossed where it is worth the GPU. The **objective** is a sum of up
-to three terms (``docs/add_to_docs_later/segment/config.md``, *Losses*): the
+to three terms (``docs/source/models/segment/config.md``, *Losses*): the
 frame cross-entropy, the consistency (smoothing) term it carries at
 ``train.loss.alpha``, and the circle metric-learning term at
 ``train.circle.weight``. The **inputs** fall into three declared kinds

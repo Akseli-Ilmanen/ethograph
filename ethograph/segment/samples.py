@@ -617,7 +617,7 @@ def _apply_likelihood_threshold(
 def dense_targets(
     labels: pd.DataFrame, time: np.ndarray, individual: str, classes: ClassTable
 ) -> tuple[np.ndarray, int]:
-    """Per-frame class indices for *individual* from its state labels.
+    """Per-frame class indices for *individual* from its state events.
 
     Interval ends are inclusive (the convention ``dense_to_intervals`` reads
     back). Returns the target and how many rows contributed.

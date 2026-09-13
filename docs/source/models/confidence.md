@@ -1,5 +1,5 @@
 (target-confidence)=
-# Confidence: what the number beside a predicted label means
+# Model confidence
 
 Every predicted label carries a `confidence` in the labels TSV (a hand-placed
 label is `1.0`), and the review tools threshold on it: the label grid outlines
@@ -14,8 +14,19 @@ There are two kinds.
 The segmentation pipeline (`eto.segment`) predicts **state events** — spans.
 Its output is one probability distribution **over the classes at every
 frame**: $p_1(t), \dots, p_C(t)$ with $\sum_c p_c(t) = 1$. The label at a
-frame is the largest, and how sure the model is at that frame is how far the
-distribution is from uniform — its normalised entropy
+frame is the largest. A segment's `confidence` in the TSV is the mean
+probability of its own class over its frames (`ethograph/segment/inference.py`):
+
+$$
+\text{confidence} = \frac{1}{|S|} \sum_{t \in S} p_{c}(t),
+$$
+
+where $S$ is the segment's frames and $c$ its class. The question at each
+frame is "which one", so the number is how much of the distribution the
+chosen class holds.
+
+The confidence overlay drawn during review is a per-frame curve instead: how
+far the distribution is from uniform, its normalised entropy
 (`ethograph/labels/predictions.py`):
 
 $$
@@ -24,15 +35,11 @@ H(t) = -\sum_{c=1}^{C} p_c(t)\,\log p_c(t), \qquad
 $$
 
 `1` means all the mass sits on one class, `0` means every class is equally
-likely. A segment's `confidence` in the TSV is the mean of this over its
-frames, and the per-frame curve is what the review overlay draws. Entropy is
-the natural measure here because the model's uncertainty *is* the spread
-over classes: the question at each frame is "which one", and the answer is
-a distribution over the alternatives.
+likely.
 
 ## Point events: when did it happen?
 
-The LightGBM onset model and the E2E-Spot pixel model predict **point
+The LightGBM lightgbm model {cite:p}`ke2017lightgbm` and the E2E-Spot pixel model {cite:p}`hong2022e2espot` predict **point
 events**. For each class they produce a **curve over time**, $p_k(t)$, the
 per-frame belief that class $k$'s event is *here*, and the prediction is the
 tallest peak of that curve, $t^\ast = \arg\max_t p_k(t)$ (a local maximum —
@@ -64,7 +71,7 @@ $$
 - **confidence** — both at once: a lone sharp bump reads near `1`, a rival
   or a smeared bump pulls it down.
 
-![peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival](../source/_static/media/confidence_curve_stats.png)
+![peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival](../_static/media/confidence_curve_stats.png)
 
 **Two curves read `0` whatever their shape**: one that is nearly nothing
 everywhere (its tallest peak below 0.05 — otherwise a single surviving blip
@@ -74,7 +81,7 @@ climbing at the trial's end — the event may lie past it). Whatever rule is
 chosen, such a label's confidence is `0`: flagged for review, never dropped.
 
 **The window is the user's timescale, not a constant.** $w = 2 \times$ the
-tolerance the labels are believed to: the onset model takes it from its own
+tolerance the labels are believed to: the lightgbm model takes it from its own
 `tolerance_s`, the pixel model from `infer.focus_window_ms` (twice the label
 precision). A bump wider than twice the label precision is smeared by the
 user's own definition; a peak further away than that is a rival.
@@ -83,7 +90,7 @@ user's own definition; a peak further away than that is a rival.
 measured, not assumed.** On the same held-out trials, how well each
 candidate separates the model's hits from its misses (AUC) decides:
 
-- The **onset model** ranks every candidate per class when it trains
+- The **lightgbm model** ranks every candidate per class when it trains
   (`fit_confidence_calibration`) and writes `peak` unless `focus`, `ratio` or
   their product wins by a clear margin — its curve is shape-constrained by construction (a
   Gaussian-weighted target smoothed with the matching kernel), so its bumps
@@ -155,14 +162,15 @@ bottom of the range can be flagged at `0.0002` as easily as at `0.6`;
 before you commit — with a bimodal statistic such as `ratio` the gap is
 where the threshold goes.
 
-In the default *Click = uncurated, rest = curated* mode, **Mark low-confidence
+In the *Click = uncurated, rest = curated* mode, **Mark low-confidence
 as uncurated** pre-clicks exactly the outlined tiles; click any other tile
 that looks wrong, and **Done** curates everything else in one go. With the
 Curation section in frame-by-frame review, a tile click drops straight into
 that boundary instead: `Enter` moves the event onto the right frame,
-`Backspace` deletes one that never happened, `N` marks it curated.
+`Backspace` deletes one that never happened, `N` marks it curated (with **Click N curates current** ticked).
 
 Judge a cutoff by what it buys: on a session with curated labels, "reviewing
 everything below *t* catches what share of the errors?" is the question the
 confidence exists to answer, and it is a better guide than how the histogram
 looks.
+

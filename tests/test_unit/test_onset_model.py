@@ -1,4 +1,4 @@
-"""Unit tests for the LightGBM onset model (labels/onset_model.py)."""
+"""Unit tests for the LightGBM lightgbm model (labels/onset_model.py)."""
 
 from __future__ import annotations
 

@@ -85,25 +85,18 @@ load — the override applies, but never unnoticed.
 
 ---
 
-## Auto-generated mappings
+(target-auto-mapping)=
+## Importing labels with new class names
 
-When you import labels from an external source whose classes don't exist
-in the active `mapping.txt`, the GUI auto-creates a new mapping file
-alongside the data so no IDs clash:
+Every import format (Crowsetta, pynapple / NWB `IntervalSet`) uses the same
+`mapping.txt`, the one shown in the mapping path field. A name that is already
+in it keeps its ID, branch and event type. A new name is appended with the next
+free ID, as a state class on branch 0, and the GUI says which classes it added.
+With no mapping in use, the classes go into the session's
+`.ethograph/mapping.txt`. `background` and `sil` are treated as background and
+never added.
 
-| Import source | Generated file |
-|---------------|----------------|
-| Crowsetta formats (aud-seq, textgrid, ...) | `mapping_{format}.txt` |
-| Pynapple / NWB `IntervalSet` labels | `mapping_pynapple.txt` |
-| NWB epoch imports | `mapping_nwb_epochs.txt` |
-
-The mapping path field in the Label controls updates to point at the new
-file. You can rename it to `mapping.txt` to make it the default for this
-project.
-
-See {func}`~ethograph.labels.converters.resolve_crowsetta_mapping` and
-{func}`~ethograph.labels.converters.build_mapping_from_labels` for the
-auto-generation logic.
+See {func}`~ethograph.labels.converters.extend_mapping`.
 
 ---
 

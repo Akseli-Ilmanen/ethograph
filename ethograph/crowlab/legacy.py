@@ -269,7 +269,7 @@ def convert_session_to_nwb(dt: TrialTree, output_path: str | Path | None = None)
     -------
     Path to the created NWB file.
     """
-    from ethograph.io.nwb_alignment import align_media_per_trial
+    from ethograph.io.pairing import pair_media
 
     sess = dt.session
     if sess is None:
@@ -349,7 +349,7 @@ def convert_session_to_nwb(dt: TrialTree, output_path: str | Path | None = None)
     output_path = Path(output_path)
     stream_rates = {"video": fps, "pose": fps}
 
-    align_media_per_trial(trial_df, stream_rates=stream_rates, output_path=output_path)
+    pair_media(trial_df, stream_rates=stream_rates, output_path=output_path)
     return output_path
 
 

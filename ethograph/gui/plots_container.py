@@ -1564,7 +1564,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def show_onset_curves(self, time, curves: dict, colors: dict | None = None) -> int:
         """One dashed curve per label class over the current plot.
 
-        What an onset model believed frame by frame, in each class's own
+        What an lightgbm model believed frame by frame, in each class's own
         colour. Every class is scaled against a fixed 0–1 range rather than
         its own extent, so their heights mean the same thing — the point is
         seeing one class's belief rise where another class's event sits.

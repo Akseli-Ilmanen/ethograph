@@ -1,6 +1,6 @@
 """Precise event spotting from pixels — point events learned from video.
 
-Where :mod:`ethograph.segment` learns state labels from feature columns you
+Where :mod:`ethograph.segment` learns state events from feature columns you
 choose, this learns a single moment per trial from the frames themselves. The
 model is E2E-Spot (Hong et al., ECCV 2022), vendored the way DLC2Action is.
 
@@ -17,7 +17,7 @@ how the data is organised, not of the model. What is this pipeline's own is
 how video becomes clips, and there **every temporal setting is a duration**
 resolved against the video's own rate (:class:`~ethograph.spot.config.ClipConfig`).
 
-Docs: ``docs/add_to_docs_later/spot/index.md``.
+Docs: ``docs/source/models/spot/index.md``.
 """
 
 from __future__ import annotations

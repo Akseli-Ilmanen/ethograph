@@ -297,7 +297,7 @@ def test_horizon_and_scale_by_reach_the_expansion(tmp_path: Path):
 
 
 def _labels(n: int, *, seed: int = 0) -> pd.DataFrame:
-    """*n* curated ``flap`` (id 3) state labels on trial 1, durations 0.2–1.0 s."""
+    """*n* curated ``flap`` (id 3) state events on trial 1, durations 0.2–1.0 s."""
     rng = np.random.default_rng(seed)
     onsets = np.sort(rng.uniform(0.0, DURATION - 1.2, size=n))
     durations = rng.uniform(0.2, 1.0, size=n)
@@ -353,7 +353,7 @@ def test_scales_are_derived_from_the_labels_at_materialise(tmp_path: Path):
     assert recorded["horizon"] == pytest.approx(0.5 * np.percentile(durations, 5) * FS, abs=1e-4)
     assert recorded["max_length"] == pytest.approx(np.percentile(durations, 95) * FS, abs=1e-4)
     assert recorded["sigmas"] == pytest.approx([recorded["horizon"] / k for k in (16, 8, 4)], abs=1e-4)
-    assert "Derived at materialise from 40 manual/curated state labels of 1 session(s)" in recorded["note"]
+    assert "Derived at materialise from 40 manual/curated state events of 1 session(s)" in recorded["note"]
     assert "horizon = 0.5 x p5(duration)" in recorded["note"]
 
     # every later stage reads them back: an unresolved config now opens fine, at the recorded scale

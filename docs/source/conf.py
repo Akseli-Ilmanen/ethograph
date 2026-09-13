@@ -69,7 +69,13 @@ extensions = [
     "sphinx_sitemap",
     "myst_nb",
     "sphinx_design",
+    "sphinxcontrib.mermaid",
+    "sphinxcontrib.bibtex",
 ]
+
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+bibtex_default_style = "plain"
 
 # Don't execute notebooks during build
 nb_execution_mode = "off"
@@ -105,8 +111,6 @@ exclude_patterns = [
     "**.ipynb_checkpoints",
     "**/includes/**",
     "api_generated/**",
-    "advanced/data_index.md",
-    "advanced/gui_index.md",
     "advanced/examples.md",
     "_static/media/changepoints.ipynb",
 ]

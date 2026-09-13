@@ -55,12 +55,12 @@ logger = logging.getLogger(__name__)
 
 #: Folder each prediction run writes into, under the session's ``labels/``:
 #: ``predictions_{model}_{timestamp}`` — the convention every model here
-#: shares (the LightGBM onset model, the segmentation pipeline, the pixel
+#: shares (the LightGBM lightgbm model, the segmentation pipeline, the pixel
 #: spotter). A run is recognised by holding :data:`CURVES_FILE`, not by which
 #: model wrote it.
 RUN_PREFIX = "predictions_"
 
-#: The model name the GUI's onset model writes under.
+#: The model name the GUI's lightgbm model writes under.
 LIGHTGBM = "lightgbm"
 
 #: The curves file inside a run folder.

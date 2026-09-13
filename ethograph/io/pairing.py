@@ -234,8 +234,7 @@ def _pair_into_new(
     media_root: str | Path | None,
     pose_fps: float | None,
 ) -> NWBFile:
-    """Build a fresh alignment NWB from *trial_table* (the ``align_media_per_trial`` shape),
-    plus one ImageSeries per *session_wide* stream."""
+    """Build a fresh alignment NWB from *trial_table*, plus one ImageSeries per *session_wide* stream."""
     from datetime import datetime
     from uuid import uuid4
 
@@ -316,9 +315,9 @@ def pair_media(
 ) -> NWBFile:
     """Write ``.ethograph/alignment.nwb`` from a pairing table.
 
-    Per-trial columns are handled as :func:`~ethograph.io.nwb_alignment.align_media_per_trial`
-    always did; ``session_wide`` streams each get one ``ImageSeries`` with a ``starting_time``
-    (the ``align_media_from_streams`` behaviour for a single session-wide file).
+    Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one
+    ``ImageSeries`` whose segments start at the trial starts; ``session_wide`` streams each get
+    one ``ImageSeries`` with a ``starting_time``.
     ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media
     (needs ``media_root``).
 
@@ -335,7 +334,8 @@ def pair_media(
         ``trial`` + ``{stream}_{device}`` filename columns (as :func:`discover_media` returns).
         ``start_time``/``stop_time`` optional.
     stream_rates
-        Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``.
+        Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``; a
+        ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
     session_wide
         ``{"{stream}_{device}": (file, rate_hz, starting_time_s)}`` for streams that are one
         file spanning the whole session rather than one file per trial.

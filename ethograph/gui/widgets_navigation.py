@@ -76,9 +76,8 @@ class _DataAlignmentDialog(QDialog):
         btn_row.addWidget(close_btn)
         layout.addLayout(btn_row)
 
-        dt = getattr(app_state, "dt", None)
-        if dt is not None and getattr(dt, "trials", None):
-            self._page.populate_from_trialtree(dt, app_state)
+        if app_state.nwb_alignment is not None or app_state.source_collection is not None:
+            self._page.populate_from_session(app_state)
 
 
 class NavigationWidget(QWidget):

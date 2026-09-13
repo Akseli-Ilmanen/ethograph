@@ -179,14 +179,25 @@ class TestMediaFilename:
     the same file for every trial — and neither needs the media on disk."""
 
     def _alignment(self, tmp_path):
-        from ethograph.io.nwb_alignment import align_media_from_streams, make_nwb_alignment
+        from ethograph.io.nwb_alignment import make_nwb_alignment
+        from ethograph.io.pairing import pair_media
 
-        trials = pd.DataFrame({"trial": [1, 2, 3], "start_time": [0.0, 10.5, 22.3], "stop_time": [8.2, 19.1, 30.0]})
-        streams = [
-            {"name": "video_cam-1", "files": ["/media/t1.mp4", "/media/t2.mp4", "/media/t3.mp4"], "rate": 30.0},
-            {"name": "audio_mic-1", "files": ["/media/session.wav"], "rate": 48000.0, "starting_time": 0.0},
-        ]
-        return make_nwb_alignment(align_media_from_streams(trials, streams, tmp_path / "alignment.nwb"))
+        table = pd.DataFrame(
+            {
+                "trial": [1, 2, 3],
+                "start_time": [0.0, 10.5, 22.3],
+                "stop_time": [8.2, 19.1, 30.0],
+                "video_cam-1": ["/media/t1.mp4", "/media/t2.mp4", "/media/t3.mp4"],
+            }
+        )
+        nwb = tmp_path / "alignment.nwb"
+        pair_media(
+            table,
+            stream_rates={"video": 30.0},
+            session_wide={"audio_mic-1": ("/media/session.wav", 48000.0, 0.0)},
+            output_path=nwb,
+        )
+        return make_nwb_alignment(nwb)
 
     def test_per_trial_stream(self, tmp_path):
         alignment = self._alignment(tmp_path)

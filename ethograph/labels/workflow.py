@@ -1,7 +1,7 @@
 """Curation workflows: a named, replayable sequence of curation steps.
 
 Curating a session is the same handful of moves over and over — narrow the
-trials table to one condition, run the onset model over them, drop the
+trials table to one condition, run the lightgbm model over them, drop the
 predicted classes into the curation scope, open a grid laid out the way that
 behaviour needs, walk the boundaries, save. A *workflow* is that sequence
 written down once and replayed with one click.
@@ -15,7 +15,7 @@ their types and defaults, so the editor builds its form and the runner reads
 its arguments from one place.
 
 Workflows live in ``~/.ethograph/defaults/workflows/{name}.yaml`` — the same global
-store as the onset models they usually invoke, so a workflow written on one
+store as the lightgbm models they usually invoke, so a workflow written on one
 dataset is there for the next.
 """
 
@@ -230,7 +230,7 @@ STEP_KINDS: dict[str, StepKind] = {
         StepKind(
             key="predict",
             title="Predict onsets",
-            summary="Run a trained LightGBM onset model over the visible trials, filling classes they lack.",
+            summary="Run a trained LightGBM lightgbm model over the visible trials, filling classes they lack.",
             params=(
                 ParamSpec("model", "Model", "choice", "", "A trained model from ~/.ethograph/defaults/runs/lightgbm."),
                 ParamSpec(

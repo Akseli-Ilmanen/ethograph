@@ -70,7 +70,7 @@ recorder's file spells it (for Intan, `DIGITAL-IN-02`).
 | Mode | Files |
 |---|---|
 | 1 | `.ethograph/alignment.nwb` beside the session file, plus `wizard/{rig_name}.ipynb` with the {func}`~ethograph.discover_media` + {func}`~ethograph.pair_media` calls it ran |
-| 2, 3 | `wizard/{rig_name}.ipynb` only. Run it; it writes `session.nwb`, which you then select in the **Custom set-up** card. {doc}`../getting_started/video_and_ephys` shows what such a notebook contains |
+| 2, 3 | `wizard/{rig_name}.ipynb` only. Run it; it writes `session.nwb`, which you then select in the **Custom set-up** card. {ref}`target-video-and-ephys` shows what such a notebook contains |
 
 The notebook is **per rig, not per session**. Its first cell is tagged
 `parameters` and holds `session_dir`, the one value to change next time. The

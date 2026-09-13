@@ -9,7 +9,7 @@ use), so the same spelling works for xarray, pynapple and NWB sessions.
 
 Pinning explicit values (never "all") is what keeps the column set, and
 therefore the model's input layout, identical across sessions. Both the
-onset model (``labels/onset_model.py``) and the segmentation pipeline
+lightgbm model (``labels/onset_model.py``) and the segmentation pipeline
 (``ethograph/segment``) read their inputs through this module.
 
 A feature can additionally contribute its **time derivative** as an extra

@@ -1,6 +1,6 @@
 # Keypoint labelling
 
-**Tools ▸ Keypoint labelling…** (or the Pose sidebar) opens a dialog where you
+**Tools ▸ Pose tracking (from scratch)…** (or **Label keypoints…** in the Pose sidebar) opens a dialog where you
 label a few frames by clicking the video and let a point tracker fill in the
 rest. No training, no annotated dataset, no GPU for the default backend.
 
@@ -20,7 +20,7 @@ thing a click does, so it slots in ahead of the tracker rather than replacing it
 ## One video at a time
 
 The dialog works on **a single camera and a single trial** — one continuous
-video, which is what a {doc}`drag & drop <../data_index>` of a video file gives
+video, which is what a {doc}`drag & drop <../../getting_started/your_data/index>` of a video file gives
 you. It always follows the primary camera view's current video: labels are keyed
 by frame index on that video's own frame grid, and they are saved to a sidecar
 next to it (`<video>.keypoints.json`).
@@ -56,7 +56,7 @@ Nothing is learned that transfers to the next recording.
 **This is the tool for heterogeneous footage.** If every recording has a
 different animal, camera angle, background or lighting, a trained detector
 generalises worst exactly where your data varies most. Tracking never had to
-generalise — it is only ever asked about the video in front of it.[^pan]
+generalise — it is only ever asked about the video in front of it {cite:p}`pan2025posepal`.
 
 ## In the classroom
 
@@ -73,7 +73,8 @@ does exactly this, putting leg kinematics next to the sound they produce.
 
 ## The workflow
 
-The dialog is one tab per stage, and these pages follow the same order.
+The dialog has one tab per stage (Fill and export share one); these pages
+follow the same order, with correction and refining imported poses at the end.
 
 ```{toctree}
 :maxdepth: 1
@@ -87,6 +88,3 @@ export
 refine_imported
 ```
 
-## References
-
-[^pan]: Pan, Z., Pan, B., Yang, G., Harley, A. W. & Guibas, L. (2025). [Animal Pose Labeling Using General-Purpose Point Trackers](https://arxiv.org/abs/2506.03868). *arXiv:2506.03868*. [Project page](https://zhuoyang-pan.github.io/animal-labeling) · [Reference implementation](https://github.com/Zhuoyang-Pan/PosePAL)

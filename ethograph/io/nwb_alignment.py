@@ -1114,18 +1114,18 @@ def sync_acquisition_for_streams(
         NWB file with a populated trials table.
     stream_rates
         Mapping of stream name to sampling rate, e.g.
-        ``{"video": 30.0, "audio": 44100.0, "pose": 30.0}``.
+        ``{"video": 30.0, "audio": 44100.0, "pose": 30.0}``. A
+        ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
     """
     df = nwbfile.trials.to_dataframe()
     stream_devices = _parse_stream_devices(list(df.columns))
 
     for stream, devices in stream_devices.items():
-        rate = stream_rates.get(stream)
-        if rate is None or rate <= 0:
-            continue
-
         for device in devices:
             col = f"{stream}_{device}"
+            rate = stream_rates.get(col, stream_rates.get(stream))
+            if rate is None or rate <= 0:
+                continue
             if col not in df.columns:
                 continue
 
@@ -1230,72 +1230,6 @@ def _resolve_media_path(filename: Any, media_root: Path | None) -> Path | None:
     return path if path.exists() else None
 
 
-def align_media_per_trial(
-    trial_table: pd.DataFrame,
-    stream_rates: dict[str, float] | None = None,
-    output_path: str | Path | None = None,
-    session_description: str = "NWB file for media alignment (ethograph generated).",
-    media_root: str | Path | None = None,
-    pose_fps: float | None = None,
-) -> NWBFile:
-    """Create an alignment.nwb from a trial table.
-
-    .. deprecated::
-        Thin wrapper over :func:`ethograph.io.pairing.pair_media` — kept so
-        existing callers keep working. ``session_description`` is accepted
-        for backward compatibility but is no longer threaded through
-        (``pair_media`` has no per-call description); new code should call
-        :func:`~ethograph.io.pairing.pair_media` (or
-        :func:`~ethograph.io.pairing.discover_media` +
-        :func:`~ethograph.io.pairing.pair_media`) directly.
-
-    Parameters
-    ----------
-    trial_table
-        DataFrame with ``trial`` column and ``{stream}_{device}`` filename
-        columns.  Rows are trials, in order.  ``start_time`` / ``stop_time``
-        are optional -- omit them and each trial's duration is probed from its
-        own media, laying trials end to end from ``0.0``.
-    stream_rates
-        Sampling rate per stream.  Must include every stream that has
-        columns in the table.  Example:
-        ``{"video": 30.0, "audio": 48000.0, "pose": 30.0}``
-    output_path
-        Where to write the ``.nwb`` file.
-    media_root
-        Folder the filename columns are relative to.  Only needed when times
-        are inferred, since probing must open the files.
-    pose_fps
-        Frame rate for probing pose files.  Required to infer times from a
-        table whose only media columns are ``pose_*``.
-
-    Returns
-    -------
-    The in-memory :class:`~pynwb.NWBFile`, written to ``output_path`` when given.
-
-    Examples
-    --------
-    >>> import pandas as pd, ethograph as eto
-    >>> table = pd.DataFrame(
-    ...     {
-    ...         "trial": [1, 2, 3],
-    ...         "video_cam-1": ["t1.mp4", "t2.mp4", "t3.mp4"],
-    ...         "pose_cam-1": ["t1.h5", "t2.h5", "t3.h5"],
-    ...     }
-    ... )
-    >>> eto.align_media_per_trial(table, {"video": 30.0, "pose": 30.0}, "out/.ethograph/alignment.nwb")
-    """
-    from ethograph.io.pairing import pair_media  # local: pairing imports this module at top level
-
-    return pair_media(
-        trial_table,
-        stream_rates=stream_rates,
-        output_path=output_path,
-        media_root=media_root,
-        pose_fps=pose_fps,
-    )
-
-
 def trials_df_from_trials_ep(ep) -> pd.DataFrame:
     """Trials DataFrame (``trial``/``start_time``/``stop_time`` + metadata
     columns) from a pynapple trials IntervalSet."""
@@ -1359,134 +1293,6 @@ def alignment_from_trials_ep(ep, output_path: str | Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     with NWBHDF5IO(str(output), "w") as io:
         io.write(nwbfile)
-    return output
-
-
-def align_media_from_streams(
-    trials: pd.DataFrame,
-    streams: list[dict],
-    output_path: str | Path,
-) -> Path:
-    """Create an alignment.nwb for unaligned / complex scenarios.
-
-    The trials table contains only timing (no filenames).  All file
-    references go into ImageSeries acquisition items.
-
-    Parameters
-    ----------
-    trials
-        DataFrame with ``trial``, ``start_time``, ``stop_time``.
-    streams
-        List of stream dicts, each with::
-
-            {
-                "name": "video_cam-1",  # acquisition item name
-                "files": ["t1.mp4", ...],  # one per trial (full paths)
-                "rate": 30.0,  # sampling rate
-            }
-
-        For session-wide files (one file spanning all trials)::
-
-            {
-                "name": "audio_mic-1",
-                "files": ["session.wav"],
-                "rate": 44100.0,
-                "starting_time": 0.0,  # when file starts in session time
-            }
-
-    A spec carrying a ``"timestamps"`` key is refused: per-sample timestamps are
-    neuroconv's job — build the ``.nwb`` with ``ExternalVideoInterface`` (or the
-    matching interface for the stream) and pair over it with
-    :func:`ethograph.io.pairing.pair_media` instead.
-
-    output_path
-        Where to write the ``.nwb`` file.
-
-    Returns
-    -------
-    Path to the created NWB file.
-
-    Examples
-    --------
-    Per-trial video + pose, session-wide audio::
-
-        >>> trials = pd.DataFrame({
-        ...     "trial": [1, 2, 3],
-        ...     "start_time": [0.0, 10.5, 22.3],
-        ...     "stop_time": [8.2, 19.1, 30.0],
-        ... })
-        >>> streams = [
-        ...     {"name": "video_cam-1", "files": ["t1.mp4", "t2.mp4", "t3.mp4"], "rate": 30.0},
-        ...     {"name": "pose_cam-1", "files": ["t1.h5", "t2.h5", "t3.h5"], "rate": 30.0},
-        ...     {"name": "audio_mic-1", "files": ["session.wav"], "rate": 48000.0, "starting_time": 0.0},
-        ... ]
-        >>> eto.align_media_from_streams(trials, streams, ".ethograph/alignment.nwb")
-    """
-    from datetime import datetime
-    from uuid import uuid4
-
-    import pynwb
-    from dateutil.tz import tzlocal
-    from pynwb import NWBHDF5IO
-
-    for spec in streams:
-        if "timestamps" in spec:
-            raise ValueError(
-                "Per-sample timestamps are neuroconv's job: build the .nwb with ExternalVideoInterface and pair over it"
-            )
-
-    nwbfile = pynwb.NWBFile(
-        session_description="NWB file for media alignment (ethograph generated).",
-        identifier=str(uuid4()),
-        session_start_time=datetime.now(tzlocal()),
-    )
-
-    # Trials table: only timing, no filenames
-    nwbfile.add_trial_column(name="trial", description="Trial number")
-    for _, row in trials.iterrows():
-        nwbfile.add_trial(
-            trial=_coerce_trial_id(row["trial"]),
-            start_time=float(row["start_time"]),
-            stop_time=float(row["stop_time"]),
-        )
-
-    trial_starts = trials["start_time"].values.astype(float)
-    trial_stops = trials["stop_time"].values.astype(float)
-    n_trials = len(trials)
-
-    for spec in streams:
-        name = spec["name"]
-        files = spec["files"]
-        rate = spec.get("rate")
-        starting_time = spec.get("starting_time", None)
-
-        # Parse stream_device for device creation
-        parts = name.split("_", 1)
-        device_name = parts[1] if len(parts) > 1 else parts[0]
-        if device_name not in [d.name for d in nwbfile.devices.values()]:
-            nwbfile.create_device(name=device_name, description=f"Device {device_name}")
-
-        if len(files) == 1 and n_trials > 1:
-            # Session-wide: one file spanning all trials
-            t0 = starting_time if starting_time is not None else float(trial_starts[0])
-            n_samples = max(1, int((float(trial_stops[-1]) - t0) * rate)) if rate else 1
-            _add_external_series(nwbfile, name, files, [t0], [n_samples], rate)
-        else:
-            # Per-trial: one file per trial
-            seg_starts = []
-            seg_nsamples = []
-            for i in range(min(len(files), n_trials)):
-                t0 = float(trial_starts[i])
-                dur = float(trial_stops[i]) - t0
-                seg_starts.append(t0)
-                seg_nsamples.append(max(1, int(dur * rate)) if rate else 1)
-            _add_external_series(nwbfile, name, files[:n_trials], seg_starts, seg_nsamples, rate)
-
-    output = Path(output_path)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with NWBHDF5IO(str(output), "w") as io:
-        io.write(nwbfile)
-
     return output
 
 

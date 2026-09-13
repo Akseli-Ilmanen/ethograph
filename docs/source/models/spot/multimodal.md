@@ -1,5 +1,5 @@
 (target-spot-multimodal)=
-# Pose beside pixels: features in, or a teacher
+# Pixels + Pose (extra features/ model distillation)
 
 `eto.spot` reads video. Where pose exists too, there are two ways to use it,
 and both start from the same thing — a flat list of variables in your session
@@ -68,9 +68,9 @@ teacher:
 
 `train_teacher()` fits the **pose teacher** (`pose_model.PoseSpotter`): the
 listed features → a linear embedding → `depth` blocks of a parameter-free
-multi-scale temporal shift (UMEG-Net's: a slice of channels copied from
+multi-scale temporal shift (UMEG-Net's {cite:p}`umegnet2026`: a slice of channels copied from
 `t ± k` for each scale, so a block sees several ranges of context at no
-parameter cost) → a bi-GRU → a `K + 1` softmax, E2E-Spot's own output
+parameter cost) → a bi-GRU → a `K + 1` softmax, E2E-Spot's {cite:p}`hong2022e2espot` own output
 contract. Minutes on a GPU. Every epoch writes val predictions in E2E-Spot's
 schema, so `evaluate()` scores the teacher exactly as it scores a pixel run,
 and the sweep-chosen epoch writes its per-clip embeddings under
@@ -90,7 +90,8 @@ learn from a model that knows less than it does.
 
 ## Choosing between them
 
-- Pose available at inference → option 3 (after the LightGBM onset model,
+- Pose available at inference → option 3 (after the LightGBM lightgbm model {cite:p}`ke2017lightgbm`,
   which is the cheaper first try on the same features).
 - Pose available only for the labelled sessions → option 4, gated as above.
 - No pose → neither; E2E-Spot alone.
+

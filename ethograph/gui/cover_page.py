@@ -696,7 +696,7 @@ class CoverPage(QDialog):
             "  ·  <b>VIA-tracks</b> (<code>.csv</code>)"
         )
 
-        ephys_docs = "https://akseli-ilmanen.github.io/ethograph/getting_started/loading_ephys.html"
+        ephys_docs = "https://akseli-ilmanen.github.io/ethograph/getting_started/your_data/ephys.html"
         ephys = (
             "all Neo-supported formats, raw data (<code>.dat</code>, <code>.bin</code>, …) "
             "and Kilosort folders — "
@@ -944,7 +944,6 @@ class CoverPage(QDialog):
             return
         self._load_panel_borrowed = True
         io = self.io_widget
-        io.load_buttons_row.hide()
         # The panel's own Load button is replaced by the shared load bar
         # below the cards (which serves both drag & drop and custom set-up).
         io.load_button.hide()
@@ -959,7 +958,6 @@ class CoverPage(QDialog):
         io = self.io_widget
         self._load_host_layout.removeWidget(io.load_panel)
         io.load_button.show()
-        io.load_buttons_row.show()
         # Re-insert at the top of the IO widget (original position).
         io.layout().insertWidget(0, io.load_panel)
 
@@ -1574,13 +1572,14 @@ class CoverPage(QDialog):
         import pandas as pd
 
         from ethograph.gui.video_manager import probe_video
-        from ethograph.io.nwb_alignment import align_media_from_streams
+        from ethograph.io.pairing import pair_media
 
         if not cam_map and not audio_files:
             raise RuntimeError("No media files to build an alignment from.")
 
         details = details or {}
-        streams: list[dict] = []
+        row: dict[str, str] = {}
+        stream_rates: dict[str, float] = {}
         stop_time = 0.0
         for i, (video, pose) in enumerate(cam_map):
             if video is None:
@@ -1591,7 +1590,8 @@ class CoverPage(QDialog):
                     raise RuntimeError("A pose file dropped without a video needs its frame rate.")
                 duration = _pose_duration(pose, details.get("source_software"), pose_fps)
                 stop_time = max(stop_time, duration)
-                streams.append({"name": f"pose_cam-{i + 1}", "files": [pose], "rate": pose_fps})
+                row[f"pose_cam-{i + 1}"] = pose
+                stream_rates[f"pose_cam-{i + 1}"] = pose_fps
                 logger.info(
                     "Drop alignment cam-%d: standalone pose %s at %s fps",
                     i + 1,
@@ -1605,8 +1605,10 @@ class CoverPage(QDialog):
                     raise RuntimeError("An image-backed camera needs a pose file and its frame rate.")
                 duration = _pose_duration(pose, details.get("source_software"), pose_fps)
                 stop_time = max(stop_time, duration)
-                streams.append({"name": f"video_cam-{i + 1}", "files": [video], "rate": pose_fps})
-                streams.append({"name": f"pose_cam-{i + 1}", "files": [pose], "rate": pose_fps})
+                row[f"video_cam-{i + 1}"] = video
+                stream_rates[f"video_cam-{i + 1}"] = pose_fps
+                row[f"pose_cam-{i + 1}"] = pose
+                stream_rates[f"pose_cam-{i + 1}"] = pose_fps
                 logger.info(
                     "Drop alignment cam-%d: static image %s, pose %s at %s fps",
                     i + 1,
@@ -1621,7 +1623,8 @@ class CoverPage(QDialog):
                 raise RuntimeError(f"Could not read frame rate from {Path(video).name}.")
             duration = probe.nframes / fps if probe.nframes else 0.0
             stop_time = max(stop_time, duration)
-            streams.append({"name": f"video_cam-{i + 1}", "files": [video], "rate": fps})
+            row[f"video_cam-{i + 1}"] = video
+            stream_rates[f"video_cam-{i + 1}"] = fps
             logger.info(
                 "Drop alignment cam-%d: assumed fps=%s (from %s)%s",
                 i + 1,
@@ -1631,27 +1634,22 @@ class CoverPage(QDialog):
             )
             if pose:
                 # Pose shares the matching video's frame rate (per spec).
-                streams.append({"name": f"pose_cam-{i + 1}", "files": [pose], "rate": fps})
+                row[f"pose_cam-{i + 1}"] = pose
+                stream_rates[f"pose_cam-{i + 1}"] = fps
 
         for j, audio in enumerate(audio_files):
             rate, duration = _audio_info(audio)
             stop_time = max(stop_time, duration)
-            streams.append(
-                {
-                    "name": f"audio_mic-{j + 1}",
-                    "files": [audio],
-                    "rate": rate,
-                    "starting_time": 0.0,
-                }
-            )
+            row[f"audio_mic-{j + 1}"] = audio
+            stream_rates[f"audio_mic-{j + 1}"] = rate
 
         if stop_time <= 0.0:
             raise RuntimeError("Could not determine session duration from the dropped media.")
 
-        trials = pd.DataFrame({"trial": [1], "start_time": [0.0], "stop_time": [stop_time]})
+        pairing = pd.DataFrame([{"trial": 1, "start_time": 0.0, "stop_time": stop_time, **row}])
 
         out_path = self._drop_tmp_dir / f"alignment-{uuid4().hex[:8]}.tmp.nwb"
-        align_media_from_streams(trials, streams, out_path)
+        pair_media(pairing, stream_rates=stream_rates, output_path=out_path)
         return out_path
 
     def _prepare_drop_dir(self) -> Path:

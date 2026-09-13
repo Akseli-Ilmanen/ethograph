@@ -18,18 +18,11 @@ features and changepoints.
 Conda environments, extras, troubleshooting.
 :::
 
-:::{grid-item-card} {fas}`bolt` Ephys
-:link: loading_ephys
+:::{grid-item-card} {fas}`list-check` Bring your own data
+:link: your_data/index
 :link-type: doc
 
-Supported formats, Kilosort output, and the two trace viewers.
-:::
-
-:::{grid-item-card} {fas}`list-check` Preparing your own data
-:link: preparing_data
-:link-type: doc
-
-Dataset schema, trial structure, and media alignment for trialized data.
+Dataset schema, trials, media alignment, ephys recordings and folder layout.
 :::
 
 ::::
@@ -40,7 +33,5 @@ Dataset schema, trial structure, and media alignment for trialized data.
 
 user_manual
 installation
-loading_ephys
-preparing_data
-video_and_ephys
+your_data/index
 ```

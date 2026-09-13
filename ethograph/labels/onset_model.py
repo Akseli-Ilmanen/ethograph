@@ -164,7 +164,7 @@ _TRAIN_DIR = "train_data"
 
 @dataclass
 class OnsetModelConfig:
-    """Frozen description of one onset model (written once, at creation)."""
+    """Frozen description of one lightgbm model (written once, at creation)."""
 
     name: str
     #: label id -> label name, one entry per point-event class the model

@@ -24,6 +24,13 @@ How to contribute to ethograph.
 What's coming next.
 :::
 
+:::{grid-item-card} {fas}`book` References
+:link: references
+:link-type: doc
+
+Every paper and tool cited in the docs.
+:::
+
 ::::
 
 ```{toctree}
@@ -32,4 +39,5 @@ What's coming next.
 people
 contributing
 roadmap
+references
 ```

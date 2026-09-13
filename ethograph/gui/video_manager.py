@@ -542,24 +542,6 @@ class VideoManager:
         self._cleanup_primary_video()
         self._setup_primary_video(frame)
 
-    def reset_primary_video(self) -> None:
-        """Tools ▸ Reset video view — rebuild the primary ``PlotVideo`` in place.
-
-        The proven recovery for a dead render chain (a frozen image while
-        audio and the playhead keep moving) without closing and re-adding the
-        panel. Safe against the cold-worker shared-memory race documented in
-        ``CameraView.set_video``: a *frozen* plot's worker is warm, so
-        ``close()``'s join succeeds before the new worker spawns.
-        """
-        video = getattr(self.app_state, "video", None)
-        if video is not None and video.is_playing:
-            video.stop()
-        if not self.primary_view.has_video:
-            notify("No video is loaded.", "warning")
-            return
-        self._reload_primary()
-        notify("Video view was rebuilt.")
-
     def _reload_extra(self, view: CameraView) -> None:
         camera = getattr(view, "camera_name", None)
         src = getattr(view, "source_video_path", None)

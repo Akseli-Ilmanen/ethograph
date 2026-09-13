@@ -1,6 +1,6 @@
 """Find label inconsistencies — filter the trials table by what the labels do.
 
-**Tools ▸ Find label inconsistencies…**
+**Tools ▸ Labels: Find label inconsistencies…**
 
 The trials table filters on *metadata*: genotype, session, drug. This filters
 on the *labels*: which trials have one event without its partner, which ran

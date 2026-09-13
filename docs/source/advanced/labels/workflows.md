@@ -2,17 +2,16 @@
 # Curation workflows
 
 Reviewing a model's output is the same handful of moves every session: narrow
-the trials table to one condition, run the onset model over what is left, drop
+the trials table to one condition, run the lightgbm model over what is left, drop
 the predicted classes into the curation scope, open a grid laid out the way
 that behaviour needs, walk the boundaries, save. A **workflow** is that
 sequence written down once and replayed with one button.
 
-Open it from **Workflows…** at the bottom of the Curation section, or from
-**Model ▸ Curation workflows…** — a workflow usually starts with a prediction,
-so it sits next to *LightGBM: Predict…* as well.
+Open it from **Model ▸ Curation workflows…** in the top bar — a workflow usually starts with a
+prediction, so it sits next to *LightGBM: Predict…*.
 
 Workflows are stored as plain YAML in `~/.ethograph/defaults/workflows/{name}.yaml`,
-the same global store as the onset models they invoke — so a workflow written
+the same global store as the lightgbm models they invoke — so a workflow written
 while curating one dataset is there for the next one.
 
 ## Recording one
@@ -36,12 +35,15 @@ Everything is saved as you type, so there is no Save button — **New**,
 | Step | What it does |
 |------|--------------|
 | **Filter trials** | Sets the trials table's column filters. Every later step runs over exactly the trials the table then shows — this is the one trial filter (see {doc}`../metadata`). |
-| **Predict onsets** | Runs a trained LightGBM model over those trials, filling classes they do not already carry (see {doc}`onset_model`). |
+| **Predict onsets** | Runs a trained LightGBM model over those trials, filling classes they do not already carry (see {doc}`../../models/onset_model`). |
 | **Set curation scope** | Drops label classes into the Curation section's scope area and picks the curation mode. |
 | **Label grid view** | Opens the frame grid on the scope, from the chosen cameras, laid out and generated as configured. |
 | **Video grid** | Opens the clip player on the scope, from the chosen cameras. |
 | **Frame-by-frame review** | Starts the boundary review over the scope. |
-| **Curate the visible trials** | Marks every automated label in scope, across every visible trial, as curated — the **Curate visible trials…** button in the Curation section. The button asks first; a recorded step is already a deliberate choice, so it does not. |
+| **Curate trials' labels** | Marks every automated label of the chosen classes, in the chosen trials (current, all, filtered or hidden), as curated — **Curate…** in **Tools ▸ Labels: Bulk editing…**. An empty class list means whatever the curation scope holds. The dialog asks first; a recorded step is already a deliberate choice, so it does not. |
+| **Delete trials' labels** | Deletes every label of the chosen classes in the chosen trials — every labeling method, not just automated. |
+| **Purge short labels** | Deletes state-interval labels of the chosen classes shorter than a threshold, in the chosen trials. Point events are never touched. |
+| **Correct offsets** | Pulls back each label's offset across a near-zero gap to the next onset of the same subject, in the chosen trials, so every interval is strictly separated. Not scoped by label class: a subject's whole sequence has to be seen together. |
 | **Save labels** | Writes the labels TSV, exactly as `Ctrl+S` does. |
 
 Each step drives the same widgets you would: there is no second way of
@@ -69,12 +71,13 @@ A **Save labels** step at the end means the session's work is on disk before
 you stop paying attention.
 
 ```{warning}
-**Curate the visible trials** is *not* a follow-up to a grid worked through in
+**Curate trials' labels** is rarely a follow-up to a grid worked through in
 *Click = uncurated, rest = curated*. That mode's **Done** already curates every
 unclicked automated label the grid is showing — in the video grid the whole
 grid, in the label grid the class its **Label** filter is on (all of them when
-it is not filtering) — which is the same set this step computes, so it would
-find nothing left to do.
+it is not filtering) — so a step over the same trials and classes would find
+nothing left to do. It only reaches further when its trials or label classes
+reach beyond what the grid showed.
 
 It is for the flows where nothing swept up: a grid where **Done** only curated
 the handful you clicked, a label grid narrowed to one class so the others were

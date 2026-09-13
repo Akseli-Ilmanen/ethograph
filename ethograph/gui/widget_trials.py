@@ -645,7 +645,7 @@ class TrialsWidget(QWidget):
     def set_label_filter(self, trials, note: str = "") -> int:
         """Restrict to *trials* on top of the column filters; ``None`` clears it.
 
-        Set by **Tools ▸ Find label inconsistencies…**, which works out which
+        Set by **Tools ▸ Labels: Find label inconsistencies…**, which works out which
         trials look wrong from the labels themselves — something no metadata
         column knows. It is deliberately a separate slot from the column
         filters: clearing one leaves the other alone, and the status line says

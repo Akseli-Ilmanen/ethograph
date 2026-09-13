@@ -6,6 +6,7 @@
 
    getting_started/index
    advanced/index
+   models/index
    examples/index
    api_index
    community/index
@@ -224,7 +225,7 @@ Quickstart
 
    <script>
    (function(){
-   var PREP='getting_started/preparing_data.html';
+   var PREP='getting_started/your_data/index.html';
    var st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,trials:null},cur=0;
 
    function clearErr(){document.querySelectorAll('.dcerr').forEach(function(e){e.classList.remove('won');});}
@@ -345,7 +346,7 @@ Quickstart
          +'min/max downsampling keeps the waveform and spectrogram fast with no manual downsampling.</li>'
          +'<li><strong>Write an xarray script</strong> &mdash; needed for arrays with more than two '
          +'dimensions. Wrap your data in an <code>xr.Dataset</code>; see '
-         +'<a href="'+PREP+'">Preparing your own data</a>.</li>'
+         +'<a href="'+PREP+'">Bring your own data</a>.</li>'
          +'</ul></div>'+importNote();
      }
      if(st.trials!=='yes'){
@@ -369,9 +370,11 @@ Quickstart
          +importNote();
      }
      return '<div class="dcres next"><h4>You need a session file</h4>'+tags()
-       +'<p>Your data has a trial structure, which drag &amp; drop cannot infer &mdash; it handles one '
-       +'recording session at a time. Build a session file plus an alignment file with a short Python '
-       +'script &mdash; see <a href="'+PREP+'">Preparing your own data</a>.</p></div>'+importNote();
+       +'<p>Your data has a trial structure. If it is one device with one file per trial, drag &amp; '
+       +'drop still works: choose <strong>Several trials of one device (natural sort)</strong> on the '
+       +'start page. Otherwise click <strong>Data wizard &mdash; prepare my data</strong> on the start '
+       +'page to build the session and alignment files, then open them in <strong>Custom set-up</strong> '
+       +'&mdash; see <a href="'+PREP+'">Bring your own data</a>.</p></div>'+importNote();
    }
 
    dcReset();
@@ -431,15 +434,16 @@ Support
    :width: 60%
 
 EthoGraph is built on top of a number of open-source projects:
-`PyAV <https://pyav.org/docs/stable/>`_,
-`audioio <https://github.com/bendalab/audioio>`_,
-`Neo <https://neo.readthedocs.io>`_,
-`crowsetta <https://github.com/vocalpy/crowsetta>`_,
-`Neurodata Without Borders <https://www.nwb.org/>`_,
-`xarray <https://docs.xarray.dev/>`_,
-`pynapple <https://pynapple.org/index.html>`_,
-`movement <https://movement.neuroinformatics.dev/>`_,
-`phy <https://github.com/cortex-lab/phy>`_,
-`PyQtGraph <https://www.pyqtgraph.org/>`_, and
-`pygfx <https://pygfx.org/>`_ (via
-`pynaviz <https://github.com/pynapple-org/pynaviz>`_).
+`PyAV <https://pyav.org/docs/stable/>`_ :cite:p:`pyav`,
+`audioio <https://github.com/bendalab/audioio>`_ :cite:p:`audioio`,
+`Neo <https://neo.readthedocs.io>`_ :cite:p:`garcia2014neo`,
+`crowsetta <https://github.com/vocalpy/crowsetta>`_ :cite:p:`nicholson2023crowsetta`,
+`Neurodata Without Borders <https://www.nwb.org/>`_ :cite:p:`rubel2022nwb`,
+`xarray <https://docs.xarray.dev/>`_ :cite:p:`hoyer2017xarray`,
+`pynapple <https://pynapple.org/index.html>`_ :cite:p:`viejo2023pynapple`,
+`movement <https://movement.neuroinformatics.dev/>`_ :cite:p:`sirmpilatze_movement`,
+`phy <https://github.com/cortex-lab/phy>`_ :cite:p:`rossant2016phy`,
+`PyQtGraph <https://www.pyqtgraph.org/>`_ :cite:p:`pyqtgraph`, and
+`pygfx <https://pygfx.org/>`_ :cite:p:`klein_pygfx` (via
+`pynaviz <https://github.com/pynapple-org/pynaviz>`_ :cite:p:`pynaviz`).
+The full list is on the :doc:`references page <community/references>`.

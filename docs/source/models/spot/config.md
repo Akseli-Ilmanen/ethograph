@@ -61,8 +61,8 @@ session has no role; `train.split` gives every trial one.
 |---|---|---|
 | `classes` | required | The point-event label ids to spot. Their order is the order the events happen in (first contact before last contact): `infer.flag_out_of_order` reads it. |
 | `camera` | the alignment's default | Which camera's video, one per project. |
-| `crop` | `null` | `{x0, y0, x1, y1}` in source pixels, cut from the decoded frame **before** the resize, so a tight crop spends the model's pixels on less scene. Must fit inside every trial's video for the camera — checked at materialise time. The GUI writes it: Tools ▸ Video ▸ *Pick a crop for a config…*. |
-| `frame_height` | `224` | Height the (cropped) frame is resized to; width follows the aspect ratio. E2E-Spot's own. |
+| `crop` | `null` | `{x0, y0, x1, y1}` in source pixels, cut from the decoded frame **before** the resize, so a tight crop spends the model's pixels on less scene. Must fit inside every trial's video for the camera — checked at materialise time. The GUI writes it: Tools ▸ *Video: Pick a crop for a config…*. |
+| `frame_height` | `224` | Height the (cropped) frame is resized to; width follows the aspect ratio. E2E-Spot's own {cite:p}`hong2022e2espot`. |
 
 ## `clip`
 
@@ -98,7 +98,7 @@ card uses the run's stride. A strided prediction is read back at the
 
 | Key | Default | Meaning |
 |---|---|---|
-| `architecture` | `rny008_gsm` | Upstream's `--feature_arch`: a backbone plus a temporal module. `rny008_gsm` is E2E-Spot's own; `rny008_msagsm` swaps the Gate Shift Module for the multi-scale one. `eto.spot.architectures()` lists the names, `describe_architecture(name)` says what each is; an unknown name is refused before any frame is decoded. |
+| `architecture` | `rny008_gsm` | Upstream's `--feature_arch`: a backbone plus a temporal module. `rny008_gsm` is E2E-Spot's own {cite:p}`hong2022e2espot,radosavovic2020regnet,sudhakaran2020gsn`; `rny008_msagsm` swaps the Gate Shift Module for the multi-scale one {cite:p}`msagsm2025`. `eto.spot.architectures()` lists the names, `describe_architecture(name)` says what each is; an unknown name is refused before any frame is decoded. |
 | `head` | `gru` | Upstream's `--temporal_arch`. |
 | `shift_scales_ms` | `[40, 80, 120]` | MSAGSM only: how far each gated-shift branch reaches, in milliseconds, resolved against the *strided* clock. The paper's `{1, 2, 3}` frames at 25 fps. |
 | `attention_groups` | `2` | MSAGSM only: channel groups of its spatial attention (the paper's 2). |
@@ -108,7 +108,7 @@ card uses the run's stride. A strided prediction is read back at the
 | Key | Default | Meaning |
 |---|---|---|
 | `run_name` | `ctx{context_s}s_res{resolution_ms}ms` | The run's folder under `runs/`; `_features` is appended when the features are fed in. Two runs with one name overwrite each other — name a second run of the same clip. |
-| `epochs` | `8` | Every run trains its full budget; the epoch used afterwards is the one the sweep ranks first on the run's own validation predictions (fewest misses, then most within 20 ms), never the last and never `val_mAP`. |
+| `epochs` | `8` | Every run trains its full budget; the epoch used afterwards is the one the sweep ranks first on the run's own validation predictions (fewest misses, then most within 4 frames, 20 ms at 200 fps), never the last and never `val_mAP`. |
 | `epoch_frames` | `250000` | Frames per epoch. What an epoch costs, whatever the trial count (~6.5 min per 250 k at 3.2 it/s on one RTX 3080). |
 | `learning_rate` | `1e-3` | Linear warm-up then cosine, upstream's schedule. |
 | `warm_up_epochs` | `1` | Epochs of warm-up; must be fewer than `epochs`, or the cosine has nothing left. |
@@ -166,7 +166,7 @@ a GPU; distilled into the pixel model by `distil()`.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `shift_scales_ms` | `[40, 80, 160]` | Temporal shift scales of the blocks, in ms, resolved against the features' own rate (UMEG-Net's `{1, 2, 4}` frames at 25 fps). |
+| `shift_scales_ms` | `[40, 80, 160]` | Temporal shift scales of the blocks, in ms, resolved against the features' own rate (UMEG-Net's `{1, 2, 4}` frames at 25 fps {cite:p}`umegnet2026`). |
 | `hidden` | `64` | Width of every block. |
 | `depth` | `4` | Stacked blocks. |
 | `shift_fraction` | `0.125` | Channels shifted forward and backward, as a fraction of `hidden`. |
@@ -191,7 +191,7 @@ labels. Both are ordinary runs under `runs/{baseline}_distil_{fingerprint}/`.
 | Key | Default | Meaning |
 |---|---|---|
 | `teacher_run` | the one whose embeddings are under `features/embeddings/` | The teacher run under `teacher/` to distil from. A mismatch is refused. |
-| `init_run` | the newest label-only run | The baseline the student starts from; must agree about `features_as_input`. |
+| `init_run` | the newest trained run (refused if it is a distilled student) | The baseline the student starts from; must agree about `features_as_input`. |
 | `epochs`, `epoch_frames`, `learning_rate` | `6`, `250000`, `1e-4` | The embedding-matching step. |
 | `head_epochs`, `head_learning_rate` | `4`, `1e-4` | The head step. |
 | `retries` | `2` | As `train.retries`. |
@@ -200,9 +200,10 @@ labels. Both are ordinary runs under `runs/{baseline}_distil_{fingerprint}/`.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `focus_window_ms` | `100` | ± this around the tallest peak counts as the same event when reading `focus`/`ratio` off a curve — twice the precision you believe your labels to (the onset model takes it from its `tolerance_s`). See the confidence page. |
+| `focus_window_ms` | `100` | ± this around the tallest peak counts as the same event when reading `focus`/`ratio` off a curve — twice the precision you believe your labels to (the lightgbm model takes it from its `tolerance_s`). See the confidence page. |
 | `flag_out_of_order` | `false` | A trial whose predicted events are not in `labels.classes` order has every event's confidence set to 0 — flagged, never reordered or dropped. |
-| `source` | `spot:{run}@{epoch}` | Written into every predicted row's `prediction_source`. |
+| `source` | `spot:{run}@{epoch}` | Currently unused: every predicted row's `prediction_source` is always `spot:{run}@{epoch}`. |
+| `flag_confidence_below` | `0.01` | Events below this confidence are logged as flagged, never dropped. |
 | `jpeg_roundtrip` | `true` | Inference decodes the video straight into the model; each frame passes through JPEG in memory first, so the model sees what training saw (the export writes JPEGs). Off = an ablation. |
 | `confidence` | `product` | Which reading of a prediction's curve is written as its `confidence`: `product` (focus × ratio), `ratio` (one candidate or two), `focus` (sharp or smeared), `peak`, or `custom` = `ratio × (α + (1 − α)·focus)`. The grids' histogram popup previews these on a session's curves and its **Copy for project.yaml** button hands you these lines. |
 | `confidence_alpha` | `0.5` | α of the `custom` rule; ignored otherwise. |
@@ -238,5 +239,6 @@ cross_validation/{session}/           one project per fold, its own dataset/ and
 
 Predictions land beside each session, never under `root`:
 `{session}/labels/predictions_spot_{run}_{timestamp}/` holds the labels TSV
-the GUI imports and `onset_curves.npz`, the curves frame-by-frame review
+(`{stem}_predictions.tsv`) the GUI imports and `onset_curves.npz`, the curves frame-by-frame review
 draws.
+

@@ -371,7 +371,7 @@ def build_alignment_nwb(key: str) -> None:
     import pandas as pd
 
     import ethograph as eto
-    from ethograph.io.nwb_alignment import align_media_per_trial
+    from ethograph.io.pairing import pair_media
     from ethograph.utils.stream_durations import (
         get_audio_duration,
         get_video_duration,
@@ -416,7 +416,7 @@ def build_alignment_nwb(key: str) -> None:
             if sr is not None:
                 stream_rates["audio"] = float(sr)
 
-    align_media_per_trial(trial_table, stream_rates=stream_rates, output_path=nwb_path)
+    pair_media(trial_table, stream_rates=stream_rates, output_path=nwb_path)
     logger.info("Created alignment NWB: %s", nwb_path)
 
 

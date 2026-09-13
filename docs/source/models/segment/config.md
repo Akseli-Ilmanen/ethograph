@@ -15,11 +15,6 @@ project = eto.segment.Project("project.yaml", "model.architecture=mstcn")
 project.update("train.run_name=mstcn", "train.augment.stretch=[0.8,1.2]")
 ```
 
-```{important}
-An unknown key is an error, in the file and in an override alike — a typo
-must not silently become a default. The message names the valid keys of the
-section it failed in.
-```
 
 ## Top level
 
@@ -27,21 +22,11 @@ section it failed in.
 |---|---|---|
 | `root` | the config's folder | Project directory: `data/` and `runs/` live here. |
 | `sessions` | required | List of sessions: `{source, labels_path, video_dir, alignment, name}`. `alignment` reads the trials from that NWB instead of the source's own sidecar — the same file listed twice, once with its behaviour trials and once with windows tiled over a sleep epoch ({func}`ethograph.segment.windows.write_windows_alignment`), is two sessions of one recording; give the second a `name`. |
+| `individual` | `null` | The one individual a single-animal project's samples belong to, stamped into every exported label's `individual`. Equivalent to `features.individuals: [name]`; set only one of them. |
 | `trials.where` | `{}` | Metadata column → allowed values. The one trial filter; applied in every stage. |
+| `trials.limit` | `null` | Keep only the first N trials that pass `where`, in session order — a smoke run before a long one. `null` = all. |
 
-```{important}
-A session has **no role**. Every session you list is material for the model,
-and what a trial is *used for* comes from `train.split` — three ratios, drawn
-by whole trial. Holding a whole session out is a cross-validation fold, which
-`project.cross_validate()` writes per fold (`train.split.holdout_sessions`);
-it is not something you write per session. See `train.split` below.
-```
 
-```{important}
-Every session names its own `labels_path` explicitly — there is no
-`{stem}_labels.tsv` sidecar guess. `video_dir`, when the session has video, is
-the one folder searched for it (no project-level list to fall through).
-```
 
 ## `features`
 
@@ -127,7 +112,7 @@ mask, so a pynapple session with this set raises immediately.
 
 **The scales are read off the labels.** With `sigmas`, `horizon` and
 `max_length` left out, `materialise` derives them from the durations of the
-curated state labels of the branch's classes (over the trials the config
+curated state events of the branch's classes (over the trials the config
 selects, at the rate of the first mask), writes them into the dataset's
 `columns.yaml` under `changepoint_features` together with a `note` saying
 exactly what was read off what, and every later stage reads them back from
@@ -248,7 +233,7 @@ Applied at `train`/`infer` (run-level, not materialise):
 
 | Key | Default | Meaning |
 |---|---|---|
-| `architecture` | `c2f_tcn` | Which network to train. `eto.segment.architectures()` lists the names. |
+| `architecture` | `c2f_tcn` | Which network to train (the default is {cite:t}`singhania2021c2ftcn`). `eto.segment.architectures()` lists the names. |
 | `params` | `{}` | Change individual hyperparameters of that network. Keys you leave out keep their default. |
 
 ```yaml
@@ -269,7 +254,7 @@ ethograph/segment/dlc2action/config/model/{architecture}.yaml
 One name differs from its file: `mstcn` reads `ms_tcn3.yaml`. Every other
 architecture matches.
 
-The two skeleton-graph architectures (`specscalpel`, `lady`) are the
+The two skeleton-graph architectures (`specscalpel` {cite:p}`ji2026specscalpel`, `lady` {cite:p}`ji2026lady`) are the
 exception to "params are architecture hyperparameters only": their `params`
 also carry the **joint layout** — `keypoints` (the ordered keypoint names) and
 `skeleton` (a skeleton-config YAML, an ndx-pose `.nwb`, or `[a, b]` pairs) — and,
@@ -313,9 +298,9 @@ For what each architecture is good at, see {doc}`index`.
 | `select_on` | `f1@50` | Which validation metric decides the kept checkpoint: `acc`, `edit`, `frame_f1`, `f1@50`, `f1@75`, `f1@90`. Pick the one that matches what you need from the model — `f1@50` for "did it find the behaviour", `f1@90` for "are the boundaries right", `edit` for "is the sequence of behaviours right". |
 | `f1_thresholds` | `[0.5, 0.75, 0.9]` | IoU thresholds of the segmental F1 scores. |
 | `seed`, `device` | `0`, auto | `device` = `cuda`, `mps`, `cpu`; auto picks the best available. |
-| `drop_kinds` | `[]` | Feature categories to leave out of this run — the ablation axis (see {doc}`../variable_schema`). `[video_feature]` trains the same model without the video features. Applied to the materialised dataset's columns, so an ablation costs a run rather than a re-materialisation; columns whose `kind` is undeclared are always kept. |
+| `drop_kinds` | `[]` | Feature categories to leave out of this run — the ablation axis. `[video_feature]` trains the same model without the video features. Applied to the materialised dataset's columns, so an ablation costs a run rather than a re-materialisation; columns whose `kind` is undeclared are always kept. |
 | `frame_weight` | `1.0` | Weight of `train.loss` in the total. `0` leaves `train.circle` as the only thing training. |
-| `subsample` | `1` | Train and predict at `fs / subsample` — the temporal-resolution axis, run-level like `drop_kinds`, so one materialised dataset serves every rate. Every frame count the run reports (its metrics, its `_probs.npz`) is then in *its* frames, so runs at different rates are only comparable once their predictions are scored back on one grid (`scripts/experiment2_smoothing.py` does that). Striding, with no anti-alias filter. |
+| `subsample` | `1` | Train and predict at `fs / subsample` — the temporal-resolution axis, run-level like `drop_kinds`, so one materialised dataset serves every rate. Every frame count the run reports (its metrics, its `_probs.npz`) is then in *its* frames, so runs at different rates are only comparable once their predictions are scored back on one grid. Striding, with no anti-alias filter. |
 
 ### Losses
 
@@ -342,9 +327,9 @@ stops the output flickering between classes mid-behaviour.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `alpha` | `0.001` | Weight of the consistency term. Raise it if predictions flicker; lower it if short behaviours are being swallowed by their neighbours. The default is DLC2Action's, at which the term barely registers; MS-TCN's published value is `0.15`, which is what the earlier CETNet training script used and what `scripts/bench.py` pins when it asks whether the term helps at all. |
+| `alpha` | `0.001` | Weight of the consistency term. Raise it if predictions flicker; lower it if short behaviours are being swallowed by their neighbours. The default is DLC2Action's {cite:p}`kozlova2025dlc2action`, at which the term barely registers; MS-TCN's {cite:p}`abufarha2019mstcn` published value is `0.15`, which is what the earlier CETNet training script used and what `scripts/bench.py` pins when it asks whether the term helps at all. |
 | `candidate_gate` | `null` | Do not smooth across changepoint candidates. The consistency term normally penalises every frame-to-frame change in the prediction, including the ones at real boundaries; with the gate on it skips the change into and out of each candidate frame, so a boundary that sits on a candidate is free and everything else is smoothed as before. `null` = on when the inputs include a `{var}_cp_binary` column, off otherwise; `true` / `false` force it. |
-| `tau` | `4` | How large a frame-to-frame jump in log-probability that term still penalises; beyond `tau` it is truncated, so a genuine class change is not punished without limit. Ours, not a key of a config file upstream: DLC2Action writes MS-TCN's `tau` of 4 into the arithmetic as `clamp(..., max=16)`. Both it and `alpha` were tuned in the literature at 15–30 fps, so at a high sampling rate they are worth re-tuning together — that is what `scripts/experiment2_smoothing.py` sweeps. |
+| `tau` | `4` | How large a frame-to-frame jump in log-probability that term still penalises; beyond `tau` it is truncated, so a genuine class change is not punished without limit. Ours, not a key of a config file upstream: DLC2Action writes MS-TCN's `tau` of 4 into the arithmetic as `clamp(..., max=16)`. Both it and `alpha` were tuned in the literature at 15–30 fps, so at a high sampling rate they are worth re-tuning together. |
 | `focal` | `true` | Focus the loss on frames the model still gets wrong, instead of ones it already has right. |
 | `gamma` | `2` | How sharply `focal` does that. Higher = more focus on hard frames. No effect when `focal: false`. |
 | `weights` | `null` | Per-class multipliers on the cross-entropy, as a list one entry per class (background first). `null` treats every class alike.
@@ -364,8 +349,8 @@ on each, live in `ethograph/segment/dlc2action/config/losses.yaml`.
 
 ### `train.circle`
 
-A deep metric-learning term over the finest-stage logits (Sun et al. 2020,
-circle loss) — pulls same-class frames' logit vectors together and pushes
+A deep metric-learning term over the finest-stage logits (circle loss
+{cite:p}`sun2020circle`) — pulls same-class frames' logit vectors together and pushes
 different-class ones apart, independent of the frame cross-entropy above.
 Architecture-agnostic — every registered model produces logits.
 
@@ -529,7 +514,7 @@ stage of the workflow rather than a setting: see {doc}`index`.
 
 ## `search`
 
-Stage 1 of the workflow: [Optuna](https://optuna.org) over the config, every
+Stage 1 of the workflow: Optuna {cite:p}`akiba2019optuna` over the config, every
 trial a full training run scored by `train.select_on` on the **validation**
 trials. Run it with `project.search()`.
 
@@ -589,7 +574,7 @@ seconds — frame counts come from each video's own rate. See {doc}`video_featur
 
 | Key | Default | Meaning |
 |---|---|---|
-| `extractor` | `s3d` | The network, by registry name: `s3d` (clip-wise; Kinetics-400 S3D) or `timm` (frame-wise; any timm image backbone; `pip install 'ethograph[timm]'`). Names the sidecar suffix and the merged variable. |
+| `extractor` | `s3d` | The network, by registry name: `s3d` (clip-wise; Kinetics-400 {cite:p}`kay2017kinetics` S3D {cite:p}`xie2018s3d`) or `timm` (frame-wise; any timm {cite:p}`wightman2019timm` image backbone; `pip install 'ethograph[timm]'`). Names the sidecar suffix and the merged variable. |
 | `model_name` | `null` | `timm` only: the backbone. `null` = `vit_base_patch14_reg4_dinov2.lvd142m` (DINOv2 ViT-B/14). |
 | `stack_s` | `null` | `s3d` only: temporal extent of one window — how much motion context each frame's feature sees. `null` = 0.5 s. |
 | `analysis_fps` | `null` | Rate the network sees; frames are skipped to reach it, never interpolated up, so halving this roughly halves the cost. `null` = every frame. |
@@ -618,6 +603,7 @@ Sidecars go to `{root}/video_features/`.
 | Key | Default | Meaning |
 |---|---|---|
 | `run` | `train.run_name` | Run name (exact or base) or a run directory under `runs/`; a base name resolves to its most recently trained timestamped run (`project.inference(run=…)` overrides it for one call). |
+| `threshold` | `0.5` | Multi-label targets: a channel is on where its sigmoid exceeds this. Exclusive targets argmax and never read it. |
 
 ### `infer.postprocess`
 
@@ -643,7 +629,7 @@ read as zeroed parameters (purge off → `min_duration_s: 0`, stitch off →
 `stitch_gap_s: 0`, snap off → `changepoint_correction: false`). Spell the
 values instead when one project needs settings the GUI does not hold.
 `changepoints` has no GUI counterpart and is always the config's. See
-`docs/adr/0006-postprocess-from-gui-settings.md`.
+`notes/adr/0006-postprocess-from-gui-settings.md`.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -651,7 +637,7 @@ values instead when one project needs settings the GUI does not hold.
 | `min_duration_s` | `0` | Drop predicted labels shorter than this (`0` = off). |
 | `label_thresholds` | `{}` | Per-label-id minimum durations overriding `min_duration_s`. |
 | `stitch_gap_s` | `0` | Merge same-label predictions separated by less than this. |
-| `changepoint_correction` | `false` | Snap onsets/offsets to the session's changepoint masks (xarray sessions only; see {doc}`../variable_schema`). |
+| `changepoint_correction` | `false` | Snap onsets/offsets to the session's changepoint masks (xarray sessions only). |
 | `changepoints` | `{}` | Selections pinning those variables (e.g. `{keypoint: beakTip}`); the individual is pinned per sample. |
 | `max_expansion_s`, `max_shrink_s` | `0.05`, `0.05` | How far an interval edge may move outwards / inwards when snapping. |
 
@@ -690,3 +676,4 @@ cross_validation/{name}/
   folds.tsv          one row per fold: session, run, run_dir, best_epoch, held-out metrics, predictions
   crossval.log       everything logged during the folds
 ```
+

@@ -105,6 +105,12 @@ class PynappleSource:
         return self._name
 
     @property
+    def time_support(self) -> list[tuple[float, float]]:
+        """The object's epochs as ``(start, end)`` pairs, session clock."""
+        ts = self._obj.time_support
+        return [(float(s), float(e)) for s, e in zip(ts.start, ts.end, strict=True)]
+
+    @property
     def time_range(self) -> TimeRange:
         if len(self._obj) == 0:
             return TimeRange(0.0, 0.0)

@@ -30,6 +30,7 @@ from qtpy.QtWidgets import (
 from ethograph.gui.project import project_dir_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.io.metadata_table import metadata_tsv_path
+from ethograph.io.pynapple import label_intervalsets
 from ethograph.io.validation import EPHYS_FILE_FILTER
 from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv
 from ethograph.utils.paths import (
@@ -155,29 +156,6 @@ class IOWidget(QWidget):
         self._load_layout.setSpacing(2)
         self._load_layout.setContentsMargins(0, 0, 0, 0)
         self.load_panel.setLayout(self._load_layout)
-
-        # Button row
-        self.reset_button = QPushButton("Reset gui_settings.yaml")
-        self.reset_button.setObjectName("reset_button")
-        self.reset_button.clicked.connect(self._on_reset_gui_clicked)
-
-        self.create_nc_button = QPushButton("🧙Data wizard")
-        self.create_nc_button.setObjectName("create_nc_button")
-        self.create_nc_button.clicked.connect(self._on_create_nc_clicked)
-
-        self.template_button = QPushButton("💡Select templates")
-        self.template_button.setObjectName("template_button")
-        self.template_button.clicked.connect(self._on_select_template_clicked)
-
-        # Wrapped in a QWidget so the cover page can hide this row while it
-        # hosts the load panel (the cover page has its own wizard/template buttons).
-        self.load_buttons_row = QWidget()
-        button_row = QHBoxLayout(self.load_buttons_row)
-        button_row.setContentsMargins(0, 0, 0, 0)
-        button_row.addWidget(self.reset_button)
-        button_row.addWidget(self.create_nc_button)
-        button_row.addWidget(self.template_button)
-        self._load_layout.addRow(self.load_buttons_row)
 
         # Path widgets
         self.nc_file_path_edit = self._create_path_widget(
@@ -565,7 +543,7 @@ class IOWidget(QWidget):
         )
         controls_row.addWidget(self.pred_confidence_threshold_spin)
 
-        controls_row.addWidget(QLabel("Segment thr (state labels only):"))
+        controls_row.addWidget(QLabel("Segment thr (state events only):"))
         self.pred_segment_confidence_threshold_spin = QDoubleSpinBox()
         self.pred_segment_confidence_threshold_spin.setRange(0.0, 1.0)
         self.pred_segment_confidence_threshold_spin.setSingleStep(0.05)
@@ -573,7 +551,7 @@ class IOWidget(QWidget):
         self.pred_segment_confidence_threshold_spin.setValue(0.6)
         self.pred_segment_confidence_threshold_spin.setToolTip(
             "Segment-level mean confidence threshold — segments below this are highlighted red.\n"
-            "Meaningful for state labels only: a point event has no span to average over, so this "
+            "Meaningful for state events only: a point event has no span to average over, so this "
             "threshold has no effect on it."
         )
         controls_row.addWidget(self.pred_segment_confidence_threshold_spin)
@@ -581,7 +559,7 @@ class IOWidget(QWidget):
         self.pred_confidence_pdf_btn = QPushButton("Update confidence (+ PDF)")
         self.pred_confidence_pdf_btn.setToolTip(
             "Regenerate confidence PDF with current thresholds and update low/high confidence classification.\n"
-            "The segment threshold only affects state labels — point events have no span to average over."
+            "The segment threshold only affects state events — point events have no span to average over."
         )
         self.pred_confidence_pdf_btn.setEnabled(False)
         controls_row.addWidget(self.pred_confidence_pdf_btn)
@@ -856,32 +834,16 @@ class IOWidget(QWidget):
     def _do_crowsetta_import(self, format_name, file_path):
         from ethograph.labels.converters import (
             crowsetta_to_intervals,
-            resolve_crowsetta_mapping,
+            extract_crowsetta_labels,
         )
 
-        data_dir = Path(self.app_state.nc_file_path).parent if self.app_state.nc_file_path else None
-        configs_dir = default_config_dir(data_dir)
-        mapping_path = self.mapping_file_path_edit.text()
-
         try:
-            name_to_id, new_mapping_path, warning = resolve_crowsetta_mapping(
-                file_path,
-                format_name,
-                mapping_path,
-                configs_dir,
-            )
+            names = extract_crowsetta_labels(file_path, format_name)
         except (OSError, ValueError, KeyError) as e:
-            logger.exception("Crowsetta mapping resolution failed")
-            notify_dialog(str(e), "error", "Mapping error", self)
+            logger.exception("Failed to parse %s file", format_name)
+            notify_dialog(f"Failed to parse {format_name} file:\n{e}", "error", "Import error", self)
             return
-
-        if warning:
-            notify_dialog(warning, "warning", "Mapping warning", self)
-
-        if new_mapping_path:
-            self.mapping_file_path_edit.setText(new_mapping_path)
-            if self.labels_widget:
-                self.labels_widget._reload_mapping(new_mapping_path)
+        name_to_id = self._extend_active_mapping(names)
 
         individual = "ind0"
         ds = getattr(self.app_state, "ds", None)
@@ -941,35 +903,15 @@ class IOWidget(QWidget):
             notify_dialog(f"Failed to load pynapple file:\n{e}", "error", "Import error", self)
             return
 
-        intervalsets = {}
-        for key in data.keys():
-            try:
-                val = data[key]
-            except Exception:
-                continue
-            if isinstance(val, nap.IntervalSet) and key.lower() != "trials":
-                intervalsets[key] = val
+        intervalsets = label_intervalsets(data)
 
         if not intervalsets:
-            notify_dialog("No IntervalSets found (excluding 'trials').", "info", "No labels", self)
+            notify_dialog("No IntervalSets found (excluding the trials).", "info", "No labels", self)
             return
 
-        from ethograph.labels.converters import (
-            build_mapping_from_labels,
-            write_mapping_file,
-        )
         from ethograph.labels.intervals import _rows_to_df
 
-        label_names = sorted(intervalsets.keys())
-        name_to_id = build_mapping_from_labels(label_names)
-
-        data_dir = Path(self.app_state.nc_file_path).parent if self.app_state.nc_file_path else None
-        configs_dir = default_config_dir(data_dir)
-        mapping_path = configs_dir / "mapping_pynapple.txt"
-        write_mapping_file(mapping_path, name_to_id)
-        self.mapping_file_path_edit.setText(str(mapping_path))
-        if self.labels_widget:
-            self.labels_widget._reload_mapping(str(mapping_path))
+        name_to_id = self._extend_active_mapping(list(intervalsets))
 
         individual = "ind0"
         ds = getattr(self.app_state, "ds", None)
@@ -1000,6 +942,22 @@ class IOWidget(QWidget):
             return
 
         self._apply_imported_intervals(intervals_df)
+
+    def _extend_active_mapping(self, names: list[str]) -> dict[str, int]:
+        """Name -> id for imported class *names*, adding the new ones to the mapping in use."""
+        from ethograph.labels.converters import extend_mapping
+
+        active = self.mapping_file_path_edit.text().strip()
+        if not active:
+            data_dir = Path(self.app_state.nc_file_path).parent if self.app_state.nc_file_path else None
+            active = str(default_config_dir(data_dir) / "mapping.txt")
+        name_to_id, added = extend_mapping(names, active)
+        if added:
+            notify(f"Added {len(added)} new label classes to {active}: {', '.join(added)}")
+        self.mapping_file_path_edit.setText(active)
+        if self.labels_widget:
+            self.labels_widget._reload_mapping(active)
+        return name_to_id
 
     def _apply_imported_intervals(self, intervals_df):
         """Common post-import: save converted TSV, load into app state, refresh UI."""
@@ -1057,7 +1015,6 @@ class IOWidget(QWidget):
         self._auto_discover_nwb()
         self._auto_discover_metadata()
         self._auto_import_crowsetta_labels()
-        self._apply_nwb_epoch_mapping()
 
     def _auto_populate_nwb_video_folder(self):
         """If the loaded NWB file downloaded trial clips, auto-fill the video folder field."""
@@ -1071,56 +1028,6 @@ class IOWidget(QWidget):
         self.video_folder_edit.setText(video_folder)
         self.app_state.video_folder = video_folder
         logger.info("NWB auto-set video folder: %s", video_folder)
-
-    def _apply_nwb_epoch_mapping(self):
-        """If NWB epochs were imported, write mapping file and load into labels widget.
-
-        Writes the mapping only on first load (when the file doesn't already
-        exist).  On subsequent loads the existing file is reused so user edits
-        (branch assignments, ``event_type`` toggles) are preserved.
-        """
-        dt = getattr(self.app_state, "dt", None)
-        if dt is None:
-            return
-        epoch_mapping = getattr(self.app_state, "nwb_epoch_mapping", None)
-        if not epoch_mapping or not isinstance(epoch_mapping, dict):
-            return
-
-        from ethograph.labels.intervals import (
-            EVENT_TYPE_STATE,
-            save_label_mapping,
-        )
-
-        data_dir = Path(self.app_state.nc_file_path).parent if self.app_state.nc_file_path else None
-        mapping_path = default_config_dir(data_dir) / "mapping_nwb_epochs.txt"
-
-        if not mapping_path.exists():
-            save_label_mapping(
-                mapping_path,
-                {
-                    label_id: {
-                        "name": name,
-                        "branch": 0,
-                        "event_type": EVENT_TYPE_STATE,
-                    }
-                    for name, label_id in epoch_mapping.items()
-                },
-            )
-            n_labels = len(epoch_mapping) - 1  # exclude background
-            logger.info(
-                "NWB auto-created mapping with %d epoch labels: %s",
-                n_labels,
-                mapping_path,
-            )
-        else:
-            logger.info(
-                "Reusing existing NWB epoch mapping (preserving user edits): %s",
-                mapping_path,
-            )
-
-        self.mapping_file_path_edit.setText(str(mapping_path))
-        if self.labels_widget:
-            self.labels_widget._reload_mapping(str(mapping_path))
 
     def _ensure_crowsetta_formats(self):
         """Add crowsetta formats to labels combo if not already present."""

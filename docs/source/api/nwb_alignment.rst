@@ -33,10 +33,6 @@ Creating alignment files
 
 .. currentmodule:: ethograph.io.nwb_alignment
 
-.. autofunction:: align_media_per_trial
-
-.. autofunction:: align_media_from_streams
-
 .. autofunction:: make_nwb_alignment
 
 .. autofunction:: discover_nwb

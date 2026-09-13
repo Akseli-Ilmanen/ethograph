@@ -5,7 +5,7 @@ to a list of events coded in observation-global time. This module:
 
 - parses the JSON project file,
 - splits events across media boundaries into trial-local intervals,
-- builds a per-file trial table for ``align_media_from_streams``.
+- builds a per-file trial table for ``pair_media``.
 
 Each media file becomes one ethograph trial (1-indexed).
 """

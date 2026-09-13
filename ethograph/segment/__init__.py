@@ -1,4 +1,4 @@
-"""Segmentation pipeline — learn state labels from trial-structured sessions.
+"""Segmentation pipeline — learn state events from trial-structured sessions.
 
 Everything is scripted: one YAML config becomes a
 :class:`~ethograph.segment.project.Project`, and each stage is a method on

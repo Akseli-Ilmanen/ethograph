@@ -9,8 +9,10 @@ import numpy as np
 import pandas as pd
 
 from ethograph.labels.intervals import (
+    EVENT_TYPE_STATE,
     _rows_to_df,
-    load_mapping,
+    load_label_mapping,
+    save_label_mapping,
 )
 from ethograph.labels.tsv_store import (
     TRIAL_META_DEFAULTS,
@@ -225,49 +227,38 @@ def write_mapping_file(
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def resolve_crowsetta_mapping(
-    file_path: str | Path,
-    format_name: str,
-    mapping_path: str | Path,
-    configs_dir: str | Path,
-) -> tuple[dict[str, int], str | None, str | None]:
-    """Check existing mapping against crowsetta labels; create new if needed."""
-    file_labels = extract_crowsetta_labels(file_path, format_name)
+#: Imported class names that mean "no behaviour" and are never added to a mapping.
+BACKGROUND_NAMES = frozenset({"background", "sil"})
 
+
+def extend_mapping(names: list[str], mapping_path: str | Path) -> tuple[dict[str, int], list[str]]:
+    """Name -> id for *names* in the mapping at *mapping_path*, appending any it lacks.
+
+    Existing classes keep their ids, branches and event types; a new name gets the
+    next free id as a state class on branch 0. The file is rewritten only when a
+    name was added, so one vocabulary serves every import format.
+
+    Returns the name -> id lookup and the names that were added.
+    """
     mapping_path = Path(mapping_path)
-    configs_dir = Path(configs_dir)
-
-    existing_names: set[str] = set()
-    if mapping_path.exists():
-        try:
-            with open(mapping_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    parts = line.strip().split()
-                    if len(parts) >= 2:
-                        existing_names.add(parts[1])
-        except (OSError, UnicodeDecodeError):
-            pass
-
-    non_bg_labels = [lbl for lbl in file_labels if lbl.lower() not in ("background", "sil")]
-    if not non_bg_labels:
-        non_bg_labels = file_labels
-
-    overlap = existing_names & set(non_bg_labels)
-
-    if overlap == set(non_bg_labels) and len(overlap) > 0:
-        class_to_idx, _ = load_mapping(str(mapping_path))
-        return class_to_idx, None, None
-
-    warning = None
-    if overlap and overlap != set(non_bg_labels):
-        missing = set(non_bg_labels) - overlap
-        warning = f"Mapping file contains {len(overlap)} of {len(non_bg_labels)} labels. Missing: {sorted(missing)}"
-
-    name_to_id = build_mapping_from_labels(non_bg_labels)
-    new_path = configs_dir / f"mapping_{format_name.replace('-', '_')}.txt"
-    write_mapping_file(new_path, name_to_id)
-
-    return name_to_id, str(new_path), warning
+    mappings = (
+        load_label_mapping(mapping_path)
+        if mapping_path.exists()
+        else {0: {"name": "background", "branch": 0, "event_type": EVENT_TYPE_STATE}}
+    )
+    name_to_id = {data["name"]: label_id for label_id, data in mappings.items() if isinstance(label_id, int)}
+    next_id = max(name_to_id.values(), default=0) + 1
+    added: list[str] = []
+    for name in sorted(set(names)):
+        if name in name_to_id or name.lower() in BACKGROUND_NAMES:
+            continue
+        mappings[next_id] = {"name": name, "branch": 0, "event_type": EVENT_TYPE_STATE}
+        name_to_id[name] = next_id
+        added.append(name)
+        next_id += 1
+    if added:
+        save_label_mapping(mapping_path, mappings)
+    return name_to_id, added
 
 
 # ---------------------------------------------------------------------------
@@ -357,14 +348,12 @@ class CrowsettaLabelConverter(LabelConverter):
 class PynappleLabelConverter(LabelConverter):
     """Extract labels from pynapple IntervalSet objects.
 
-    Collects every ``nap.IntervalSet`` in the data dict whose key is
-    **not** ``"trials"`` or ``"epochs"`` (those are trial boundaries,
-    not labels).  Each IntervalSet name becomes a label class.
+    Collects every ``nap.IntervalSet`` in the data dict except the one
+    :func:`~ethograph.io.pynapple.detect_trials` reads as trial boundaries.
+    Each IntervalSet name becomes a label class.
     """
 
     name = "pynapple_intervals"
-
-    SKIP_KEYS = frozenset({"trials", "epochs"})
 
     def __init__(self, data: dict, trials_ep=None) -> None:
         super().__init__()
@@ -374,15 +363,10 @@ class PynappleLabelConverter(LabelConverter):
             self._label_map = build_mapping_from_labels(sorted({e["label_name"] for e in self._epochs}))
 
     def _extract_interval_epochs(self, data: dict) -> list[dict]:
-        import pynapple as nap
+        from ethograph.io.pynapple import label_intervalsets
 
         epochs: list[dict] = []
-        for key, obj in data.items():
-            if not isinstance(obj, nap.IntervalSet):
-                continue
-            if key.lower() in self.SKIP_KEYS:
-                continue
-
+        for key, obj in label_intervalsets(data).items():
             meta_cols = list(getattr(obj, "metadata_columns", []))
             starts = np.asarray(obj.start)
             ends = np.asarray(obj.end)

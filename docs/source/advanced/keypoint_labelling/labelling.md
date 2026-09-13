@@ -74,7 +74,7 @@ Labelling consecutive frames is close to wasted effort: neighbouring frames look
 almost identical, so the second one tells the tracker nothing the first did not.
 The **Which frames to label** group proposes a spread instead. Ask for a *share*
 of the video — the default is **10%, roughly every 10th frame**, the density
-CoTracker3 is evaluated at for this task (6 labelled frames of 60[^pan]).
+CoTracker3 is evaluated at for this task (6 labelled frames of 60 {cite:p}`pan2025posepal`).
 
 | Method | What it picks | Use it |
 |---|---|---|
@@ -89,6 +89,3 @@ the end; plain `←` / `→` still move one frame at a time. There is no key for
 *previous* suggestion: the list is a queue to work down, and clicking a row of
 the points table seeks to any frame, suggested or not.
 
-## References
-
-[^pan]: Pan, Z., Pan, B., Yang, G., Harley, A. W. & Guibas, L. (2025). [Animal Pose Labeling Using General-Purpose Point Trackers](https://arxiv.org/abs/2506.03868). *arXiv:2506.03868*. [Project page](https://zhuoyang-pan.github.io/animal-labeling) · [Reference implementation](https://github.com/Zhuoyang-Pan/PosePAL)

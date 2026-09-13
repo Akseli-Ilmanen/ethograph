@@ -5,7 +5,7 @@ the user knows which relations matter better than any architecture can
 discover from three hundred events. So the pose side of this pipeline is
 **nothing but the variables you list**, in the segmentation pipeline's
 column spelling (:func:`~ethograph.features.columns.extract_features`, the
-same path the onset model reads through)::
+same path the lightgbm model reads through)::
 
     features:
       velocity: {space: [x, y], keypoint: [stickTip, pellet]}

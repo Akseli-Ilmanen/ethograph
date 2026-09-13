@@ -22,7 +22,7 @@ The classic ethogram-software workflow, for labelling from the video alone:
 2. Press the label's key. A **point event** is placed on that frame and you are done.
 3. For a **state event** the first press marks the start (a dashed anchor appears on the plots). Navigate to the end frame and press the same key again to close it. The playhead stays where you are, ready for the next label. Pressing a different label's key abandons the half-placed one and starts that class instead.
 
-To move an existing label in this mode, select it, press `Ctrl+E`, then press its key at the new start and again at the new end.
+To move an existing label in this mode, select it, press `Ctrl+E`, then press its key at the new start and again at the new end (a point event takes one press).
 
 With a video the boundary is the frame on screen, exactly as frame-by-frame
 curation commits it; without one it is the red time marker.
@@ -48,7 +48,7 @@ panel except the video, whatever backend the data came from. It holds two
 dropdowns:
 
 - **Individual** — the animal performing the behaviour. Switching it switches
-  the labels you see and create, exactly as before.
+  the labels you see and create.
 - **Receiver** — for dyadic interactions (one bird mounting another, one
   animal grooming another). It is `None` by default, meaning a solo behaviour.
 
@@ -59,6 +59,13 @@ trim each other exactly as two solo labels do. Every label of the individual
 is drawn whatever its receiver, a directed one carrying a small `→ partner`
 tag at its onset, and switching the receiver changes nothing on screen — only
 what the next label records.
+
+```{note}
+A new label is placed for the individual of the panel you last clicked —
+whether that panel follows the sidebar combo or is pinned to another animal
+(📌). The bottom bar shows `labelling: <individual>` so you always know whom
+the next label belongs to.
+```
 
 The pair is stored per label in the TSV's `individual` and `individual_rec`
 columns — see {ref}`the column reference <target-exporting-labels>`.
@@ -79,7 +86,7 @@ playing the video.
 
 Use the labels widget interface:
 
-- **Edit**: Select a label (Left-click), press `Ctrl + E`, then click twice to define new start/stop boundary.
+- **Edit**: Select a label (Left-click) and press `Ctrl + E`. Then click twice to set the new start and end, or once to move a point event. In the *at the current frame* mode, press the label's key at the new start and again at the new end instead (once for a point event).
 - **Delete**: Select a label (Left-click), press `Ctrl + D` to delete.
 
 ---
@@ -88,7 +95,7 @@ Use the labels widget interface:
 
 When a boundary must sit on an exact video frame, refine your existing labels
 frame-by-frame instead of re-placing them on the plots — see
-{doc}`curation`.
+{doc}`../../models/curation`.
 
 ---
 

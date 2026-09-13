@@ -1,5 +1,5 @@
 (target-loading-ephys)=
-# From an ephys recording
+# Ephys recordings
 
 Use this path for extracellular electrophysiology data, with optional Kilosort spike-sorting output.
 
@@ -12,7 +12,7 @@ Ephys is a **session-wide stream** — the raw recording file is selected in the
 ## Load it — drag & drop
 
 ```{tip}
-{doc}`Install EthoGraph <../getting_started/installation>` if you haven't already, then launch via shortcut or:
+{doc}`Install EthoGraph <../installation>` if you haven't already, then launch via shortcut or:
 `conda activate ethograph && ethograph launch`
 ```
 
@@ -114,4 +114,4 @@ EthoGraph reads `dat_path`, `n_channels_dat`, and `sample_rate` from it. If the 
 (target-ephys-multi-trial)=
 ## Ephys with multiple trials
 
-The native route is {doc}`video_and_ephys`: neuroconv puts the video on the recorder's clock and writes a `session.nwb` with trials. Without a sync line, {ref}`pair the files <target-nwb-alignment>` into a `session.nc` instead and select the ephys file in the GUI as above.
+The native route is to {ref}`align video to the recording system <target-video-and-ephys>`: neuroconv puts the video on the recorder's clock and writes a `session.nwb` with trials. Without a sync line, {ref}`pair the files <target-nwb-alignment>` into a `session.nc` instead and select the ephys file in the GUI as above.

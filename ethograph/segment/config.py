@@ -333,7 +333,7 @@ class ChangepointFeaturesConfig:
 
     **The temporal scales are read off the labels unless spelled.** Leave
     ``sigmas``, ``horizon`` and ``max_length`` out and ``materialise``
-    derives them from the durations of the curated state labels
+    derives them from the durations of the curated state events
     (:func:`~ethograph.features.changepoints.scales_from_durations`),
     records them in the dataset's ``columns.yaml`` with a ``note`` saying
     what happened, and every later stage reads them back from there, so a
