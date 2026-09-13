@@ -27,3 +27,4 @@ If your `NWB` files contains pose or spike times, you can visualize them for fre
   waveforms straight off the raw binary and still needs the Kilosort folder
   selected in the GUI.
 -> VERIFY THIS WORKS
+11) in docs/segment we mention that we take dataset structure where mapping.txt is single class per frame, put for multi label, mult inidividual this breaks down. Inestigate how claude solved this.
