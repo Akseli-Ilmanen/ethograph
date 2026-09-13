@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="../labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -506,8 +517,7 @@ producing more consistent annotations.</p>
 </tbody>
 </table>
 </div>
-<p>These four parameters can be set in frames or seconds. I would recommend
-using frames for kinematics and seconds for audio data.</p>
+<p>These four parameters are set in seconds.</p>
 </section>
 <hr class="docutils" />
 <section id="automatic-vs-manual-correction">
@@ -516,12 +526,12 @@ using frames for kinematics and seconds for audio data.</p>
 <ul class="simple">
 <li><p><strong>Checkbox “Changepoint correction”</strong>: When enabled, each click you make while drawing a label snaps to the nearest changepoint <strong>drawn on the panel you clicked</strong> — a feature panel’s masks for its feature at its own keypoint / individual selection, an audio panel’s audio changepoints — however far away that is. A mark you cannot see on that panel is never a snap target. This keeps hand-drawn annotations consistent in real time.</p></li>
 </ul>
-<p><strong>Manual (post-hoc, bulk application):</strong>
+<p><strong>Manual (post-hoc, bulk application) — in development:</strong>
 Manual correction is especially useful for cleaning up model predictions in bulk — run the detector once, then snap all predicted boundaries to changepoints across the dataset in one step.</p>
 <ul class="simple">
 <li><p><strong>Single Trial</strong>: Applies the full correction pipeline to the current trial’s labels.</p></li>
-<li><p><strong>All Trials</strong>: Applies correction to every trial. The dataset is marked as corrected to prevent double-application.</p></li>
-<li><p><strong>Undo</strong>: Reverts the last correction (single or all trials).</p></li>
+<li><p><strong>All Trials (Filtered only)</strong>: Corrects the trials that pass the trials-table filter; each trial where something snapped is marked corrected.</p></li>
+<li><p><strong>↻</strong> (Undo last manual correction): Reverts the last correction (single or all trials).</p></li>
 </ul>
 <hr class="docutils" />
 </section>

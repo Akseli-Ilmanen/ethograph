@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="../labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -464,7 +475,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="overview">
 <span id="target-changepoints-overview"></span><h1>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h1>
-<p>Changepoint detection methods (Xu et al., 2025) allow finding transitions in
+<p>Changepoint detection methods <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id144" title="Ruiyu Xu, Zheren Song, Jianguo Wu, Chao Wang, and Shiyu Zhou. Change-point detection with deep learning: a review. Frontiers of Engineering Management, 12(1):154–176, 2025. doi:10.1007/s42524-025-4109-z.">Xu <em>et al.</em>, 2025</a>]</span> allow finding transitions in
 time series data. This can be leveraged to identify <strong>candidates</strong> of action
 boundaries in various data formats (kinematic, audio, spectral).</p>
 <p><img alt="Changepoints overview" src="../../_images/changepoints0.gif" /></p>
@@ -478,8 +489,7 @@ refined by jumping to the nearest changepoint. For example, when labelling
 the onset of a movement, the user may click close to a speed minima, and
 the GUI will refine the selection to jump exactly to that minima. This
 increases the accuracy and consistency of human labelling.</p></li>
-<li><p>Changepoint detection methods often have a false-positive problem (Cohen,
-2022), where a large subset of the detections are not at real behavioural
+<li><p>Changepoint detection methods often have a false-positive problem <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id142" title="Yarden Cohen, David Aaron Nicholson, Alexa Sanchioni, Emily K. Mallaber, Viktoriya Skidanova, and Timothy J. Gardner. Automated annotation of birdsong with a neural network that segments spectrograms. eLife, 11:e63853, 2022. doi:10.7554/eLife.63853.">Cohen <em>et al.</em>, 2022</a>]</span>, where a large subset of the detections are not at real behavioural
 boundaries but false positives. Similarly, the changepoint algorithms
 often <strong>overspecify</strong> by providing too many changepoints. The
 human-in-the-loop through labelling can then specify which of these
@@ -500,16 +510,7 @@ unseen data.</p></li>
 <li><p><a class="reference internal" href="ruptures.html"><span class="doc">Ruptures</span></a> — general-purpose changepoint detection</p></li>
 <li><p><a class="reference internal" href="correction.html"><span class="doc">Changepoint correction</span></a> — label-boundary correction pipeline</p></li>
 </ul>
-</section>
 <hr class="docutils" />
-<section id="references">
-<h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>Cohen, Y., Nicholson, D. A., Sanchioni, A., Mallaber, E. K., Skidanova, V., &amp; Gardner, T. J. (2022). Automated annotation of birdsong with a neural network that segments spectrograms. eLife, 11, e63853. <a class="reference external" href="https://doi.org/10.7554/eLife.63853">https://doi.org/10.7554/eLife.63853</a></p></li>
-<li><p>Gu, N., Lee, K., Basha, M., Kumar Ram, S., You, G., &amp; Hahnloser, R. H. R. (2024). Positive Transfer of the Whisper Speech Transformer to Human and Animal Voice Activity Detection. ICASSP 2024. <a class="reference external" href="https://doi.org/10.1109/ICASSP48485.2024.10447620">https://doi.org/10.1109/ICASSP48485.2024.10447620</a></p></li>
-<li><p>Kozlova, E., Bonnetto, A., &amp; Mathis, A. (2025). DLC2Action: A Deep Learning-based Toolbox for Automated Behavior Segmentation. bioRxiv. <a class="reference external" href="https://doi.org/10.1101/2025.09.27.678941">https://doi.org/10.1101/2025.09.27.678941</a></p></li>
-<li><p>Xu, R., Song, Z., Wu, J., Wang, C., &amp; Zhou, S. (2025). Change-point detection with deep learning: A review. Frontiers of Engineering Management, 12(1), 154-176. <a class="reference external" href="https://doi.org/10.1007/s42524-025-4109-z">https://doi.org/10.1007/s42524-025-4109-z</a></p></li>
-</ul>
 </section>
 </section>
 
@@ -561,7 +562,6 @@ unseen data.</p></li>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next">Next</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
 </ul>
   </nav></div>
 

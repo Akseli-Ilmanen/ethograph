@@ -157,6 +157,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="index.html">
     Examples
   </a>
@@ -409,12 +423,15 @@
 input: only a handful of frames are ever 1. <code class="docutils literal notranslate"><span class="pre">ethograph.features.changepoints.add_changepoint_features</span></code>
 expands one mask into the richer representation <code class="docutils literal notranslate"><span class="pre">more_changepoint_features</span></code> was built for:</p>
 <ul class="simple">
-<li><p>a multi-scale <strong>Laplacian proximity</strong> curve, one per sigma — “how close is the nearest changepoint”</p></li>
-<li><p>a <strong>speed-weighted</strong> variant of each — emphasises changepoints where the target feature (e.g. speed) is low</p></li>
-<li><p>a normalised <strong>segment ID</strong> — which contiguous stretch between changepoints a frame falls in</p></li>
+<li><p>a multi-scale <strong>Laplacian proximity</strong> curve, one per sigma — “how close is the nearest changepoint”;
+optionally scaled by a signal such as speed (<code class="docutils literal notranslate"><span class="pre">scale_by</span></code>) to emphasise changepoints where it is low</p></li>
+<li><p>two <strong>offset</strong> columns — samples <em>since</em> the previous and <em>until</em> the next changepoint, clipped at a
+horizon — so a frame knows which side of its nearest candidate it is on, which a symmetric kernel cannot say</p></li>
+<li><p>a <strong>length</strong> column — the log length of the candidate segment the frame sits in, the long range the
+offsets saturate on</p></li>
 </ul>
 <p>This notebook is pure visualisation: it runs the function on one trial of the public
-<a class="reference external" href="https://doi.org/10.1016/j.cub.2025.08.033">Moll et al., 2025</a> crow dataset so you can see
+crow dataset <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id73" title="Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. Current Biology, 35(19):4845–4852.e3, 2025. doi:10.1016/j.cub.2025.08.033.">Moll <em>et al.</em>, 2025</a>]</span> so you can see
 what each output column looks like before deciding whether to use it. Two ways to turn it
 on for real (see <code class="docutils literal notranslate"><span class="pre">CLAUDE.md</span></code>’s segmentation-pipeline section):</p>
 <ol class="arabic simple">
@@ -477,7 +494,7 @@ data_folder: c:\Users\aksel\Documents\Code\ethograph\data\Moll2025
 
 <span class="n">TRIAL</span> <span class="o">=</span> <span class="kc">None</span>          <span class="c1"># None -&gt; first trial</span>
 <span class="n">KEYPOINT</span> <span class="o">=</span> <span class="s2">"beakTip"</span>
-<span class="n">SIGMAS</span> <span class="o">=</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">]</span>  <span class="c1"># kernel widths, in samples</span>
+<span class="n">SIGMAS</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.56</span><span class="p">,</span> <span class="mf">1.13</span><span class="p">,</span> <span class="mf">2.25</span><span class="p">]</span>  <span class="c1"># kernel widths, in samples</span>
 
 <span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">data_folder</span> <span class="o">/</span> <span class="s2">"Trial_data.nc"</span><span class="p">))</span>
 <span class="n">trial</span> <span class="o">=</span> <span class="n">TRIAL</span> <span class="k">if</span> <span class="n">TRIAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dt</span><span class="o">.</span><span class="n">trials</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -523,22 +540,6 @@ migration for you automatically, once per session — only calling
 </pre></div>
 </div>
 </div>
-<div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>speed_troughs attrs: {'kind': 'changepoint_feature', 'changepoint_mask': np.int64(1), 'target_feature': 'speed'}
-
-9 new columns:
-  speed_troughs_cp_binary
-  speed_troughs_cp_sigma2
-  speed_troughs_cp_sigma3
-  speed_troughs_cp_sigma5
-  speed_troughs_cp_binary_weighted
-  speed_troughs_cp_sigma2_weighted
-  speed_troughs_cp_sigma3_weighted
-  speed_troughs_cp_sigma5_weighted
-  speed_troughs_cp_segment_id
-</pre></div>
-</div>
-</div>
 </div>
 </section>
 <section id="plot-every-representation">
@@ -557,8 +558,7 @@ migration for you automatically, once per session — only calling
 <span class="n">mask</span> <span class="o">=</span> <span class="n">expanded_win</span><span class="p">[</span><span class="s2">"speed_troughs"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
 <span class="n">trough_times</span> <span class="o">=</span> <span class="n">time</span><span class="p">[</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)]</span>
 
-<span class="n">sigma_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"speed_troughs_cp_sigma</span><span class="si">{</span><span class="n">s</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">SIGMAS</span><span class="p">]</span>
-<span class="n">weighted_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">_weighted"</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sigma_cols</span><span class="p">]</span>
+<span class="n">sigma_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"speed_troughs_cp_prox</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">SIGMAS</span><span class="p">))]</span>  <span class="c1"># named by rank, narrowest first</span>
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -575,28 +575,25 @@ migration for you automatically, once per session — only calling
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"binary mask — the input to more_changepoint_features"</span><span class="p">)</span>
 
 <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">sigma_cols</span><span class="p">:</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">expanded_win</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sigma_cols</span><span class="p">,</span> <span class="n">SIGMAS</span><span class="p">):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">expanded_win</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"sigma </span><span class="si">{</span><span class="n">sigma</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"proximity"</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"upper right"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Laplacian proximity — one curve per sigma, wider sigma = broader peak"</span><span class="p">)</span>
 
 <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
-<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">weighted_cols</span><span class="p">:</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">expanded_win</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"_cp_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">expanded_win</span><span class="p">[</span><span class="s2">"speed_troughs_cp_segment_id"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"gray"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"segment_id"</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"weighted / segment id"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"speed_troughs_cp_since"</span><span class="p">,</span> <span class="s2">"since previous"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"speed_troughs_cp_until"</span><span class="p">,</span> <span class="s2">"until next"</span><span class="p">)):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">expanded_win</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">expanded_win</span><span class="p">[</span><span class="s2">"speed_troughs_cp_length"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"gray"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"segment length (log)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"offset / length"</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time (s)"</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"upper right"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"speed-weighted proximity (z-normalised) + normalised segment id"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"offsets — samples since / until the nearest trough, clipped at </span><span class="si">{</span><span class="mi">4</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">max</span><span class="p">(</span><span class="n">SIGMAS</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> samples (default horizon = 4 × max sigma)"</span><span class="p">)</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<img alt="../_images/59fb561b1b957e77deb5ff3e0c906c457eec81ee53fbbbd033d226fef5b52db1.png" src="../_images/59fb561b1b957e77deb5ff3e0c906c457eec81ee53fbbbd033d226fef5b52db1.png" />
 </div>
 </div>
 </section>
@@ -612,20 +609,26 @@ just done once and saved:</p>
 of being baked into the file — name the raw masks under <code class="docutils literal notranslate"><span class="pre">inputs</span></code> (dims pinned the same
 way as <code class="docutils literal notranslate"><span class="pre">features.columns</span></code>) and which column groups you want under <code class="docutils literal notranslate"><span class="pre">transforms</span></code>; the
 generated columns are merged into <code class="docutils literal notranslate"><span class="pre">features.columns</span></code> for you, so you never spell out a
-name like <code class="docutils literal notranslate"><span class="pre">speed_troughs_cp_sigma2_weighted</span></code> by hand:</p>
+name like <code class="docutils literal notranslate"><span class="pre">speed_troughs_cp_since</span></code> by hand:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">changepoint_features</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">sigmas</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5.0</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">proximity</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">proximity_weighted</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">segment_id</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">proximity</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">offset</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">length</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">scale_by</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">speed</span>
 <span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">speed_troughs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">stickTip</span><span class="p p-Indicator">]}</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">transforms</span></code> is a subset of <code class="docutils literal notranslate"><span class="pre">binary</span></code>, <code class="docutils literal notranslate"><span class="pre">proximity</span></code>, <code class="docutils literal notranslate"><span class="pre">proximity_weighted</span></code>, <code class="docutils literal notranslate"><span class="pre">segment_id</span></code> —
-<code class="docutils literal notranslate"><span class="pre">binary</span></code> is left out above because it just duplicates the raw mask (only marked
-<code class="docutils literal notranslate"><span class="pre">normalise=0</span></code>), and this config already doesn’t select <code class="docutils literal notranslate"><span class="pre">speed_troughs</span></code> directly. Every
-generated column already carries <code class="docutils literal notranslate"><span class="pre">attrs[&quot;normalise&quot;]</span> <span class="pre">=</span> <span class="pre">0</span></code>, so none of them need a
-<code class="docutils literal notranslate"><span class="pre">preprocess.zscore_exclude</span></code> entry either.</p>
+<p><code class="docutils literal notranslate"><span class="pre">transforms</span></code> is a subset of <code class="docutils literal notranslate"><span class="pre">binary</span></code>, <code class="docutils literal notranslate"><span class="pre">proximity</span></code>, <code class="docutils literal notranslate"><span class="pre">offset</span></code>, <code class="docutils literal notranslate"><span class="pre">length</span></code> — <code class="docutils literal notranslate"><span class="pre">binary</span></code> is left out above
+because it just duplicates the raw mask (only marked <code class="docutils literal notranslate"><span class="pre">normalise=0</span></code>), and this config
+already doesn’t select <code class="docutils literal notranslate"><span class="pre">speed_troughs</span></code> directly. <code class="docutils literal notranslate"><span class="pre">scale_by</span></code> names a feature whose values
+scale the proximity columns by <code class="docutils literal notranslate"><span class="pre">exp(−x</span> <span class="pre">/</span> <span class="pre">mean</span> <span class="pre">x)</span></code>, so troughs at rest count for more than
+a dip inside a movement; leave it out for the plain kernels. <code class="docutils literal notranslate"><span class="pre">sigmas</span></code>, <code class="docutils literal notranslate"><span class="pre">horizon</span></code> and <code class="docutils literal notranslate"><span class="pre">max_length</span></code> are left out on purpose:
+materialise reads them off the curated label durations (half the 5th percentile for the horizon, the
+95th percentile for <code class="docutils literal notranslate"><span class="pre">max_length</span></code>, the ladder horizon / (16, 8, 4) for the sigmas), records them in the
+dataset’s <code class="docutils literal notranslate"><span class="pre">columns.yaml</span></code> with a note saying so, and every later stage reads them back. Spell any of
+them, in samples, to pin it. Every generated column already
+carries <code class="docutils literal notranslate"><span class="pre">attrs[&quot;normalise&quot;]</span> <span class="pre">=</span> <span class="pre">0</span></code>, so none of them need a <code class="docutils literal notranslate"><span class="pre">preprocess.zscore_exclude</span></code> entry
+either.</p>
 </section>
 </section>
 

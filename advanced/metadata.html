@@ -50,8 +50,8 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/metadata.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Time slider &amp; trial/session" href="time_slider_trial_session.html" />
-    <link rel="prev" title="Advanced" href="index.html" />
+    <link rel="next" title="Video &amp; Audio playback" href="playback.html" />
+    <link rel="prev" title="Refining imported poses" href="keypoint_labelling/refine_imported.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -154,6 +154,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
@@ -464,19 +475,6 @@
 <p>Attach per-trial conditions (e.g. stimulus, reward outcome) via a TSV file. The
 trials table in the GUI turns those columns into filters, restricting navigation
 and analysis to a subset of trials.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p><strong>The trials table’s filters are the one trial filter in EthoGraph, and they
-apply to everything.</strong> Filter, say, <code class="docutils literal notranslate"><span class="pre">num_pellets</span></code> to <code class="docutils literal notranslate"><span class="pre">1,</span> <span class="pre">2</span></code> (not <code class="docutils literal notranslate"><span class="pre">0</span></code>) in the
-trials table, and every operation from then on sees only those trials:
-navigation, label and sequence jumps, changepoint correction, purging short
-labels, curation (Ctrl+C, inspect mode, frame-by-frame review, the label and
-video grids), model <strong>training</strong> and model <strong>inference</strong>. A label in a
-filtered-out trial is not visited, not curated, not trained on and not
-predicted over — it simply does not exist for those operations until you
-widen the filter again. No dialog has a trial filter of its own; each one says
-how many trials it will run over, read off the table.</p>
-</div>
 <hr class="docutils" />
 <section id="the-metadata-file">
 <h2>The metadata file<a class="headerlink" href="#the-metadata-file" title="Link to this heading">#</a></h2>
@@ -507,20 +505,22 @@ only its condition columns, joined on <code class="docutils literal notranslate"
 <p>To use a different file, set the <strong>Metadata:</strong> field in the loader form on the
 start page (<em>Custom set-up</em> card) before clicking <strong>Load</strong>. It accepts a
 tabular file (<code class="docutils literal notranslate"><span class="pre">.tsv</span></code> / <code class="docutils literal notranslate"><span class="pre">.csv</span></code> / <code class="docutils literal notranslate"><span class="pre">.xlsx</span></code>) with a <code class="docutils literal notranslate"><span class="pre">trial</span></code> column; other file
-types are ignored. The path is saved with the project.</p>
+types are ignored. The path is saved with the project. The <strong>Template</strong> button
+next to it writes a <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> pre-filled with all trial IDs, ready
+to edit in a spreadsheet.</p>
 <p>For pynapple folders whose trial timing lives in a <code class="docutils literal notranslate"><span class="pre">trials.npz</span></code> IntervalSet:
 the loader never reads timing from it. When no alignment NWB exists, the start
 page offers — once — to convert the IntervalSet into
 <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> (its metadata columns travel into the trials
-table); after that, the alignment file is the single per-trial record. The <strong>Template</strong> button next to it writes a
-<code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> pre-filled with all trial IDs, ready to edit in a
-spreadsheet.</p>
+table); after that, the alignment file is the single per-trial record.</p>
 <p>Sources are tried in this order:</p>
 <ol class="arabic simple">
-<li><p>The <strong>Metadata:</strong> field (or <code class="docutils literal notranslate"><span class="pre">metadata_path</span></code> in the API).</p></li>
-<li><p>The <strong>NWB trials table</strong>, when the data source is a <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> file.</p></li>
-<li><p>The <strong>sidecar TSV</strong> next to the data file.</p></li>
-<li><p><strong>Pynapple <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> metadata</strong>, for <code class="docutils literal notranslate"><span class="pre">.npz</span></code> or folder sources.</p></li>
+<li><p>The <strong>Metadata:</strong> field (or <code class="docutils literal notranslate"><span class="pre">metadata_path</span></code> in the API) — a <code class="docutils literal notranslate"><span class="pre">.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.npz</span></code> or pynapple folder.</p></li>
+<li><p>The <strong>data source itself</strong>, when it is a <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>, <code class="docutils literal notranslate"><span class="pre">.npz</span></code> or pynapple folder.</p></li>
+<li><p>The <strong>sidecar TSV</strong> <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> next to the data file.</p></li>
+<li><p>Metadata embedded in the loaded <strong>alignment NWB</strong>.</p></li>
+<li><p><strong>Pynapple <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> metadata</strong>.</p></li>
 </ol>
 <p>With none of these, trials carry no conditions and no filtering UI appears.
 Drag &amp; drop loading never uses a metadata table.</p>
@@ -541,14 +541,30 @@ active.</p>
 <p>Filtered-out trials disappear from the table and from the trial navigator — the
 <em>Previous / Next trial</em> buttons and the trial slider skip them. A combination
 matching no trials is ignored rather than emptying the navigator.</p>
-<p>And not just the navigator: as the box at the top says, <strong>every</strong> operation —
-changepoint correction, purging short labels, curation, model training and
-inference — runs over the filtered trials only.</p>
+<p>And not just the navigator: curation, model training and inference run over
+the filtered trials only. Label bulk editing (changepoint correction, purging
+short labels, curating, deleting) and the matching workflow steps instead take
+an explicit trial scope — current, all, filtered or hidden trials — which
+defaults to the filtered ones.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>The trials table’s filters are the one trial filter in EthoGraph, and they
+apply to everything.</strong> Filter, say, <code class="docutils literal notranslate"><span class="pre">num_pellets</span></code> to <code class="docutils literal notranslate"><span class="pre">1,</span> <span class="pre">2</span></code> (not <code class="docutils literal notranslate"><span class="pre">0</span></code>) in the
+trials table, and every operation from then on sees only those trials:
+navigation, label and sequence jumps, curation (Ctrl+C, inspect mode,
+frame-by-frame review, the label and video grids), model <strong>training</strong> and
+model <strong>inference</strong>. A label in a filtered-out trial is not visited, not
+curated, not trained on and not predicted over — it simply does not exist for
+those operations until you widen the filter again. No dialog has a metadata
+filter of its own. The one exception is scope, not filtering: label bulk
+editing and its workflow steps pick <em>which</em> trials to run over (current, all,
+filtered or hidden), still read off the table.</p>
+</div>
 <hr class="docutils" />
 </section>
 <section id="filtering-by-what-the-labels-do">
 <span id="target-label-filter"></span><h3>Filtering by what the labels do<a class="headerlink" href="#filtering-by-what-the-labels-do" title="Link to this heading">#</a></h3>
-<p>The column filters ask about metadata. <strong>Tools ▸ Find label inconsistencies…</strong>
+<p>The column filters ask about metadata. <strong>Tools ▸ Labels: Find label inconsistencies…</strong>
 asks about the labels themselves — which trials have an event without its
 partner, which carry a label twice, which ran the classes in an order they
 should not have, which are missing a sequence altogether. Type the label ids the way the Sequence
@@ -592,12 +608,17 @@ untouched either way. Nothing about the labels is ever modified.</p>
 <hr class="docutils" />
 <section id="the-curated-column">
 <h3>The <code class="docutils literal notranslate"><span class="pre">curated</span></code> column<a class="headerlink" href="#the-curated-column" title="Link to this heading">#</a></h3>
-<p>EthoGraph maintains one column itself: <strong><code class="docutils literal notranslate"><span class="pre">curated</span></code></strong> is <code class="docutils literal notranslate"><span class="pre">1</span></code> when every label
-of the trial is <code class="docutils literal notranslate"><span class="pre">manual</span></code> or <code class="docutils literal notranslate"><span class="pre">curated</span></code> and <code class="docutils literal notranslate"><span class="pre">0</span></code> while any is still a model’s
-unreviewed <code class="docutils literal notranslate"><span class="pre">automated</span></code> output (see <a class="reference internal" href="labels/curation.html"><span class="doc">Curating labels</span></a>). It is refreshed
-every few seconds while you curate rather than on every edit, so labelling
-never waits on a file write, and it flips back to <code class="docutils literal notranslate"><span class="pre">0</span></code> whenever new predictions
-land in a trial. Filter on it like any other column to walk only the trials
+<p>EthoGraph maintains one column itself: <strong><code class="docutils literal notranslate"><span class="pre">curated</span></code></strong> is <code class="docutils literal notranslate"><span class="pre">yes</span></code> when every label
+of the trial is <code class="docutils literal notranslate"><span class="pre">manual</span></code> or <code class="docutils literal notranslate"><span class="pre">curated</span></code> and <code class="docutils literal notranslate"><span class="pre">no</span></code> while any is still a model’s
+unreviewed <code class="docutils literal notranslate"><span class="pre">automated</span></code> output (see <a class="reference internal" href="../models/curation.html"><span class="doc">Curating labels</span></a>) — text rather
+than <code class="docutils literal notranslate"><span class="pre">1</span></code>/<code class="docutils literal notranslate"><span class="pre">0</span></code>, so the funnel filter offers it as a yes/no checklist. It is
+refreshed every few seconds while you curate rather than on every edit, so
+labelling never waits on a file write, and it flips back to <code class="docutils literal notranslate"><span class="pre">no</span></code> whenever new
+predictions land in a trial. Nothing is written until curation is active
+(label classes dropped into the curation scope, or something curated); a
+session that curates nothing leaves the metadata untouched. For an NWB source,
+arming curation creates a sidecar <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code>, seeded from the
+loaded table, and the column lives there — the NWB is left alone. Filter on it like any other column to walk only the trials
 that still need a look.</p>
 </section>
 </section>
@@ -638,7 +659,7 @@ every label row carries its trial’s condition columns.</p>
 <section id="references">
 <h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="../getting_started/preparing_data.html#target-nwb-alignment"><span class="std std-ref">NWB alignment</span></a> — trial timing metadata in NWB</p></li>
+<li><p><a class="reference internal" href="../getting_started/your_data/media_alignment.html#target-nwb-alignment"><span class="std std-ref">NWB alignment</span></a> — trial timing metadata in NWB</p></li>
 <li><p><a class="reference internal" href="labels/index.html"><span class="doc">Labels</span></a> — label export and the enriched labels DataFrame</p></li>
 </ul>
 </section>
@@ -655,20 +676,20 @@ every label row carries its trial’s condition columns.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="index.html"
+       href="keypoint_labelling/refine_imported.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Advanced</p>
+        <p class="prev-next-title">Refining imported poses</p>
       </div>
     </a>
     <a class="right-next"
-       href="time_slider_trial_session.html"
+       href="playback.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Time slider &amp; trial/session</p>
+        <p class="prev-next-title">Video &amp; Audio playback</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

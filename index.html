@@ -158,6 +158,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="examples/index.html">
     Examples
   </a>
@@ -284,6 +291,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="models/index.html">
+    Models
   </a>
 </li>
 
@@ -586,7 +600,7 @@ multi-dimensional timeseries — all on one shared timeline.</p>
 
 <script>
 (function(){
-var PREP='getting_started/preparing_data.html';
+var PREP='getting_started/your_data/index.html';
 var st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,trials:null},cur=0;
 
 function clearErr(){document.querySelectorAll('.dcerr').forEach(function(e){e.classList.remove('won');});}
@@ -707,7 +721,7 @@ function build(){
       +'min/max downsampling keeps the waveform and spectrogram fast with no manual downsampling.</li>'
       +'<li><strong>Write an xarray script</strong> &mdash; needed for arrays with more than two '
       +'dimensions. Wrap your data in an <code>xr.Dataset</code>; see '
-      +'<a href="'+PREP+'">Preparing your own data</a>.</li>'
+      +'<a href="'+PREP+'">Bring your own data</a>.</li>'
       +'</ul></div>'+importNote();
   }
   if(st.trials!=='yes'){
@@ -731,9 +745,11 @@ function build(){
       +importNote();
   }
   return '<div class="dcres next"><h4>You need a session file</h4>'+tags()
-    +'<p>Your data has a trial structure, which drag &amp; drop cannot infer &mdash; it handles one '
-    +'recording session at a time. Build a session file plus an alignment file with a short Python '
-    +'script &mdash; see <a href="'+PREP+'">Preparing your own data</a>.</p></div>'+importNote();
+    +'<p>Your data has a trial structure. If it is one device with one file per trial, drag &amp; '
+    +'drop still works: choose <strong>Several trials of one device (natural sort)</strong> on the '
+    +'start page. Otherwise click <strong>Data wizard &mdash; prepare my data</strong> on the start '
+    +'page to build the session and alignment files, then open them in <strong>Custom set-up</strong> '
+    +'&mdash; see <a href="'+PREP+'">Bring your own data</a>.</p></div>'+importNote();
 }
 
 dcReset();
@@ -782,18 +798,19 @@ learn more about all the functionalities, I recommend the
 <a class="reference internal image-reference" href="_images/opensource.png"><img alt="Open-source projects EthoGraph depends on" class="align-left" src="_images/opensource.png" style="width: 60%;" />
 </a>
 <p>EthoGraph is built on top of a number of open-source projects:
-<a class="reference external" href="https://pyav.org/docs/stable/">PyAV</a>,
-<a class="reference external" href="https://github.com/bendalab/audioio">audioio</a>,
-<a class="reference external" href="https://neo.readthedocs.io">Neo</a>,
-<a class="reference external" href="https://github.com/vocalpy/crowsetta">crowsetta</a>,
-<a class="reference external" href="https://www.nwb.org/">Neurodata Without Borders</a>,
-<a class="reference external" href="https://docs.xarray.dev/">xarray</a>,
-<a class="reference external" href="https://pynapple.org/index.html">pynapple</a>,
-<a class="reference external" href="https://movement.neuroinformatics.dev/">movement</a>,
-<a class="reference external" href="https://github.com/cortex-lab/phy">phy</a>,
-<a class="reference external" href="https://www.pyqtgraph.org/">PyQtGraph</a>, and
-<a class="reference external" href="https://pygfx.org/">pygfx</a> (via
-<a class="reference external" href="https://github.com/pynapple-org/pynaviz">pynaviz</a>).</p>
+<a class="reference external" href="https://pyav.org/docs/stable/">PyAV</a> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="community/references.html#id2" title="PyAV contributors. PyAV: pythonic bindings for FFmpeg's libraries. URL: https://pyav.org/docs/stable/.">PyAV contributors, n.d.</a>]</span>,
+<a class="reference external" href="https://github.com/bendalab/audioio">audioio</a> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="community/references.html#id3" title="Jan Benda. Audioio: platform independent interfacing of numpy arrays of floats with audio files and devices. URL: https://github.com/bendalab/audioio.">Benda, n.d.</a>]</span>,
+<a class="reference external" href="https://neo.readthedocs.io">Neo</a> <span class="bibtex-citation" id="id3">[<a class="reference internal" href="community/references.html#id4" title="Samuel Garcia, Domenico Guarino, Florent Jaillet, Todd Jennings, Robert Pröpper, Philipp L. Rautenberg, Chris C. Rodgers, Andrey Sobolev, Thomas Wachtler, Pierre Yger, and Andrew P. Davison. Neo: an object model for handling electrophysiology data in multiple formats. Frontiers in Neuroinformatics, 8:10, 2014. doi:10.3389/fninf.2014.00010.">Garcia <em>et al.</em>, 2014</a>]</span>,
+<a class="reference external" href="https://github.com/vocalpy/crowsetta">crowsetta</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="community/references.html#id5" title="David Nicholson. Crowsetta: a Python tool to work with any format for annotating animal vocalizations and bioacoustics data. Journal of Open Source Software, 8(84):5338, 2023. doi:10.21105/joss.05338.">Nicholson, 2023</a>]</span>,
+<a class="reference external" href="https://www.nwb.org/">Neurodata Without Borders</a> <span class="bibtex-citation" id="id5">[<a class="reference internal" href="community/references.html#id6" title="Oliver Rübel, Andrew Tritt, Ryan Ly, Benjamin K. Dichter, Satrajit Ghosh, Lawrence Niu, Pamela Baker, Ivan Soltesz, Lydia Ng, Karel Svoboda, Loren Frank, and Kristofer E. Bouchard. The Neurodata Without Borders ecosystem for neurophysiological data science. eLife, 11:e78362, 2022. doi:10.7554/eLife.78362.">Rübel <em>et al.</em>, 2022</a>]</span>,
+<a class="reference external" href="https://docs.xarray.dev/">xarray</a> <span class="bibtex-citation" id="id6">[<a class="reference internal" href="community/references.html#id7" title="Stephan Hoyer and Joe Hamman. Xarray: N-D labeled arrays and datasets in Python. Journal of Open Research Software, 5(1):10, 2017. doi:10.5334/jors.148.">Hoyer and Hamman, 2017</a>]</span>,
+<a class="reference external" href="https://pynapple.org/index.html">pynapple</a> <span class="bibtex-citation" id="id7">[<a class="reference internal" href="community/references.html#id8" title="Guillaume Viejo, Daniel Levenstein, Sofia Skromne Carrasco, Dhruv Mehrotra, Sara Mahallati, Gilberto R. Vite, Henry Denny, Lucas Sjulson, Francesco P. Battaglia, and Adrien Peyrache. Pynapple, a toolbox for data analysis in neuroscience. eLife, 12:RP85786, 2023. doi:10.7554/eLife.85786.">Viejo <em>et al.</em>, 2023</a>]</span>,
+<a class="reference external" href="https://movement.neuroinformatics.dev/">movement</a> <span class="bibtex-citation" id="id8">[<a class="reference internal" href="community/references.html#id9" title="Nikoloz Sirmpilatze, Chang Huan Lo, Sofía Miñano, Brandon D. Peri, Dhruv Sharma, Laura Porta, Iván Varela, and Adam L. Tyson. Movement. URL: https://movement.neuroinformatics.dev/, doi:10.5281/zenodo.12755724.">Sirmpilatze <em>et al.</em>, n.d.</a>]</span>,
+<a class="reference external" href="https://github.com/cortex-lab/phy">phy</a> <span class="bibtex-citation" id="id9">[<a class="reference internal" href="community/references.html#id10" title="Cyrille Rossant, Shabnam N. Kadir, Dan F. M. Goodman, John Schulman, Maximilian L. D. Hunter, Aman B. Saleem, Andres Grosmark, Mariano Belluscio, George H. Denfield, Alexander S. Ecker, Andreas S. Tolias, Samuel Solomon, György Buzsáki, Matteo Carandini, and Kenneth D. Harris. Spike sorting for large, dense electrode arrays. Nature Neuroscience, 19:634–641, 2016. The paper behind phy (https://github.com/cortex-lab/phy). doi:10.1038/nn.4268.">Rossant <em>et al.</em>, 2016</a>]</span>,
+<a class="reference external" href="https://www.pyqtgraph.org/">PyQtGraph</a> <span class="bibtex-citation" id="id10">[<a class="reference internal" href="community/references.html#id11" title="PyQtGraph contributors. PyQtGraph: scientific graphics and GUI library for Python. URL: https://www.pyqtgraph.org/.">PyQtGraph contributors, n.d.</a>]</span>, and
+<a class="reference external" href="https://pygfx.org/">pygfx</a> <span class="bibtex-citation" id="id11">[<a class="reference internal" href="community/references.html#id12" title="Almar Klein and others. Pygfx: a render engine for Python. URL: https://pygfx.org/, doi:10.5281/zenodo.21443465.">Klein and others, n.d.</a>]</span> (via
+<a class="reference external" href="https://github.com/pynapple-org/pynaviz">pynaviz</a> <span class="bibtex-citation" id="id12">[<a class="reference internal" href="community/references.html#id13" title="pynapple-org. Pynaviz: interactive visualization for pynapple. URL: https://github.com/pynapple-org/pynaviz.">pynapple-org, n.d.</a>]</span>).
+The full list is on the <a class="reference internal" href="community/references.html"><span class="doc">references page</span></a>.</p>
 </section>
 </section>
 

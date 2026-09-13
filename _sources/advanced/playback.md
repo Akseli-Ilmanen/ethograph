@@ -75,7 +75,7 @@ the resolution drops — so labels and timing stay exactly aligned. Use full
 resolution to inspect fine visual detail, the proxy for general navigation.
 ```
 
-Proxies are cached in one central folder, **`~/.ethograph/proxies`**, reused
+Proxies are cached in one central folder, **`~/.ethograph/cache/proxies`**, reused
 across sessions and generated only once per source file. To free disk space,
 just delete that folder — proxies regenerate on demand.
 

@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/labels/exporting.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Curating labels" href="curation.html" />
+    <link rel="next" title="Curation workflows" href="workflows.html" />
     <link rel="prev" title="Importing labels" href="importing.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -154,6 +154,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
   </a>
 </li>
 
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Labels</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="importing.html">Importing labels</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -476,8 +487,8 @@ references and non-label metadata. Labels live exclusively in the TSV.</p>
 ├── data_labels.tsv                  # recommended file location for most-up-to-date labels
 ├── labels/
 │   ├── backups/
-│       └── session_labels_20240315_101230.tsv # timestamped backups
-│       └── session_labels_20240314_111420.tsv
+│       ├── data_labels_20240315_101230.tsv  # timestamped backups
+│       └── data_labels_20240314_111420.tsv
 </pre></div>
 </div>
 <p>The TSV uses integer label IDs in the <code class="docutils literal notranslate"><span class="pre">labels</span></code> column. Label names are
@@ -488,7 +499,7 @@ applies everywhere. See <a class="reference internal" href="mapping.html"><span 
 <section id="saving-labels-ctrl-s">
 <h2>Saving labels (Ctrl+S)<a class="headerlink" href="#saving-labels-ctrl-s" title="Link to this heading">#</a></h2>
 <p>Each save writes the canonical <code class="docutils literal notranslate"><span class="pre">data_labels.tsv</span></code> alongside the <code class="docutils literal notranslate"><span class="pre">.nc</span></code>, plus a
-timestamped backup in <code class="docutils literal notranslate"><span class="pre">label_backups/</span></code>. An optional remote backup can be
+timestamped backup in <code class="docutils literal notranslate"><span class="pre">labels/backups/</span></code>. An optional remote backup can be
 configured (see <a class="reference internal" href="#target-labels-advanced"><span class="std std-ref">Advanced</span></a>).</p>
 </section>
 <hr class="docutils" />
@@ -518,34 +529,38 @@ the GUI; computed columns are derived on each save from the data file.</p>
 <td><p>int</p></td>
 <td><p>Label class ID from <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> (0 = background, excluded from display)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">individual</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">event_type</span></code></p></td>
+<td><p>str</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">state</span></code> for an interval with an onset and offset, <code class="docutils literal notranslate"><span class="pre">point</span></code> for an instantaneous event</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">individual</span></code></p></td>
 <td><p>str</p></td>
 <td><p>The individual performing the behaviour, i.e. the actor (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;mouse1&quot;</span></code>)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">individual_rec</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">individual_rec</span></code></p></td>
 <td><p>str</p></td>
-<td><p>The recipient of a dyadic behaviour (e.g. the bird being mounted); empty for a solo behaviour</p></td>
+<td><p>The recipient of a dyadic behaviour (e.g. the bird being mounted), shown as <strong>Receiver</strong> in the GUI; empty for a solo behaviour</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">trial</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">trial</span></code></p></td>
 <td><p>int/str</p></td>
 <td><p>Trial identifier, matches the TrialTree</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">confidence</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">confidence</span></code></p></td>
 <td><p>float</p></td>
 <td><p>How sure the label is: <code class="docutils literal notranslate"><span class="pre">1.0</span></code> for a hand-placed label, the model’s own score for a predicted one</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">labeling_method</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">labeling_method</span></code></p></td>
 <td><p>str</p></td>
-<td><p>Who vouches for the label: <code class="docutils literal notranslate"><span class="pre">manual</span></code> (placed or edited by hand), <code class="docutils literal notranslate"><span class="pre">automated</span></code> (a model’s output nobody has looked at) or <code class="docutils literal notranslate"><span class="pre">curated</span></code> (automated, then approved) — see <a class="reference internal" href="curation.html"><span class="doc">Curating labels</span></a>. A file without the column reads <code class="docutils literal notranslate"><span class="pre">automated</span></code> for any row with <code class="docutils literal notranslate"><span class="pre">confidence</span> <span class="pre">&lt;</span> <span class="pre">1.0</span></code>, <code class="docutils literal notranslate"><span class="pre">manual</span></code> otherwise</p></td>
+<td><p>Who vouches for the label: <code class="docutils literal notranslate"><span class="pre">manual</span></code> (placed or edited by hand), <code class="docutils literal notranslate"><span class="pre">automated</span></code> (a model’s output nobody has looked at) or <code class="docutils literal notranslate"><span class="pre">curated</span></code> (automated, then approved) — see <a class="reference internal" href="../../models/curation.html"><span class="doc">Curating labels</span></a>. A file without the column reads <code class="docutils literal notranslate"><span class="pre">automated</span></code> for any row with <code class="docutils literal notranslate"><span class="pre">confidence</span> <span class="pre">&lt;</span> <span class="pre">1.0</span></code>, <code class="docutils literal notranslate"><span class="pre">manual</span></code> otherwise</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">individual</span></code> and <code class="docutils literal notranslate"><span class="pre">individual_rec</span></code> together are the <strong>subject</strong> of a label. Each
-(actor, recipient) pair is an independent track: labels are shown, selected and
-created for exactly the pair chosen in the sidebar’s Individual section, so the
-same animal’s solo behaviours and its interactions with each partner never
-overwrite one another. Files written before recipients existed have no
+<p><code class="docutils literal notranslate"><span class="pre">individual</span></code> and <code class="docutils literal notranslate"><span class="pre">individual_rec</span></code> together are the <strong>subject</strong> of a label. The
+receiver is an attribute of each label, not a separate track: overlapping labels
+are resolved per actor, every label of the actor is drawn (tagged <code class="docutils literal notranslate"><span class="pre">→</span> <span class="pre">receiver</span></code>
+when it has one), and the sidebar’s Receiver combo only sets the receiver of the
+next label you create. Files written before recipients existed have no
 <code class="docutils literal notranslate"><span class="pre">individual_rec</span></code> column and read back as solo behaviours.</p>
 </section>
 <section id="per-trial-metadata-columns">
@@ -566,6 +581,10 @@ overwrite one another. Files written before recipients existed have no
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">prediction_source</span></code></p></td>
 <td><p>str</p></td>
 <td><p>Path to the prediction file that produced these labels (empty for human-labeled)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">n_samples</span></code></p></td>
+<td><p>int</p></td>
+<td><p>The trial’s sample count, used for dense conversion; <code class="docutils literal notranslate"><span class="pre">0</span></code> if unknown</p></td>
 </tr>
 </tbody>
 </table>
@@ -618,7 +637,7 @@ recalculated.</p>
 <section id="timing-columns-computed-requires-alignment">
 <h3>Timing columns (computed, requires alignment)<a class="headerlink" href="#timing-columns-computed-requires-alignment" title="Link to this heading">#</a></h3>
 <p>These columns convert trial-relative times to session-absolute times. They
-only appear when the <a class="reference internal" href="../../getting_started/preparing_data.html#target-nwb-alignment"><span class="std std-ref">NWB alignment file</span></a> has real
+only appear when the <a class="reference internal" href="../../getting_started/your_data/media_alignment.html#target-nwb-alignment"><span class="std std-ref">NWB alignment file</span></a> has real
 trial start/stop times (i.e. <code class="docutils literal notranslate"><span class="pre">alignment.has_real_timing</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>).</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -769,11 +788,11 @@ and on your PATH; the remote folder must be a git repository.</p>
       </div>
     </a>
     <a class="right-next"
-       href="curation.html"
+       href="workflows.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Curating labels</p>
+        <p class="prev-next-title">Curation workflows</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

@@ -4,11 +4,11 @@
 One example of changepoints occurring at behavioural boundaries are speed
 minima. In point-to-point reaching tasks, the hand speed profile is
 characterised by a unimodal bell-shaped curve with two speed minima
-(Torricelli et al., 2023), where the minima correspond to the onset and
+{cite:p}`torricelli2023motor`, where the minima correspond to the onset and
 offset of the movement, and the peak of the speed bump marks the point where
 the hand starts decelerating. These minima can even be used to identify
 sub-movements, such as the small second corrective speed bump in the figure
-below (Meyer et al., 1988).
+below {cite:p}`meyer1988optimality`.
 
 ![Kinematic changepoints](../../_static/media/changepoints1.png)
 
@@ -123,7 +123,7 @@ Use {func}`~ethograph.io.pynapple.add_changepoints_to_nap`:
 ```python
 import pynapple as nap
 from ethograph.io.pynapple import add_changepoints_to_nap
-from ethograph.features.changepoints import find_troughs
+from ethograph.features.changepoints import find_troughs_binary
 
 speed = nap.TsdFrame(
     t=time_s,
@@ -134,7 +134,7 @@ speed = nap.TsdFrame(
 cps = add_changepoints_to_nap(
     speed,
     target_feature="speed",
-    changepoint_func=find_troughs,
+    changepoint_func=find_troughs_binary,
     prominence=0.1,
 )
 # cps is a TsGroup — one Ts per column with:
@@ -153,7 +153,3 @@ through when the input is a `TsGroup`.
 
 ---
 
-## References
-
-- Meyer, D. E., Abrams, R. A., Kornblum, S., Wright, C. E., & Keith Smith, J. E. (1988). Optimality in human motor performance: Ideal control of rapid aimed movements. Psychological Review, 95(3), 340-370. <https://doi.org/10.1037/0033-295X.95.3.340>
-- Torricelli, F., Tomassini, A., Pezzulo, G., Pozzo, T., Fadiga, L., & D'Ausilio, A. (2023). Motor invariants in action execution and perception. Physics of Life Reviews, 44, 13-47. <https://doi.org/10.1016/j.plrev.2022.11.003>

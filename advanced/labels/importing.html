@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Labels</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="branches.html">Label branches</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -502,13 +513,14 @@ format</strong> combo offers:</p>
 <h2>Pynapple / NWB IntervalSets<a class="headerlink" href="#pynapple-nwb-intervalsets" title="Link to this heading">#</a></h2>
 <p>Selecting <strong><code class="docutils literal notranslate"><span class="pre">pynapple</span> <span class="pre">(.npz)</span></code></strong> or <strong><code class="docutils literal notranslate"><span class="pre">pynapple</span> <span class="pre">(.nwb)</span></code></strong> loads the file with
 <code class="xref py py-func docutils literal notranslate"><span class="pre">pynapple.load_file()</span></code> and extracts every
-<a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalSet</span></code></a> in the data dict <strong>except</strong> those named
-<code class="docutils literal notranslate"><span class="pre">&quot;trials&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;epochs&quot;</span></code> (those are treated as trial boundaries, not labels).
+<a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalSet</span></code></a> in the data dict <strong>except</strong> the one used as the
+trial boundaries: <code class="docutils literal notranslate"><span class="pre">trials</span></code> if present, otherwise <code class="docutils literal notranslate"><span class="pre">epochs</span></code>, then <code class="docutils literal notranslate"><span class="pre">intervals</span></code>,
+then the first set with <code class="docutils literal notranslate"><span class="pre">trial</span></code> in its name. Every other set, <code class="docutils literal notranslate"><span class="pre">epochs</span></code> included
+when <code class="docutils literal notranslate"><span class="pre">trials</span></code> exists, is imported as labels.
 Each <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> name becomes a label class.</p>
-<p>The GUI auto-generates a <code class="docutils literal notranslate"><span class="pre">mapping_pynapple.txt</span></code> file with integer IDs for
-each label name (see <a class="reference internal" href="mapping.html"><span class="doc">Label mapping (mapping.txt)</span></a> for the file format and resolution
-order) and writes the result to the canonical <code class="docutils literal notranslate"><span class="pre">_labels.tsv</span></code> alongside the
-<code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</p>
+<p>Label names already in the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their IDs; new names are
+appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels with new class names</span></a>). The labels are written to the
+canonical <code class="docutils literal notranslate"><span class="pre">_labels.tsv</span></code> alongside the <code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</p>
 <p>Global-time intervals are split across trials using the <code class="docutils literal notranslate"><span class="pre">trials</span></code> /
 <code class="docutils literal notranslate"><span class="pre">epochs</span></code> <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> (or the session’s trial table). See
 <a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.PynappleLabelConverter" title="ethograph.labels.converters.PynappleLabelConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">PynappleLabelConverter</span></code></a> for the
@@ -553,11 +565,9 @@ string names (resolved via <code class="docutils literal notranslate"><span clas
 <span class="n">annot</span> <span class="o">=</span> <span class="n">scribe</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"labels_for_sharing.tsv"</span><span class="p">)</span><span class="o">.</span><span class="n">to_annot</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>On import, the GUI checks the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> against the labels found
-in the file. If some labels are missing from the mapping, it auto-generates
-a new <code class="docutils literal notranslate"><span class="pre">mapping_{format}.txt</span></code> alongside the data file and warns about
-unmatched labels. See
-<a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.resolve_crowsetta_mapping" title="ethograph.labels.converters.resolve_crowsetta_mapping"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_crowsetta_mapping()</span></code></a> for details.</p>
+<p>On import, label names already in the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their IDs and
+new names are appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels with new class names</span></a>); <code class="docutils literal notranslate"><span class="pre">background</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sil</span></code> count as background.</p>
 </section>
 <hr class="docutils" />
 <section id="programmatic-usage">

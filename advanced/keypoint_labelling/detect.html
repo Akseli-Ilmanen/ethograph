@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="../labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -473,14 +484,14 @@ stops optical flow drifting and gives PosePAL far more to fit to.</p>
 well on moving 5mm and 10mm wide tags.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> Two smaller families are
 offered alongside it, and EthoGraph <strong>prints exactly what it can read</strong> — a
 sheet of tags the detector cannot decode would be a trap.</p>
-<figure class="align-default" id="id2">
+<figure class="align-default" id="id3">
 <a class="reference internal image-reference" href="../../_images/apriltags.png"><img alt="Two example tags each from the tag16h5, tag25h9 and tag36h11 AprilTag families" src="../../_images/apriltags.png" style="width: 100%;" />
 </a>
 <figcaption>
 <p><span class="caption-text">Three AprilTag families. The first number is how many data bits a tag carries
 (a 4×4, 5×5 or 6×6 grid of modules); the number after the <code class="docutils literal notranslate"><span class="pre">h</span></code> is the smallest
 Hamming distance between any two valid codes — how many bits have to be misread
-before one ID turns into another <em>valid</em> ID.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+before one ID turns into another <em>valid</em> ID.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -612,15 +623,15 @@ observations; a detection never overwrites a label, and correcting one is just
 clicking it. Runs are cached next to the video as <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.detections.npz</span></code>, which
 is safe to delete.</p>
 </section>
-<section id="references">
-<h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading">#</a></h2>
 </section>
 </section>
 <hr class="footnotes docutils" />
 <aside class="footnote-list brackets">
 <aside class="footnote brackets" id="apriltag" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
-<p>Detection runs through <a class="reference external" href="https://github.com/pupil-labs/apriltags">pupil-apriltags</a>, a maintained binding to the reference AprilTag 3 C library (Krogius, Haggenmiller &amp; Olson, IROS 2019). OpenCV renders the printed tags, since <code class="docutils literal notranslate"><span class="pre">pupil-apriltags</span></code> has no generator.</p>
+<p>Detection runs through <a class="reference external" href="https://github.com/pupil-labs/apriltags">pupil-apriltags</a>, a maintained binding to the reference AprilTag 3 C library <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id205" title="Maximilian Krogius, Acshi Haggenmiller, and Edwin Olson. Flexible layouts for fiducial tags. In IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 1898–1903. 2019. doi:10.1109/IROS40897.2019.8967787.">Krogius <em>et al.</em>, 2019</a>]</span>. OpenCV renders the printed tags, since <code class="docutils literal notranslate"><span class="pre">pupil-apriltags</span></code> has no generator.</p>
 </aside>
 </aside>
 
@@ -674,7 +685,7 @@ is safe to delete.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#print-the-tags-first">Print the tags first</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning">Tuning</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#running-it">Running it</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes">Notes</a></li>
 </ul>
   </nav></div>
 

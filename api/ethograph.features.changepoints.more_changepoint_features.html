@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -283,6 +290,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -424,51 +438,64 @@
 <h1>more_changepoint_features<a class="headerlink" href="#more-changepoint-features" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.features.changepoints.more_changepoint_features">
-<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">more_changepoint_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">changepoint_binary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targ_feat_vals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigmas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'laplacian'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#more_changepoint_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.more_changepoint_features" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">more_changepoint_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">changepoint_binary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigmas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'laplacian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#more_changepoint_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.more_changepoint_features" title="Link to this definition">#</a></dt>
 <dd><p>Create changepoint-based features from a binary changepoint array.</p>
-<p>Generates three complementary representations that help a model learn
-changepoint locations:</p>
+<p>Four column groups, in this order (see <code class="xref py py-data docutils literal notranslate"><span class="pre">CP_TRANSFORMS</span></code>):</p>
 <ul class="simple">
-<li><p><strong>Binary changepoints</strong> — exact changepoint positions (0/1 mask).
+<li><p><strong>Binary</strong> — the exact changepoint positions (0/1 mask).
 Example: <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span></code></p></li>
-<li><p><strong>Smooth changepoints</strong> — proximity to the nearest changepoint, rendered
-as Laplacian (or Gaussian) peaks centred at each changepoint index.
-Example: <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">.3</span> <span class="pre">1</span> <span class="pre">.3</span> <span class="pre">0</span> <span class="pre">.3</span> <span class="pre">1</span> <span class="pre">.3</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span></code></p></li>
-<li><p><strong>Segment IDs</strong> — unique identifier for each contiguous region between
-changepoints (normalised to [0, 1]).
-Example: <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">2</span> <span class="pre">2</span> <span class="pre">2</span> <span class="pre">2</span> <span class="pre">2</span> <span class="pre">2</span></code></p></li>
+<li><p><strong>Proximity</strong> — one column per sigma: a Laplacian (or Gaussian) kernel
+centred at each changepoint, summed. An isolated changepoint reads 1 at
+its frame; overlapping kernels add, so a cluster of candidates reads
+above 1. Nothing is normalised per trial.
+Example (one sigma): <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">.3</span> <span class="pre">1</span> <span class="pre">.3</span> <span class="pre">0</span> <span class="pre">.3</span> <span class="pre">1</span> <span class="pre">.3</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span></code></p></li>
+<li><p><strong>Offset</strong> — two columns: samples <em>since</em> the previous changepoint and
+<em>until</em> the next, each clipped at <em>horizon</em> and scaled to <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>.
+A frame reads which side of its nearest candidate it is on, which the
+symmetric kernels cannot say; before the first / after the last
+changepoint the column is saturated (no candidate in reach).
+Example (horizon 4): since <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">0</span> <span class="pre">.25</span> <span class="pre">.5</span> <span class="pre">.75</span> <span class="pre">0</span> <span class="pre">.25</span> <span class="pre">.5</span> <span class="pre">.75</span> <span class="pre">1</span> <span class="pre">1</span></code>,
+until <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">.75</span> <span class="pre">.5</span> <span class="pre">.25</span> <span class="pre">0</span> <span class="pre">.75</span> <span class="pre">.5</span> <span class="pre">.25</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span> <span class="pre">1</span></code></p></li>
+<li><p><strong>Length</strong> — one column: the length of the candidate segment the frame
+sits in (cut at every changepoint and at the trial’s ends), as
+<code class="docutils literal notranslate"><span class="pre">log1p(length)</span> <span class="pre">/</span> <span class="pre">log1p(max_length)</span></code>, clipped at 1. The offsets
+already resolve anything shorter than two horizons; this is the long
+range, where a fragment-prone short segment and a whole bout of rest
+should not read alike.</p></li>
 </ul>
-<p>Smooth changepoints use a Laplacian kernel by default:</p>
+<p>Proximity uses a Laplacian kernel by default:</p>
 <div class="math notranslate nohighlight">
-\[\text{smooth}(t) = \sum_i \exp\!\left(-\frac{|t - i|}{\sigma}\right)\]</div>
+\[\text{prox}(t) = \sum_i \exp\!\left(-\frac{|t - i|}{\sigma}\right)\]</div>
 <p>where <span class="math notranslate nohighlight">\(i\)</span> are the changepoint indices and <span class="math notranslate nohighlight">\(\sigma\)</span> controls
 the peak width. Laplacians have a narrow peak that points directly at the
 changepoint while their long tails remain visible from far away. Passing
 multiple <code class="docutils literal notranslate"><span class="pre">sigmas</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">[0.5,</span> <span class="pre">3,</span> <span class="pre">5]</span></code>) yields features at several
 scales.</p>
-<p>Additionally, weighted versions emphasise changepoints where the target
-feature (e.g. speed) is low, by multiplying the smooth features with
-<span class="math notranslate nohighlight">\(\exp(-x / (\bar{x} + \epsilon))\)</span>. This helps the model
-distinguish speed minima before/after movements (low speed) from minima
-occurring within different movements.</p>
+<p><em>scale</em> multiplies every proximity column by <span class="math notranslate nohighlight">\(\exp(-x / \bar{x})\)</span>
+of that signal, emphasising changepoints where it is low — with speed,
+the troughs before and after a movement rather than a dip inside one;
+with an amplitude envelope, the silences between calls. Frames where
+<em>scale</em> is NaN read 0.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>changepoint_binary</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a></span>) – Binary (0/1) array marking changepoint locations.</p></li>
-<li><p><strong>targ_feat_vals</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a></span>) – Target feature values (e.g. speed) used to weight the
-smooth changepoint features.</p></li>
-<li><p><strong>sigmas</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span>) – Kernel widths for the smooth changepoint representation.</p></li>
-<li><p><strong>distribution</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<code class="docutils literal notranslate"><span class="pre">'gaussian'</span></code>, <code class="docutils literal notranslate"><span class="pre">'laplacian'</span></code>]</span>) – <code class="docutils literal notranslate"><span class="pre">&quot;laplacian&quot;</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">&quot;gaussian&quot;</span></code> kernel.</p></li>
+<li><p><strong>changepoint_binary</strong> (<span class="sphinx_autodoc_typehints-type">np.ndarray</span>) – Binary (0/1) array marking changepoint locations.</p></li>
+<li><p><strong>sigmas</strong> (<span class="sphinx_autodoc_typehints-type">Sequence[float]</span>) – Kernel widths (samples) for the proximity columns.</p></li>
+<li><p><strong>distribution</strong> (<span class="sphinx_autodoc_typehints-type">Literal[‘gaussian’, ‘laplacian’]</span>) – <code class="docutils literal notranslate"><span class="pre">&quot;laplacian&quot;</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">&quot;gaussian&quot;</span></code> kernel.</p></li>
+<li><p><strong>horizon</strong> (<span class="sphinx_autodoc_typehints-type">float | None</span>) – Reach of the offset columns, in samples; <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+<code class="xref py py-func docutils literal notranslate"><span class="pre">default_horizon()</span></code>.</p></li>
+<li><p><strong>scale</strong> (<span class="sphinx_autodoc_typehints-type">np.ndarray | None</span>) – Optional signal on the same time axis that scales the
+proximity columns.</p></li>
+<li><p><strong>max_length</strong> (<span class="sphinx_autodoc_typehints-type">float | None</span>) – Where the length column saturates, in samples; <code class="docutils literal notranslate"><span class="pre">None</span></code>
+is <code class="xref py py-data docutils literal notranslate"><span class="pre">LENGTH_HORIZONS</span></code> horizons.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a></span></p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the binary mask, one
+proximity column per sigma, <code class="docutils literal notranslate"><span class="pre">since</span></code>, <code class="docutils literal notranslate"><span class="pre">until</span></code>, then <code class="docutils literal notranslate"><span class="pre">length</span></code>.</p>
 </dd>
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>2D array of shape <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">len(sigmas)</span> <span class="pre">+</span> <span class="pre">1)</span></code> stacking the
-binary mask, one smooth feature per sigma, their weighted (speed-
-emphasised, z-normalised) counterparts, and the normalised segment
-IDs.</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>2D array of shape <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">len(sigmas)</span> <span class="pre">+</span> <span class="pre">3)</span></code></p>
 </dd>
 </dl>
 </dd></dl>

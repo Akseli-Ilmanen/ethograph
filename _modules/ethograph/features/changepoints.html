@@ -44,6 +44,364 @@
     <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = "pre.mermaid {\n    /* Same as .mermaid-container > pre */\n    display: block;\n    width: 100%;\n}\n\npre.mermaid > svg {\n    /* Same as .mermaid-container > pre > svg */\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}";
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = ".mermaid-container {\n    position: relative;\n    display: flex;\n    flex-direction: row;\n    width: 100%;\n}\n\n.mermaid-container > pre {\n    display: block;\n    width: 100%;\n}\n\n.mermaid-container > pre > svg {\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}\n\n.mermaid-fullscreen-btn {\n    position: absolute;\n    width: 28px;\n    height: 28px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    border-radius: 4px;\n    cursor: pointer;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    transition: all 0.2s;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);\n    font-size: 14px;\n    line-height: 1;\n    padding: 0;\n    color: #333;\n}\n\n.mermaid-fullscreen-btn:hover {\n    opacity: 100% !important;\n    background: rgba(255, 255, 255, 1);\n    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-btn.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.3);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-btn.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal {\n    display: none;\n    position: fixed !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 95vw;\n    height: 100vh;\n    background: rgba(255, 255, 255, 0.98);\n    z-index: 9999;\n    padding: 20px;\n    overflow: auto;\n}\n\n.mermaid-fullscreen-modal.dark-theme {\n    background: rgba(0, 0, 0, 0.98);\n}\n\n.mermaid-fullscreen-modal.active {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen {\n    position: relative;\n    width: 95vw;\n    height: 90vh;\n    max-width: 95vw;\n    max-height: 90vh;\n    background: white;\n    border-radius: 8px;\n    padding: 20px;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n    overflow: auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen.dark-theme {\n    background: #1a1a1a;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);\n}\n\n.mermaid-container-fullscreen pre.mermaid {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen .mermaid svg {\n    height: 100% !important;\n    width: 100% !important;\n    cursor: grab;\n}\n\n.mermaid-fullscreen-close {\n    position: fixed !important;\n    top: 20px !important;\n    right: 20px !important;\n    width: 40px;\n    height: 40px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 50%;\n    cursor: pointer;\n    z-index: 10000;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n    font-size: 24px;\n    line-height: 1;\n    color: #333;\n}\n\n.mermaid-fullscreen-close:hover {\n    background: white;\n    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-close.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.2);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-close.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal .mermaid-fullscreen-btn {\n    display: none !important;\n}";
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+let _lazyObserver = null;
+let _renderQueue = Promise.resolve();
+let closeModal = () => {};
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.classList.contains('active')) {
+        closeModal();
+    }
+});
+
+// Apply d3 zoom to each SVG. Idempotent: an SVG already wrapped is skipped,
+// so this is safe to call both for the initial batch and for diagrams that
+// render lazily once they become visible.
+const addZoomToSvgs = (svgs) => {
+    svgs.each(function() {
+        if (this.getAttribute('data-zoom-applied') === 'true') return;
+        var svg = d3.select(this);
+        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+        var inner = svg.select("g");
+        var zoom = d3.zoom().on("zoom", function(event) {
+            inner.attr("transform", event.transform);
+        });
+        svg.call(zoom);
+        this.setAttribute('data-zoom-applied', 'true');
+    });
+};
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        // Disconnect any previous lazy rendering observer
+        if (_lazyObserver) {
+            _lazyObserver.disconnect();
+            _lazyObserver = null;
+        }
+
+        all_mermaids.forEach((el) => {
+            el.removeAttribute('data-mermaid-deferred');
+            el.removeAttribute('data-mermaid-render-failed');
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+
+        // Separate visible and hidden elements. Mermaid's layout engine measures
+        // text dimensions via the DOM, which fails for elements hidden by a parent
+        // (e.g., Reveal.js non-active slides, sphinx-design unopened tabs),
+        // producing broken SVGs. Render visible elements now, defer hidden ones.
+        const visible = [];
+        const hidden = [];
+        all_mermaids.forEach((el) => {
+            // offsetParent is null for display:none ancestors.
+            // getClientRects().length > 0 catches position:fixed elements
+            // (which also have null offsetParent but are still visible).
+            if (el.offsetParent !== null || el.getClientRects().length > 0) {
+                visible.push(el);
+            } else {
+                hidden.push(el);
+                el.setAttribute('data-mermaid-deferred', 'true');
+            }
+        });
+
+        if (visible.length > 0) {
+            try {
+                await mermaid.run({ nodes: visible });
+            } catch (e) {
+                console.error("Mermaid rendering failed:", e);
+            }
+        }
+
+        // Lazily render hidden elements when they become visible.
+        // Uses a promise chain (_renderQueue) to serialize rendering,
+        // since IntersectionObserver may report multiple entries at once
+        // and mermaid.run() is not safe to call concurrently.
+        if (hidden.length > 0) {
+            if (typeof IntersectionObserver === 'undefined') {
+                console.warn("IntersectionObserver not available; hidden mermaid diagrams will not render.");
+            } else {
+                _renderQueue = Promise.resolve();
+                _lazyObserver = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.isIntersecting && entry.target.getAttribute("data-processed") !== "true") {
+                            _lazyObserver.unobserve(entry.target);
+                            const el = entry.target;
+                            _renderQueue = _renderQueue.then(async () => {
+                                try {
+                                    await mermaid.run({ nodes: [el] });
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    // Apply zoom to the now-rendered diagram, matching
+                                    // the decoration visible diagrams receive.
+                                    if (false) {
+                                        addZoomToSvgs(d3.selectAll("").select(function() {
+                                            return this.querySelector("svg");
+                                        }));
+                                    }
+                                } catch (e) {
+                                    console.error("Mermaid deferred rendering failed:", e);
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    el.setAttribute('data-mermaid-render-failed', 'true');
+                                }
+                            });
+                        }
+                    }
+                });
+                hidden.forEach((el) => _lazyObserver.observe(el));
+            }
+        }
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    // Exclude deferred (hidden) and render-failed elements from completion checks
+    const mermaids_active = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])");
+    const mermaids_processed = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])[data-processed='true']");
+
+    if (false) {
+        const mermaids_to_add_zoom = 0 === -1 ? mermaids_active.length : 0;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("").select(function() {
+                return this.querySelector("svg");
+            });
+            // Wait until every active (visible) diagram has rendered. Deferred
+            // diagrams are excluded, so a fixed d3_node_count that counts a
+            // hidden diagram no longer loops forever waiting for its SVG.
+            if(mermaids_active.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            }
+            addZoomToSvgs(svgs);
+        }
+    } else if(mermaids_active.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if (!true) return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = "\u26f6";
+        fullscreenBtn.style.opacity = "50%";
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scrollX, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.display = 'block';
+
+                if (false) {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+
+
+const load = async () => {
+    initStyles();
+
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...{"startOnLoad": false},
+                ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...{"startOnLoad": false},
+    ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+    }
+);
+
+window.addEventListener("load", load);
+window.runMermaid = runMermaid;</script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ethograph/features/changepoints';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/_modules/ethograph/features/changepoints.html" />
@@ -151,6 +509,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../models/index.html">
+    Models
   </a>
 </li>
 
@@ -283,6 +648,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../examples/index.html">
     Examples
   </a>
@@ -405,15 +777,17 @@
                 <article class="bd-article">
                   
   <h1>Source code for ethograph.features.changepoints</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Literal</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_peaks</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">z_normalize</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">schema</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">purge_short_intervals</span><span class="p">,</span>
@@ -755,33 +1129,155 @@
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_proximity</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">seq_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">distribution</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Sum of one kernel per changepoint; an isolated changepoint reads exactly 1 at its frame."""</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
+    <span class="n">peak</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">changepoint_indices</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">distribution</span> <span class="o">==</span> <span class="s2">"gaussian"</span><span class="p">:</span>
+            <span class="n">peak</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">idx</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">peak</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">idx</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">peak</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_offsets</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">seq_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(since, until)``: samples since the previous / until the next changepoint, clipped at *horizon*, in ``[0, 1]``.</span>
+
+<span class="sd">    Before the first changepoint ``since`` is saturated, after the last</span>
+<span class="sd">    ``until`` is — "no candidate in reach".</span>
+<span class="sd">    """</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">seq_length</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
+    <span class="n">prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">nxt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"left"</span><span class="p">)</span>
+    <span class="n">since</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">prev</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">changepoint_indices</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">prev</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">horizon</span><span class="p">)</span>
+    <span class="n">until</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nxt</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">,</span> <span class="n">changepoint_indices</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">nxt</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">-</span> <span class="n">idx</span><span class="p">,</span> <span class="n">horizon</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">since</span><span class="p">,</span> <span class="n">horizon</span><span class="p">)</span> <span class="o">/</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">until</span><span class="p">,</span> <span class="n">horizon</span><span class="p">)</span> <span class="o">/</span> <span class="n">horizon</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_segment_lengths</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">seq_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">max_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Length of the candidate segment each frame sits in, on a log scale saturating at *max_length*, in ``[0, 1]``.</span>
+
+<span class="sd">    Segments are cut at every changepoint and at both ends of the trial.</span>
+<span class="sd">    ``log1p`` so that 1, 10 and 100 samples are evenly spread — the linear</span>
+<span class="sd">    offsets already resolve everything shorter than two horizons, this</span>
+<span class="sd">    column's job is the long range.</span>
+<span class="sd">    """</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="n">changepoint_indices</span><span class="p">,</span> <span class="p">[</span><span class="n">seq_length</span><span class="p">]]))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">max_length</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">)</span>
+
+
+<span class="c1">#: ``max_length`` default, in horizons: the length column saturates at ``16 * horizon`` samples.</span>
+<span class="n">LENGTH_HORIZONS</span> <span class="o">=</span> <span class="mf">16.0</span>
+
+<span class="c1">#: The short end of the label durations the horizon is read off.</span>
+<span class="n">SHORT_PERCENTILE</span> <span class="o">=</span> <span class="mf">5.0</span>
+
+<span class="c1">#: The long end of the label durations ``max_length`` is read off.</span>
+<span class="n">LONG_PERCENTILE</span> <span class="o">=</span> <span class="mf">95.0</span>
+
+<span class="c1">#: ``horizon = HORIZON_FRACTION * p5(duration)``: the largest radius that keeps the shortest label's edges apart.</span>
+<span class="n">HORIZON_FRACTION</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+<span class="c1">#: The derived kernel ladder, ``horizon / k`` — the widest fades at the horizon (``e^-4``).</span>
+<span class="n">SIGMA_DIVISORS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">16.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">)</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ChangepointScales</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The three temporal scales of the expansion, in samples."""</span>
+
+    <span class="n">horizon</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">max_length</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">sigmas</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">scales_from_durations</span><span class="p">(</span><span class="n">durations_s</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChangepointScales</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read the expansion's scales off the labelled behaviours' durations.</span>
+
+<span class="sd">    Two percentiles, two knobs, no taste: the offsets must resolve the</span>
+<span class="sd">    shortest labelled behaviour, so the horizon is half its duration</span>
+<span class="sd">    (:data:`HORIZON_FRACTION` × the :data:`SHORT_PERCENTILE` percentile) — any larger and</span>
+<span class="sd">    both edges of that label fall inside one horizon; the length column</span>
+<span class="sd">    stops being informative where almost nothing labelled is longer, so</span>
+<span class="sd">    ``max_length`` is the :data:`LONG_PERCENTILE` percentile. Kernel widths only mean</span>
+<span class="sd">    something relative to the boundary radius, so the sigmas are the ladder</span>
+<span class="sd">    ``horizon / (16, 8, 4)``. Point events carry no duration and must be</span>
+<span class="sd">    left out by the caller.</span>
+<span class="sd">    """</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">durations_s</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">d</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">d</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"scales_from_durations needs at least two positive label durations, got </span><span class="si">{</span><span class="n">d</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> — "</span>
+            <span class="s2">"label some behaviours, or spell sigmas/horizon/max_length in the config"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"fs must be positive, got </span><span class="si">{</span><span class="n">fs</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">short_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">SHORT_PERCENTILE</span><span class="p">))</span>
+    <span class="n">long_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">LONG_PERCENTILE</span><span class="p">))</span>
+    <span class="n">horizon</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">HORIZON_FRACTION</span> <span class="o">*</span> <span class="n">short_s</span> <span class="o">*</span> <span class="n">fs</span><span class="p">),</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">max_length</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">long_s</span> <span class="o">*</span> <span class="n">fs</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">horizon</span><span class="p">),</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ChangepointScales</span><span class="p">(</span><span class="n">horizon</span><span class="p">,</span> <span class="n">max_length</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">horizon</span> <span class="o">/</span> <span class="n">k</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">SIGMA_DIVISORS</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">default_horizon</span><span class="p">(</span><span class="n">sigmas</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Where the widest proximity kernel has faded: ``4 * max(sigmas)`` samples (``e^-4``, about 2 % of its peak).</span>
+
+<span class="sd">    The one default the offset columns have, so the two families reach</span>
+<span class="sd">    equally far.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sigmas</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"horizon must be given explicitly when no sigmas are set (the default is 4 * max(sigmas))"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">sigmas</span><span class="p">))</span>
+
+
 <div class="viewcode-block" id="more_changepoint_features">
 <a class="viewcode-back" href="../../../api/ethograph.features.changepoints.more_changepoint_features.html#ethograph.features.changepoints.more_changepoint_features">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">more_changepoint_features</span><span class="p">(</span>
     <span class="n">changepoint_binary</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">targ_feat_vals</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">sigmas</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+    <span class="n">sigmas</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
     <span class="n">distribution</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"gaussian"</span><span class="p">,</span> <span class="s2">"laplacian"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"laplacian"</span><span class="p">,</span>
+    <span class="n">horizon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">scale</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Create changepoint-based features from a binary changepoint array.</span>
 
-<span class="sd">    Generates three complementary representations that help a model learn</span>
-<span class="sd">    changepoint locations:</span>
+<span class="sd">    Four column groups, in this order (see :data:`CP_TRANSFORMS`):</span>
 
-<span class="sd">    - **Binary changepoints** — exact changepoint positions (0/1 mask).</span>
+<span class="sd">    - **Binary** — the exact changepoint positions (0/1 mask).</span>
 <span class="sd">      Example: ``0 0 0 0 1 0 0 0 1 0 0 0 0 0``</span>
-<span class="sd">    - **Smooth changepoints** — proximity to the nearest changepoint, rendered</span>
-<span class="sd">      as Laplacian (or Gaussian) peaks centred at each changepoint index.</span>
-<span class="sd">      Example: ``0 0 0 .3 1 .3 0 .3 1 .3 0 0 0 0``</span>
-<span class="sd">    - **Segment IDs** — unique identifier for each contiguous region between</span>
-<span class="sd">      changepoints (normalised to [0, 1]).</span>
-<span class="sd">      Example: ``0 0 0 0 1 1 1 1 2 2 2 2 2 2``</span>
+<span class="sd">    - **Proximity** — one column per sigma: a Laplacian (or Gaussian) kernel</span>
+<span class="sd">      centred at each changepoint, summed. An isolated changepoint reads 1 at</span>
+<span class="sd">      its frame; overlapping kernels add, so a cluster of candidates reads</span>
+<span class="sd">      above 1. Nothing is normalised per trial.</span>
+<span class="sd">      Example (one sigma): ``0 0 0 .3 1 .3 0 .3 1 .3 0 0 0 0``</span>
+<span class="sd">    - **Offset** — two columns: samples *since* the previous changepoint and</span>
+<span class="sd">      *until* the next, each clipped at *horizon* and scaled to ``[0, 1]``.</span>
+<span class="sd">      A frame reads which side of its nearest candidate it is on, which the</span>
+<span class="sd">      symmetric kernels cannot say; before the first / after the last</span>
+<span class="sd">      changepoint the column is saturated (no candidate in reach).</span>
+<span class="sd">      Example (horizon 4): since ``1 1 1 1 0 .25 .5 .75 0 .25 .5 .75 1 1``,</span>
+<span class="sd">      until ``1 .75 .5 .25 0 .75 .5 .25 0 1 1 1 1 1``</span>
+<span class="sd">    - **Length** — one column: the length of the candidate segment the frame</span>
+<span class="sd">      sits in (cut at every changepoint and at the trial's ends), as</span>
+<span class="sd">      ``log1p(length) / log1p(max_length)``, clipped at 1. The offsets</span>
+<span class="sd">      already resolve anything shorter than two horizons; this is the long</span>
+<span class="sd">      range, where a fragment-prone short segment and a whole bout of rest</span>
+<span class="sd">      should not read alike.</span>
 
-<span class="sd">    Smooth changepoints use a Laplacian kernel by default:</span>
+<span class="sd">    Proximity uses a Laplacian kernel by default:</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        \\text{smooth}(t) = \\sum_i \\exp\\!\\left(-\\frac{|t - i|}{\\sigma}\\right)</span>
+<span class="sd">        \\text{prox}(t) = \\sum_i \\exp\\!\\left(-\\frac{|t - i|}{\\sigma}\\right)</span>
 
 <span class="sd">    where :math:`i` are the changepoint indices and :math:`\\sigma` controls</span>
 <span class="sd">    the peak width. Laplacians have a narrow peak that points directly at the</span>
@@ -789,90 +1285,94 @@
 <span class="sd">    multiple ``sigmas`` (e.g. ``[0.5, 3, 5]``) yields features at several</span>
 <span class="sd">    scales.</span>
 
-<span class="sd">    Additionally, weighted versions emphasise changepoints where the target</span>
-<span class="sd">    feature (e.g. speed) is low, by multiplying the smooth features with</span>
-<span class="sd">    :math:`\\exp(-x / (\\bar{x} + \\epsilon))`. This helps the model</span>
-<span class="sd">    distinguish speed minima before/after movements (low speed) from minima</span>
-<span class="sd">    occurring within different movements.</span>
+<span class="sd">    *scale* multiplies every proximity column by :math:`\\exp(-x / \\bar{x})`</span>
+<span class="sd">    of that signal, emphasising changepoints where it is low — with speed,</span>
+<span class="sd">    the troughs before and after a movement rather than a dip inside one;</span>
+<span class="sd">    with an amplitude envelope, the silences between calls. Frames where</span>
+<span class="sd">    *scale* is NaN read 0.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        changepoint_binary: Binary (0/1) array marking changepoint locations.</span>
-<span class="sd">        targ_feat_vals: Target feature values (e.g. speed) used to weight the</span>
-<span class="sd">            smooth changepoint features.</span>
-<span class="sd">        sigmas: Kernel widths for the smooth changepoint representation.</span>
+<span class="sd">        sigmas: Kernel widths (samples) for the proximity columns.</span>
 <span class="sd">        distribution: ``"laplacian"`` (default) or ``"gaussian"`` kernel.</span>
+<span class="sd">        horizon: Reach of the offset columns, in samples; ``None`` is</span>
+<span class="sd">            :func:`default_horizon`.</span>
+<span class="sd">        scale: Optional signal on the same time axis that scales the</span>
+<span class="sd">            proximity columns.</span>
+<span class="sd">        max_length: Where the length column saturates, in samples; ``None``</span>
+<span class="sd">            is :data:`LENGTH_HORIZONS` horizons.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        2D array of shape ``(T, 1 + 2 * len(sigmas) + 1)`` stacking the</span>
-<span class="sd">        binary mask, one smooth feature per sigma, their weighted (speed-</span>
-<span class="sd">        emphasised, z-normalised) counterparts, and the normalised segment</span>
-<span class="sd">        IDs.</span>
+<span class="sd">        2D array of shape ``(T, 1 + len(sigmas) + 3)``: the binary mask, one</span>
+<span class="sd">        proximity column per sigma, ``since``, ``until``, then ``length``.</span>
 <span class="sd">    """</span>
-    <span class="n">features</span> <span class="o">=</span> <span class="p">[</span><span class="n">changepoint_binary</span><span class="p">]</span>
+    <span class="n">changepoint_binary</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">changepoint_binary</span><span class="p">)</span>
     <span class="n">seq_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">changepoint_binary</span><span class="p">)</span>
-    <span class="n">changepoint_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">changepoint_binary</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">changepoint_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">changepoint_binary</span><span class="p">)</span>
+    <span class="n">horizon</span> <span class="o">=</span> <span class="n">default_horizon</span><span class="p">(</span><span class="n">sigmas</span><span class="p">)</span> <span class="k">if</span> <span class="n">horizon</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">horizon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">horizon</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"horizon must be positive, got </span><span class="si">{</span><span class="n">horizon</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">max_length</span> <span class="o">=</span> <span class="n">LENGTH_HORIZONS</span> <span class="o">*</span> <span class="n">horizon</span> <span class="k">if</span> <span class="n">max_length</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_length</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">max_length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"max_length must be positive, got </span><span class="si">{</span><span class="n">max_length</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="n">sigmas</span><span class="p">:</span>
-        <span class="n">peak</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">changepoint_indices</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">distribution</span> <span class="o">==</span> <span class="s2">"gaussian"</span><span class="p">:</span>
-                <span class="n">peak</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">idx</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">peak</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">idx</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span>
+    <span class="n">proximity</span> <span class="o">=</span> <span class="p">[</span><span class="n">_proximity</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">,</span> <span class="n">seq_length</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">distribution</span><span class="p">)</span> <span class="k">for</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="n">sigmas</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">scale</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">seq_length</span><span class="p">,):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"scale must have shape (</span><span class="si">{</span><span class="n">seq_length</span><span class="si">}</span><span class="s2">,), got </span><span class="si">{</span><span class="n">scale</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">scale</span><span class="p">)):</span>
+            <span class="n">multiplier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">multiplier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">scale</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">))</span>
+        <span class="n">proximity</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">col</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">proximity</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">peak</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">peak</span> <span class="o">/=</span> <span class="n">peak</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">peak</span><span class="p">)</span>
-
-    <span class="n">cp_binary_peak</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
-
-    <span class="n">multiplier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">targ_feat_vals</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">targ_feat_vals</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">))</span>
-    <span class="n">weighted_cps</span> <span class="o">=</span> <span class="n">cp_binary_peak</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
-    <span class="n">weighted_cps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">weighted_cps</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-    <span class="n">weighted_cps</span> <span class="o">=</span> <span class="n">z_normalize</span><span class="p">(</span><span class="n">weighted_cps</span><span class="p">)</span>
-
-    <span class="n">segment_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">seq_length</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">boundaries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="n">changepoint_indices</span><span class="p">,</span> <span class="p">[</span><span class="n">seq_length</span><span class="p">]]))</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">boundaries</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">boundaries</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
-            <span class="n">segment_ids</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-        <span class="k">if</span> <span class="n">segment_ids</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">segment_ids</span> <span class="o">/=</span> <span class="n">segment_ids</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">cp_binary_peak</span><span class="p">,</span> <span class="n">weighted_cps</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">])</span></div>
+    <span class="n">since</span><span class="p">,</span> <span class="n">until</span> <span class="o">=</span> <span class="n">_offsets</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">,</span> <span class="n">seq_length</span><span class="p">,</span> <span class="n">horizon</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">_segment_lengths</span><span class="p">(</span><span class="n">changepoint_indices</span><span class="p">,</span> <span class="n">seq_length</span><span class="p">,</span> <span class="n">max_length</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">changepoint_binary</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="o">*</span><span class="n">proximity</span><span class="p">,</span> <span class="n">since</span><span class="p">,</span> <span class="n">until</span><span class="p">,</span> <span class="n">length</span><span class="p">])</span></div>
 
 
 
 <span class="c1">#: The four column groups ``more_changepoint_features`` produces — the</span>
 <span class="c1">#: vocabulary ``add_changepoint_features``'s ``transforms`` and</span>
 <span class="c1">#: ``segment.config.ChangepointFeaturesConfig.transforms`` both read.</span>
-<span class="c1">#: ``proximity``/``proximity_weighted`` name the *shape* generically because</span>
-<span class="c1">#: which kernel they use is a separate choice (``distribution``).</span>
+<span class="c1">#: ``proximity`` names the *shape* generically because which kernel it uses</span>
+<span class="c1">#: is a separate choice (``distribution``), and whether a signal scales it</span>
+<span class="c1">#: another (``scale_by``). Its columns are named by rank (``_cp_prox0`` is</span>
+<span class="c1">#: the narrowest), never by the sigma value: the values may be derived from</span>
+<span class="c1">#: the labels after the column names are fixed.</span>
 <span class="n">CP_BINARY</span> <span class="o">=</span> <span class="s2">"binary"</span>
+<span class="c1">#: How mask ``var``'s ``binary`` column is named (``{var}_cp_binary``): what a layout looks for to find candidates.</span>
+<span class="n">CP_BINARY_SUFFIX</span> <span class="o">=</span> <span class="s2">"_cp_binary"</span>
 <span class="n">CP_PROXIMITY</span> <span class="o">=</span> <span class="s2">"proximity"</span>
-<span class="n">CP_PROXIMITY_WEIGHTED</span> <span class="o">=</span> <span class="s2">"proximity_weighted"</span>
-<span class="n">CP_SEGMENT_ID</span> <span class="o">=</span> <span class="s2">"segment_id"</span>
-<span class="n">CP_TRANSFORMS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">CP_BINARY</span><span class="p">,</span> <span class="n">CP_PROXIMITY</span><span class="p">,</span> <span class="n">CP_PROXIMITY_WEIGHTED</span><span class="p">,</span> <span class="n">CP_SEGMENT_ID</span><span class="p">)</span>
+<span class="n">CP_OFFSET</span> <span class="o">=</span> <span class="s2">"offset"</span>
+<span class="n">CP_LENGTH</span> <span class="o">=</span> <span class="s2">"length"</span>
+<span class="n">CP_TRANSFORMS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">CP_BINARY</span><span class="p">,</span> <span class="n">CP_PROXIMITY</span><span class="p">,</span> <span class="n">CP_OFFSET</span><span class="p">,</span> <span class="n">CP_LENGTH</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_cp_feature_groups</span><span class="p">(</span><span class="n">var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">"""``(name, transform_group)`` pairs, in ``more_changepoint_features``'s column order."""</span>
-    <span class="n">smooth</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_sigma</span><span class="si">{</span><span class="n">sigma</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="n">sigmas</span><span class="p">]</span>
-    <span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_binary"</span><span class="p">,</span> <span class="n">CP_BINARY</span><span class="p">)]</span>
-    <span class="n">pairs</span> <span class="o">+=</span> <span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">CP_PROXIMITY</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">smooth</span><span class="p">]</span>
-    <span class="n">pairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_binary_weighted"</span><span class="p">,</span> <span class="n">CP_PROXIMITY_WEIGHTED</span><span class="p">))</span>
-    <span class="n">pairs</span> <span class="o">+=</span> <span class="p">[(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_weighted"</span><span class="p">,</span> <span class="n">CP_PROXIMITY_WEIGHTED</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">smooth</span><span class="p">]</span>
-    <span class="n">pairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_segment_id"</span><span class="p">,</span> <span class="n">CP_SEGMENT_ID</span><span class="p">))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_n_sigmas</span><span class="p">(</span><span class="n">sigmas</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">sigmas</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigmas</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigmas</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cp_feature_groups</span><span class="p">(</span><span class="n">var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""``(name, transform_group)`` pairs, in ``more_changepoint_features``'s column order.</span>
+
+<span class="sd">    *sigmas* is the list or just its length — the names depend on nothing else.</span>
+<span class="sd">    """</span>
+    <span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}{</span><span class="n">CP_BINARY_SUFFIX</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">CP_BINARY</span><span class="p">)]</span>
+    <span class="n">pairs</span> <span class="o">+=</span> <span class="p">[(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_prox</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">CP_PROXIMITY</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">_n_sigmas</span><span class="p">(</span><span class="n">sigmas</span><span class="p">))]</span>
+    <span class="n">pairs</span> <span class="o">+=</span> <span class="p">[(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_since"</span><span class="p">,</span> <span class="n">CP_OFFSET</span><span class="p">),</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_until"</span><span class="p">,</span> <span class="n">CP_OFFSET</span><span class="p">)]</span>
+    <span class="n">pairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_length"</span><span class="p">,</span> <span class="n">CP_LENGTH</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">pairs</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">cp_feature_names</span><span class="p">(</span><span class="n">var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">CP_TRANSFORMS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cp_feature_names</span><span class="p">(</span><span class="n">var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">CP_TRANSFORMS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Column names ``add_changepoint_features(..., transforms=transforms)`` writes for *var*.</span>
 
 <span class="sd">    Use this to name the exact columns a ``changepoint_features`` config will</span>
 <span class="sd">    produce without materialising anything — e.g. to paste into</span>
 <span class="sd">    ``features.columns`` by hand, or to check a config's generated layout.</span>
+<span class="sd">    *sigmas* may be the list or just how many there are.</span>
 <span class="sd">    """</span>
     <span class="n">unknown</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">CP_TRANSFORMS</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
@@ -884,10 +1384,12 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">add_changepoint_features</span><span class="p">(</span>
     <span class="n">ds</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
     <span class="n">sigmas</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
-    <span class="n">target_feature</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">distribution</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"gaussian"</span><span class="p">,</span> <span class="s2">"laplacian"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"laplacian"</span><span class="p">,</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">CP_TRANSFORMS</span><span class="p">,</span>
     <span class="nb">vars</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">horizon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">scale_by</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Expand changepoint variables into the ML features of ``more_changepoint_features``.</span>
 
@@ -898,26 +1400,25 @@
 <span class="sd">    for the exact names:</span>
 
 <span class="sd">    - ``binary`` → ``{var}_cp_binary`` — the mask itself</span>
-<span class="sd">    - ``proximity`` → ``{var}_cp_sigma{sigma}`` — one smooth proximity feature per sigma</span>
-<span class="sd">    - ``proximity_weighted`` → ``{var}_cp_binary_weighted`` / ``{var}_cp_sigma{sigma}_weighted``</span>
-<span class="sd">      — the same, weighted by low values of the target feature and z-normalised</span>
-<span class="sd">    - ``segment_id`` → ``{var}_cp_segment_id`` — normalised id of the segment between changepoints</span>
+<span class="sd">    - ``proximity`` → ``{var}_cp_prox{i}`` — one kernel column per sigma, in</span>
+<span class="sd">      the order given, scaled by *scale_by* when given; the sigma value is in</span>
+<span class="sd">      the column's ``description``</span>
+<span class="sd">    - ``offset`` → ``{var}_cp_since`` / ``{var}_cp_until`` — samples since the</span>
+<span class="sd">      previous / until the next changepoint, clipped at *horizon*</span>
+<span class="sd">    - ``length`` → ``{var}_cp_length`` — log length of the candidate segment</span>
+<span class="sd">      the frame sits in, saturating at *max_length*</span>
 
-<span class="sd">    All of them carry ``attrs["normalise"] = 0`` (already in ``[0, 1]`` or</span>
-<span class="sd">    z-normalised) and none is marked as a changepoint variable — neither the</span>
-<span class="sd">    ``kind`` nor the legacy ``type`` — so only the raw binary masks remain</span>
-<span class="sd">    changepoints: they are the only ones that can be OR-merged, snapped to or</span>
-<span class="sd">    drawn as lines.</span>
+<span class="sd">    All of them carry ``attrs["normalise"] = 0`` (already on a fixed scale)</span>
+<span class="sd">    and none is marked as a changepoint variable — neither the ``kind`` nor</span>
+<span class="sd">    the legacy ``type`` — so only the raw binary masks remain changepoints:</span>
+<span class="sd">    they are the only ones that can be OR-merged, snapped to or drawn as lines.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    ds : xr.Dataset</span>
-<span class="sd">        Trial dataset holding changepoint vars and their target features.</span>
+<span class="sd">        Trial dataset holding changepoint vars (and *scale_by*, if given).</span>
 <span class="sd">    sigmas : sequence of float</span>
-<span class="sd">        Kernel widths (samples) for the smooth features.</span>
-<span class="sd">    target_feature : str, optional</span>
-<span class="sd">        Feature whose values weight the smooth features; defaults to each</span>
-<span class="sd">        changepoint var's own ``attrs["target_feature"]``.</span>
+<span class="sd">        Kernel widths (samples) for the proximity columns.</span>
 <span class="sd">    distribution : ``"laplacian"`` or ``"gaussian"``</span>
 <span class="sd">        Kernel shape, see ``more_changepoint_features``.</span>
 <span class="sd">    transforms : subset of :data:`CP_TRANSFORMS`</span>
@@ -926,6 +1427,17 @@
 <span class="sd">        Which changepoint variables to expand; default expands every one</span>
 <span class="sd">        :func:`~ethograph.io.schema.changepoint_vars` finds. Naming a</span>
 <span class="sd">        variable that is not a changepoint mask is an error.</span>
+<span class="sd">    horizon : float, optional</span>
+<span class="sd">        Reach of the offset columns in samples; default</span>
+<span class="sd">        :func:`default_horizon` (``4 * max(sigmas)``).</span>
+<span class="sd">    scale_by : str, optional</span>
+<span class="sd">        Feature whose values scale the proximity columns by</span>
+<span class="sd">        ``exp(-x / mean x)`` — e.g. ``"speed"`` to emphasise changepoints at</span>
+<span class="sd">        rest. It must be on the changepoint var's time axis and carry no dim</span>
+<span class="sd">        the changepoint var lacks. Default: unscaled.</span>
+<span class="sd">    max_length : float, optional</span>
+<span class="sd">        Where the length column saturates, in samples; default</span>
+<span class="sd">        :data:`LENGTH_HORIZONS` × *horizon*.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -942,39 +1454,54 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">!r}</span><span class="s2"> is not a changepoint mask in this dataset (available: </span><span class="si">{</span><span class="n">schema</span><span class="o">.</span><span class="n">changepoint_vars</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
             <span class="p">)</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">CP_TRANSFORMS</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"transforms must be a subset of </span><span class="si">{</span><span class="n">CP_TRANSFORMS</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">cp_vars</span><span class="p">:</span>
         <span class="n">cp</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
         <span class="n">time</span> <span class="o">=</span> <span class="n">get_time_coord</span><span class="p">(</span><span class="n">cp</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
-        <span class="n">target_name</span> <span class="o">=</span> <span class="n">target_feature</span> <span class="k">if</span> <span class="n">target_feature</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">cp</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"target_feature"</span><span class="p">]</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">target_name</span><span class="p">]</span>
-        <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">dims</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cp</span><span class="o">.</span><span class="n">dims</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">extra</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Target feature </span><span class="si">{</span><span class="n">target_name</span><span class="si">!r}</span><span class="s2"> has dims </span><span class="si">{</span><span class="n">extra</span><span class="si">}</span><span class="s2"> that changepoint var </span><span class="si">{</span><span class="n">var</span><span class="si">!r}</span><span class="s2"> "</span>
-                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">cp</span><span class="o">.</span><span class="n">dims</span><span class="si">}</span><span class="s2">) lacks; pin them first"</span>
+        <span class="k">if</span> <span class="n">scale_by</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">stacked</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">mask</span><span class="p">:</span> <span class="n">more_changepoint_features</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">distribution</span><span class="p">,</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="n">max_length</span><span class="p">),</span>
+                <span class="n">cp</span><span class="p">,</span>
+                <span class="n">input_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">time</span><span class="p">]],</span>
+                <span class="n">output_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">time</span><span class="p">,</span> <span class="s2">"cp_feature"</span><span class="p">]],</span>
+                <span class="n">vectorize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">output_dtypes</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="n">time</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Target feature </span><span class="si">{</span><span class="n">target_name</span><span class="si">!r}</span><span class="s2"> is not on the </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2"> axis of </span><span class="si">{</span><span class="n">var</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-
-        <span class="n">stacked</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span>
-            <span class="k">lambda</span> <span class="n">mask</span><span class="p">,</span> <span class="n">vals</span><span class="p">:</span> <span class="n">more_changepoint_features</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">distribution</span><span class="p">),</span>
-            <span class="n">cp</span><span class="p">,</span>
-            <span class="n">target</span><span class="p">,</span>
-            <span class="n">input_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">time</span><span class="p">],</span> <span class="p">[</span><span class="n">time</span><span class="p">]],</span>
-            <span class="n">output_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">time</span><span class="p">,</span> <span class="s2">"cp_feature"</span><span class="p">]],</span>
-            <span class="n">vectorize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">output_dtypes</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
-        <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">scale_by</span><span class="p">]</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">scale</span><span class="o">.</span><span class="n">dims</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cp</span><span class="o">.</span><span class="n">dims</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">extra</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"scale_by feature </span><span class="si">{</span><span class="n">scale_by</span><span class="si">!r}</span><span class="s2"> has dims </span><span class="si">{</span><span class="n">extra</span><span class="si">}</span><span class="s2"> that changepoint var </span><span class="si">{</span><span class="n">var</span><span class="si">!r}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">cp</span><span class="o">.</span><span class="n">dims</span><span class="si">}</span><span class="s2">) lacks; pin them first"</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">time</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scale</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"scale_by feature </span><span class="si">{</span><span class="n">scale_by</span><span class="si">!r}</span><span class="s2"> is not on the </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2"> axis of </span><span class="si">{</span><span class="n">var</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">stacked</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">mask</span><span class="p">,</span> <span class="n">vals</span><span class="p">:</span> <span class="n">more_changepoint_features</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">distribution</span><span class="p">,</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="n">max_length</span><span class="p">),</span>
+                <span class="n">cp</span><span class="p">,</span>
+                <span class="n">scale</span><span class="p">,</span>
+                <span class="n">input_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">time</span><span class="p">],</span> <span class="p">[</span><span class="n">time</span><span class="p">]],</span>
+                <span class="n">output_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="n">time</span><span class="p">,</span> <span class="s2">"cp_feature"</span><span class="p">]],</span>
+                <span class="n">vectorize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">output_dtypes</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+            <span class="p">)</span>
         <span class="n">all_pairs</span> <span class="o">=</span> <span class="n">_cp_feature_groups</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">stacked</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s2">"cp_feature"</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_pairs</span><span class="p">)</span>
         <span class="n">wanted</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span>
+        <span class="n">scaled</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">", scaled by </span><span class="si">{</span><span class="n">scale_by</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">scale_by</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">details</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">_cp_prox</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">": proximity, sigma </span><span class="si">{</span><span class="n">sigma</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> samples</span><span class="si">{</span><span class="n">scaled</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sigmas</span><span class="p">)</span>
+        <span class="p">}</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">group</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_pairs</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">group</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">wanted</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">feature</span> <span class="o">=</span> <span class="n">stacked</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">cp_feature</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">*</span><span class="n">cp</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
             <span class="n">feature</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">"description"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Changepoint feature of </span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2"> (target </span><span class="si">{</span><span class="n">target_name</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Changepoint feature of </span><span class="si">{</span><span class="n">var</span><span class="si">}{</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="s1">''</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">schema</span><span class="o">.</span><span class="n">KIND</span><span class="p">:</span> <span class="n">schema</span><span class="o">.</span><span class="n">CHANGEPOINT_FEATURE</span><span class="p">,</span>
                 <span class="s2">"normalise"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
             <span class="p">}</span>

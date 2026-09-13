@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -283,6 +290,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -480,7 +494,7 @@ type) is stored as group metadata columns; if <em>data</em> is itself a
 <li><p><strong>data</strong> (<em>nap.Tsd</em><em> | </em><em>nap.TsdFrame</em><em> | </em><em>nap.TsGroup</em>) – Input time series.  For a <code class="docutils literal notranslate"><span class="pre">Tsd</span></code> a single unit is produced; for a
 <code class="docutils literal notranslate"><span class="pre">TsdFrame</span></code> one unit per column; for a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code> one unit per
 neuron/unit.</p></li>
-<li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Human-readable label recorded in the output metadata
+<li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Human-readable label recorded in the output metadata
 (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;speed&quot;</span></code>).</p></li>
 <li><p><strong>changepoint_func</strong> (<em>callable</em>) – A function <code class="docutils literal notranslate"><span class="pre">f(x,</span> <span class="pre">**kwargs)</span> <span class="pre">-&gt;</span> <span class="pre">array</span></code> that accepts a 1-D numpy
 array of values and returns an array of changepoint times (or a
@@ -497,12 +511,12 @@ binary indicator of the same length).</p></li>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_troughs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_troughs_binary</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">load_nap_data</span><span class="p">(</span><span class="s2">"experiment.nwb"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">cp_group</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">add_changepoints_to_nap</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">data</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">target_feature</span><span class="o">=</span><span class="s2">"speed"</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">changepoint_func</span><span class="o">=</span><span class="n">find_troughs</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">changepoint_func</span><span class="o">=</span><span class="n">find_troughs_binary</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">prominence</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 </pre></div>
@@ -522,10 +536,10 @@ is applied before angle computation.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tsdframe</strong> (<em>nap.TsdFrame</em>) – Position data with at least two columns (x and y).  If more than two
 columns are present, <em>xy_columns</em> selects which two to use.</p></li>
-<li><p><strong>smoothing_params</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Keyword arguments forwarded to
+<li><p><strong>smoothing_params</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Keyword arguments forwarded to
 <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html#scipy.ndimage.gaussian_filter1d" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.ndimage.gaussian_filter1d()</span></code></a> (e.g. <code class="docutils literal notranslate"><span class="pre">{&quot;sigma&quot;:</span> <span class="pre">3}</span></code>).</p></li>
-<li><p><strong>position_key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Input type passed to <code class="docutils literal notranslate"><span class="pre">get_angle_rgb</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;position&quot;</span></code>).</p></li>
-<li><p><strong>xy_columns</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Column names to use as x and y when <em>tsdframe</em> has more than two
+<li><p><strong>position_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Input type passed to <code class="docutils literal notranslate"><span class="pre">get_angle_rgb</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;position&quot;</span></code>).</p></li>
+<li><p><strong>xy_columns</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Column names to use as x and y when <em>tsdframe</em> has more than two
 columns (default <code class="docutils literal notranslate"><span class="pre">[&quot;x&quot;,</span> <span class="pre">&quot;y&quot;]</span></code>).</p></li>
 </ul>
 </dd>

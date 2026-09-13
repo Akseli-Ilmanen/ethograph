@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -367,8 +381,14 @@
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">User Manual</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="loading_ephys.html">From an ephys recording</a></li>
-<li class="toctree-l1"><a class="reference internal" href="preparing_data.html">Preparing your own data</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="your_data/index.html">Bring your own data</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="your_data/dataset_schema.html">Dataset schema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your_data/trials.html">Trials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your_data/media_alignment.html">Media alignment (w. neuroconv)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your_data/ephys.html">Ephys recordings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your_data/folder_layout.html">Folder layout</a></li>
+</ul>
+</details></li>
 </ul>
 </div>
 </nav></div>
@@ -466,7 +486,7 @@ recordings.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>Electrophysiology</strong></p></td>
 <td><p>Multi-channel trace</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">.bin</span></code>, <code class="docutils literal notranslate"><span class="pre">.raw</span></code> via <a class="reference external" href="https://github.com/cortex-lab/phylib">phylib</a>, and <a class="reference internal" href="loading_ephys.html#target-ephys-formats"><span class="std std-ref">many more formats</span></a> via <a class="reference external" href="https://neo.readthedocs.io">Neo</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">.bin</span></code>, <code class="docutils literal notranslate"><span class="pre">.raw</span></code> via <a class="reference external" href="https://github.com/cortex-lab/phylib">phylib</a>, and <a class="reference internal" href="your_data/ephys.html#target-ephys-formats"><span class="std std-ref">many more formats</span></a> via <a class="reference external" href="https://neo.readthedocs.io">Neo</a></p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Spike-sorted units</strong></p></td>
 <td><p>Raster / PSTH</p></td>
@@ -521,10 +541,13 @@ rate of each timestamp (T), and it is converted internally into a timestamped ob
 <p>Launching opens the start page. It lists the supported file types along the
 bottom and offers three ways in:</p>
 <p><img alt="The EthoGraph start page" src="../_images/cover_page.png" /></p>
-<section id="single-recording-or-trials">
-<h3>Single recording, or trials?<a class="headerlink" href="#single-recording-or-trials" title="Link to this heading">#</a></h3>
-<p>This is the decision that picks your entry point. It is <strong>not</strong> about how many
-files you have — it is about whether they run in parallel or in sequence.</p>
+<section id="which-entry-point">
+<h3>Which entry point?<a class="headerlink" href="#which-entry-point" title="Link to this heading">#</a></h3>
+<p>New here? Start with <strong>Template datasets</strong> (1) — example data of cool animal
+behaviours (🐦‍⬛🐦🎶🦗🐀) that loads in one click. See more here:
+<a class="reference internal" href="../examples/index.html#target-examples-gallery"><span class="std std-ref">examples gallery</span></a>.</p>
+<p>For your own data, the question is not how many files you have — drag &amp; drop
+takes many — but how they are arranged across devices and trials.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Your data</p></th>
@@ -532,28 +555,47 @@ files you have — it is about whether they run in parallel or in sequence.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong>One recording session.</strong> Any number of files, as long as they cover the same stretch of time and start together — four cameras, three microphones, pose per camera, ephys alongside.</p></td>
-<td><p><strong>Drag &amp; drop</strong> (2)</p></td>
+<tr class="row-even"><td><p><strong>One trial, many devices.</strong> Files that start together and cover the same stretch of time — four cameras, three microphones, pose per camera.</p></td>
+<td><p><strong>Drag &amp; drop</strong> (2), <em>Several cameras/mics filming one trial</em></p></td>
 </tr>
-<tr class="row-odd"><td><p><strong>Files split across trials</strong> (one clip per trial), or <strong>streams needing offsets</strong> — ephys on its own clock, trial windows carved out of a continuous recording.</p></td>
+<tr class="row-odd"><td><p><strong>Many trials, one device.</strong> One file per trial per stream — <code class="docutils literal notranslate"><span class="pre">trial001.mp4,</span> <span class="pre">trial002.mp4,</span> <span class="pre">…</span></code>, optionally with matching pose and audio files.</p></td>
+<td><p><strong>Drag &amp; drop</strong> (2), <em>Several trials of one device</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Many trials <em>and</em> many devices</strong> — e.g. 20 trials filmed by 2 cameras with 1 microphone (40 videos + 20 audio files); <strong>streams needing offsets</strong> — ephys on its own clock, trial windows carved out of a continuous recording; or an <strong>existing session file</strong> (<code class="docutils literal notranslate"><span class="pre">.nc</span></code> with trials, <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>, pynapple).</p></td>
 <td><p><strong>Custom set-up</strong> (3)</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>New here? Start with <strong>Template datasets</strong> (1) — example data of cool animal behaviours (🐦‍⬛🐦🎶🦗🐀) that loads in one
-click. See more here: <a class="reference internal" href="../examples/index.html#target-examples-gallery"><span class="std std-ref">examples gallery</span></a>.</p>
 </section>
 <section id="drag-drop">
 <h3>Drag &amp; drop<a class="headerlink" href="#drag-drop" title="Link to this heading">#</a></h3>
-<p>Drop the files, click <strong>Load</strong>. Frame rates, sample rates and durations are read
-from the files themselves. You are only asked for what cannot be inferred: the
-source software of an ambiguous <code class="docutils literal notranslate"><span class="pre">.h5</span></code>/<code class="docutils literal notranslate"><span class="pre">.csv</span></code> pose file, the sampling rate of a
-<code class="docutils literal notranslate"><span class="pre">.npy</span></code>, or the camera order when several videos and pose files arrive together.</p>
-<p>Several videos become <code class="docutils literal notranslate"><span class="pre">cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">cam-2</span></code>, … (each its own view, one shared
-playhead); several audio files become <code class="docutils literal notranslate"><span class="pre">mic-1</span></code>, <code class="docutils literal notranslate"><span class="pre">mic-2</span></code>, … A multichannel <code class="docutils literal notranslate"><span class="pre">.wav</span></code>
-is split into channels automatically. Pose files also gain velocity,
-acceleration and speed per keypoint on load.</p>
+<p>Pick a layout in the drop card’s dropdown, drop the files, click <strong>Load</strong>.
+Frame rates, sample rates and durations are read from the files themselves.
+You are only asked for what cannot be inferred: the source software of an
+ambiguous <code class="docutils literal notranslate"><span class="pre">.h5</span></code>/<code class="docutils literal notranslate"><span class="pre">.csv</span></code> pose file, the sampling rate of a <code class="docutils literal notranslate"><span class="pre">.npy</span></code>, or the camera
+order when several videos and pose files arrive together.</p>
+<p><strong>Several cameras/mics filming one trial</strong> (default): several videos become
+<code class="docutils literal notranslate"><span class="pre">cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">cam-2</span></code>, … (each its own view, one shared playhead); several audio
+files become <code class="docutils literal notranslate"><span class="pre">mic-1</span></code>, <code class="docutils literal notranslate"><span class="pre">mic-2</span></code>, … A multichannel <code class="docutils literal notranslate"><span class="pre">.wav</span></code> is split into channels
+automatically.</p>
+<p><strong>Several trials of one device</strong>: the files of each stream are natural-sorted
+and paired one per trial, so <code class="docutils literal notranslate"><span class="pre">trial001.mp4</span></code> goes with <code class="docutils literal notranslate"><span class="pre">trial001.h5</span></code>. Every
+stream must hold the same number of files; the result is a multi-trial session
+you navigate trial by trial.</p>
+<p>In both layouts, pose files also gain velocity, acceleration and speed per
+keypoint on load.</p>
+<section id="project-folder-keep-your-drops">
+<h4>Project folder — keep your drops<a class="headerlink" href="#project-folder-keep-your-drops" title="Link to this heading">#</a></h4>
+<p>A drop is a quick look by default: the alignment it builds lives in a temp
+folder and is gone next time. Choose a <strong>Project folder</strong> in the bar above the
+cards to keep them instead. Every drop made while it is set lands in the
+project’s <code class="docutils literal notranslate"><span class="pre">sessions/</span></code> folder, one timestamped folder per drop (<code class="docutils literal notranslate"><span class="pre">2026-09-06_21-47-12/</span></code>),
+holding the alignment file, anything derived from the drop and the panel
+layout you left it with. The drop card then lists them under <strong>Reopen a previous
+drop…</strong>: pick one, click <strong>Load</strong>, and the session comes back as it was. Your
+media and data files stay where they are — nothing is copied into the project.</p>
+</section>
 </section>
 <section id="custom-set-up">
 <h3>Custom set-up<a class="headerlink" href="#custom-set-up" title="Link to this heading">#</a></h3>
@@ -562,10 +604,11 @@ plus, optionally, the folders holding your media. Ephys recorded on its own
 clock gets an <strong>Ephys offset (s)</strong> field here.</p>
 <p>The I/O section offers a lot of flexibility, but may be overly complex for your
 data. In many cases the <strong>Data wizard</strong> button can guide you through organizing
-and temporally aligning your media streams into a <code class="docutils literal notranslate"><span class="pre">session.nc</span></code>. For more complex
+and temporally aligning your media streams — including many trials across
+several cameras and microphones — into a <code class="docutils literal notranslate"><span class="pre">session.nc</span></code>. For more complex
 scenarios you may have to write a custom Python script:</p>
-<p>See <a class="reference internal" href="preparing_data.html"><span class="doc">Preparing your own data</span></a> for the full workflow and dataset schema, and
-<a class="reference internal" href="loading_ephys.html"><span class="doc">From an ephys recording</span></a> for ephys formats and Kilosort.</p>
+<p>See <a class="reference internal" href="your_data/index.html"><span class="doc">Bring your own data</span></a> for the full workflow and dataset schema, and
+<a class="reference internal" href="your_data/ephys.html"><span class="doc">Ephys recordings</span></a> for ephys formats and Kilosort.</p>
 </section>
 </section>
 <section id="labelling">
@@ -602,8 +645,8 @@ trained on or predicted over until you widen the filter. No dialog has a
 trial filter of its own; each one tells you how many trials it will run over.</p>
 </div>
 <p>Two more things worth knowing: EthoGraph keeps a <code class="docutils literal notranslate"><span class="pre">curated</span></code> column in that
-table itself (<code class="docutils literal notranslate"><span class="pre">1</span></code> once every label of a trial is manual or curated — see
-<a class="reference internal" href="../advanced/labels/curation.html"><span class="doc">Curating labels</span></a>), and metadata edits save on their own,
+table itself (<code class="docutils literal notranslate"><span class="pre">yes</span></code> once every label of a trial is manual or curated, otherwise <code class="docutils literal notranslate"><span class="pre">no</span></code> — see
+<a class="reference internal" href="../models/curation.html"><span class="doc">Curating labels</span></a>), and metadata edits save on their own,
 about a second after you stop typing — <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code> is only for labels.</p>
 </section>
 <section id="the-interface">
@@ -619,6 +662,27 @@ dimensions for a line plot, or the channel for an audio panel).</p></li>
 the default spot. Remove any panel with its ✕. You can open as many as you
 like — e.g. the same feature as both a line plot and a heatmap.</p></li>
 </ul>
+<section id="which-individual-a-panel-shows">
+<h3>Which individual a panel shows<a class="headerlink" href="#which-individual-a-panel-shows" title="Link to this heading">#</a></h3>
+<p>With more than one individual in the dataset, every panel is in one of two
+modes, shown in its title:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>speed — bird_1 (sidebar)    follows the Individual combo
+speed — bird_2 (pinned)     ignores it
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>The Individual combo</strong> sets what every <code class="docutils literal notranslate"><span class="pre">(sidebar)</span></code> panel shows, and the
+default for new panels.</p></li>
+<li><p><strong>📌</strong> next to the combo pins the last clicked panel (line plot, heatmap or
+camera view) to one individual, or sets it back to <em>Follow sidebar</em>.</p></li>
+<li><p>A pinned line plot/heatmap selects that individual from its feature; a pinned
+camera view shows only that individual’s pose overlay; a panel pinned to individual
+X only shows labels where X is the actor.</p></li>
+</ul>
+<p>To compare two birds side by side: add two duplicate lineplots via
+➕ Add panel. Then for one of them, click 📌 → <code class="docutils literal notranslate"><span class="pre">bird_2</span></code>. Switching the combo
+now moves only the original.</p>
+</section>
 </section>
 <section id="video-audio-playback">
 <h2>Video &amp; audio playback<a class="headerlink" href="#video-audio-playback" title="Link to this heading">#</a></h2>
@@ -638,7 +702,7 @@ Play uses.</p>
 </section>
 <section id="feature-dropdowns">
 <h2>Feature dropdowns<a class="headerlink" href="#feature-dropdowns" title="Link to this heading">#</a></h2>
-<p>To showcase some <code class="docutils literal notranslate"><span class="pre">ethograph</span></code> functionalities, we will use pose data from a carrion crow performing a tool-use task (Moll et al., 2025¹). The <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> is from one behavioural trial, and shows position, velocity, speed, and acceleration for 3 keypoints tracked in 3D.</p>
+<p>To showcase some <code class="docutils literal notranslate"><span class="pre">ethograph</span></code> functionalities, we will use pose data from a carrion crow performing a tool-use task <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id73" title="Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. Current Biology, 35(19):4845–4852.e3, 2025. doi:10.1016/j.cub.2025.08.033.">Moll <em>et al.</em>, 2025</a>]</span>. The <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> is from one behavioural trial, and shows position, velocity, speed, and acceleration for 3 keypoints tracked in 3D.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
@@ -1433,12 +1497,19 @@ how multi-trial data is stored on the xarray side (pynapple uses an
 <span class="n">ds</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">itrial</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>     <span class="c1"># by index</span>
 </pre></div>
 </div>
-<p>Already have one session-long <code class="docutils literal notranslate"><span class="pre">xr.Dataset</span></code>? You don’t have to rebuild it by
-hand — <a class="reference internal" href="preparing_data.html#target-from-continuous"><span class="std std-ref">from_continuous()</span></a> carves trial windows
-out of it.</p>
+<p><strong>One session-long <code class="docutils literal notranslate"><span class="pre">xr.Dataset</span></code> plus trial start/stop times?</strong> Pass both to
+<a class="reference internal" href="your_data/trials.html#target-from-continuous"><span class="std std-ref">from_continuous()</span></a>. The times can be a
+<code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> with <code class="docutils literal notranslate"><span class="pre">trial</span></code>, <code class="docutils literal notranslate"><span class="pre">start_time</span></code> and <code class="docutils literal notranslate"><span class="pre">stop_time</span></code> columns (in seconds, on
+the dataset’s time axis) or a <a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pynapple.IntervalSet</span></code></a>. Each trial becomes
+its own window, with time starting at 0:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">trials</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"trial"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="s2">"start_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">120.0</span><span class="p">],</span> <span class="s2">"stop_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">100.0</span><span class="p">,</span> <span class="mf">250.0</span><span class="p">]})</span>
+<span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">from_continuous</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">trials</span><span class="p">)</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"session.nc"</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Storing trials is only half the job: the GUI also needs to know which video,
 audio and pose files belong to each trial, which lives in a separate alignment
-file. <a class="reference internal" href="preparing_data.html"><span class="doc">Preparing your own data</span></a> covers both ends — the dataset schema and the
+file. <a class="reference internal" href="your_data/index.html"><span class="doc">Bring your own data</span></a> covers both ends — the dataset schema and the
 alignment — and <a class="reference internal" href="../api/trialtree.html"><span class="doc">TrialTree</span></a> documents the full TrialTree API.</p>
 </section>
 <section id="template-datasets">
@@ -1446,16 +1517,10 @@ alignment — and <a class="reference internal" href="../api/trialtree.html"><sp
 <p>Ready-made datasets with video, features and labels already in place, downloaded
 from the start page. The notebooks that built them are in the
 <a class="reference internal" href="../examples/index.html#target-examples-gallery"><span class="std std-ref">examples gallery</span></a>.</p>
-<p><strong>Tool-using crows (Moll et al., 2025)</strong> — Learned precision tool use in carrion crows. Two trials with video, 3D pose (DeepLabCut), kinematics, and video features.</p>
-<p><strong>Lockbox (Reiske et al., 2026)</strong> — Behaviour recognition for mice solving mechanical puzzle lockboxes. Six trials with multi-camera video and pose.</p>
-<p><strong>Zebra finches in BirdPark (Rüttimann et al., 2025)</strong> — Multimodal dataset of zebra finch groups with synchronized video, microphone arrays, and backpack-mounted accelerometers.</p>
+<p><strong>Tool-using crows</strong> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id73" title="Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. Current Biology, 35(19):4845–4852.e3, 2025. doi:10.1016/j.cub.2025.08.033.">Moll <em>et al.</em>, 2025</a>]</span> — Learned precision tool use in carrion crows. Two trials with video, 3D pose (DeepLabCut), kinematics, and video features.</p>
+<p><strong>Lockbox</strong> <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../community/references.html#id74" title="Patrik Reiske, Marcus N. Boon, Niek Andresen, Sole Traverso, Marieatou Daniels, Katharina Hohlbaum, Lars Lewejohann, Christa Thöne-Reineke, Olaf Hellwich, and Henning Sprekeler. Mouse lockbox dataset: behavior recognition for mice solving lockboxes. International Journal of Computer Vision, 134(7):318, 2026. doi:10.1007/s11263-026-02908-x.">Reiske <em>et al.</em>, 2026</a>]</span> — Behaviour recognition for mice solving mechanical puzzle lockboxes. Six trials with multi-camera video and pose.</p>
+<p><strong>Zebra finches in BirdPark</strong> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../community/references.html#id75" title="Linus Rüttimann, Yuhang Wang, Jörg Rychen, Tomas Tomka, Heiko Hörster, and Richard H. R. Hahnloser. Multimodal system for recording individual-level behaviors in songbird groups. PeerJ, 13:e20203, 2025. doi:10.7717/peerj.20203.">Rüttimann <em>et al.</em>, 2025</a>]</span> — Multimodal dataset of zebra finch groups with synchronized video, microphone arrays, and backpack-mounted accelerometers.</p>
 <p><strong>Cricket stridulation</strong> — Sound production in <em>Pholidoptera littoralis</em> with synchronized video, audio, and DeepLabCut pose.</p>
-<section id="references">
-<h3>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h3>
-<p>Moll, F. W., Würzler, J., &amp; Nieder, A. (2025). Learned precision tool use in carrion crows. <em>Current Biology</em>, 35(19), 4845–4852.e3. <a class="reference external" href="https://doi.org/10.1016/j.cub.2025.08.033">https://doi.org/10.1016/j.cub.2025.08.033</a></p>
-<p>Reiske, P., Boon, M. N., Andresen, N., Traverso, S., Daniels, M., Hohlbaum, K., Lewejohann, L., Thöne-Reineke, C., Hellwich, O., &amp; Sprekeler, H. (2026). Mouse Lockbox Dataset: Behavior Recognition for Mice Solving Lockboxes. <em>International Journal of Computer Vision</em>, 134, 318. <a class="reference external" href="https://doi.org/10.1007/s11263-026-02908-x">https://doi.org/10.1007/s11263-026-02908-x</a></p>
-<p>Rüttimann, L., Wang, Y., Rychen, J., Tomka, T., Hörster, H., &amp; Hahnloser, R. H. R. (2025). Multimodal system for recording individual-level behaviors in songbird groups. <em>PeerJ</em>, 13, e20203. <a class="reference external" href="https://doi.org/10.7717/peerj.20203">https://doi.org/10.7717/peerj.20203</a></p>
-</section>
 </section>
 </section>
 
@@ -1509,22 +1574,25 @@ from the start page. The notebooks that built them are in the
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#install">Install</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multimodal-visualization">Multimodal visualization</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-your-data">Loading your data</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#single-recording-or-trials">Single recording, or trials?</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#drag-drop">Drag &amp; drop</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-entry-point">Which entry point?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#drag-drop">Drag &amp; drop</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#project-folder-keep-your-drops">Project folder — keep your drops</a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-set-up">Custom set-up</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#labelling">Labelling</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#trial-metadata">Trial metadata</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-individual-a-panel-shows">Which individual a panel shows</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#video-audio-playback">Video &amp; audio playback</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-dropdowns">Feature dropdowns</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoints">Changepoints</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#storing-trials-dataset-vs-trialtree">Storing trials: Dataset vs TrialTree</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-datasets">Template datasets</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-datasets">Template datasets</a></li>
 </ul>
   </nav></div>
 

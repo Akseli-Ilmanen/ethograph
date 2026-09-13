@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -368,6 +382,7 @@
 <li class="toctree-l1"><a class="reference internal" href="people.html">People</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 </div>
 </nav></div>
@@ -438,7 +453,7 @@ requests — all help is appreciated.</p>
 <a class="reference external" href="https://github.com/Akseli-Ilmanen/ethograph/issues">GitHub repository</a> with a
 clear description of the problem and steps to reproduce it. Please:</p>
 <ol class="arabic simple">
-<li><p>In topbar <code class="docutils literal notranslate"><span class="pre">Help\Debug</span></code>, click on <code class="docutils literal notranslate"><span class="pre">Print</span> <span class="pre">current</span> <span class="pre">state</span></code>. Share this message along with your error.</p></li>
+<li><p>In the top bar, <strong>Help ▸ Print current state</strong>. Share this message along with your error.</p></li>
 <li><p>If you have data loading problems, send some sample data to <a class="reference external" href="mailto:akseli&#46;ilmanen&#37;&#52;&#48;gmail&#46;com">akseli<span>&#46;</span>ilmanen<span>&#64;</span>gmail<span>&#46;</span>com</a>, so I can test it myself.</p></li>
 </ol>
 </section>
@@ -448,7 +463,8 @@ clear description of the problem and steps to reproduce it. Please:</p>
 development tools:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Akseli-Ilmanen/ethograph
 <span class="nb">cd</span><span class="w"> </span>ethograph
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[gui,audio,dandi,dev,docs]"</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[gui,audio,model,dandi,dev,docs]"</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="../getting_started/installation.html"><span class="doc">Installation</span></a> for details on setting up a virtual

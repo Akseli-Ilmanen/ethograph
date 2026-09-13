@@ -9,7 +9,7 @@ Open an issue on the
 [GitHub repository](https://github.com/Akseli-Ilmanen/ethograph/issues) with a
 clear description of the problem and steps to reproduce it. Please:
 
-1) In topbar `Help\Debug`, click on `Print current state`. Share this message along with your error.
+1) In the top bar, **Help ▸ Print current state**. Share this message along with your error.
 2) If you have data loading problems, send some sample data to akseli.ilmanen@gmail.com, so I can test it myself.
 
 
@@ -21,7 +21,8 @@ development tools:
 ```bash
 git clone https://github.com/Akseli-Ilmanen/ethograph
 cd ethograph
-uv pip install -e ".[gui,audio,dandi,dev,docs]"
+uv pip install --torch-backend=auto torch torchvision
+uv pip install -e ".[gui,audio,model,dandi,dev,docs]"
 ```
 
 See {doc}`../getting_started/installation` for details on setting up a virtual

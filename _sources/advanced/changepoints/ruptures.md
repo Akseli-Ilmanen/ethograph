@@ -1,7 +1,7 @@
 (target-ruptures)=
 # Ruptures
 
-Reference: [Ruptures (Truong et al., 2020)](https://centre-borelli.github.io/ruptures-docs)
+Reference: [Ruptures](https://centre-borelli.github.io/ruptures-docs) {cite:p}`truong2020ruptures`
 
 General-purpose changepoint detection using the `ruptures` library.
 
@@ -40,6 +40,3 @@ needed.
 
 ---
 
-## References
-
-- Truong, C., Oudre, L., & Vayatis, N. (2020). Selective review of offline change point detection methods. Signal Processing, 167, 107299. <https://doi.org/10.1016/j.sigpro.2019.107299>

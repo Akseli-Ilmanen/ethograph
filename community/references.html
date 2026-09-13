@@ -1,0 +1,849 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>References &#8212; ethograph</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=17f663f2" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'community/references';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/community/references.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Roadmap" href="roadmap.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/icon.png" class="logo__image only-light" alt=""/>
+    <img src="../_static/icon.png" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">ethograph</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="people.html">People</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">References</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Community</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">References</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="references">
+<span id="target-references"></span><h1>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h1>
+<p>Every paper, dataset and tool cited in these docs. A citation on any page
+links to its entry here.</p>
+<section id="software-ethograph-builds-on">
+<h2>Software EthoGraph builds on<a class="headerlink" href="#software-ethograph-builds-on" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id1">
+<div role="list" class="citation-list">
+<div class="citation" id="id3" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S1<span class="fn-bracket">]</span></span>
+<p>Jan Benda. Audioio: platform independent interfacing of numpy arrays of floats with audio files and devices. URL: <a class="github reference external" href="https://github.com/bendalab/audioio">bendalab/audioio</a>.</p>
+</div>
+<div class="citation" id="id4" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S2<span class="fn-bracket">]</span></span>
+<p>Samuel Garcia, Domenico Guarino, Florent Jaillet, Todd Jennings, Robert Pröpper, Philipp L. Rautenberg, Chris C. Rodgers, Andrey Sobolev, Thomas Wachtler, Pierre Yger, and Andrew P. Davison. Neo: an object model for handling electrophysiology data in multiple formats. <em>Frontiers in Neuroinformatics</em>, 8:10, 2014. <a class="reference external" href="https://doi.org/10.3389/fninf.2014.00010">doi:10.3389/fninf.2014.00010</a>.</p>
+</div>
+<div class="citation" id="id7" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S3<span class="fn-bracket">]</span></span>
+<p>Stephan Hoyer and Joe Hamman. Xarray: N-D labeled arrays and datasets in Python. <em>Journal of Open Research Software</em>, 5(1):10, 2017. <a class="reference external" href="https://doi.org/10.5334/jors.148">doi:10.5334/jors.148</a>.</p>
+</div>
+<div class="citation" id="id12" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S4<span class="fn-bracket">]</span></span>
+<p>Almar Klein and others. Pygfx: a render engine for Python. URL: <a class="reference external" href="https://pygfx.org/">https://pygfx.org/</a>, <a class="reference external" href="https://doi.org/10.5281/zenodo.21443465">doi:10.5281/zenodo.21443465</a>.</p>
+</div>
+<div class="citation" id="id5" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S5<span class="fn-bracket">]</span></span>
+<p>David Nicholson. Crowsetta: a Python tool to work with any format for annotating animal vocalizations and bioacoustics data. <em>Journal of Open Source Software</em>, 8(84):5338, 2023. <a class="reference external" href="https://doi.org/10.21105/joss.05338">doi:10.21105/joss.05338</a>.</p>
+</div>
+<div class="citation" id="id10" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S6<span class="fn-bracket">]</span></span>
+<p>Cyrille Rossant, Shabnam N. Kadir, Dan F. M. Goodman, John Schulman, Maximilian L. D. Hunter, Aman B. Saleem, Andres Grosmark, Mariano Belluscio, George H. Denfield, Alexander S. Ecker, Andreas S. Tolias, Samuel Solomon, György Buzsáki, Matteo Carandini, and Kenneth D. Harris. Spike sorting for large, dense electrode arrays. <em>Nature Neuroscience</em>, 19:634–641, 2016. The paper behind phy (https://github.com/cortex-lab/phy). <a class="reference external" href="https://doi.org/10.1038/nn.4268">doi:10.1038/nn.4268</a>.</p>
+</div>
+<div class="citation" id="id6" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S7<span class="fn-bracket">]</span></span>
+<p>Oliver Rübel, Andrew Tritt, Ryan Ly, Benjamin K. Dichter, Satrajit Ghosh, Lawrence Niu, Pamela Baker, Ivan Soltesz, Lydia Ng, Karel Svoboda, Loren Frank, and Kristofer E. Bouchard. The Neurodata Without Borders ecosystem for neurophysiological data science. <em>eLife</em>, 11:e78362, 2022. <a class="reference external" href="https://doi.org/10.7554/eLife.78362">doi:10.7554/eLife.78362</a>.</p>
+</div>
+<div class="citation" id="id9" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S8<span class="fn-bracket">]</span></span>
+<p>Nikoloz Sirmpilatze, Chang Huan Lo, Sofía Miñano, Brandon D. Peri, Dhruv Sharma, Laura Porta, Iván Varela, and Adam L. Tyson. Movement. URL: <a class="reference external" href="https://movement.neuroinformatics.dev/">https://movement.neuroinformatics.dev/</a>, <a class="reference external" href="https://doi.org/10.5281/zenodo.12755724">doi:10.5281/zenodo.12755724</a>.</p>
+</div>
+<div class="citation" id="id8" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S9<span class="fn-bracket">]</span></span>
+<p>Guillaume Viejo, Daniel Levenstein, Sofia Skromne Carrasco, Dhruv Mehrotra, Sara Mahallati, Gilberto R. Vite, Henry Denny, Lucas Sjulson, Francesco P. Battaglia, and Adrien Peyrache. Pynapple, a toolbox for data analysis in neuroscience. <em>eLife</em>, 12:RP85786, 2023. <a class="reference external" href="https://doi.org/10.7554/eLife.85786">doi:10.7554/eLife.85786</a>.</p>
+</div>
+<div class="citation" id="id2" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S10<span class="fn-bracket">]</span></span>
+<p>PyAV contributors. PyAV: pythonic bindings for FFmpeg's libraries. URL: <a class="reference external" href="https://pyav.org/docs/stable/">https://pyav.org/docs/stable/</a>.</p>
+</div>
+<div class="citation" id="id13" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S11<span class="fn-bracket">]</span></span>
+<p>pynapple-org. Pynaviz: interactive visualization for pynapple. URL: <a class="github reference external" href="https://github.com/pynapple-org/pynaviz">pynapple-org/pynaviz</a>.</p>
+</div>
+<div class="citation" id="id11" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>S12<span class="fn-bracket">]</span></span>
+<p>PyQtGraph contributors. PyQtGraph: scientific graphics and GUI library for Python. URL: <a class="reference external" href="https://www.pyqtgraph.org/">https://www.pyqtgraph.org/</a>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="datasets">
+<h2>Datasets<a class="headerlink" href="#datasets" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id60">
+<div role="list" class="citation-list">
+<div class="citation" id="id76" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>D1<span class="fn-bracket">]</span></span>
+<p>Jesse Marshall, Ugne Klibaite, Amanda Gellis, Diego Aldarondo, Bence Olveczky, and Timothy W. Dunn. The PAIR-R24M dataset for multi-animal 3D pose estimation. In <em>Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks</em>, volume 1. 2021. URL: <a class="reference external" href="https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/1ff8a7b5dc7a7d1f0ed65aaa29c04b1e-Abstract-round1.html">https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/1ff8a7b5dc7a7d1f0ed65aaa29c04b1e-Abstract-round1.html</a>.</p>
+</div>
+<div class="citation" id="id73" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>D2<span class="fn-bracket">]</span></span>
+<p>Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. <em>Current Biology</em>, 35(19):4845–4852.e3, 2025. <a class="reference external" href="https://doi.org/10.1016/j.cub.2025.08.033">doi:10.1016/j.cub.2025.08.033</a>.</p>
+</div>
+<div class="citation" id="id77" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>D3<span class="fn-bracket">]</span></span>
+<p>Tanmay Nath, Alexander Mathis, An Chi Chen, Amir Patel, Matthias Bethge, and Mackenzie Weygandt Mathis. Using DeepLabCut for 3D markerless pose estimation across species and behaviors. <em>Nature Protocols</em>, 14(7):2152–2176, 2019. <a class="reference external" href="https://doi.org/10.1038/s41596-019-0176-0">doi:10.1038/s41596-019-0176-0</a>.</p>
+</div>
+<div class="citation" id="id74" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>D4<span class="fn-bracket">]</span></span>
+<p>Patrik Reiske, Marcus N. Boon, Niek Andresen, Sole Traverso, Marieatou Daniels, Katharina Hohlbaum, Lars Lewejohann, Christa Thöne-Reineke, Olaf Hellwich, and Henning Sprekeler. Mouse lockbox dataset: behavior recognition for mice solving lockboxes. <em>International Journal of Computer Vision</em>, 134(7):318, 2026. <a class="reference external" href="https://doi.org/10.1007/s11263-026-02908-x">doi:10.1007/s11263-026-02908-x</a>.</p>
+</div>
+<div class="citation" id="id75" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>D5<span class="fn-bracket">]</span></span>
+<p>Linus Rüttimann, Yuhang Wang, Jörg Rychen, Tomas Tomka, Heiko Hörster, and Richard H. R. Hahnloser. Multimodal system for recording individual-level behaviors in songbird groups. <em>PeerJ</em>, 13:e20203, 2025. <a class="reference external" href="https://doi.org/10.7717/peerj.20203">doi:10.7717/peerj.20203</a>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="changepoint-detection">
+<h2>Changepoint detection<a class="headerlink" href="#changepoint-detection" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id119">
+<div role="list" class="citation-list">
+<div class="citation" id="id142" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C1<span class="fn-bracket">]</span></span>
+<p>Yarden Cohen, David Aaron Nicholson, Alexa Sanchioni, Emily K. Mallaber, Viktoriya Skidanova, and Timothy J. Gardner. Automated annotation of birdsong with a neural network that segments spectrograms. <em>eLife</em>, 11:e63853, 2022. <a class="reference external" href="https://doi.org/10.7554/eLife.63853">doi:10.7554/eLife.63853</a>.</p>
+</div>
+<div class="citation" id="id143" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C2<span class="fn-bracket">]</span></span>
+<p>Nianlong Gu, Kanghwi Lee, Maris Basha, Sumit Kumar Ram, Guanghao You, and Richard H. R. Hahnloser. Positive transfer of the Whisper speech transformer to human and animal voice activity detection. In <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 7505–7509. 2024. <a class="reference external" href="https://doi.org/10.1109/ICASSP48485.2024.10447620">doi:10.1109/ICASSP48485.2024.10447620</a>.</p>
+</div>
+<div class="citation" id="id140" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C3<span class="fn-bracket">]</span></span>
+<p>David E. Meyer, Richard A. Abrams, Sheldon Kornblum, Charles E. Wright, and J. E. Keith Smith. Optimality in human motor performance: ideal control of rapid aimed movements. <em>Psychological Review</em>, 95(3):340–370, 1988. <a class="reference external" href="https://doi.org/10.1037/0033-295X.95.3.340">doi:10.1037/0033-295X.95.3.340</a>.</p>
+</div>
+<div class="citation" id="id137" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C4<span class="fn-bracket">]</span></span>
+<p>David Nicholson. Vocalpy/vocalpy: 0.2.0. 2023. <a class="reference external" href="https://doi.org/10.5281/zenodo.7905426">doi:10.5281/zenodo.7905426</a>.</p>
+</div>
+<div class="citation" id="id138" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C5<span class="fn-bracket">]</span></span>
+<p>David Nicholson and Yarden Cohen. Vak: a neural network framework for researchers studying animal acoustic communication. In <em>Proceedings of the 22nd Python in Science Conference (SciPy)</em>. 2023. <a class="reference external" href="https://doi.org/10.25080/gerudo-f2bc6f59-008">doi:10.25080/gerudo-f2bc6f59-008</a>.</p>
+</div>
+<div class="citation" id="id139" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C6<span class="fn-bracket">]</span></span>
+<p>Tim Sainburg, Marvin Thielk, and Timothy Q. Gentner. Finding, visualizing, and quantifying latent structure across diverse animal vocal repertoires. <em>PLOS Computational Biology</em>, 16(10):e1008228, 2020. <a class="reference external" href="https://doi.org/10.1371/journal.pcbi.1008228">doi:10.1371/journal.pcbi.1008228</a>.</p>
+</div>
+<div class="citation" id="id141" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C7<span class="fn-bracket">]</span></span>
+<p>Francesco Torricelli, Alice Tomassini, Giovanni Pezzulo, Thierry Pozzo, Luciano Fadiga, and Alessandro D'Ausilio. Motor invariants in action execution and perception. <em>Physics of Life Reviews</em>, 44:13–47, 2023. <a class="reference external" href="https://doi.org/10.1016/j.plrev.2022.11.003">doi:10.1016/j.plrev.2022.11.003</a>.</p>
+</div>
+<div class="citation" id="id145" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C8<span class="fn-bracket">]</span></span>
+<p>Charles Truong, Laurent Oudre, and Nicolas Vayatis. Selective review of offline change point detection methods. <em>Signal Processing</em>, 167:107299, 2020. <a class="reference external" href="https://doi.org/10.1016/j.sigpro.2019.107299">doi:10.1016/j.sigpro.2019.107299</a>.</p>
+</div>
+<div class="citation" id="id144" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>C9<span class="fn-bracket">]</span></span>
+<p>Ruiyu Xu, Zheren Song, Jianguo Wu, Chao Wang, and Shiyu Zhou. Change-point detection with deep learning: a review. <em>Frontiers of Engineering Management</em>, 12(1):154–176, 2025. <a class="reference external" href="https://doi.org/10.1007/s42524-025-4109-z">doi:10.1007/s42524-025-4109-z</a>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="keypoint-labelling-and-tracking">
+<h2>Keypoint labelling and tracking<a class="headerlink" href="#keypoint-labelling-and-tracking" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id178">
+<div role="list" class="citation-list">
+<div class="citation" id="id208" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>K1<span class="fn-bracket">]</span></span>
+<p>Jean-Yves Bouguet. Pyramidal implementation of the lucas kanade feature tracker. 2001. URL: <a class="reference external" href="https://robots.stanford.edu/cs223b04/algo_tracking.pdf">https://robots.stanford.edu/cs223b04/algo_tracking.pdf</a>.</p>
+</div>
+<div class="citation" id="id206" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>K2<span class="fn-bracket">]</span></span>
+<p>F. N. Fritsch and R. E. Carlson. Monotone piecewise cubic interpolation. <em>SIAM Journal on Numerical Analysis</em>, 17(2):238–246, 1980. <a class="reference external" href="https://doi.org/10.1137/0717021">doi:10.1137/0717021</a>.</p>
+</div>
+<div class="citation" id="id209" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>K3<span class="fn-bracket">]</span></span>
+<p>Nikita Karaev, Iurii Makarov, Jianyuan Wang, Natalia Neverova, Andrea Vedaldi, and Christian Rupprecht. CoTracker3: simpler and better point tracking by pseudo-labelling real videos. In <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>, 6013–6022. 2025. URL: <a class="reference external" href="https://arxiv.org/abs/2410.11831">https://arxiv.org/abs/2410.11831</a>, <a class="reference external" href="https://arxiv.org/abs/2410.11831">arXiv:2410.11831</a>.</p>
+</div>
+<div class="citation" id="id205" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>K4<span class="fn-bracket">]</span></span>
+<p>Maximilian Krogius, Acshi Haggenmiller, and Edwin Olson. Flexible layouts for fiducial tags. In <em>IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)</em>, 1898–1903. 2019. <a class="reference external" href="https://doi.org/10.1109/IROS40897.2019.8967787">doi:10.1109/IROS40897.2019.8967787</a>.</p>
+</div>
+<div class="citation" id="id207" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>K5<span class="fn-bracket">]</span></span>
+<p>Bruce D. Lucas and Takeo Kanade. An iterative image registration technique with an application to stereo vision. In <em>Proceedings of the 7th International Joint Conference on Artificial Intelligence (IJCAI)</em>, 674–679. 1981. URL: <a class="reference external" href="https://www.ri.cmu.edu/pub_files/pub3/lucas_bruce_d_1981_1/lucas_bruce_d_1981_1.pdf">https://www.ri.cmu.edu/pub_files/pub3/lucas_bruce_d_1981_1/lucas_bruce_d_1981_1.pdf</a>.</p>
+</div>
+<div class="citation" id="id210" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>K6<span class="fn-bracket">]</span></span>
+<p>Zhuoyang Pan, Boxiao Pan, Guandao Yang, Adam W. Harley, and Leonidas Guibas. Animal pose labeling using general-purpose point trackers. In <em>CV4Animals Workshop at the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2025. URL: <a class="reference external" href="https://arxiv.org/abs/2506.03868">https://arxiv.org/abs/2506.03868</a>, <a class="reference external" href="https://arxiv.org/abs/2506.03868">arXiv:2506.03868</a>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="point-event-models">
+<h2>Point-event models<a class="headerlink" href="#point-event-models" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id237">
+<div role="list" class="citation-list">
+<div class="citation" id="id272" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P1<span class="fn-bracket">]</span></span>
+<p>James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In <em>European Conference on Computer Vision (ECCV)</em>. 2022. URL: <a class="reference external" href="https://arxiv.org/abs/2207.10213">https://arxiv.org/abs/2207.10213</a>, <a class="reference external" href="https://arxiv.org/abs/2207.10213">arXiv:2207.10213</a>.</p>
+</div>
+<div class="citation" id="id271" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P2<span class="fn-bracket">]</span></span>
+<p>Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In <em>Advances in Neural Information Processing Systems (NeurIPS)</em>. 2017. URL: <a class="reference external" href="https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree">https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree</a>.</p>
+</div>
+<div class="citation" id="id276" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P3<span class="fn-bracket">]</span></span>
+<p>Zhaoyu Liu, Kan Jiang, Murong Ma, Zhe Hou, Yun Lin, and Jin Song Dong. Few-shot precise event spotting via unified multi-entity graph and distillation. In <em>Proceedings of the AAAI Conference on Artificial Intelligence (AAAI)</em>. 2026. URL: <a class="reference external" href="https://arxiv.org/abs/2511.14186">https://arxiv.org/abs/2511.14186</a>, <a class="reference external" href="https://arxiv.org/abs/2511.14186">arXiv:2511.14186</a>.</p>
+</div>
+<div class="citation" id="id270" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P4<span class="fn-bracket">]</span></span>
+<p>Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake VanderPlas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, and Edouard Duchesnay. Scikit-learn: machine learning in Python. <em>Journal of Machine Learning Research</em>, 12:2825–2830, 2011. URL: <a class="reference external" href="https://jmlr.org/papers/v12/pedregosa11a.html">https://jmlr.org/papers/v12/pedregosa11a.html</a>.</p>
+</div>
+<div class="citation" id="id273" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P5<span class="fn-bracket">]</span></span>
+<p>Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming He, and Piotr Dollár. Designing network design spaces. In <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2020. URL: <a class="reference external" href="https://arxiv.org/abs/2003.13678">https://arxiv.org/abs/2003.13678</a>, <a class="reference external" href="https://arxiv.org/abs/2003.13678">arXiv:2003.13678</a>.</p>
+</div>
+<div class="citation" id="id274" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P6<span class="fn-bracket">]</span></span>
+<p>Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2020. URL: <a class="reference external" href="https://arxiv.org/abs/1912.00381">https://arxiv.org/abs/1912.00381</a>, <a class="reference external" href="https://arxiv.org/abs/1912.00381">arXiv:1912.00381</a>.</p>
+</div>
+<div class="citation" id="id275" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>P7<span class="fn-bracket">]</span></span>
+<p>Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: <a class="reference external" href="https://arxiv.org/abs/2507.07381">https://arxiv.org/abs/2507.07381</a>, <a class="reference external" href="https://arxiv.org/abs/2507.07381">arXiv:2507.07381</a>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="action-segmentation">
+<h2>Action segmentation<a class="headerlink" href="#action-segmentation" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id296">
+<div role="list" class="citation-list">
+<div class="citation" id="id337" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A1<span class="fn-bracket">]</span></span>
+<p>Yazan Abu Farha and Juergen Gall. MS-TCN: multi-stage temporal convolutional network for action segmentation. In <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2019. URL: <a class="reference external" href="https://arxiv.org/abs/1903.01945">https://arxiv.org/abs/1903.01945</a>, <a class="reference external" href="https://arxiv.org/abs/1903.01945">arXiv:1903.01945</a>.</p>
+</div>
+<div class="citation" id="id349" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A2<span class="fn-bracket">]</span></span>
+<p>Takuya Akiba, Shotaro Sano, Toshihiko Yanase, Takeru Ohta, and Masanori Koyama. Optuna: a next-generation hyperparameter optimization framework. In <em>Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery &amp; Data Mining (KDD)</em>. 2019. URL: <a class="reference external" href="https://arxiv.org/abs/1907.10902">https://arxiv.org/abs/1907.10902</a>, <a class="reference external" href="https://arxiv.org/abs/1907.10902">arXiv:1907.10902</a>.</p>
+</div>
+<div class="citation" id="id348" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A3<span class="fn-bracket">]</span></span>
+<p>Emad Bahrami, Gianpiero Francesca, and Juergen Gall. How much temporal long-term context is needed for action segmentation? In <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>. 2023. URL: <a class="reference external" href="https://arxiv.org/abs/2308.11358">https://arxiv.org/abs/2308.11358</a>, <a class="reference external" href="https://arxiv.org/abs/2308.11358">arXiv:2308.11358</a>.</p>
+</div>
+<div class="citation" id="id343" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A4<span class="fn-bracket">]</span></span>
+<p>Haoyu Ji, Bowen Chen, Zhihao Yang, Wenze Huang, Yu Gao, Xueting Liu, Weihong Ren, Zhiyong Wang, and Honghai Liu. Spectral scalpel: amplifying adjacent action discrepancy via frequency-selective filtering for skeleton-based action segmentation. In <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2026. URL: <a class="github reference external" href="https://github.com/HaoyuJi/SpecScalpel">HaoyuJi/SpecScalpel</a>, <a class="reference external" href="https://arxiv.org/abs/2603.24134">arXiv:2603.24134</a>.</p>
+</div>
+<div class="citation" id="id344" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A5<span class="fn-bracket">]</span></span>
+<p>Haoyu Ji, Xueting Liu, Yu Gao, Wenze Huang, Zhihao Yang, Weihong Ren, Zhiyong Wang, and Honghai Liu. LaDy: lagrangian-dynamic informed network for skeleton-based action segmentation via spatial-temporal modulation. In <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2026. URL: <a class="github reference external" href="https://github.com/HaoyuJi/LaDy">HaoyuJi/LaDy</a>, <a class="reference external" href="https://arxiv.org/abs/2603.24097">arXiv:2603.24097</a>.</p>
+</div>
+<div class="citation" id="id336" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A6<span class="fn-bracket">]</span></span>
+<p>Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: <a class="github reference external" href="https://github.com/amathislab/DLC2Action">amathislab/DLC2Action</a>, <a class="reference external" href="https://doi.org/10.1101/2025.09.27.678941">doi:10.1101/2025.09.27.678941</a>.</p>
+</div>
+<div class="citation" id="id341" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A7<span class="fn-bracket">]</span></span>
+<p>Colin Lea, Michael D. Flynn, René Vidal, Austin Reiter, and Gregory D. Hager. Temporal convolutional networks for action segmentation and detection. In <em>Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>. 2017. URL: <a class="reference external" href="https://arxiv.org/abs/1611.05267">https://arxiv.org/abs/1611.05267</a>, <a class="reference external" href="https://arxiv.org/abs/1611.05267">arXiv:1611.05267</a>.</p>
+</div>
+<div class="citation" id="id338" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A8<span class="fn-bracket">]</span></span>
+<p>Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em>, 2020. URL: <a class="reference external" href="https://arxiv.org/abs/2006.09220">https://arxiv.org/abs/2006.09220</a>, <a class="reference external" href="https://arxiv.org/abs/2006.09220">arXiv:2006.09220</a>.</p>
+</div>
+<div class="citation" id="id346" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A9<span class="fn-bracket">]</span></span>
+<p>Daochang Liu, Qiyue Li, AnhDung Dinh, Tingting Jiang, Mubarak Shah, and Chang Xu. Diffusion action segmentation. In <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>. 2023. URL: <a class="reference external" href="https://arxiv.org/abs/2303.17959">https://arxiv.org/abs/2303.17959</a>, <a class="reference external" href="https://arxiv.org/abs/2303.17959">arXiv:2303.17959</a>.</p>
+</div>
+<div class="citation" id="id347" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A10<span class="fn-bracket">]</span></span>
+<p>Zijia Lu and Ehsan Elhamifar. FACT: frame-action cross-attention temporal modeling for efficient action segmentation. In <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 18175–18185. 2024. URL: <a class="reference external" href="https://openaccess.thecvf.com/content/CVPR2024/html/Lu_FACT_Frame-Action_Cross-Attention_Temporal_Modeling_for_Efficient_Action_Segmentation_CVPR_2024_paper.html">https://openaccess.thecvf.com/content/CVPR2024/html/Lu_FACT_Frame-Action_Cross-Attention_Temporal_Modeling_for_Efficient_Action_Segmentation_CVPR_2024_paper.html</a>.</p>
+</div>
+<div class="citation" id="id340" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A11<span class="fn-bracket">]</span></span>
+<p>Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: <a class="reference external" href="https://arxiv.org/abs/2105.10859">https://arxiv.org/abs/2105.10859</a>, <a class="reference external" href="https://arxiv.org/abs/2105.10859">arXiv:2105.10859</a>.</p>
+</div>
+<div class="citation" id="id345" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A12<span class="fn-bracket">]</span></span>
+<p>Yifan Sun, Changmao Cheng, Yuhan Zhang, Chi Zhang, Liang Zheng, Zhongdao Wang, and Yichen Wei. Circle loss: a unified perspective of pair similarity optimization. 2020. URL: <a class="reference external" href="https://arxiv.org/abs/2002.10857">https://arxiv.org/abs/2002.10857</a>, <a class="reference external" href="https://arxiv.org/abs/2002.10857">arXiv:2002.10857</a>.</p>
+</div>
+<div class="citation" id="id339" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A13<span class="fn-bracket">]</span></span>
+<p>Fangqiu Yi, Hongyu Wen, and Tingting Jiang. ASFormer: transformer for action segmentation. In <em>British Machine Vision Conference (BMVC)</em>. 2021. URL: <a class="reference external" href="https://arxiv.org/abs/2110.08568">https://arxiv.org/abs/2110.08568</a>, <a class="reference external" href="https://arxiv.org/abs/2110.08568">arXiv:2110.08568</a>.</p>
+</div>
+<div class="citation" id="id342" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>A14<span class="fn-bracket">]</span></span>
+<p>Wentao Zhu, Xiaoxuan Ma, Zhaoyang Liu, Libin Liu, Wayne Wu, and Yizhou Wang. MotionBERT: a unified perspective on learning human motion representations. In <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>. 2023. URL: <a class="reference external" href="https://arxiv.org/abs/2210.06551">https://arxiv.org/abs/2210.06551</a>, <a class="reference external" href="https://arxiv.org/abs/2210.06551">arXiv:2210.06551</a>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="video-features">
+<h2>Video features<a class="headerlink" href="#video-features" title="Link to this heading">#</a></h2>
+<div class="docutils container" id="id355">
+<div role="list" class="citation-list">
+<div class="citation" id="id413" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>V1<span class="fn-bracket">]</span></span>
+<p>Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: <a class="github reference external" href="https://github.com/v-iashin/video_features">v-iashin/video_features</a>.</p>
+</div>
+<div class="citation" id="id409" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>V2<span class="fn-bracket">]</span></span>
+<p>Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: <a class="reference external" href="https://arxiv.org/abs/1705.06950">https://arxiv.org/abs/1705.06950</a>, <a class="reference external" href="https://arxiv.org/abs/1705.06950">arXiv:1705.06950</a>.</p>
+</div>
+<div class="citation" id="id411" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>V3<span class="fn-bracket">]</span></span>
+<p>Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. <em>Transactions on Machine Learning Research</em>, 2024. URL: <a class="reference external" href="https://openreview.net/forum?id=a68SUt6zFt">https://openreview.net/forum?id=a68SUt6zFt</a>, <a class="reference external" href="https://arxiv.org/abs/2304.07193">arXiv:2304.07193</a>.</p>
+</div>
+<div class="citation" id="id412" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>V4<span class="fn-bracket">]</span></span>
+<p>Ross Wightman. Pytorch image models (timm). 2019. URL: <a class="github reference external" href="https://github.com/huggingface/pytorch-image-models">huggingface/pytorch-image-models</a>.</p>
+</div>
+<div class="citation" id="id410" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>V5<span class="fn-bracket">]</span></span>
+<p>Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In <em>European Conference on Computer Vision (ECCV)</em>. 2018. URL: <a class="reference external" href="https://arxiv.org/abs/1712.04851">https://arxiv.org/abs/1712.04851</a>, <a class="reference external" href="https://arxiv.org/abs/1712.04851">arXiv:1712.04851</a>.</p>
+</div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="roadmap.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Roadmap</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#software-ethograph-builds-on">Software EthoGraph builds on</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#datasets">Datasets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoint-detection">Changepoint detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#keypoint-labelling-and-tracking">Keypoint labelling and tracking</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#point-event-models">Point-event models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#action-segmentation">Action segmentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#video-features">Video features</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection sourcelink">
+    <a href="../_sources/community/references.md">
+      
+        <i class="fa-solid fa-file-lines"></i> Show Source
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, Akseli Ilmanen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

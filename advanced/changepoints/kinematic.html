@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="../labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -467,11 +478,11 @@
 <p>One example of changepoints occurring at behavioural boundaries are speed
 minima. In point-to-point reaching tasks, the hand speed profile is
 characterised by a unimodal bell-shaped curve with two speed minima
-(Torricelli et al., 2023), where the minima correspond to the onset and
+<span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id141" title="Francesco Torricelli, Alice Tomassini, Giovanni Pezzulo, Thierry Pozzo, Luciano Fadiga, and Alessandro D'Ausilio. Motor invariants in action execution and perception. Physics of Life Reviews, 44:13–47, 2023. doi:10.1016/j.plrev.2022.11.003.">Torricelli <em>et al.</em>, 2023</a>]</span>, where the minima correspond to the onset and
 offset of the movement, and the peak of the speed bump marks the point where
 the hand starts decelerating. These minima can even be used to identify
 sub-movements, such as the small second corrective speed bump in the figure
-below (Meyer et al., 1988).</p>
+below <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id140" title="David E. Meyer, Richard A. Abrams, Sheldon Kornblum, Charles E. Wright, and J. E. Keith Smith. Optimality in human motor performance: ideal control of rapid aimed movements. Psychological Review, 95(3):340–370, 1988. doi:10.1037/0033-295X.95.3.340.">Meyer <em>et al.</em>, 1988</a>]</span>.</p>
 <p><img alt="Kinematic changepoints" src="../../_images/changepoints1.png" /></p>
 <hr class="docutils" />
 <section id="troughs-local-minima">
@@ -586,7 +597,7 @@ channel, neuron, …) with metadata columns marking it as a changepoint set.</p>
 <p>Use <a class="reference internal" href="../../api/pynapple_io.html#ethograph.io.pynapple.add_changepoints_to_nap" title="ethograph.io.pynapple.add_changepoints_to_nap"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_changepoints_to_nap()</span></code></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pynapple</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nap</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.pynapple</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_changepoints_to_nap</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_troughs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_troughs_binary</span>
 
 <span class="n">speed</span> <span class="o">=</span> <span class="n">nap</span><span class="o">.</span><span class="n">TsdFrame</span><span class="p">(</span>
     <span class="n">t</span><span class="o">=</span><span class="n">time_s</span><span class="p">,</span>
@@ -597,7 +608,7 @@ channel, neuron, …) with metadata columns marking it as a changepoint set.</p>
 <span class="n">cps</span> <span class="o">=</span> <span class="n">add_changepoints_to_nap</span><span class="p">(</span>
     <span class="n">speed</span><span class="p">,</span>
     <span class="n">target_feature</span><span class="o">=</span><span class="s2">"speed"</span><span class="p">,</span>
-    <span class="n">changepoint_func</span><span class="o">=</span><span class="n">find_troughs</span><span class="p">,</span>
+    <span class="n">changepoint_func</span><span class="o">=</span><span class="n">find_troughs_binary</span><span class="p">,</span>
     <span class="n">prominence</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="c1"># cps is a TsGroup — one Ts per column with:</span>
@@ -612,14 +623,7 @@ channel, neuron, …) with metadata columns marking it as a changepoint set.</p>
 through when the input is a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code>.</p>
 </div>
 </div>
-</section>
 <hr class="docutils" />
-<section id="references">
-<h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>Meyer, D. E., Abrams, R. A., Kornblum, S., Wright, C. E., &amp; Keith Smith, J. E. (1988). Optimality in human motor performance: Ideal control of rapid aimed movements. Psychological Review, 95(3), 340-370. <a class="reference external" href="https://doi.org/10.1037/0033-295X.95.3.340">https://doi.org/10.1037/0033-295X.95.3.340</a></p></li>
-<li><p>Torricelli, F., Tomassini, A., Pezzulo, G., Pozzo, T., Fadiga, L., &amp; D’Ausilio, A. (2023). Motor invariants in action execution and perception. Physics of Life Reviews, 44, 13-47. <a class="reference external" href="https://doi.org/10.1016/j.plrev.2022.11.003">https://doi.org/10.1016/j.plrev.2022.11.003</a></p></li>
-</ul>
 </section>
 </section>
 
@@ -674,7 +678,6 @@ through when the input is a <code class="docutils literal notranslate"><span cla
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#turning-points">Turning points</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#usage">Usage</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-format">Data format</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
 </ul>
   </nav></div>
 

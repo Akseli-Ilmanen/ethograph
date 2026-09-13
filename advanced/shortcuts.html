@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
@@ -487,7 +498,7 @@ useful guide when guessing a binding.</p>
 <td><p>Step one frame backward / forward (video mode) or one time-step (no-video mode)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Shift+Left</span></code> / <code class="docutils literal notranslate"><span class="pre">Shift+Right</span></code></p></td>
-<td><p>Jump backward / forward by customizable time step (see “Jump step (ms)” in Navigation)</p></td>
+<td><p>Jump backward / forward by customizable time step (see “Jump step” in Navigation)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+Space</span></code></p></td>
 <td><p>Stop screen recording</p></td>
@@ -571,25 +582,28 @@ useful guide when guessing a binding.</p>
 <td><p>Activate label 31-40</p></td>
 </tr>
 <tr class="row-even"><td><p>Click twice on line plot</p></td>
-<td><p>Define label boundaries (set start/end)</p></td>
+<td><p>Define label boundaries (set start/end) — <em>On the time series</em> mode</p></td>
 </tr>
-<tr class="row-odd"><td><p>Left-click on label</p></td>
+<tr class="row-odd"><td><p>Label key at a frame</p></td>
+<td><p>Place the boundary at the frame on screen: a point event on one press, a state event on two — <em>At the current frame</em> mode (Labels tab dropdown)</p></td>
+</tr>
+<tr class="row-even"><td><p>Left-click on label</p></td>
 <td><p>Select existing label</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+E</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+E</span></code></p></td>
 <td><p>Edit selected label boundaries (after selecting label, click twice for new boundaries)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+D</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+D</span></code></p></td>
 <td><p>Delete selected label (after selecting label)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code></p></td>
 <td><p>Undo the last label placed, moved or deleted (cancels a half-placed label first)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code></p></td>
 <td><p>Save <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> file</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Shift+B</span></code></p></td>
-<td><p>Switch the Main labels slot to the previously-selected branch</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Shift+B</span></code></p></td>
+<td><p>Swap the active branch with the previously-active one</p></td>
 </tr>
 </tbody>
 </table>
@@ -597,7 +611,7 @@ useful guide when guessing a binding.</p>
 </section>
 <section id="curation">
 <h2>Curation<a class="headerlink" href="#curation" title="Link to this heading">#</a></h2>
-<p>See <a class="reference internal" href="labels/curation.html"><span class="doc">Curating labels</span></a>. <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> is always bound; the others are live
+<p>See <a class="reference internal" href="../models/curation.html"><span class="doc">Curating labels</span></a>. <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> is always bound; the others are live
 only while a frame-by-frame review runs (started from the Labels tab’s
 Curation section), wherever the key is pressed.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -617,7 +631,7 @@ Curation section), wherever the key is pressed.</p>
 <td><p>Delete the event being reviewed and move on</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
-<td><p>Next boundary (curates the one you leave when <strong>N = seen, mark curated</strong> is ticked)</p></td>
+<td><p>Next boundary (curates the one you leave when <strong>Click N curates current</strong> is ticked)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">B</span></code></p></td>
 <td><p>Previous boundary</p></td>

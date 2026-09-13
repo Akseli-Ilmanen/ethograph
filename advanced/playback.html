@@ -51,7 +51,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Keyboard Shortcuts" href="shortcuts.html" />
-    <link rel="prev" title="Refining imported poses" href="keypoint_labelling/refine_imported.html" />
+    <link rel="prev" title="Trial metadata" href="metadata.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -154,6 +154,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
@@ -529,7 +540,7 @@ resolution.</p>
 the resolution drops — so labels and timing stay exactly aligned. Use full
 resolution to inspect fine visual detail, the proxy for general navigation.</p>
 </div>
-<p>Proxies are cached in one central folder, <strong><code class="docutils literal notranslate"><span class="pre">~/.ethograph/proxies</span></code></strong>, reused
+<p>Proxies are cached in one central folder, <strong><code class="docutils literal notranslate"><span class="pre">~/.ethograph/cache/proxies</span></code></strong>, reused
 across sessions and generated only once per source file. To free disk space,
 just delete that folder — proxies regenerate on demand.</p>
 </section>
@@ -583,12 +594,12 @@ unintelligible) and the video free-runs.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="keypoint_labelling/refine_imported.html"
+       href="metadata.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Refining imported poses</p>
+        <p class="prev-next-title">Trial metadata</p>
       </div>
     </a>
     <a class="right-next"

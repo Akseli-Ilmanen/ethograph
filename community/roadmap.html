@@ -50,6 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/community/roadmap.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="References" href="references.html" />
     <link rel="prev" title="Contributing" href="contributing.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -153,6 +154,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -287,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -367,6 +382,7 @@
 <li class="toctree-l1"><a class="reference internal" href="people.html">People</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 </div>
 </nav></div>
@@ -429,44 +445,64 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="roadmap">
 <h1>Roadmap<a class="headerlink" href="#roadmap" title="Link to this heading">#</a></h1>
-<p>Currently this is still more of a collection of notes, than a roadmap.</p>
-<section id="improved-interop-with-segmentation-models">
-<h2>Improved interop. with segmentation models:<a class="headerlink" href="#improved-interop-with-segmentation-models" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>Movement community call (April 2026): <a class="reference external" href="https://neuroinformatics.zulipchat.com/user_uploads/58792/jV4lyzfLheHU4Gj4qCQkKzwy/2026_04-Ethograph-demo.pptx">PPT slides</a></p></li>
-<li><p>Discussion on schema for segmentation feature data: <a class="github reference external" href="https://github.com/neuroinformatics-unit/movement/issues/978">neuroinformatics-unit/movement#978</a></p></li>
-</ul>
-<section id="import-predictions-from-action-segmentation-models">
-<h3>Import predictions from action segmentation models<a class="headerlink" href="#import-predictions-from-action-segmentation-models" title="Link to this heading">#</a></h3>
-<p>Done — <strong>File → Import predictions…</strong> loads per-trial <code class="docutils literal notranslate"><span class="pre">.npy</span></code>/<code class="docutils literal notranslate"><span class="pre">.pickle</span></code> files with shape <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">n_classes)</span></code> or <code class="docutils literal notranslate"><span class="pre">(T,)</span></code> from action segmentation models (DLC2Action, ASFormer, MS-TCN) and converts them to label intervals with a confidence overlay (1 - entropy of classwise softmax).</p>
-</section>
+<p>What EthoGraph already does, what is in progress, and what is still open. Grouped by theme; within each theme items run roughly in the order they were (or will be) tackled.</p>
+<p><strong>Legend:</strong> ✅ done · 🚧 in progress · ⬜ not started</p>
+<section id="milestones">
+<h2>Milestones<a class="headerlink" href="#milestones" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>When</p></th>
+<th class="head"><p>Milestone</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>April 2026</p></td>
+<td><p>Movement community call demo (<a class="reference external" href="https://neuroinformatics.zulipchat.com/user_uploads/58792/jV4lyzfLheHU4Gj4qCQkKzwy/2026_04-Ethograph-demo.pptx">slides</a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>2026</p></td>
+<td><p>Segmentation pipeline, lightgbm models, pixel event spotting, curation workflows</p></td>
+</tr>
+<tr class="row-even"><td><p>Next</p></td>
+<td><p>Shared feature schema with <code class="docutils literal notranslate"><span class="pre">movement</span></code>, NWB video alignment upstream</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </section>
 <hr class="docutils" />
-<section id="easier-alignment-of-video-and-data-streams-via-nwb-files">
-<h2>Easier alignment of video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> files<a class="headerlink" href="#easier-alignment-of-video-and-data-streams-via-nwb-files" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p><a class="github reference external" href="https://github.com/catalystneuro/nwb-video-widgets/issues/34">catalystneuro/nwb-video-widgets#34</a></p></li>
-<li><p><a class="github reference external" href="https://github.com/NeurodataWithoutBorders/nwb-schema/issues/677">NeurodataWithoutBorders/nwb-schema#677</a></p></li>
+<section id="interop-with-segmentation-models">
+<h2>1. Interop with segmentation models<a class="headerlink" href="#interop-with-segmentation-models" title="Link to this heading">#</a></h2>
+<ul class="contains-task-list simple">
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Import predictions from action segmentation models (DLC2Action, ASFormer, MS-TCN): <strong>File → Import predictions…</strong> turns per-trial <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">n_classes)</span></code> or <code class="docutils literal notranslate"><span class="pre">(T,)</span></code> arrays into labels with a confidence overlay (1 − normalised entropy)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Scripted segmentation pipeline (<code class="docutils literal notranslate"><span class="pre">ethograph.segment</span></code>): materialise → search → cross-validate, predictions written as GUI label files</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">lightgbm models for point events, with confidence read off the curve</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Pixel event spotting from video (<code class="docutils literal notranslate"><span class="pre">ethograph.spot</span></code>)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Curation of model output: the Curation section, grids and saved workflows</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">🚧 A shared schema for segmentation feature data with <code class="docutils literal notranslate"><span class="pre">movement</span></code> (<a class="reference external" href="https://github.com/neuroinformatics-unit/movement/issues/978">movement#978</a>)</p></li>
 </ul>
 </section>
-<hr class="docutils" />
+<section id="aligning-video-and-data-streams-via-nwb">
+<h2>2. Aligning video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code><a class="headerlink" href="#aligning-video-and-data-streams-via-nwb" title="Link to this heading">#</a></h2>
+<ul class="contains-task-list simple">
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Read and edit alignment directly in <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> sources; <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> sidecars for everything else</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">🚧 Video alignment in NWB tooling upstream (<a class="reference external" href="https://github.com/catalystneuro/nwb-video-widgets/issues/34">nwb-video-widgets#34</a>, <a class="reference external" href="https://github.com/NeurodataWithoutBorders/nwb-schema/issues/677">nwb-schema#677</a>)</p></li>
+</ul>
+</section>
 <section id="changepoints">
-<h2>Changepoints<a class="headerlink" href="#changepoints" title="Link to this heading">#</a></h2>
-<section id="more-sophisticated-changepoint-detection">
-<h3>More sophisticated changepoint detection<a class="headerlink" href="#more-sophisticated-changepoint-detection" title="Link to this heading">#</a></h3>
-<p>Current methods are fast (gradient based, RMS-based, etc.), but could also use ML for detection. Important that it’s easily reproducible, so it represents a reliable feature in feature space. Sometimes the changepoint correction post-model output makes things worse, transformer learns better representation than simple gradient based methods.</p>
+<h2>3. Changepoints<a class="headerlink" href="#changepoints" title="Link to this heading">#</a></h2>
+<ul class="contains-task-list simple">
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Fast changepoint detection (gradient-, RMS-based, …) and changepoint correction of label boundaries</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Changepoint features (<a class="reference internal" href="../api/ethograph.features.changepoints.more_changepoint_features.html#ethograph.features.changepoints.more_changepoint_features" title="ethograph.features.changepoints.more_changepoint_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">more_changepoint_features()</span></code></a>), which massively improved fine-grained accuracy for <a class="reference external" href="https://github.com/ChinaYi/ASFormer">ASFormer</a></p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Changepoint features available to every segmentation model (<code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code> in the segment pipeline)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">ML-based changepoint detection. It must stay reproducible so it is a reliable feature. Note: post-model changepoint correction sometimes makes things worse, since the transformer learns a better representation than simple gradient-based methods.</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">🚧 Audio changepoints (<code class="docutils literal notranslate"><span class="pre">ethograph.features.audio_changepoints</span></code>)</p></li>
+</ul>
 </section>
-<section id="changepoint-features">
-<h3>Changepoint features<a class="headerlink" href="#changepoint-features" title="Link to this heading">#</a></h3>
-<p>Using <a class="reference internal" href="../api/ethograph.features.changepoints.more_changepoint_features.html#ethograph.features.changepoints.more_changepoint_features" title="ethograph.features.changepoints.more_changepoint_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">more_changepoint_features()</span></code></a> massively improved fine-grained accuracy for <a class="reference external" href="https://github.com/ChinaYi/ASFormer">ASFormer</a>, would be cool if this could be exported generally to segmentation models (DLC2Action, etc.)</p>
-</section>
-</section>
-<section id="other">
-<h2>Other<a class="headerlink" href="#other" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>Audio changepoints</p></li>
-<li><p>Interactive PSTH <code class="docutils literal notranslate"><span class="pre">ethograph.gui.widgets_psth</span></code></p></li>
-<li><p>Single-trial neural dimensionality reduction techniques, visualize label segments in latent spaces</p></li>
+<section id="neural-data">
+<h2>4. Neural data<a class="headerlink" href="#neural-data" title="Link to this heading">#</a></h2>
+<ul class="contains-task-list simple">
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">🚧 Interactive PSTH (<code class="docutils literal notranslate"><span class="pre">ethograph.gui.widgets_psth</span></code>)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">Single-trial neural dimensionality reduction; visualise label segments in latent space</p></li>
 </ul>
 </section>
 </section>
@@ -490,6 +526,15 @@
         <p class="prev-next-title">Contributing</p>
       </div>
     </a>
+    <a class="right-next"
+       href="references.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">References</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
 </div>
                 </footer>
               
@@ -509,17 +554,11 @@
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#improved-interop-with-segmentation-models">Improved interop. with segmentation models:</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#import-predictions-from-action-segmentation-models">Import predictions from action segmentation models</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#easier-alignment-of-video-and-data-streams-via-nwb-files">Easier alignment of video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> files</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoints">Changepoints</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#more-sophisticated-changepoint-detection">More sophisticated changepoint detection</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoint-features">Changepoint features</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other">Other</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#milestones">Milestones</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interop-with-segmentation-models">1. Interop with segmentation models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#aligning-video-and-data-streams-via-nwb">2. Aligning video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoints">3. Changepoints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#neural-data">4. Neural data</a></li>
 </ul>
   </nav></div>
 

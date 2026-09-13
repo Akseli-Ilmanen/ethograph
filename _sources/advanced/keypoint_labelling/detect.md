@@ -109,6 +109,6 @@ observations; a detection never overwrites a label, and correcting one is just
 clicking it. Runs are cached next to the video as `<video>.detections.npz`, which
 is safe to delete.
 
-## References
+## Notes
 
-[^apriltag]: Detection runs through [pupil-apriltags](https://github.com/pupil-labs/apriltags), a maintained binding to the reference AprilTag 3 C library (Krogius, Haggenmiller & Olson, IROS 2019). OpenCV renders the printed tags, since `pupil-apriltags` has no generator.
+[^apriltag]: Detection runs through [pupil-apriltags](https://github.com/pupil-labs/apriltags), a maintained binding to the reference AprilTag 3 C library {cite:p}`krogius2019apriltag`. OpenCV renders the printed tags, since `pupil-apriltags` has no generator.

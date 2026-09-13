@@ -157,6 +157,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -281,6 +288,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -433,15 +447,15 @@ animal mounting bird A and preening bird B are two independent tracks.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> (<em>pd.DataFrame</em>) – Current intervals DataFrame.</p></li>
-<li><p><strong>onset_s</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Start and end times in seconds.</p></li>
-<li><p><strong>offset_s</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Start and end times in seconds.</p></li>
-<li><p><strong>labels</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Label class ID.</p></li>
-<li><p><strong>individual</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Individual performing the behaviour (actor).</p></li>
-<li><p><strong>protected_label_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><em>set</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>] </em><em>| </em><em>None</em>) – Label IDs that must not be trimmed or split (e.g. labels belonging
+<li><p><strong>onset_s</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Start and end times in seconds.</p></li>
+<li><p><strong>offset_s</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Start and end times in seconds.</p></li>
+<li><p><strong>labels</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Label class ID.</p></li>
+<li><p><strong>individual</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Individual performing the behaviour (actor).</p></li>
+<li><p><strong>protected_label_ids</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.14)"><em>set</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>] </em><em>| </em><em>None</em>) – Label IDs that must not be trimmed or split (e.g. labels belonging
 to inactive branches).  <code class="docutils literal notranslate"><span class="pre">None</span></code> means no protection.</p></li>
-<li><p><strong>individual_rec</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Recipient of the behaviour; <code class="xref py py-data docutils literal notranslate"><span class="pre">NO_RECIPIENT</span></code> for a solo one.</p></li>
-<li><p><strong>confidence</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – How sure this label is; <code class="xref py py-data docutils literal notranslate"><span class="pre">HUMAN_CONFIDENCE</span></code> for a hand-placed one.</p></li>
-<li><p><strong>labeling_method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Who vouches for it; <code class="xref py py-data docutils literal notranslate"><span class="pre">LABELING_MANUAL</span></code> for a hand-placed one.
+<li><p><strong>individual_rec</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Recipient of the behaviour; <code class="xref py py-data docutils literal notranslate"><span class="pre">NO_RECIPIENT</span></code> for a solo one.</p></li>
+<li><p><strong>confidence</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – How sure this label is; <code class="xref py py-data docutils literal notranslate"><span class="pre">HUMAN_CONFIDENCE</span></code> for a hand-placed one.</p></li>
+<li><p><strong>labeling_method</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Who vouches for it; <code class="xref py py-data docutils literal notranslate"><span class="pre">LABELING_MANUAL</span></code> for a hand-placed one.
 A remnant trimmed off an existing interval keeps that interval’s
 method — nobody re-judged it.</p></li>
 </ul>

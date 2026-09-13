@@ -158,6 +158,13 @@
 </li>
 
 
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     Examples
@@ -283,6 +290,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -450,7 +464,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">movement.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_poses</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">movement.kinematics</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_acceleration</span><span class="p">,</span> <span class="n">compute_speed</span><span class="p">,</span> <span class="n">compute_velocity</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.nwb_alignment</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_media_per_trial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.pairing</span><span class="w"> </span><span class="kn">import</span> <span class="n">pair_media</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.utils.download</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_example_dataset</span>
 </pre></div>
 </div>
@@ -516,7 +530,7 @@ data_folder: d:\Akseli\Code\ethograph\data\philodoptera
 <span class="p">)</span>
 
 <span class="n">nwb_path</span> <span class="o">=</span> <span class="n">data_folder</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"alignment.nwb"</span>
-<span class="n">align_media_per_trial</span><span class="p">(</span>
+<span class="n">pair_media</span><span class="p">(</span>
     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">audio_sr</span><span class="p">),</span> <span class="s2">"pose"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">)},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>

@@ -51,7 +51,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Changepoints" href="../changepoints/index.html" />
-    <link rel="prev" title="Curating labels" href="curation.html" />
+    <link rel="prev" title="Exporting labels" href="exporting.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -154,6 +154,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
   </a>
 </li>
 
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Labels</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation.html">Curating labels</a></li>
-
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -465,15 +476,14 @@
   <section class="tex2jax_ignore mathjax_ignore" id="curation-workflows">
 <span id="target-curation-workflows"></span><h1>Curation workflows<a class="headerlink" href="#curation-workflows" title="Link to this heading">#</a></h1>
 <p>Reviewing a model’s output is the same handful of moves every session: narrow
-the trials table to one condition, run the onset model over what is left, drop
+the trials table to one condition, run the lightgbm model over what is left, drop
 the predicted classes into the curation scope, open a grid laid out the way
 that behaviour needs, walk the boundaries, save. A <strong>workflow</strong> is that
 sequence written down once and replayed with one button.</p>
-<p>Open it from <strong>Workflows…</strong> at the bottom of the Curation section, or from
-<strong>Model ▸ Curation workflows…</strong> — a workflow usually starts with a prediction,
-so it sits next to <em>LightGBM: Predict…</em> as well.</p>
-<p>Workflows are stored as plain YAML in <code class="docutils literal notranslate"><span class="pre">~/.ethograph/workflows/{name}.yaml</span></code>,
-the same global store as the onset models they invoke — so a workflow written
+<p>Open it from <strong>Model ▸ Curation workflows…</strong> in the top bar — a workflow usually starts with a
+prediction, so it sits next to <em>LightGBM: Predict…</em>.</p>
+<p>Workflows are stored as plain YAML in <code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/workflows/{name}.yaml</span></code>,
+the same global store as the lightgbm models they invoke — so a workflow written
 while curating one dataset is there for the next one.</p>
 <section id="recording-one">
 <h2>Recording one<a class="headerlink" href="#recording-one" title="Link to this heading">#</a></h2>
@@ -504,7 +514,7 @@ Everything is saved as you type, so there is no Save button — <strong>New</str
 <td><p>Sets the trials table’s column filters. Every later step runs over exactly the trials the table then shows — this is the one trial filter (see <a class="reference internal" href="../metadata.html"><span class="doc">Trial metadata</span></a>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Predict onsets</strong></p></td>
-<td><p>Runs a trained LightGBM model over those trials, filling classes they do not already carry (see <span class="xref std std-doc">onset_model</span>).</p></td>
+<td><p>Runs a trained LightGBM model over those trials, filling classes they do not already carry (see <a class="reference internal" href="../../models/onset_model.html"><span class="doc">LightGBM for point events</span></a>).</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Set curation scope</strong></p></td>
 <td><p>Drops label classes into the Curation section’s scope area and picks the curation mode.</p></td>
@@ -518,10 +528,19 @@ Everything is saved as you type, so there is no Save button — <strong>New</str
 <tr class="row-odd"><td><p><strong>Frame-by-frame review</strong></p></td>
 <td><p>Starts the boundary review over the scope.</p></td>
 </tr>
-<tr class="row-even"><td><p><strong>Curate the visible trials</strong></p></td>
-<td><p>Marks every automated label in scope, across every visible trial, as curated — the <strong>Curate visible trials…</strong> button in the Curation section. The button asks first; a recorded step is already a deliberate choice, so it does not.</p></td>
+<tr class="row-even"><td><p><strong>Curate trials’ labels</strong></p></td>
+<td><p>Marks every automated label of the chosen classes, in the chosen trials (current, all, filtered or hidden), as curated — <strong>Curate…</strong> in <strong>Tools ▸ Labels: Bulk editing…</strong>. An empty class list means whatever the curation scope holds. The dialog asks first; a recorded step is already a deliberate choice, so it does not.</p></td>
 </tr>
-<tr class="row-odd"><td><p><strong>Save labels</strong></p></td>
+<tr class="row-odd"><td><p><strong>Delete trials’ labels</strong></p></td>
+<td><p>Deletes every label of the chosen classes in the chosen trials — every labeling method, not just automated.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Purge short labels</strong></p></td>
+<td><p>Deletes state-interval labels of the chosen classes shorter than a threshold, in the chosen trials. Point events are never touched.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Correct offsets</strong></p></td>
+<td><p>Pulls back each label’s offset across a near-zero gap to the next onset of the same subject, in the chosen trials, so every interval is strictly separated. Not scoped by label class: a subject’s whole sequence has to be seen together.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Save labels</strong></p></td>
 <td><p>Writes the labels TSV, exactly as <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code> does.</p></td>
 </tr>
 </tbody>
@@ -549,12 +568,13 @@ modal.</p>
 you stop paying attention.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p><strong>Curate the visible trials</strong> is <em>not</em> a follow-up to a grid worked through in
+<p><strong>Curate trials’ labels</strong> is rarely a follow-up to a grid worked through in
 <em>Click = uncurated, rest = curated</em>. That mode’s <strong>Done</strong> already curates every
 unclicked automated label the grid is showing — in the video grid the whole
 grid, in the label grid the class its <strong>Label</strong> filter is on (all of them when
-it is not filtering) — which is the same set this step computes, so it would
-find nothing left to do.</p>
+it is not filtering) — so a step over the same trials and classes would find
+nothing left to do. It only reaches further when its trials or label classes
+reach beyond what the grid showed.</p>
 <p>It is for the flows where nothing swept up: a grid where <strong>Done</strong> only curated
 the handful you clicked, a label grid narrowed to one class so the others were
 never judged, a frame-by-frame review you stopped partway, or a workflow with
@@ -609,12 +629,12 @@ trials table loaded — stops the workflow and says why.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="curation.html"
+       href="exporting.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Curating labels</p>
+        <p class="prev-next-title">Exporting labels</p>
       </div>
     </a>
     <a class="right-next"

@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/refine_imported.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Video &amp; Audio playback" href="../playback.html" />
+    <link rel="next" title="Trial metadata" href="../metadata.html" />
     <link rel="prev" title="7. Visualizing &amp; exporting" href="export.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -154,6 +154,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
   </a>
 </li>
 
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="../labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -464,7 +475,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="refining-imported-poses">
 <span id="target-refine-imported"></span><h1>Refining imported poses<a class="headerlink" href="#refining-imported-poses" title="Link to this heading">#</a></h1>
-<p><strong>Tools ▸ Refine imported poses…</strong> corrects a pose file another tool produced —
+<p><strong>Tools ▸ Pose correction (DLC, SLEAP, …)…</strong> corrects a pose file another tool produced —
 DeepLabCut, SLEAP, LightningPose — on the video, and writes the result back
 <strong>in the source format</strong> as <code class="docutils literal notranslate"><span class="pre">{stem}_refined{ext}</span></code> beside the original
 (overwritten on every save — a refined file only gets more refined). Where the
@@ -508,7 +519,7 @@ clicks, and never replaces a file point.</p></li>
 </section>
 <section id="saving">
 <h2>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h2>
-<p>There is no export page, and <strong>Save always means every edited camera</strong>. A
+<p>There is no export step — the last tab is <strong>Fill and save</strong> — and <strong>Save always means every edited camera</strong>. A
 camera’s <code class="docutils literal notranslate"><span class="pre">_refined</span></code> copy is created the moment it is first edited, and
 rewritten on every trial switch, on <strong>Save refined now</strong>, and on close — an
 untouched camera writes nothing, so the output folder records exactly what
@@ -543,11 +554,11 @@ yours.</p>
       </div>
     </a>
     <a class="right-next"
-       href="../playback.html"
+       href="../metadata.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Video &amp; Audio playback</p>
+        <p class="prev-next-title">Trial metadata</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

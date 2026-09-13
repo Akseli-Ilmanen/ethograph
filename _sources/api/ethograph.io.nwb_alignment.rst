@@ -30,10 +30,6 @@
     :nosignatures:
 
 
-    align_media_from_streams
-
-    align_media_per_trial
-
     discover_nwb
 
     edit_nwb

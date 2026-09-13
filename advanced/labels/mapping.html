@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Labels</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -517,53 +528,35 @@ default branch explicitly, because the columns are positional:
 <hr class="docutils" />
 <section id="resolution-order">
 <h2>Resolution order<a class="headerlink" href="#resolution-order" title="Link to this heading">#</a></h2>
-<p>When the GUI needs a mapping, it searches with
-<code class="xref py py-func docutils literal notranslate"><span class="pre">find_mapping_file()</span></code>:</p>
+<p>A study keeps its vocabulary in <strong><code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> at the root of its project
+folder</strong> (the folder chosen on the start page). When the GUI needs a mapping,
+<code class="xref py py-func docutils literal notranslate"><span class="pre">find_mapping_file()</span></code> takes the most specific one:</p>
 <ol class="arabic simple">
-<li><p>Walk up from the loaded data directory looking for
-<code class="docutils literal notranslate"><span class="pre">.ethograph/mapping.txt</span></code> in each ancestor. This lets a shared
-<code class="docutils literal notranslate"><span class="pre">.ethograph/</span></code> in a parent folder serve many sessions, while a
-per-session override wins.</p></li>
-<li><p>Fall back to <code class="docutils literal notranslate"><span class="pre">~/.ethograph/mapping.txt</span></code> (global user default).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.ethograph/mapping.txt</span></code> beside the loaded session, walking up through its
+parent folders — a session’s own copy overrides the study’s.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">{project}/mapping.txt</span></code> — the project’s copy.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/mapping.txt</span></code> — the backup every install ships with.
+With no project folder chosen this is the one in use.</p></li>
 </ol>
-<p>Typical layouts:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">~/.</span><span class="n">ethograph</span><span class="o">/</span><span class="n">mapping</span><span class="o">.</span><span class="n">txt</span>                          <span class="c1"># global default</span>
-<span class="n">project</span><span class="o">/.</span><span class="n">ethograph</span><span class="o">/</span><span class="n">mapping</span><span class="o">.</span><span class="n">txt</span>                    <span class="c1"># project-wide (shared across sessions)</span>
-<span class="n">project</span><span class="o">/</span><span class="n">session_01</span><span class="o">/.</span><span class="n">ethograph</span><span class="o">/</span><span class="n">mapping</span><span class="o">.</span><span class="n">txt</span>         <span class="c1"># per-session override</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">session_01</span><span class="o">/.</span><span class="n">ethograph</span><span class="o">/</span><span class="n">mapping</span><span class="o">.</span><span class="n">txt</span>                 <span class="c1"># a session's own copy: overrides the project</span>
+<span class="n">my_study</span><span class="o">/</span><span class="n">mapping</span><span class="o">.</span><span class="n">txt</span>                              <span class="c1"># the study's vocabulary</span>
+<span class="o">~/.</span><span class="n">ethograph</span><span class="o">/</span><span class="n">defaults</span><span class="o">/</span><span class="n">mapping</span><span class="o">.</span><span class="n">txt</span>                 <span class="c1"># backup: the bundled default</span>
 </pre></div>
 </div>
-</section>
+<p>When a session’s own copy disagrees with the project’s, the GUI says so on
+load — the override applies, but never unnoticed.</p>
 <hr class="docutils" />
-<section id="auto-generated-mappings">
-<h2>Auto-generated mappings<a class="headerlink" href="#auto-generated-mappings" title="Link to this heading">#</a></h2>
-<p>When you import labels from an external source whose classes don’t exist
-in the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>, the GUI auto-creates a new mapping file
-alongside the data so no IDs clash:</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Import source</p></th>
-<th class="head"><p>Generated file</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>Crowsetta formats (aud-seq, textgrid, …)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">mapping_{format}.txt</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p>Pynapple / NWB <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> labels</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">mapping_pynapple.txt</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p>NWB epoch imports</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">mapping_nwb_epochs.txt</span></code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>The mapping path field in the Label controls updates to point at the new
-file. You can rename it to <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> to make it the default for this
-project.</p>
-<p>See <a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.resolve_crowsetta_mapping" title="ethograph.labels.converters.resolve_crowsetta_mapping"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_crowsetta_mapping()</span></code></a> and
-<a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.build_mapping_from_labels" title="ethograph.labels.converters.build_mapping_from_labels"><code class="xref py py-func docutils literal notranslate"><span class="pre">build_mapping_from_labels()</span></code></a> for the
-auto-generation logic.</p>
+</section>
+<section id="importing-labels-with-new-class-names">
+<span id="target-auto-mapping"></span><h2>Importing labels with new class names<a class="headerlink" href="#importing-labels-with-new-class-names" title="Link to this heading">#</a></h2>
+<p>Every import format (Crowsetta, pynapple / NWB <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code>) uses the same
+<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>, the one shown in the mapping path field. A name that is already
+in it keeps its ID, branch and event type. A new name is appended with the next
+free ID, as a state class on branch 0, and the GUI says which classes it added.
+With no mapping in use, the classes go into the session’s
+<code class="docutils literal notranslate"><span class="pre">.ethograph/mapping.txt</span></code>. <code class="docutils literal notranslate"><span class="pre">background</span></code> and <code class="docutils literal notranslate"><span class="pre">sil</span></code> are treated as background and
+never added.</p>
+<p>See <a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.extend_mapping" title="ethograph.labels.converters.extend_mapping"><code class="xref py py-func docutils literal notranslate"><span class="pre">extend_mapping()</span></code></a>.</p>
 <hr class="docutils" />
 </section>
 <section id="state-vs-point-events">
@@ -649,7 +642,7 @@ enforced by <code class="docutils literal notranslate"><span class="pre">split_b
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#format">Format</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resolution-order">Resolution order</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#auto-generated-mappings">Auto-generated mappings</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#importing-labels-with-new-class-names">Importing labels with new class names</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-vs-point-events">State vs point events</a></li>
 </ul>
   </nav></div>

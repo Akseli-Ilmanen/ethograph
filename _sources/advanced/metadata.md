@@ -5,19 +5,6 @@ Attach per-trial conditions (e.g. stimulus, reward outcome) via a TSV file. The
 trials table in the GUI turns those columns into filters, restricting navigation
 and analysis to a subset of trials.
 
-```{important}
-**The trials table's filters are the one trial filter in EthoGraph, and they
-apply to everything.** Filter, say, `num_pellets` to `1, 2` (not `0`) in the
-trials table, and every operation from then on sees only those trials:
-navigation, label and sequence jumps, changepoint correction, purging short
-labels, curation (Ctrl+C, inspect mode, frame-by-frame review, the label and
-video grids), model **training** and model **inference**. A label in a
-filtered-out trial is not visited, not curated, not trained on and not
-predicted over — it simply does not exist for those operations until you
-widen the filter again. No dialog has a trial filter of its own; each one says
-how many trials it will run over, read off the table.
-```
-
 ---
 
 ## The metadata file
@@ -44,6 +31,7 @@ ignored when they appear in a metadata table — **trial timing always comes
 from the alignment NWB, never from metadata**. A metadata table contributes
 only its condition columns, joined on `trial`.
 
+
 ---
 
 ## Loading metadata
@@ -54,22 +42,24 @@ Loading a dataset auto-detects a sidecar `{stem}_metadata.tsv` beside it — e.g
 To use a different file, set the **Metadata:** field in the loader form on the
 start page (*Custom set-up* card) before clicking **Load**. It accepts a
 tabular file (`.tsv` / `.csv` / `.xlsx`) with a `trial` column; other file
-types are ignored. The path is saved with the project.
+types are ignored. The path is saved with the project. The **Template** button
+next to it writes a `{stem}_metadata.tsv` pre-filled with all trial IDs, ready
+to edit in a spreadsheet.
 
 For pynapple folders whose trial timing lives in a `trials.npz` IntervalSet:
 the loader never reads timing from it. When no alignment NWB exists, the start
 page offers — once — to convert the IntervalSet into
 `.ethograph/alignment.nwb` (its metadata columns travel into the trials
-table); after that, the alignment file is the single per-trial record. The **Template** button next to it writes a
-`{stem}_metadata.tsv` pre-filled with all trial IDs, ready to edit in a
-spreadsheet.
+table); after that, the alignment file is the single per-trial record.
 
 Sources are tried in this order:
 
-1. The **Metadata:** field (or `metadata_path` in the API).
-2. The **NWB trials table**, when the data source is a `.nwb` file.
-3. The **sidecar TSV** next to the data file.
-4. **Pynapple `IntervalSet` metadata**, for `.npz` or folder sources.
+1. The **Metadata:** field (or `metadata_path` in the API) — a `.tsv`, `.nwb`,
+   `.npz` or pynapple folder.
+2. The **data source itself**, when it is a `.nwb`, `.npz` or pynapple folder.
+3. The **sidecar TSV** `{stem}_metadata.tsv` next to the data file.
+4. Metadata embedded in the loaded **alignment NWB**.
+5. **Pynapple `IntervalSet` metadata**.
 
 With none of these, trials carry no conditions and no filtering UI appears.
 Drag & drop loading never uses a metadata table.
@@ -94,16 +84,32 @@ Filtered-out trials disappear from the table and from the trial navigator — th
 *Previous / Next trial* buttons and the trial slider skip them. A combination
 matching no trials is ignored rather than emptying the navigator.
 
-And not just the navigator: as the box at the top says, **every** operation —
-changepoint correction, purging short labels, curation, model training and
-inference — runs over the filtered trials only.
+And not just the navigator: curation, model training and inference run over
+the filtered trials only. Label bulk editing (changepoint correction, purging
+short labels, curating, deleting) and the matching workflow steps instead take
+an explicit trial scope — current, all, filtered or hidden trials — which
+defaults to the filtered ones.
+
+```{important}
+**The trials table's filters are the one trial filter in EthoGraph, and they
+apply to everything.** Filter, say, `num_pellets` to `1, 2` (not `0`) in the
+trials table, and every operation from then on sees only those trials:
+navigation, label and sequence jumps, curation (Ctrl+C, inspect mode,
+frame-by-frame review, the label and video grids), model **training** and
+model **inference**. A label in a filtered-out trial is not visited, not
+curated, not trained on and not predicted over — it simply does not exist for
+those operations until you widen the filter again. No dialog has a metadata
+filter of its own. The one exception is scope, not filtering: label bulk
+editing and its workflow steps pick *which* trials to run over (current, all,
+filtered or hidden), still read off the table.
+```
 
 ---
 
 (target-label-filter)=
 ### Filtering by what the labels do
 
-The column filters ask about metadata. **Tools ▸ Find label inconsistencies…**
+The column filters ask about metadata. **Tools ▸ Labels: Find label inconsistencies…**
 asks about the labels themselves — which trials have an event without its
 partner, which carry a label twice, which ran the classes in an order they
 should not have, which are missing a sequence altogether. Type the label ids the way the Sequence
@@ -133,12 +139,17 @@ untouched either way. Nothing about the labels is ever modified.
 
 ### The `curated` column
 
-EthoGraph maintains one column itself: **`curated`** is `1` when every label
-of the trial is `manual` or `curated` and `0` while any is still a model's
-unreviewed `automated` output (see {doc}`labels/curation`). It is refreshed
-every few seconds while you curate rather than on every edit, so labelling
-never waits on a file write, and it flips back to `0` whenever new predictions
-land in a trial. Filter on it like any other column to walk only the trials
+EthoGraph maintains one column itself: **`curated`** is `yes` when every label
+of the trial is `manual` or `curated` and `no` while any is still a model's
+unreviewed `automated` output (see {doc}`../models/curation`) — text rather
+than `1`/`0`, so the funnel filter offers it as a yes/no checklist. It is
+refreshed every few seconds while you curate rather than on every edit, so
+labelling never waits on a file write, and it flips back to `no` whenever new
+predictions land in a trial. Nothing is written until curation is active
+(label classes dropped into the curation scope, or something curated); a
+session that curates nothing leaves the metadata untouched. For an NWB source,
+arming curation creates a sidecar `{stem}_metadata.tsv`, seeded from the
+loaded table, and the column lives there — the NWB is left alone. Filter on it like any other column to walk only the trials
 that still need a look.
 
 ## Editing metadata as you watch

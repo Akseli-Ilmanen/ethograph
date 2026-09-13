@@ -157,6 +157,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -281,6 +288,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -425,9 +439,9 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ethograph.labels.converters.</span></span><span class="sig-name descname"><span class="pre">PynappleLabelConverter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trials_ep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/labels/converters.html#PynappleLabelConverter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.labels.converters.PynappleLabelConverter" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="labels.html#ethograph.labels.converters.LabelConverter" title="ethograph.labels.converters.LabelConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">LabelConverter</span></code></a></p>
 <p>Extract labels from pynapple IntervalSet objects.</p>
-<p>Collects every <code class="docutils literal notranslate"><span class="pre">nap.IntervalSet</span></code> in the data dict whose key is
-<strong>not</strong> <code class="docutils literal notranslate"><span class="pre">&quot;trials&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;epochs&quot;</span></code> (those are trial boundaries,
-not labels).  Each IntervalSet name becomes a label class.</p>
+<p>Collects every <code class="docutils literal notranslate"><span class="pre">nap.IntervalSet</span></code> in the data dict except the one
+<a class="reference internal" href="ethograph.io.pynapple.detect_trials.html#ethograph.io.pynapple.detect_trials" title="ethograph.io.pynapple.detect_trials"><code class="xref py py-func docutils literal notranslate"><span class="pre">detect_trials()</span></code></a> reads as trial boundaries.
+Each IntervalSet name becomes a label class.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>

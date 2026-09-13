@@ -16,8 +16,8 @@ session_20260903/
 ├── data_labels.tsv                  # recommended file location for most-up-to-date labels
 ├── labels/
 │   ├── backups/
-│       └── session_labels_20240315_101230.tsv # timestamped backups
-│       └── session_labels_20240314_111420.tsv
+│       ├── data_labels_20240315_101230.tsv  # timestamped backups
+│       └── data_labels_20240314_111420.tsv
 ```
 
 The TSV uses integer label IDs in the `labels` column. Label names are
@@ -29,7 +29,7 @@ applies everywhere. See {doc}`mapping` for the format and resolution order.
 ## Saving labels (Ctrl+S)
 
 Each save writes the canonical `data_labels.tsv` alongside the `.nc`, plus a
-timestamped backup in `label_backups/`. An optional remote backup can be
+timestamped backup in `labels/backups/`. An optional remote backup can be
 configured (see {ref}`Advanced <target-labels-advanced>`).
 
 ---
@@ -46,17 +46,18 @@ the GUI; computed columns are derived on each save from the data file.
 | `onset_s` | float | Segment start in **trial-relative** seconds (time starts at 0 for each trial) |
 | `offset_s` | float | Segment end in **trial-relative** seconds |
 | `labels` | int | Label class ID from `mapping.txt` (0 = background, excluded from display) |
+| `event_type` | str | `state` for an interval with an onset and offset, `point` for an instantaneous event |
 | `individual` | str | The individual performing the behaviour, i.e. the actor (e.g. `"mouse1"`) |
-| `individual_rec` | str | The recipient of a dyadic behaviour (e.g. the bird being mounted); empty for a solo behaviour |
+| `individual_rec` | str | The recipient of a dyadic behaviour (e.g. the bird being mounted), shown as **Receiver** in the GUI; empty for a solo behaviour |
 | `trial` | int/str | Trial identifier, matches the TrialTree |
 | `confidence` | float | How sure the label is: `1.0` for a hand-placed label, the model's own score for a predicted one |
-| `labeling_method` | str | Who vouches for the label: `manual` (placed or edited by hand), `automated` (a model's output nobody has looked at) or `curated` (automated, then approved) — see {doc}`curation`. A file without the column reads `automated` for any row with `confidence < 1.0`, `manual` otherwise |
+| `labeling_method` | str | Who vouches for the label: `manual` (placed or edited by hand), `automated` (a model's output nobody has looked at) or `curated` (automated, then approved) — see {doc}`../../models/curation`. A file without the column reads `automated` for any row with `confidence < 1.0`, `manual` otherwise |
 
-`individual` and `individual_rec` together are the **subject** of a label. Each
-(actor, recipient) pair is an independent track: labels are shown, selected and
-created for exactly the pair chosen in the sidebar's Individual section, so the
-same animal's solo behaviours and its interactions with each partner never
-overwrite one another. Files written before recipients existed have no
+`individual` and `individual_rec` together are the **subject** of a label. The
+receiver is an attribute of each label, not a separate track: overlapping labels
+are resolved per actor, every label of the actor is drawn (tagged `→ receiver`
+when it has one), and the sidebar's Receiver combo only sets the receiver of the
+next label you create. Files written before recipients existed have no
 `individual_rec` column and read back as solo behaviours.
 
 ### Per-trial metadata columns
@@ -67,6 +68,7 @@ These have the same value for every row in a trial:
 |--------|------|-------------|
 | `changepoint_corrected` | int | 1 if changepoint correction has been applied to this trial |
 | `prediction_source` | str | Path to the prediction file that produced these labels (empty for human-labeled) |
+| `n_samples` | int | The trial's sample count, used for dense conversion; `0` if unknown |
 
 A `human_verified` column in an older file is carried along unchanged and
 never read: whether a trial has been reviewed is answered per label by

@@ -1,7 +1,7 @@
 (target-refine-imported)=
 # Refining imported poses
 
-**Tools ▸ Refine imported poses…** corrects a pose file another tool produced —
+**Tools ▸ Pose correction (DLC, SLEAP, …)…** corrects a pose file another tool produced —
 DeepLabCut, SLEAP, LightningPose — on the video, and writes the result back
 **in the source format** as `{stem}_refined{ext}` beside the original
 (overwritten on every save — a refined file only gets more refined). Where the
@@ -46,7 +46,7 @@ file — the same stretch is usually wrong on both views. The scope choice:
 
 ## Saving
 
-There is no export page, and **Save always means every edited camera**. A
+There is no export step — the last tab is **Fill and save** — and **Save always means every edited camera**. A
 camera's `_refined` copy is created the moment it is first edited, and
 rewritten on every trial switch, on **Save refined now**, and on close — an
 untouched camera writes nothing, so the output folder records exactly what

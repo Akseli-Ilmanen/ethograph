@@ -158,6 +158,13 @@
 </li>
 
 
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     Examples
@@ -283,6 +290,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -434,21 +448,17 @@
 <h1>Tool-using crows - Moll et al., 2025<a class="headerlink" href="#tool-using-crows-moll-et-al-2025" title="Link to this heading">#</a></h1>
 <p>Dataset includes behavioural data from 2 trials:</p>
 <ul class="simple">
-<li><p>Videos published in Moll et al., 2025¹, see available online <a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0960982225011005?via%3Dihub#mmc1">here</a>. We recorded with two cameras (<code class="docutils literal notranslate"><span class="pre">cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">cam-2</span></code>), but only video from left camera (<code class="docutils literal notranslate"><span class="pre">cam-2</span></code>) is shared.</p></li>
-<li><p>DeepLabCut² pose files generated for the videos of each camera and 3D pose file <code class="docutils literal notranslate"><span class="pre">*_DLC_3D.csv</span></code> generated using <a class="reference external" href="https://deeplabcut.github.io/DeepLabCut/docs/Overviewof3D.html">3D triangulation</a>.</p></li>
-<li><p>Video features files (<code class="docutils literal notranslate"><span class="pre">_s3d.npy</span></code>) generated using the Video Features repository³</p></li>
+<li><p>Videos published in <span class="bibtex-citation" id="id1">Moll <em>et al.</em> [<a class="reference internal" href="../community/references.html#id73" title="Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. Current Biology, 35(19):4845–4852.e3, 2025. doi:10.1016/j.cub.2025.08.033.">2025</a>]</span>, see available online <a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0960982225011005?via%3Dihub#mmc1">here</a>. We recorded with two cameras (<code class="docutils literal notranslate"><span class="pre">cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">cam-2</span></code>), but only video from left camera (<code class="docutils literal notranslate"><span class="pre">cam-2</span></code>) is shared.</p></li>
+<li><p>DeepLabCut <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id77" title="Tanmay Nath, Alexander Mathis, An Chi Chen, Amir Patel, Matthias Bethge, and Mackenzie Weygandt Mathis. Using DeepLabCut for 3D markerless pose estimation across species and behaviors. Nature Protocols, 14(7):2152–2176, 2019. doi:10.1038/s41596-019-0176-0.">Nath <em>et al.</em>, 2019</a>]</span> pose files generated for the videos of each camera and 3D pose file <code class="docutils literal notranslate"><span class="pre">*_DLC_3D.csv</span></code> generated using <a class="reference external" href="https://deeplabcut.github.io/DeepLabCut/docs/Overviewof3D.html">3D triangulation</a>.</p></li>
+<li><p>Video features files (<code class="docutils literal notranslate"><span class="pre">_s3d.npy</span></code>) generated using the Video Features repository <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../community/references.html#id413" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Trial_data.nc</span></code> file with behavioural features (kinematic, video features), changepoints, custom colours, and trial meta data.</p></li>
 </ul>
 <p>Below is a example script how one can generate the <code class="docutils literal notranslate"><span class="pre">Trial_data.nc</span></code> file from the raw data.</p>
-<hr class="docutils" />
-<p>¹ Moll, F. W., Würzler, J., &amp; Nieder, A. (2025). Learned precision tool use in carrion crows. Current Biology, 35(19), 4845-4852.e3. <a class="reference external" href="https://doi.org/10.1016/j.cub.2025.08.033">https://doi.org/10.1016/j.cub.2025.08.033</a></p>
-<p>² Nath, T., Mathis, A., Chen, A. C., Patel, A., Bethge, M., &amp; Mathis, M. W. (2019). Using DeepLabCut for 3D markerless pose estimation across species and behaviors. Nature Protocols, 14(7), 2152–2176. <a class="reference external" href="https://doi.org/10.1038/s41596-019-0176-0">https://doi.org/10.1038/s41596-019-0176-0</a></p>
-<p>³ Iashin, V. (2020). Video Features [Computer software]. <a class="github reference external" href="https://github.com/v-iashin/video_features">v-iashin/video_features</a></p>
 <a class="reference internal image-reference" href="../_images/moll1.png"><img alt="../_images/moll1.png" src="../_images/moll1.png" style="width: 600px;" />
 </a>
 <a class="reference internal image-reference" href="../_images/moll2.png"><img alt="../_images/moll2.png" src="../_images/moll2.png" style="width: 900px;" />
 </a>
-<p>Left: Figure 1C from Moll et al., 2025¹</p>
+<p>Left: Figure 1C from <span class="bibtex-citation" id="id4">Moll <em>et al.</em> [<a class="reference internal" href="../community/references.html#id73" title="Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. Current Biology, 35(19):4845–4852.e3, 2025. doi:10.1016/j.cub.2025.08.033.">2025</a>]</span></p>
 <p>Right: Screenshot from GUI. Bottom line plot shows speed of beak tip.</p>
 <section id="file-structure">
 <h2>File structure<a class="headerlink" href="#file-structure" title="Link to this heading">#</a></h2>
@@ -513,9 +523,9 @@ Downloading 2024-12-18_041_Crow1-cam-1DLC.csv... (8/11)
 Downloading 2024-12-18_041_Crow1-cam-2DLC.csv... (9/11)
 Downloading 2024-12-18_041_Crow1_DLC_3D.csv... (10/11)
   2024-12-18_041_Crow1-cam-1_s3d.npy (11/11)
-  mapping: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025\.ethograph\mapping.txt
+  mapping: c:\Users\aksel\Documents\Code\ethograph\data\Moll2025\.ethograph\mapping.txt
 
-data_folder: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025
+data_folder: c:\Users\aksel\Documents\Code\ethograph\data\Moll2025
 </pre></div>
 </div>
 </div>
@@ -531,7 +541,7 @@ data_folder: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025
 <span class="kn">import</span><span class="w"> </span><span class="nn">natsort</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.nwb_alignment</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_media_per_trial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.pairing</span><span class="w"> </span><span class="kn">import</span> <span class="n">pair_media</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="n">_here</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">__vsc_ipynb_file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
@@ -593,10 +603,10 @@ data_folder: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025
 <span class="n">session_table_filt</span> <span class="o">=</span> <span class="n">session_table</span><span class="p">[[</span><span class="s2">"trial"</span><span class="p">,</span> <span class="s2">"video_cam-1"</span><span class="p">,</span> <span class="s2">"pose_2d"</span><span class="p">]]</span>
 
 <span class="c1"># ─── 3. Build NWB alignment ───</span>
-<span class="c1"># media_root lets align_media_per_trial open the files (by filename) to probe</span>
+<span class="c1"># media_root lets pair_media open the files (by filename) to probe</span>
 <span class="c1"># trial durations, without baking this machine's absolute paths into the NWB.</span>
 <span class="n">nwb_path</span> <span class="o">=</span> <span class="n">data_folder</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"alignment.nwb"</span>
-<span class="n">align_media_per_trial</span><span class="p">(</span>
+<span class="n">pair_media</span><span class="p">(</span>
     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table_filt</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span> <span class="s2">"pose"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">)},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
@@ -648,7 +658,7 @@ data_folder: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025
                 });
             });
         </script>
-        <div class='container-wrap'><div class='container-header'><div class='xr-obj-type'><h3>root (NWBFile)</h3></div></div><div style="margin-left: 0px;" class="container-fields"><span class="field-key" title=".session_description">session_description: </span><span class="field-value">NWB file for media alignment (ethograph generated).</span></div><div style="margin-left: 0px;" class="container-fields"><span class="field-key" title=".identifier">identifier: </span><span class="field-value">3f83ff47-f2aa-404f-b4ca-c7aa7f7be2f6</span></div><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".session_start_time"><b>session_start_time</b></summary><span class="field-key">2026-08-26 00:06:42.418267+02:00</span></details><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".timestamps_reference_time"><b>timestamps_reference_time</b></summary><span class="field-key">2026-08-26 00:06:42.418267+02:00</span></details><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".file_create_date"><b>file_create_date</b></summary><details><summary style="display: list-item; margin-left: 20px;" class="container-fields field-key" title=".file_create_date[0]"><b>0</b></summary><span class="field-key">2026-08-26 00:06:42.418267+02:00</span></details></details><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".trials"><b>trials <span style='font-weight: normal; color: #888;'>(TimeIntervals)</span></b></summary><div style="margin-left: 20px;" class="container-fields"><span class="field-key" title=".trials">description: </span><span class="field-value">experimental trials</span></div><details><summary style="display: list-item; margin-left: 20px;" class="container-fields field-key"><b>columns</b></summary><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['start_time']"><b>start_time</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">Start time of epoch, in seconds</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['stop_time']"><b>stop_time</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">Stop time of epoch, in seconds</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['trial']"><b>trial</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">Trial number</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['video_cam-1']"><b>video_cam-1</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">video_cam-1 filename</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['pose_2d']"><b>pose_2d</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">pose_2d filename</span></div></details></details><details><summary style="display: list-item; margin-left: 20px;" class="container-fields field-key" title=".trials"><b>table</b></summary><table border="1" class="dataframe">
+        <div class='container-wrap'><div class='container-header'><div class='xr-obj-type'><h3>root (NWBFile)</h3></div></div><div style="margin-left: 0px;" class="container-fields"><span class="field-key" title=".session_description">session_description: </span><span class="field-value">NWB file for media alignment (ethograph generated).</span></div><div style="margin-left: 0px;" class="container-fields"><span class="field-key" title=".identifier">identifier: </span><span class="field-value">9e9aa1d7-d912-44b7-a2be-8b83fc1747dc</span></div><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".session_start_time"><b>session_start_time</b></summary><span class="field-key">2026-09-02 21:12:45.025499+02:00</span></details><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".timestamps_reference_time"><b>timestamps_reference_time</b></summary><span class="field-key">2026-09-02 21:12:45.025499+02:00</span></details><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".file_create_date"><b>file_create_date</b></summary><details><summary style="display: list-item; margin-left: 20px;" class="container-fields field-key" title=".file_create_date[0]"><b>0</b></summary><span class="field-key">2026-09-02 21:12:45.025499+02:00</span></details></details><details><summary style="display: list-item; margin-left: 0px;" class="container-fields field-key" title=".trials"><b>trials <span style='font-weight: normal; color: #888;'>(TimeIntervals)</span></b></summary><div style="margin-left: 20px;" class="container-fields"><span class="field-key" title=".trials">description: </span><span class="field-value">experimental trials</span></div><details><summary style="display: list-item; margin-left: 20px;" class="container-fields field-key"><b>columns</b></summary><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['start_time']"><b>start_time</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">Start time of epoch, in seconds</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['stop_time']"><b>stop_time</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">Stop time of epoch, in seconds</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['trial']"><b>trial</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">Trial number</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['video_cam-1']"><b>video_cam-1</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">video_cam-1 filename</span></div></details><details><summary style="display: list-item; margin-left: 40px;" class="container-fields field-key" title=".trials['pose_2d']"><b>pose_2d</b></summary><div style="margin-left: 60px;" class="container-fields"><span class="field-value">pose_2d filename</span></div></details></details><details><summary style="display: list-item; margin-left: 20px;" class="container-fields field-key" title=".trials"><b>table</b></summary><table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
       <th></th>
@@ -690,6 +700,614 @@ data_folder: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025
 </section>
 <section id="create-dataset">
 <h2>Create dataset<a class="headerlink" href="#create-dataset" title="Link to this heading">#</a></h2>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="o">.</span><span class="n">position</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div><svg style="position: absolute; width: 0; height: 0; overflow: hidden">
+<defs>
+<symbol id="icon-database" viewBox="0 0 32 32">
+<path d="M16 0c-8.837 0-16 2.239-16 5v4c0 2.761 7.163 5 16 5s16-2.239 16-5v-4c0-2.761-7.163-5-16-5z"></path>
+<path d="M16 17c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+<path d="M16 26c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+</symbol>
+<symbol id="icon-file-text2" viewBox="0 0 32 32">
+<path d="M28.681 7.159c-0.694-0.947-1.662-2.053-2.724-3.116s-2.169-2.030-3.116-2.724c-1.612-1.182-2.393-1.319-2.841-1.319h-15.5c-1.378 0-2.5 1.121-2.5 2.5v27c0 1.378 1.122 2.5 2.5 2.5h23c1.378 0 2.5-1.122 2.5-2.5v-19.5c0-0.448-0.137-1.23-1.319-2.841zM24.543 5.457c0.959 0.959 1.712 1.825 2.268 2.543h-4.811v-4.811c0.718 0.556 1.584 1.309 2.543 2.268zM28 29.5c0 0.271-0.229 0.5-0.5 0.5h-23c-0.271 0-0.5-0.229-0.5-0.5v-27c0-0.271 0.229-0.5 0.5-0.5 0 0 15.499-0 15.5 0v7c0 0.552 0.448 1 1 1h7v19.5z"></path>
+<path d="M23 26h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 22h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 18h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+</symbol>
+</defs>
+</svg>
+<style>/* CSS stylesheet for displaying xarray objects in notebooks */
+
+:root {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base rgba(0, 0, 0, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, white)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+  );
+}
+
+html[theme="dark"],
+html[data-theme="dark"],
+body[data-theme="dark"],
+body.vscode-dark {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base, rgba(255, 255, 255, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, #111111)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
+  );
+}
+
+.xr-wrap {
+  display: block !important;
+  min-width: 300px;
+  max-width: 700px;
+  line-height: 1.6;
+  padding-bottom: 4px;
+}
+
+.xr-text-repr-fallback {
+  /* fallback to plain text repr when CSS is not injected (untrusted notebook) */
+  display: none;
+}
+
+.xr-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.xr-header {
+  border-bottom: solid 1px var(--xr-border-color);
+  margin-bottom: 4px;
+}
+
+.xr-header > div,
+.xr-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xr-obj-type,
+.xr-obj-name {
+  margin-left: 2px;
+  margin-right: 10px;
+}
+
+.xr-obj-type,
+.xr-group-box-contents > label {
+  color: var(--xr-font-color2);
+  display: block;
+}
+
+.xr-sections {
+  padding-left: 0 !important;
+  display: grid;
+  grid-template-columns: 150px auto auto 1fr 0 20px 0 20px;
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+.xr-section-item {
+  display: contents;
+}
+
+.xr-section-item > input,
+.xr-group-box-contents > input,
+.xr-array-wrap > input {
+  display: block;
+  opacity: 0;
+  height: 0;
+  margin: 0;
+}
+
+.xr-section-item > input + label,
+.xr-var-item > input + label {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-item > input:enabled + label,
+.xr-var-item > input:enabled + label,
+.xr-array-wrap > input:enabled + label,
+.xr-group-box-contents > input:enabled + label {
+  cursor: pointer;
+  color: var(--xr-font-color2);
+}
+
+.xr-section-item > input:focus-visible + label,
+.xr-var-item > input:focus-visible + label,
+.xr-array-wrap > input:focus-visible + label,
+.xr-group-box-contents > input:focus-visible + label {
+  outline: auto;
+}
+
+.xr-section-item > input:enabled + label:hover,
+.xr-var-item > input:enabled + label:hover,
+.xr-array-wrap > input:enabled + label:hover,
+.xr-group-box-contents > input:enabled + label:hover {
+  color: var(--xr-font-color0);
+}
+
+.xr-section-summary {
+  grid-column: 1;
+  color: var(--xr-font-color2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.xr-section-summary > em {
+  font-weight: normal;
+}
+
+.xr-span-grid {
+  grid-column-end: -1;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label > span {
+  display: inline-block;
+  padding-left: 0.6em;
+}
+
+.xr-section-summary-in:disabled + label {
+  color: var(--xr-font-color2);
+}
+
+.xr-section-summary-in + label:before {
+  display: inline-block;
+  content: "►";
+  font-size: 11px;
+  width: 15px;
+  text-align: center;
+}
+
+.xr-section-summary-in:disabled + label:before {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-summary-in:checked + label:before {
+  content: "▼";
+}
+
+.xr-section-summary-in:checked + label > span {
+  display: none;
+}
+
+.xr-section-summary,
+.xr-section-inline-details,
+.xr-group-box-contents > label {
+  padding-top: 4px;
+}
+
+.xr-section-inline-details {
+  grid-column: 2 / -1;
+}
+
+.xr-section-details {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  margin-bottom: 5px;
+}
+
+.xr-section-summary-in ~ .xr-section-details {
+  display: none;
+}
+
+.xr-section-summary-in:checked ~ .xr-section-details {
+  display: contents;
+}
+
+.xr-children {
+  display: inline-grid;
+  grid-template-columns: 100%;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.xr-group-box {
+  display: inline-grid;
+  grid-template-columns: 0px 30px auto;
+}
+
+.xr-group-box-vline {
+  grid-column-start: 1;
+  border-right: 0.2em solid;
+  border-color: var(--xr-border-color);
+  width: 0px;
+}
+
+.xr-group-box-hline {
+  grid-column-start: 2;
+  grid-row-start: 1;
+  height: 1em;
+  width: 26px;
+  border-bottom: 0.2em solid;
+  border-color: var(--xr-border-color);
+}
+
+.xr-group-box-contents {
+  grid-column-start: 3;
+  padding-bottom: 4px;
+}
+
+.xr-group-box-contents > label::before {
+  content: "📂";
+  padding-right: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label::before {
+  content: "📁";
+}
+
+.xr-group-box-contents > input:checked + label {
+  padding-bottom: 0px;
+}
+
+.xr-group-box-contents > input:checked ~ .xr-sections {
+  display: none;
+}
+
+.xr-group-box-contents > input + label > span {
+  display: none;
+}
+
+.xr-group-box-ellipsis {
+  font-size: 1.4em;
+  font-weight: 900;
+  color: var(--xr-font-color2);
+  letter-spacing: 0.15em;
+  cursor: default;
+}
+
+.xr-array-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.xr-array-wrap > label {
+  grid-column: 1;
+  vertical-align: top;
+}
+
+.xr-preview {
+  color: var(--xr-font-color3);
+}
+
+.xr-array-preview,
+.xr-array-data {
+  padding: 0 5px !important;
+  grid-column: 2;
+}
+
+.xr-array-data,
+.xr-array-in:checked ~ .xr-array-preview {
+  display: none;
+}
+
+.xr-array-in:checked ~ .xr-array-data,
+.xr-array-preview {
+  display: inline-block;
+}
+
+.xr-dim-list {
+  display: inline-block !important;
+  list-style: none;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.xr-dim-list li {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.xr-dim-list:before {
+  content: "(";
+}
+
+.xr-dim-list:after {
+  content: ")";
+}
+
+.xr-dim-list li:not(:last-child):after {
+  content: ",";
+  padding-right: 5px;
+}
+
+.xr-has-index {
+  font-weight: bold;
+}
+
+.xr-var-list,
+.xr-var-item {
+  display: contents;
+}
+
+.xr-var-item > div,
+.xr-var-item label,
+.xr-var-item > .xr-var-name span {
+  background-color: var(--xr-background-color-row-even);
+  border-color: var(--xr-background-color-row-odd);
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.xr-var-item > .xr-var-name:hover span {
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(odd) > div,
+.xr-var-list > li:nth-child(odd) > label,
+.xr-var-list > li:nth-child(odd) > .xr-var-name span {
+  background-color: var(--xr-background-color-row-odd);
+  border-color: var(--xr-background-color-row-even);
+}
+
+.xr-var-name {
+  grid-column: 1;
+}
+
+.xr-var-dims {
+  grid-column: 2;
+}
+
+.xr-var-dtype {
+  grid-column: 3;
+  text-align: right;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-preview {
+  grid-column: 4;
+}
+
+.xr-index-preview {
+  grid-column: 2 / 5;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-name,
+.xr-var-dims,
+.xr-var-dtype,
+.xr-preview,
+.xr-attrs dt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
+  overflow: visible;
+  width: auto;
+  z-index: 1;
+}
+
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  display: none;
+  border-top: 2px dotted var(--xr-background-color);
+  padding-bottom: 20px !important;
+  padding-top: 10px !important;
+}
+
+.xr-var-attrs-in + label,
+.xr-var-data-in + label,
+.xr-index-data-in + label {
+  padding: 0 1px;
+}
+
+.xr-var-attrs-in:checked ~ .xr-var-attrs,
+.xr-var-data-in:checked ~ .xr-var-data,
+.xr-index-data-in:checked ~ .xr-index-data {
+  display: block;
+}
+
+.xr-var-data > table {
+  float: right;
+}
+
+.xr-var-data > pre,
+.xr-index-data > pre,
+.xr-var-data > table > tbody > tr {
+  background-color: transparent !important;
+}
+
+.xr-var-name span,
+.xr-var-data,
+.xr-index-name div,
+.xr-index-data,
+.xr-attrs {
+  padding-left: 25px !important;
+}
+
+.xr-attrs,
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  grid-column: 1 / -1;
+}
+
+dl.xr-attrs {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt,
+.xr-attrs dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+  width: auto;
+}
+
+.xr-attrs dt {
+  font-weight: normal;
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: var(--xr-background-color);
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.xr-icon-database,
+.xr-icon-file-text2,
+.xr-no-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1.5em !important;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.xr-var-attrs-in:checked + label > .xr-icon-file-text2,
+.xr-var-data-in:checked + label > .xr-icon-database,
+.xr-index-data-in:checked + label > .xr-icon-database {
+  color: var(--xr-font-color0);
+  filter: drop-shadow(1px 1px 5px var(--xr-font-color2));
+  stroke-width: 0.8px;
+}
+</style><pre class='xr-text-repr-fallback'>&lt;xarray.DataArray &#x27;position&#x27; (time: 1169, space: 3, keypoint: 3, individual: 1)&gt; Size: 84kB
+nan nan nan nan nan nan nan nan nan nan ... nan nan nan nan nan nan nan nan nan
+Coordinates:
+  * time        (time) float64 9kB 0.0 0.005 0.01 0.015 ... 5.83 5.835 5.84
+  * space       (space) &lt;U1 12B &#x27;x&#x27; &#x27;y&#x27; &#x27;z&#x27;
+  * keypoint    (keypoint) &lt;U15 180B &#x27;beakTip&#x27; &#x27;stickTip&#x27; &#x27;pellet&#x27;
+  * individual  (individual) &lt;U5 20B &#x27;Crow1&#x27;
+Attributes:
+    log:      [\n  {\n    &quot;operation&quot;: &quot;filter_by_confidence&quot;,\n    &quot;datetime...</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.DataArray</div><div class='xr-obj-name'>&#x27;position&#x27;</div><ul class='xr-dim-list'><li><span class='xr-has-index'>time</span>: 1169</li><li><span class='xr-has-index'>space</span>: 3</li><li><span class='xr-has-index'>keypoint</span>: 3</li><li><span class='xr-has-index'>individual</span>: 1</li></ul></div><ul class='xr-sections'><li class='xr-section-item'><div class='xr-array-wrap'><input id='section-4e6cad6d-4a11-4653-8123-f0de49c8faae' class='xr-array-in' type='checkbox' ><label for='section-4e6cad6d-4a11-4653-8123-f0de49c8faae' title='Show/hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-array-preview xr-preview'><span>nan nan nan nan nan nan nan nan ... nan nan nan nan nan nan nan nan</span></div><div class='xr-array-data'><pre>array([[[[nan],
+         [nan],
+         [nan]],
+
+        [[nan],
+         [nan],
+         [nan]],
+
+        [[nan],
+         [nan],
+         [nan]]],
+
+
+       [[[nan],
+         [nan],
+         [nan]],
+
+        [[nan],
+         [nan],
+         [nan]],
+...
+        [[nan],
+         [nan],
+         [nan]],
+
+        [[nan],
+         [nan],
+         [nan]]],
+
+
+       [[[nan],
+         [nan],
+         [nan]],
+
+        [[nan],
+         [nan],
+         [nan]],
+
+        [[nan],
+         [nan],
+         [nan]]]], shape=(1169, 3, 3, 1))</pre></div></div></li><li class='xr-section-item'><input id='section-0f45defa-00ac-4148-87d2-b7f3d4f6d2da' class='xr-section-summary-in' type='checkbox' checked /><label for='section-0f45defa-00ac-4148-87d2-b7f3d4f6d2da' class='xr-section-summary' title='Expand/collapse section'>Coordinates: <span>(4)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 0.005 0.01 ... 5.83 5.835 5.84</div><input id='attrs-139f7b6e-55f4-4c2a-9c7b-43f7e5b523ad' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-139f7b6e-55f4-4c2a-9c7b-43f7e5b523ad' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-fd8e70b5-f6a1-4c8b-a5fa-2254a77a327f' class='xr-var-data-in' type='checkbox'><label for='data-fd8e70b5-f6a1-4c8b-a5fa-2254a77a327f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([0.000e+00, 5.000e-03, 1.000e-02, ..., 5.830e+00, 5.835e+00, 5.840e+00],
+      shape=(1169,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>space</span></div><div class='xr-var-dims'>(space)</div><div class='xr-var-dtype'>&lt;U1</div><div class='xr-var-preview xr-preview'>&#x27;x&#x27; &#x27;y&#x27; &#x27;z&#x27;</div><input id='attrs-1d9fc080-f00e-4e01-8446-e9787a746615' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-1d9fc080-f00e-4e01-8446-e9787a746615' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-486e7539-9ceb-4b61-8297-c2f617c5ca38' class='xr-var-data-in' type='checkbox'><label for='data-486e7539-9ceb-4b61-8297-c2f617c5ca38' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;x&#x27;, &#x27;y&#x27;, &#x27;z&#x27;], dtype=&#x27;&lt;U1&#x27;)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>keypoint</span></div><div class='xr-var-dims'>(keypoint)</div><div class='xr-var-dtype'>&lt;U15</div><div class='xr-var-preview xr-preview'>&#x27;beakTip&#x27; &#x27;stickTip&#x27; &#x27;pellet&#x27;</div><input id='attrs-608195e4-ff3b-4296-811e-41278c110285' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-608195e4-ff3b-4296-811e-41278c110285' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-e4cb1a8d-164b-48f7-a146-1c0718753863' class='xr-var-data-in' type='checkbox'><label for='data-e4cb1a8d-164b-48f7-a146-1c0718753863' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;beakTip&#x27;, &#x27;stickTip&#x27;, &#x27;pellet&#x27;], dtype=&#x27;&lt;U15&#x27;)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>individual</span></div><div class='xr-var-dims'>(individual)</div><div class='xr-var-dtype'>&lt;U5</div><div class='xr-var-preview xr-preview'>&#x27;Crow1&#x27;</div><input id='attrs-7fe88ab1-a6d0-484a-9466-b004efc653b9' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-7fe88ab1-a6d0-484a-9466-b004efc653b9' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-e6cf324c-b142-4182-8aca-158346f5bf2b' class='xr-var-data-in' type='checkbox'><label for='data-e6cf324c-b142-4182-8aca-158346f5bf2b' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;Crow1&#x27;], dtype=&#x27;&lt;U5&#x27;)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-95caa64f-345e-4601-8a6a-ae994ac514a7' class='xr-section-summary-in' type='checkbox' checked /><label for='section-95caa64f-345e-4601-8a6a-ae994ac514a7' class='xr-section-summary' title='Expand/collapse section'>Attributes: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>log :</span></dt><dd>[
+  {
+    &quot;operation&quot;: &quot;filter_by_confidence&quot;,
+    &quot;datetime&quot;: &quot;2026-09-02 21:12:46.469617&quot;,
+    &quot;confidence&quot;: &quot;&lt;xarray.DataArray &#x27;confidence&#x27; (time: 1169, keypoint: 5, individual: 1)&gt; Size: 47kB\n0.9989 nan 0.009679 nan 1.0 0.9992 nan ... 0.9655 0.9991 nan 0.4036 nan 0.9847\nCoordinates:\n  * time        (time) float64 9kB 0.0 0.005 0.01 0.015 ... 5.83 5.835 5.84\n  * keypoint    (keypoint) &lt;U15 300B &#x27;beakTip&#x27; &#x27;beakBase&#x27; ... &#x27;pellet&#x27;\n  * individual  (individual) &lt;U5 20B &#x27;Crow1&#x27;&quot;,
+    &quot;threshold&quot;: &quot;0.6&quot;,
+    &quot;print_report&quot;: &quot;False&quot;
+  }
+]</dd></dl></div></li></ul></div></div></div></div>
+</div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
@@ -820,7 +1438,7 @@ data_folder: c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Saved to c:\Users\Admin\Documents\Akseli\Code\ethograph\data\Moll2025\Trial_data.nc
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Saved to c:\Users\aksel\Documents\Code\ethograph\data\Moll2025\Trial_data.nc
 </pre></div>
 </div>
 </div>

@@ -64,44 +64,39 @@ See {func}`~ethograph.labels.intervals.load_mapping` and
 
 ## Resolution order
 
-When the GUI needs a mapping, it searches with
-{func}`~ethograph.utils.paths.find_mapping_file`:
+A study keeps its vocabulary in **`mapping.txt` at the root of its project
+folder** (the folder chosen on the start page). When the GUI needs a mapping,
+{func}`~ethograph.utils.paths.find_mapping_file` takes the most specific one:
 
-1. Walk up from the loaded data directory looking for
-   `.ethograph/mapping.txt` in each ancestor. This lets a shared
-   `.ethograph/` in a parent folder serve many sessions, while a
-   per-session override wins.
-2. Fall back to `~/.ethograph/mapping.txt` (global user default).
-
-Typical layouts:
+1. `.ethograph/mapping.txt` beside the loaded session, walking up through its
+   parent folders — a session's own copy overrides the study's.
+2. `{project}/mapping.txt` — the project's copy.
+3. `~/.ethograph/defaults/mapping.txt` — the backup every install ships with.
+   With no project folder chosen this is the one in use.
 
 ```
-~/.ethograph/mapping.txt                          # global default
-project/.ethograph/mapping.txt                    # project-wide (shared across sessions)
-project/session_01/.ethograph/mapping.txt         # per-session override
+session_01/.ethograph/mapping.txt                 # a session's own copy: overrides the project
+my_study/mapping.txt                              # the study's vocabulary
+~/.ethograph/defaults/mapping.txt                 # backup: the bundled default
 ```
+
+When a session's own copy disagrees with the project's, the GUI says so on
+load — the override applies, but never unnoticed.
 
 ---
 
-## Auto-generated mappings
+(target-auto-mapping)=
+## Importing labels with new class names
 
-When you import labels from an external source whose classes don't exist
-in the active `mapping.txt`, the GUI auto-creates a new mapping file
-alongside the data so no IDs clash:
+Every import format (Crowsetta, pynapple / NWB `IntervalSet`) uses the same
+`mapping.txt`, the one shown in the mapping path field. A name that is already
+in it keeps its ID, branch and event type. A new name is appended with the next
+free ID, as a state class on branch 0, and the GUI says which classes it added.
+With no mapping in use, the classes go into the session's
+`.ethograph/mapping.txt`. `background` and `sil` are treated as background and
+never added.
 
-| Import source | Generated file |
-|---------------|----------------|
-| Crowsetta formats (aud-seq, textgrid, ...) | `mapping_{format}.txt` |
-| Pynapple / NWB `IntervalSet` labels | `mapping_pynapple.txt` |
-| NWB epoch imports | `mapping_nwb_epochs.txt` |
-
-The mapping path field in the Label controls updates to point at the new
-file. You can rename it to `mapping.txt` to make it the default for this
-project.
-
-See {func}`~ethograph.labels.converters.resolve_crowsetta_mapping` and
-{func}`~ethograph.labels.converters.build_mapping_from_labels` for the
-auto-generation logic.
+See {func}`~ethograph.labels.converters.extend_mapping`.
 
 ---
 

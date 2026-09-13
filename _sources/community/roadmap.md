@@ -1,39 +1,42 @@
 # Roadmap
 
-Currently this is still more of a collection of notes, than a roadmap.
+What EthoGraph already does, what is in progress, and what is still open. Grouped by theme; within each theme items run roughly in the order they were (or will be) tackled.
 
+**Legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-## Improved interop. with segmentation models:
+## Milestones
 
-- Movement community call (April 2026): [PPT slides](https://neuroinformatics.zulipchat.com/user_uploads/58792/jV4lyzfLheHU4Gj4qCQkKzwy/2026_04-Ethograph-demo.pptx)
-- Discussion on schema for segmentation feature data: https://github.com/neuroinformatics-unit/movement/issues/978
-
-### Import predictions from action segmentation models
-Done — **File → Import predictions…** loads per-trial `.npy`/`.pickle` files with shape `(T, n_classes)` or `(T,)` from action segmentation models (DLC2Action, ASFormer, MS-TCN) and converts them to label intervals with a confidence overlay (1 - entropy of classwise softmax).
-
----
-
-## Easier alignment of video and data streams via `.nwb` files
-
-- https://github.com/catalystneuro/nwb-video-widgets/issues/34
-- https://github.com/NeurodataWithoutBorders/nwb-schema/issues/677
+| When | Milestone |
+|---|---|
+| April 2026 | Movement community call demo ([slides](https://neuroinformatics.zulipchat.com/user_uploads/58792/jV4lyzfLheHU4Gj4qCQkKzwy/2026_04-Ethograph-demo.pptx)) |
+| 2026 | Segmentation pipeline, lightgbm models, pixel event spotting, curation workflows |
+| Next | Shared feature schema with `movement`, NWB video alignment upstream |
 
 ---
 
-## Changepoints
+## 1. Interop with segmentation models
 
+- [x] Import predictions from action segmentation models (DLC2Action, ASFormer, MS-TCN): **File → Import predictions…** turns per-trial `(T, n_classes)` or `(T,)` arrays into labels with a confidence overlay (1 − normalised entropy)
+- [x] Scripted segmentation pipeline (`ethograph.segment`): materialise → search → cross-validate, predictions written as GUI label files
+- [x] lightgbm models for point events, with confidence read off the curve
+- [x] Pixel event spotting from video (`ethograph.spot`)
+- [x] Curation of model output: the Curation section, grids and saved workflows
+- [ ] 🚧 A shared schema for segmentation feature data with `movement` ([movement#978](https://github.com/neuroinformatics-unit/movement/issues/978))
 
-### More sophisticated changepoint detection
+## 2. Aligning video and data streams via `.nwb`
 
-Current methods are fast (gradient based, RMS-based, etc.), but could also use ML for detection. Important that it's easily reproducible, so it represents a reliable feature in feature space. Sometimes the changepoint correction post-model output makes things worse, transformer learns better representation than simple gradient based methods.
+- [x] Read and edit alignment directly in `.nwb` sources; `.ethograph/alignment.nwb` sidecars for everything else
+- [ ] 🚧 Video alignment in NWB tooling upstream ([nwb-video-widgets#34](https://github.com/catalystneuro/nwb-video-widgets/issues/34), [nwb-schema#677](https://github.com/NeurodataWithoutBorders/nwb-schema/issues/677))
 
-### Changepoint features
+## 3. Changepoints
 
-Using {func}`~ethograph.features.changepoints.more_changepoint_features` massively improved fine-grained accuracy for [ASFormer](https://github.com/ChinaYi/ASFormer), would be cool if this could be exported generally to segmentation models (DLC2Action, etc.)
+- [x] Fast changepoint detection (gradient-, RMS-based, …) and changepoint correction of label boundaries
+- [x] Changepoint features ({func}`~ethograph.features.changepoints.more_changepoint_features`), which massively improved fine-grained accuracy for [ASFormer](https://github.com/ChinaYi/ASFormer)
+- [x] Changepoint features available to every segmentation model (`features.changepoint_features` in the segment pipeline)
+- [ ] ML-based changepoint detection. It must stay reproducible so it is a reliable feature. Note: post-model changepoint correction sometimes makes things worse, since the transformer learns a better representation than simple gradient-based methods.
+- [ ] 🚧 Audio changepoints (`ethograph.features.audio_changepoints`)
 
+## 4. Neural data
 
-## Other
-
-- Audio changepoints
-- Interactive PSTH `ethograph.gui.widgets_psth`
-- Single-trial neural dimensionality reduction techniques, visualize label segments in latent spaces
+- [ ] 🚧 Interactive PSTH (`ethograph.gui.widgets_psth`)
+- [ ] Single-trial neural dimensionality reduction; visualise label segments in latent space

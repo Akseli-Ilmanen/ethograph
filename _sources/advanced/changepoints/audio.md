@@ -9,7 +9,7 @@ Four methods are available, drawn from two libraries.
 
 ## VocalPy methods
 
-Reference: [VocalPy documentation](https://vocalpy.readthedocs.io/)
+Reference: [VocalPy documentation](https://vocalpy.readthedocs.io/) {cite:p}`nicholson2023vocalpy`
 
 **Mean-squared energy** (`meansquared`): Computes a smoothed energy envelope
 via mean-squared amplitude, then thresholds to find vocal segments. Simple
@@ -23,7 +23,7 @@ levels.
 
 ## VocalSeg methods
 
-Reference: [VocalSeg (Sainburg et al., 2020)](https://github.com/timsainb/vocalization-segmentation)
+Reference: [VocalSeg](https://github.com/timsainb/vocalization-segmentation) {cite:p}`sainburg2020finding`
 
 **Dynamic thresholding** (`vocalseg`): Adaptive threshold segmentation that
 adjusts to local spectral energy. Good for signals with varying background
@@ -59,19 +59,14 @@ stored as onset/offset time pairs in seconds:
 ds["audio_cp_onsets"]  = xr.DataArray(
     onset_times_s,
     dims=["audio_cp"],
-    attrs={"type": "audio_changepoints", "target_feature": "audio"},
+    attrs={"target_feature": "audio", "method": method},
 )
 ds["audio_cp_offsets"] = xr.DataArray(
     offset_times_s,
     dims=["audio_cp"],
-    attrs={"type": "audio_changepoints", "target_feature": "audio"},
+    attrs={"target_feature": "audio", "method": method},
 )
 ```
 
 ---
 
-## References
-
-- Nicholson, D. (2023). vocalpy/vocalpy: 0.2.0. Zenodo. <https://doi.org/10.5281/zenodo.7905426>
-- Nicholson, D., & Cohen, Y. (2023). vak: A neural network framework for researchers studying animal acoustic communication. Scipy 2023. <https://doi.org/10.25080/gerudo-f2bc6f59-008>
-- Sainburg, T., Thielk, M., & Gentner, T. Q. (2020). Finding, visualizing, and quantifying latent structure across diverse animal vocal repertoires. PLOS Computational Biology, 16(10), e1008228. <https://doi.org/10.1371/journal.pcbi.1008228>

@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -283,6 +290,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -451,7 +465,7 @@ is always the first axis.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>da</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.7.0)"><em>xarray.DataArray</em></a>) – Source array.  Must contain at least one dimension whose name
 includes <code class="docutils literal notranslate"><span class="pre">&quot;time&quot;</span></code>.</p></li>
-<li><p><strong>sel_kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Candidate selections.  Keys that don’t match any dimension in <em>da</em>
+<li><p><strong>sel_kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Candidate selections.  Keys that don’t match any dimension in <em>da</em>
 are silently dropped.</p></li>
 </ul>
 </dd>
@@ -465,7 +479,7 @@ for building plot titles.</p></li>
 </p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <em>da</em> has no dimension containing <code class="docutils literal notranslate"><span class="pre">&quot;time&quot;</span></code>.</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <em>da</em> has no dimension containing <code class="docutils literal notranslate"><span class="pre">&quot;time&quot;</span></code>.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -493,7 +507,7 @@ one dimension whose name contains <code class="docutils literal notranslate"><sp
 <code class="docutils literal notranslate"><span class="pre">time_aux</span></code>, <code class="docutils literal notranslate"><span class="pre">time_labels</span></code>).  Different features can use different
 time dimensions at different sampling rates — this function finds the
 right one for a given DataArray.
-See <a class="reference internal" href="../getting_started/preparing_data.html#target-data-requirements"><span class="std std-ref">Preparing your own data</span></a> for the full specification.</p>
+See <a class="reference internal" href="../getting_started/your_data/index.html#target-data-requirements"><span class="std std-ref">Bring your own data</span></a> for the full specification.</p>
 <p><strong>Lookup order:</strong> dimension coordinates (<code class="docutils literal notranslate"><span class="pre">da.dims</span></code>) are checked
 before non-dimension coordinates (<code class="docutils literal notranslate"><span class="pre">da.coords</span></code>), so the primary time
 axis that actually indexes the data is returned even when a shorter

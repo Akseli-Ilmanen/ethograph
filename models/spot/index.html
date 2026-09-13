@@ -1,0 +1,1022 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Precise event spotting (PES) from pixels &#8212; ethograph</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=17f663f2" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'models/spot/index';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/spot/index.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Quickstart" href="quickstart.html" />
+    <link rel="prev" title="LightGBM for point events" href="../onset_model.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/icon.png" class="logo__image only-light" alt=""/>
+    <img src="../../_static/icon.png" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">ethograph</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../community/index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../community/index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events from features)</a></li>
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../confidence.html">Model confidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../curation.html">Curating labels</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Models</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Precise event spotting (PES) from pixels</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="precise-event-spotting-pes-from-pixels">
+<span id="target-spot"></span><h1>Precise event spotting (PES) from pixels<a class="headerlink" href="#precise-event-spotting-pes-from-pixels" title="Link to this heading">#</a></h1>
+<p>Learn the <strong>point events</strong> you curated in the GUI directly from video, and
+predict them back into the GUI. Where <a class="reference internal" href="../segment/index.html"><span class="doc">the segmentation pipeline</span></a> learns state events from engineered features, this learns
+a single moment per trial from the frames themselves — and, optionally, from
+pose features you already have.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
+
+<span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"spot.yaml"</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>        <span class="c1"># sessions -&gt; frames (+ the listed features), and the model's own index</span>
+<span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>              <span class="c1"># one run under runs/</span>
+<span class="n">project</span><span class="o">.</span><span class="n">evaluate</span><span class="p">()</span>           <span class="c1"># per class: misses, error in ms, hit rate per tolerance -&gt; test_metrics.yaml</span>
+<span class="n">project</span><span class="o">.</span><span class="n">compare</span><span class="p">()</span>            <span class="c1"># every scored run side by side -&gt; runs/compare.tsv</span>
+<span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">()</span>          <span class="c1"># a run's predictions into each session's labels/ folder</span>
+<span class="n">project</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">()</span>     <span class="c1"># one fold per session: train on the rest, predict the held-out one</span>
+<span class="n">project</span><span class="o">.</span><span class="n">train_teacher</span><span class="p">()</span>      <span class="c1"># option 4: the pose-only teacher</span>
+<span class="n">project</span><span class="o">.</span><span class="n">distil</span><span class="p">()</span>             <span class="c1"># option 4: the student, taught by the teacher, video only at inference</span>
+</pre></div>
+</div>
+<p>The model is <strong>E2E-Spot</strong> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>: a RegNetY-008 backbone <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id273" title="Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming He, and Piotr Dollár. Designing network design spaces. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/2003.13678, arXiv:2003.13678.">Radosavovic <em>et al.</em>, 2020</a>]</span>
+with Gate Shift Modules <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id274" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span> for temporal mixing and a bi-GRU head emitting a
+per-frame softmax over <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">+</span> <span class="pre">1</span></code> classes. It is vendored the way <a class="reference external" href="https://github.com/amathislab/DLC2Action">DLC2Action</a> is —
+upstream’s own layout, unedited beyond what its <code class="docutils literal notranslate"><span class="pre">NOTICE.md</span></code> lists.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There is no command line, for the same reason the segmentation pipeline has
+none: a run is a config file you can diff (<code class="docutils literal notranslate"><span class="pre">notes/adr/0004-scripted-not-cli.md</span></code>).</p>
+</div>
+<section id="four-ways-to-spot-a-point-event">
+<h2>Four ways to spot a point event<a class="headerlink" href="#four-ways-to-spot-a-point-event" title="Link to this heading">#</a></h2>
+<p>Which one to use is decided by <strong>what is available when the model runs</strong>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 4.0%" />
+<col style="width: 30.0%" />
+<col style="width: 22.0%" />
+<col style="width: 22.0%" />
+<col style="width: 22.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>Trains on</p></th>
+<th class="head"><p>Reads at inference</p></th>
+<th class="head"><p>Where</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p><strong>LightGBM lightgbm model</strong> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> — a boosted-tree classifier on a window of the
+features you tick</p></td>
+<td><p>pose features</p></td>
+<td><p>pose features</p></td>
+<td><p>the GUI, <code class="docutils literal notranslate"><span class="pre">Model</span> <span class="pre">▸</span> <span class="pre">LightGBM:</span> <span class="pre">Train…</span></code> (<a class="reference internal" href="../onset_model.html"><span class="doc">LightGBM for point events</span></a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p><strong>E2E-Spot</strong> <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> — pixels only; <code class="docutils literal notranslate"><span class="pre">rny008_msagsm</span></code> <span class="bibtex-citation" id="id6">[<a class="reference internal" href="../../community/references.html#id275" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> widens its temporal aperture</p></td>
+<td><p>video</p></td>
+<td><p>video</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>, no <code class="docutils literal notranslate"><span class="pre">features:</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p><strong>E2E-Spot + features</strong> — the listed pose features ride into the GRU
+beside the CNN features</p></td>
+<td><p>video + pose</p></td>
+<td><p>video + pose</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>, <code class="docutils literal notranslate"><span class="pre">features:</span></code> listed</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p><strong>Pose teacher → distilled E2E-Spot</strong> <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id276" title="Zhaoyu Liu, Kan Jiang, Murong Ma, Zhe Hou, Yun Lin, and Jin Song Dong. Few-shot precise event spotting via unified multi-entity graph and distillation. In Proceedings of the AAAI Conference on Artificial Intelligence (AAAI). 2026. URL: https://arxiv.org/abs/2511.14186, arXiv:2511.14186.">Liu <em>et al.</em>, 2026</a>]</span> — a small pose-only model on the
+listed features teaches the pixel model, then is set aside</p></td>
+<td><p>video + pose</p></td>
+<td><p>video</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>, <code class="docutils literal notranslate"><span class="pre">features:</span></code> + <code class="docutils literal notranslate"><span class="pre">train.features_as_input:</span> <span class="pre">false</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p><strong>Pose exists for every trial</strong> → start with <strong>1</strong>: minutes on a CPU, and
+every input is a variable you can plot. If a class stays weak, <strong>3</strong> adds
+the pixels to the same features; <code class="docutils literal notranslate"><span class="pre">evaluate(zero_features=True)</span></code> scores that
+run with the features zeroed, so what the pose contributes is a number
+rather than an assumption.</p></li>
+<li><p><strong>Video only, no pose anywhere</strong> → <strong>2</strong>.</p></li>
+<li><p><strong>Video only at inference, but pose can be made for the training
+sessions</strong> — label a few frames in the GUI, <code class="docutils literal notranslate"><span class="pre">fill_poses()</span></code> → dense pose →
+<strong>4</strong>. Its gate: <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> the teacher on the same test split as the
+video-only baseline first, and distil only from a teacher that beats it. A
+student cannot learn from a model that knows less.</p></li>
+</ul>
+<section id="which-stages-to-run">
+<h3>Which stages to run<a class="headerlink" href="#which-stages-to-run" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/spot.py</span></code> runs the stages you name, in order — it has no default
+list, because the right list depends on the case above, and running a stage
+you do not need is not harmless: distilling when pose is always available
+makes the pixel model <em>approximate</em> features it could simply be given.</p>
+<p><strong>Pose in every session, now and later</strong> (option 3). The features ride into
+the GRU; no teacher, no distillation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/spot.py<span class="w"> </span>materialise<span class="w"> </span>baseline<span class="w"> </span>evaluate
+python<span class="w"> </span>scripts/spot.py<span class="w"> </span>inference<span class="w"> </span>--run<span class="w"> </span>ctx2s_res10ms_features<span class="w"> </span>--sessions<span class="w"> </span>20260308_01
+</pre></div>
+</div>
+<p><strong>Video only, no pose anywhere</strong> (option 2). The same two lines with no
+<code class="docutils literal notranslate"><span class="pre">features:</span></code> listed; the run is named <code class="docutils literal notranslate"><span class="pre">ctx2s_res10ms</span></code>.</p>
+<p><strong>Pose for the labelled sessions, none where you will predict</strong> (option 4).
+Train the teacher and the baseline, and read <code class="docutils literal notranslate"><span class="pre">compare.tsv</span></code> before spending a
+run on distillation — a student cannot learn from a model that knows less:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/spot.py<span class="w"> </span>materialise<span class="w"> </span>teacher<span class="w"> </span>baseline<span class="w"> </span>evaluate<span class="w">   </span><span class="c1"># the gate</span>
+python<span class="w"> </span>scripts/spot.py<span class="w"> </span>distil<span class="w"> </span>evaluate<span class="w">                         </span><span class="c1"># once; the student is a run like any other</span>
+python<span class="w"> </span>scripts/spot.py<span class="w"> </span>inference<span class="w"> </span>--run<span class="w"> </span>ctx2s_res10ms_distil_64d5ef46<span class="w"> </span>--sessions<span class="w"> </span>20260308_01
+</pre></div>
+</div>
+<p>Distil once; every later session is plain <code class="docutils literal notranslate"><span class="pre">inference</span> <span class="pre">--run</span> <span class="pre">&lt;student&gt;</span></code>. The
+only reasons to distil again are a changed <code class="docutils literal notranslate"><span class="pre">features:</span></code>/<code class="docutils literal notranslate"><span class="pre">teacher:</span></code> section or
+new labelled data — the fingerprint in the run name tells those apart.</p>
+<p><strong>Every pose input is a variable in your session file</strong>, spelled the way the
+segmentation pipeline spells feature columns — <code class="docutils literal notranslate"><span class="pre">velocity:</span> <span class="pre">{space:</span> <span class="pre">[x,</span> <span class="pre">y],</span> <span class="pre">keypoint:</span> <span class="pre">[stickTip]}</span></code>, <code class="docutils literal notranslate"><span class="pre">pellet_stickClosest_dist:</span> <span class="pre">{}</span></code>. Build it with
+<code class="docutils literal notranslate"><span class="pre">movement.kinematics</span></code> or <code class="docutils literal notranslate"><span class="pre">features/geometry.py</span></code> or your own code,
+plot it in the GUI, list it. The model gets exactly that; there is no graph, no adjacency, no learned
+geometry to reason about. Options 3 and 4 are described in <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features/ model distillation)</span></a>.</p>
+</section>
+</section>
+<section id="why-this-shares-the-segmentation-pipelines-workflow">
+<h2>Why this shares the segmentation pipeline’s workflow<a class="headerlink" href="#why-this-shares-the-segmentation-pipelines-workflow" title="Link to this heading">#</a></h2>
+<p>The two pipelines learn different things from different inputs with different
+models. What they share is everything <em>around</em> the model:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 26.0%" />
+<col style="width: 37.0%" />
+<col style="width: 37.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p><strong><code class="docutils literal notranslate"><span class="pre">eto.segment</span></code></strong></p></th>
+<th class="head"><p><strong><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code></strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Learns</p></td>
+<td><p>state events (spans)</p></td>
+<td><p>Point events (moments)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Reads</p></td>
+<td><p>Feature columns you choose</p></td>
+<td><p>Video frames (+ optional pose features)</p></td>
+</tr>
+<tr class="row-even"><td><p>Model</p></td>
+<td><p>Vendored DLC2Action architectures</p></td>
+<td><p>Vendored E2E-Spot</p></td>
+</tr>
+<tr class="row-odd"><td><p>Stage 1</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code> — features to <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">T)</span></code> arrays</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code> — video to frames + index</p></td>
+</tr>
+<tr class="row-even"><td><p>Sessions, trial filter, split</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code> / <code class="docutils literal notranslate"><span class="pre">TrialsConfig</span></code> / <code class="docutils literal notranslate"><span class="pre">SplitConfig</span></code></p></td>
+<td><p><strong>the same three, imported</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>Holding a session out</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code></p></td>
+<td><p><strong>the same call</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>Predictions</p></td>
+<td><p>The GUI’s labels TSV</p></td>
+<td><p>The GUI’s labels TSV</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Combining sessions into one training set, filtering trials by a metadata
+column, drawing a split by whole trial, and holding one whole session out per
+fold are properties of how the data is organised, not of either model. So
+<code class="docutils literal notranslate"><span class="pre">eto.spot</span></code> imports <code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code>, <code class="docutils literal notranslate"><span class="pre">TrialsConfig</span></code>, <code class="docutils literal notranslate"><span class="pre">SplitConfig</span></code>,
+<code class="docutils literal notranslate"><span class="pre">open_session</span></code>, <code class="docutils literal notranslate"><span class="pre">filter_trials</span></code> and <code class="docutils literal notranslate"><span class="pre">assign_roles</span></code> unchanged, and defines only
+what is its own: how video becomes clips, and which model reads them. The
+vocabulary is the same on purpose — <code class="docutils literal notranslate"><span class="pre">eto.segment.Project</span></code> and
+<code class="docutils literal notranslate"><span class="pre">eto.spot.Project</span></code>, each built from one YAML with <code class="docutils literal notranslate"><span class="pre">base:</span></code> and dotted overrides.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>What it does <strong>not</strong> share is the segmentation pipeline’s <code class="docutils literal notranslate"><span class="pre">features:</span></code>
+<em>section</em> (<code class="docutils literal notranslate"><span class="pre">columns:</span></code>, <code class="docutils literal notranslate"><span class="pre">drop_kinds</span></code>, <code class="docutils literal notranslate"><span class="pre">subsample</span></code>, preprocessing). <code class="docutils literal notranslate"><span class="pre">features:</span></code>
+here is a flat list of variables in that pipeline’s <em>column</em> spelling; a
+<code class="docutils literal notranslate"><span class="pre">columns:</span></code> key under it is an error naming the difference.</p>
+</div>
+</section>
+<section id="what-you-write">
+<h2>What you write<a class="headerlink" href="#what-you-write" title="Link to this heading">#</a></h2>
+<p>Everything a session needs is already known from the alignment — the video
+path per trial, its frame rate, its offset — so a session is one line:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/ses-01/behav/Trial_data.nc</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">'20260307_01'</span><span class="w">             </span><span class="c1"># optional — see "The session lines" below</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/ses-02/behav/Trial_data.nc</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">'20260309_01'</span>
+
+<span class="nt">frames</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../shared_frames</span><span class="w">            </span><span class="c1"># optional: reuse frames another project decoded</span>
+
+<span class="nt">trials</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">where</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stick</span><span class="p p-Indicator">]}</span><span class="w">      </span><span class="c1"># the trials-table filter, by column name</span>
+
+<span class="nt">labels</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">classes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">31</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">]</span><span class="w">                </span><span class="c1"># the point classes to spot</span>
+<span class="w">  </span><span class="nt">camera</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cam-1</span><span class="w">                    </span><span class="c1"># which camera's video (one per project)</span>
+<span class="w">  </span><span class="nt">crop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">x0</span><span class="p">:</span><span class="w"> </span><span class="nv">120</span><span class="p p-Indicator">,</span><span class="nt"> y0</span><span class="p">:</span><span class="w"> </span><span class="nv">40</span><span class="p p-Indicator">,</span><span class="nt"> x1</span><span class="p">:</span><span class="w"> </span><span class="nv">500</span><span class="p p-Indicator">,</span><span class="nt"> y1</span><span class="p">:</span><span class="w"> </span><span class="nv">380</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># optional: train on this part of the frame only</span>
+
+<span class="nt">clip</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">context_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span><span class="w">                   </span><span class="c1"># how much video the model sees at once</span>
+<span class="w">  </span><span class="nt">resolution_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">                </span><span class="c1"># how finely a label may be placed; unset = as fine as the card allows</span>
+<span class="w">  </span><span class="nt">positive_window_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">           </span><span class="c1"># +- this counts as the event during training</span>
+
+<span class="nt">model</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rny008_gsm</span><span class="w">         </span><span class="c1"># eto.spot.architectures() lists the choices</span>
+
+<span class="nt">train</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">epochs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">epoch_frames</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">250000</span>
+<span class="w">  </span><span class="nt">split</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.6</span><span class="p p-Indicator">,</span><span class="nt"> val_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> test_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">}</span>
+
+<span class="nt">features</span><span class="p">:</span><span class="w">                          </span><span class="c1"># optional — options 3 and 4, see multimodal</span>
+<span class="w">  </span><span class="nt">velocity</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stickTip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pellet</span><span class="p p-Indicator">]}</span>
+<span class="w">  </span><span class="nt">pellet_stickClosest_dist</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+</pre></div>
+</div>
+<p>There is no preprocessing and no individuals. A point event’s subject comes
+from the labels; the pixels are whatever the camera saw.</p>
+<section id="the-session-lines">
+<span id="target-spot-session-lines"></span><h3>The session lines<a class="headerlink" href="#the-session-lines" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">sessions:</span></code> is read the same way by both pipelines (<code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code>, shared
+with <a class="reference internal" href="../segment/index.html"><span class="doc">the segmentation pipeline</span></a>): a session is a
+<code class="docutils literal notranslate"><span class="pre">source</span></code> plus whatever the stage you run needs from it.</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">source</span></code></strong> — the session file. Always.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">labels_path</span></code></strong> — its curated labels TSV. Unset, it is <code class="docutils literal notranslate"><span class="pre">{stem}_labels.tsv</span></code>
+beside <code class="docutils literal notranslate"><span class="pre">source</span></code> (the GUI’s own convention; the log says what was assumed).
+Training, the teacher and <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> read it. A session you only
+<strong>predict into</strong> needs none — a <code class="docutils literal notranslate"><span class="pre">labels_path</span></code> naming a file that does not
+exist simply means the session has no labels, and it contributes nothing to
+a training set.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">video_dir</span></code></strong> — the folder searched for a trial’s video when the
+alignment does not already resolve it. Optional when the alignment carries
+the paths; either way, a trial without a video for <code class="docutils literal notranslate"><span class="pre">labels.camera</span></code> can be
+neither trained on nor predicted, so for this pipeline the video has to be
+findable.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">name</span></code></strong> — the session id in every output (run folders, prediction
+sources, fold names). Optional: unset, it is the file’s stem, and sessions
+whose stems collide — <code class="docutils literal notranslate"><span class="pre">Trial_data3.nc</span></code> in every <code class="docutils literal notranslate"><span class="pre">behav/</span></code> folder — are named
+by the nearest folder that tells them apart,
+<code class="docutils literal notranslate"><span class="pre">ses-000_date-20250309_01_Trial_data3</span></code>, listed in the log. Quote a name
+that is all digits, or YAML reads it as a number.</p></li>
+</ul>
+<p>So a session to train on and one to predict into sit side by side:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C:/data/derivatives/sub-01/ses-000_date-20250503_02/behav/Trial_data3.nc</span>
+<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C:/data/derivatives/sub-01/ses-000_date-20250503_02/behav/Trial_data_labels.tsv</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C:/VidData/20250503_02_Ivy</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C:/data/derivatives/sub-01/ses-000_date-20250506_02/behav/Trial_data3.nc</span><span class="w">   </span><span class="c1"># no labels: predict into it</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C:/VidData/20250506_02_Ivy</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">inference()</span></code> covers every listed session unless <code class="docutils literal notranslate"><span class="pre">sessions=</span></code> narrows it, so
+that is the stage an unlabelled session is listed for. <code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code> is
+for labelled sessions only: each fold scores the session it held out, which
+takes labels to score against.</p>
+<p><code class="docutils literal notranslate"><span class="pre">labels.crop</span></code> is cut from the decoded frame before the resize, so a tight
+crop spends the model’s pixels on less scene rather than shrinking the frame.
+It must fit inside every trial’s video for the named camera — checked at
+materialise time, naming the trial it fails on. The GUI produces it (Tools ▸
+Video: <em>Pick a crop for a config…</em> — drag a rectangle, get back the box in
+this spelling).</p>
+<p><code class="docutils literal notranslate"><span class="pre">model.architecture</span></code> is a backbone plus a temporal module, in upstream’s own
+spelling — <code class="docutils literal notranslate"><span class="pre">rny008_gsm</span></code> is E2E-Spot’s default, <code class="docutils literal notranslate"><span class="pre">rny008_msagsm</span></code> the multi-scale
+variant below. The list is read off the vendored trainer’s CLI, so it cannot
+drift from what can actually be trained:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">architectures</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">describe_architecture</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="every-temporal-setting-is-a-duration">
+<span id="target-spot-seconds"></span><h2>Every temporal setting is a duration<a class="headerlink" href="#every-temporal-setting-is-a-duration" title="Link to this heading">#</a></h2>
+<p>Upstream expresses every temporal hyperparameter in <strong>frames</strong>, tuned at
+25 fps. The same numbers at 200 fps give the model an eighth of the context
+in real time. So this config takes <strong><code class="docutils literal notranslate"><span class="pre">context_s</span></code>, <code class="docutils literal notranslate"><span class="pre">resolution_ms</span></code> and
+<code class="docutils literal notranslate"><span class="pre">positive_window_ms</span></code></strong>, and derives upstream’s frame counts from the video’s
+own rate:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">stride</span>     <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">resolution_ms</span> <span class="o">/</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">fps</span><span class="p">)</span>     <span class="c1"># unset: the smallest stride that fits context_s in the card's frame budget</span>
+<span class="n">clip_len</span>   <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">context_s</span> <span class="o">*</span> <span class="n">fps</span> <span class="o">/</span> <span class="n">stride</span><span class="p">)</span>
+<span class="n">dilate_len</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">positive_window_ms</span> <span class="o">/</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">fps</span> <span class="o">/</span> <span class="n">stride</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">stride</span></code> is the label grid: at stride <em>k</em> the model sees every <em>k</em>-th frame,
+so an event can only be placed to ±<em>k</em>/2 frames. <code class="docutils literal notranslate"><span class="pre">clip_len</span></code> is the number of
+strided frames per clip. A config moved between a 200 fps rig and a 60 fps
+one keeps meaning the same thing. Context and resolution pull against each
+other — more context per clip means a coarser grid at a fixed memory budget —
+so they are the two axes to tune. Left unset, <code class="docutils literal notranslate"><span class="pre">resolution_ms</span></code> is as fine as
+the card’s frame budget allows (every frame when it fits); spelled, a
+combination whose loader batch would exceed the budget is refused, naming
+the durations to change. See <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The recovered full-rate frame of a strided prediction is the <strong>centre</strong> of its
+bin, <code class="docutils literal notranslate"><span class="pre">bin</span> <span class="pre">*</span> <span class="pre">k</span> <span class="pre">+</span> <span class="pre">(k</span> <span class="pre">-</span> <span class="pre">1)</span> <span class="pre">/</span> <span class="pre">2</span></code>. Reading it as <code class="docutils literal notranslate"><span class="pre">bin</span> <span class="pre">*</span> <span class="pre">k</span></code> makes every strided run
+look systematically early by half a stride.</p>
+</div>
+</section>
+<section id="the-stages">
+<h2>The stages<a class="headerlink" href="#the-stages" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 18.0%" />
+<col style="width: 50.0%" />
+<col style="width: 32.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Stage</p></th>
+<th class="head"><p>What it does</p></th>
+<th class="head"><p>Cost</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code></p></td>
+<td><p>Every trial’s video to <code class="docutils literal notranslate"><span class="pre">{video_id}/%06d.jpg</span></code> at the model’s input height,
+plus <code class="docutils literal notranslate"><span class="pre">{split}.json</span></code> and <code class="docutils literal notranslate"><span class="pre">class.txt</span></code> in E2E-Spot’s own schema; with
+<code class="docutils literal notranslate"><span class="pre">features:</span></code>, the listed columns per trial under <code class="docutils literal notranslate"><span class="pre">features/</span></code>. Resumable.</p></td>
+<td><p>Minutes per session, once.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">train()</span></code></p></td>
+<td><p>Upstream’s training loop, driven by the resolved config. One run under
+<code class="docutils literal notranslate"><span class="pre">runs/</span></code> — <code class="docutils literal notranslate"><span class="pre">{clip}</span></code> for pixels only, <code class="docutils literal notranslate"><span class="pre">{clip}_features</span></code> with the features
+fed in.</p></td>
+<td><p>The expensive one.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code></p></td>
+<td><p>The run’s sweep-chosen epoch scored on the test split: per class, the
+labelled events, misses, spurious predictions, mean and median error in
+ms, hit rate at 10/20/50/100 ms → <code class="docutils literal notranslate"><span class="pre">test_metrics.yaml</span></code>.
+<code class="docutils literal notranslate"><span class="pre">zero_features=True</span></code> scores a features run with them zeroed.</p></td>
+<td><p>Seconds, once predictions exist.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">compare()</span></code></p></td>
+<td><p>Every scored run — teachers included — as one table, <code class="docutils literal notranslate"><span class="pre">runs/compare.tsv</span></code>.</p></td>
+<td><p>Seconds.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">train_teacher()</span></code> / <code class="docutils literal notranslate"><span class="pre">distil()</span></code></p></td>
+<td><p>Option 4: the pose-only teacher on <code class="docutils literal notranslate"><span class="pre">features/</span></code>, then the student — the
+baseline’s weights taught the teacher’s per-frame embedding on every
+clip with pose (no labels), then its head the labels with the CNN frozen.</p></td>
+<td><p>Teacher: minutes. Student: one more training run.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inference()</span></code></p></td>
+<td><p>A run’s predictions for chosen sessions — every trial with video,
+labelled or not — as the GUI’s labels TSV (<code class="docutils literal notranslate"><span class="pre">labeling_method=automated</span></code>)
+plus the curves beside them, under <code class="docutils literal notranslate"><span class="pre">labels/predictions_spot_{run}_{time}/</span></code>.
+The epoch is the one the sweep ranks first on the run’s own validation
+predictions. A features run exports the sessions’ features first.
+Decodes the video directly — no frames are exported for a predicted session.
+The folder also holds <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> (the run’s, as trained) and
+<code class="docutils literal notranslate"><span class="pre">inference.yaml</span></code> (run, epoch, the <code class="docutils literal notranslate"><span class="pre">infer:</span></code> settings), so it can be
+reconstructed without the project.</p></td>
+<td><p>Minutes.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code></p></td>
+<td><p>One fold per session: hold it out, train on the rest, score it, predict
+into it. Each session ends up with predictions from a model that never
+saw it.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">n_sessions</span></code> × <code class="docutils literal notranslate"><span class="pre">train()</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code> is role-agnostic, so one export serves every run and every
+fold. Roles live in the run, exactly as <code class="docutils literal notranslate"><span class="pre">splits/*.bundle</span></code> do for the
+segmentation pipeline.</p>
+<section id="frames-on-disk-are-for-training-only">
+<h3>Frames on disk are for training only<a class="headerlink" href="#frames-on-disk-are-for-training-only" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code> writes every training trial’s frames to a folder of JPEGs
+because training reads them at random — a different clip from a different
+trial at every step, over and over — and a video file cannot be read like
+that. Inference reads each trial once, start to finish, so it never needs
+individual frames on disk: <code class="docutils literal notranslate"><span class="pre">inference()</span></code> decodes the video directly into the
+model. Nothing to export for a new session; nothing to clean up afterwards.</p>
+<p>The frames are prepared the same way in both cases (crop, resize, and a JPEG
+pass — in memory at inference), so the model sees the same pixels it trained
+on. <code class="docutils literal notranslate"><span class="pre">infer.jpeg_roundtrip:</span> <span class="pre">false</span></code> skips that pass; leave it on.</p>
+</section>
+</section>
+<section id="confidence">
+<h2>Confidence<a class="headerlink" href="#confidence" title="Link to this heading">#</a></h2>
+<p>A predicted event carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code> in the labels TSV, and the review
+tools threshold on it. For this model the number is by default <strong><code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">infer.confidence</span></code>): how much of the class’s curve sits within the window of its peak,
+times one minus the tallest <em>rival</em> peak over it. A lone sharp bump reads
+near 1; a second candidate or a smeared bump pulls it down. Why not the
+peak’s height, the equations, and how this compares with the segmentation
+pipeline’s entropy confidence are on <a class="reference internal" href="../confidence.html"><span class="doc">the confidence page</span></a>.</p>
+<p>Curves are written through <code class="docutils literal notranslate"><span class="pre">ethograph.labels.onset_curves</span></code> — <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">{label:</span> <span class="pre">curve})</span></code>, numpy only, model-agnostic — so frame-by-frame review draws them
+with no new GUI code. Every model writes under one convention,
+<code class="docutils literal notranslate"><span class="pre">predictions_{model}_{timestamp}</span></code>, and runs are ordered by their timestamp.</p>
+</section>
+<section id="msagsm">
+<h2>MSAGSM<a class="headerlink" href="#msagsm" title="Link to this heading">#</a></h2>
+<p>MSAGSM <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id275" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> is a drop-in replacement for the
+Gate Shift Module <span class="bibtex-citation" id="id9">[<a class="reference internal" href="../../community/references.html#id274" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span>: the same gated split-and-shift, applied at <strong>several
+temporal dilations at once</strong> and preceded by channel-grouped spatial
+attention. GSM shifts by ±1 frame — at a high frame rate, a very narrow
+aperture in real time. Widening it with <code class="docutils literal notranslate"><span class="pre">stride</span></code> costs label resolution;
+MSAGSM widens the backbone’s aperture without touching the label grid.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">model</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rny008_msagsm</span><span class="w">       </span><span class="c1"># E2E-Spot with MSAGSM in place of GSM</span>
+<span class="w">  </span><span class="nt">shift_scales_ms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">40</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">80</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">120</span><span class="p p-Indicator">]</span><span class="w">    </span><span class="c1"># the paper's {1, 2, 3} frames, at 25 fps</span>
+<span class="w">  </span><span class="nt">attention_groups</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ethograph/spot/msagsm.py</span></code> is written from the paper on top of the BSD-2 GSM
+E2E-Spot already vendors (the reference MSAGSM repository carries no licence).
+The vendored <code class="docutils literal notranslate"><span class="pre">model/shift.py</span></code> accepts any module with GSM’s <code class="docutils literal notranslate"><span class="pre">(channels,</span> <span class="pre">n_segment)</span></code> constructor, and <code class="docutils literal notranslate"><span class="pre">rny008_msagsm</span></code> hands it this one; the rest of
+the network is untouched, so a GSM run and an MSAGSM run differ in exactly
+one module. <code class="docutils literal notranslate"><span class="pre">shift_scales_ms</span></code> are durations resolved against the <strong>strided</strong>
+clock. Three choices the paper leaves open are made deliberately: the branch
+weights are a softmax; the module starts as the identity up to a uniform
+scale, so a pretrained backbone is not perturbed at step 0; and the defaults
+are the paper’s (<code class="docutils literal notranslate"><span class="pre">{1,</span> <span class="pre">2,</span> <span class="pre">3}</span></code>, 2 groups).</p>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../onset_model.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">LightGBM for point events</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="quickstart.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Quickstart</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#four-ways-to-spot-a-point-event">Four ways to spot a point event</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-stages-to-run">Which stages to run</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-shares-the-segmentation-pipelines-workflow">Why this shares the segmentation pipeline’s workflow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-write">What you write</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-session-lines">The session lines</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#every-temporal-setting-is-a-duration">Every temporal setting is a duration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-stages">The stages</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#frames-on-disk-are-for-training-only">Frames on disk are for training only</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#confidence">Confidence</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#msagsm">MSAGSM</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/models/spot/index.md">
+      
+        <i class="fa-solid fa-file-lines"></i> Show Source
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, Akseli Ilmanen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

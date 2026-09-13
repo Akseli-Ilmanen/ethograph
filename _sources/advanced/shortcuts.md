@@ -17,7 +17,7 @@ useful guide when guessing a binding.
 | `Space` | Toggle play/pause video and audio (or audio-only in no-video mode) |
 | `V` | Play selected label segment |
 | `Left` / `Right` | Step one frame backward / forward (video mode) or one time-step (no-video mode) |
-| `Shift+Left` / `Shift+Right` | Jump backward / forward by customizable time step (see "Jump step (ms)" in Navigation) |
+| `Shift+Left` / `Shift+Right` | Jump backward / forward by customizable time step (see "Jump step" in Navigation) |
 | `Ctrl+Space` | Stop screen recording |
 
 ## Navigation
@@ -47,17 +47,18 @@ useful guide when guessing a binding.
 | `Q W E R T Z U I O P` | Activate label 11-20 |
 | `A S D F G H J K L Y` | Activate label 21-30 |
 | `F1-F10` | Activate label 31-40 |
-| Click twice on line plot | Define label boundaries (set start/end) |
+| Click twice on line plot | Define label boundaries (set start/end) — *On the time series* mode |
+| Label key at a frame | Place the boundary at the frame on screen: a point event on one press, a state event on two — *At the current frame* mode (Labels tab dropdown) |
 | Left-click on label | Select existing label |
 | `Ctrl+E` | Edit selected label boundaries (after selecting label, click twice for new boundaries) |
 | `Ctrl+D` | Delete selected label (after selecting label) |
 | `Ctrl+Z` | Undo the last label placed, moved or deleted (cancels a half-placed label first) |
 | `Ctrl+S` | Save `labels.tsv` file |
-| `Shift+B` | Switch the Main labels slot to the previously-selected branch |
+| `Shift+B` | Swap the active branch with the previously-active one |
 
 ## Curation
 
-See {doc}`labels/curation`. `Ctrl+C` is always bound; the others are live
+See {doc}`../models/curation`. `Ctrl+C` is always bound; the others are live
 only while a frame-by-frame review runs (started from the Labels tab's
 Curation section), wherever the key is pressed.
 
@@ -66,7 +67,7 @@ Curation section), wherever the key is pressed.
 | `Ctrl+C` | Curate the current trial: every automated label in scope becomes curated (manual ones stay manual) |
 | `Enter` | Confirm the frame on screen as the boundary — the label becomes manual if it moved, curated if not — and move on |
 | `Backspace` / `Delete` | Delete the event being reviewed and move on |
-| `N` | Next boundary (curates the one you leave when **N = seen, mark curated** is ticked) |
+| `N` | Next boundary (curates the one you leave when **Click N curates current** is ticked) |
 | `B` | Previous boundary |
 | `Left` / `Right` | Step one frame — the main window's own binding |
 

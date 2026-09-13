@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/troubleshooting.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Examples" href="../examples/index.html" />
+    <link rel="next" title="Models" href="../models/index.html" />
     <link rel="prev" title="Keyboard Shortcuts" href="shortcuts.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -154,6 +154,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -288,6 +295,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -365,16 +379,12 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="time_slider_trial_session.html">Time slider &amp; trial/session</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="labels/index.html">Labels</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="labels/labelling_gui.html">Labelling in the GUI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/mapping.html">Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/branches.html">Label branches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/importing.html">Importing labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="labels/exporting.html">Exporting labels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="labels/curation.html">Curating labels</a></li>
-
 <li class="toctree-l2"><a class="reference internal" href="labels/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -396,6 +406,7 @@
 <li class="toctree-l2"><a class="reference internal" href="keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="shortcuts.html">Keyboard Shortcuts</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Troubleshooting</a></li>
@@ -461,7 +472,11 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="troubleshooting">
 <span id="target-troubleshooting"></span><h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">#</a></h1>
-<p>Report bugs on <a class="reference external" href="https://github.com/Akseli-Ilmanen/ethograph/issues">GitHub Issues</a>.</p>
+<p>Report bugs on <a class="reference external" href="https://github.com/Akseli-Ilmanen/ethograph/issues">GitHub Issues</a>. If possible:</p>
+<ol class="arabic simple">
+<li><p>In the top bar, <strong>Help ▸ Print current state</strong>. Share this message along with your error.</p></li>
+<li><p>If you have data loading problems, send some sample data to <a class="reference external" href="mailto:akseli&#46;ilmanen&#37;&#52;&#48;gmail&#46;com">akseli<span>&#46;</span>ilmanen<span>&#64;</span>gmail<span>&#46;</span>com</a>, so I can test it myself.</p></li>
+</ol>
 <hr class="docutils" />
 <section id="quick-fixes">
 <h2>Quick fixes<a class="headerlink" href="#quick-fixes" title="Link to this heading">#</a></h2>
@@ -475,8 +490,8 @@
 <tr class="row-even"><td><p>Unexpected error in the GUI</p></td>
 <td><p>Save labels (<code class="docutils literal notranslate"><span class="pre">Ctrl</span> <span class="pre">+</span> <span class="pre">S</span></code>), then restart the GUI. Save semi-regularly!</p></td>
 </tr>
-<tr class="row-odd"><td><p>Error during data loading</p></td>
-<td><p>Click <strong>Reset gui_settings.yaml</strong> in the I/O widget to reset the state of the GUI.</p></td>
+<tr class="row-odd"><td><p>Error with user settings</p></td>
+<td><p>In the top bar, first try <strong>Help ▸ Reset local settings (this dataset)</strong>. If that does not help, use <strong>Help ▸ Reset global settings (gui_settings.yaml)</strong>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -631,8 +646,8 @@ recent libsndfile (&gt;= 1.1).</p>
 never read in place</strong> — libsndfile reads no video container, and an AAC track
 has no sample-exact random access. The first time a video is used as an audio
 source, its track is decoded once (through PyAV, bundled with the <code class="docutils literal notranslate"><span class="pre">gui</span></code> extra)
-into <code class="docutils literal notranslate"><span class="pre">~/.ethograph/audio_tracks/</span></code> and every reader opens that file instead.
-This happens both when dropping a video with the <strong>“extract audio”</strong> box ticked
+into <code class="docutils literal notranslate"><span class="pre">~/.ethograph/cache/audio_tracks/</span></code> and every reader opens that file instead.
+This happens both when dropping a video with the <strong>“Extract the audio for audio trace / spectrogram plots”</strong> box ticked
 and when an alignment or <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> audio stream points at the video itself. The
 cache is keyed by path, size and mtime, so a re-recorded video is never served
 a stale extract; delete the folder any time to reclaim the space. A file that
@@ -684,11 +699,11 @@ uncompressed. Converting in bulk up front is faster for a whole project:</p>
       </div>
     </a>
     <a class="right-next"
-       href="../examples/index.html"
+       href="../models/index.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Examples</p>
+        <p class="prev-next-title">Models</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

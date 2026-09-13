@@ -159,6 +159,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="index.html">
     Examples
   </a>
@@ -285,6 +292,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -427,7 +441,7 @@ that video the trial starts</strong>, both come from <code class="docutils liter
 <em>not</em> begin where its video file begins. S3D features are written on the <strong>video’s</strong>
 clock (frame 0 at t = 0), the session lives on the <strong>trial</strong> clock, and
 <code class="docutils literal notranslate"><span class="pre">stream_offset_for_trial</span></code> is the bridge between them. If you have no alignment yet,
-build one in the GUI: <strong>cover page ▸ media wizard</strong>.</p>
+build one in the GUI: <strong>cover page ▸ Data wizard</strong>.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p><code class="docutils literal notranslate"><span class="pre">CAMERA</span></code> must name a device the alignment actually has (<code class="docutils literal notranslate"><span class="pre">cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">cam-2</span></code>, …), spelled
@@ -451,7 +465,7 @@ ffmpeg<span class="w"> </span>-ss<span class="w"> </span><span class="m">12</spa
 </pre></div>
 </div>
 <p>Use the re-encoding form unless you know your GOP is short — a keyframe-snapped cut
-shifts a trial’s features in time and nothing downstream can detect it. Re-run the media
+shifts a trial’s features in time and nothing downstream can detect it. Re-run the Data
 wizard afterwards so the alignment names the new clips; its offsets then become <code class="docutils literal notranslate"><span class="pre">0.0</span></code>
 and <strong>nothing in this notebook changes</strong>.</p>
 </section>

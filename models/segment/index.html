@@ -1,0 +1,1229 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Segmentation pipeline &#8212; ethograph</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=17f663f2" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'models/segment/index';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/segment/index.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Quickstart" href="quickstart.html" />
+    <link rel="prev" title="Models" href="../index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/icon.png" class="logo__image only-light" alt=""/>
+    <img src="../../_static/icon.png" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">ethograph</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../community/index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../community/index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Action segmentation (state events)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="video_features.html">Video features</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events from features)</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../confidence.html">Model confidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../curation.html">Curating labels</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Models</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Segmentation pipeline</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="segmentation-pipeline">
+<span id="target-segment"></span><h1>Segmentation pipeline<a class="headerlink" href="#segmentation-pipeline" title="Link to this heading">#</a></h1>
+<p>Learn the <strong>state events</strong> you curated in the GUI from trial-structured
+sessions, and predict them back into the GUI. A code-first pipeline — one
+YAML config, one object with a method per stage — that reads every backend
+the GUI reads (<code class="docutils literal notranslate"><span class="pre">.nc</span></code>, pynapple, NWB) through the same loaders and writes its
+predictions in the GUI’s own labels format.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>                   <span class="c1"># after installing PyTorch, then `uv pip install "ethograph[model]"`</span>
+
+<span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>   <span class="c1"># feature engineering → materialised dataset</span>
+
+<span class="c1"># Stage 1 — find good settings on a 60/20/20 split of the trials</span>
+<span class="n">best</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">search</span><span class="p">()</span>
+
+<span class="c1"># Stage 2 — cross-validate them, one fold per session, and review the</span>
+<span class="c1"># predictions in the GUI</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">best</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>New here? <a class="reference internal" href="quickstart.html"><span class="doc">Quickstart</span></a> is this page cut down to one architecture, three
+kinematic features and two sessions — a config you can copy and a model
+trained in four lines. Come back when you want the choices back.</p>
+</div>
+<section id="the-two-stages-of-a-workflow">
+<h2>The two stages of a workflow<a class="headerlink" href="#the-two-stages-of-a-workflow" title="Link to this heading">#</a></h2>
+<p>The pipeline has one set of stages you <em>run</em> (materialise, train, infer) and
+two ways to <em>use</em> them. Which one you are in decides how the trials are
+divided, and that is the only thing that changes between them.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 14.0%" />
+<col style="width: 43.0%" />
+<col style="width: 43.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p><strong>Stage 1 — search</strong></p></th>
+<th class="head"><p><strong>Stage 2 — cross-validate</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Question</p></td>
+<td><p><em>What settings work?</em></p></td>
+<td><p><em>Where is the model still wrong?</em></p></td>
+</tr>
+<tr class="row-odd"><td><p>Split</p></td>
+<td><p>The trials of every session, pooled and cut <strong>60/20/20</strong> by
+<code class="docutils literal notranslate"><span class="pre">train.split</span></code>.</p></td>
+<td><p>One whole <strong>session</strong> held out per fold; every other session trains.</p></td>
+</tr>
+<tr class="row-even"><td><p>Chooses on</p></td>
+<td><p>The <strong>validation</strong> trials — that is all validation is for.</p></td>
+<td><p>Nothing. The settings are already fixed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Call</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">project.search()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Gives you</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">searches/{name}/best.yaml</span></code> — a config inheriting yours with the winning
+parameters pinned.</p></td>
+<td><p>A prediction set beside <strong>every</strong> session, each written by a model that
+never saw it. Load them in the GUI.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>In stage 2 (cross-validation), we recommend taking an entire behavioural session
+as the held-out test set. This is convenient as you can use the GUI to open any trial
+in that session and compare your ground truth labels with predictions visually.</p>
+<section id="the-stages-themselves">
+<h3>The stages themselves<a class="headerlink" href="#the-stages-themselves" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 18.0%" />
+<col style="width: 42.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Stage</p></th>
+<th class="head"><p>What it does</p></th>
+<th class="head"><p>Writes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Feature engineering</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">project.materialise()</span></code></p>
+</td>
+<td><p>Selects every configured <em>feature column</em> of every <em>sample</em> (one
+trial × one individual), applies the fixed preprocessing chain, encodes
+the branch’s curated labels per frame.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{root}/data/{name}/</span></code></p>
+<p>the materialised dataset</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>Train</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">project.train()</span></code></p>
+</td>
+<td><p>Fits an <em>architecture</em> on the training samples, validates every few
+epochs, keeps the best checkpoint, evaluates the test samples once (raw
+and post-processed). Materialises first if needed. Returns a <code class="docutils literal notranslate"><span class="pre">RunResult</span></code>
+(<code class="docutils literal notranslate"><span class="pre">run_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">best_epoch</span></code>, <code class="docutils literal notranslate"><span class="pre">best_score</span></code>, <code class="docutils literal notranslate"><span class="pre">test_metrics</span></code>).</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{root}/runs/{run}/</span></code></p>
+<p>config, layout, stats, weights, metrics</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>Search</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">project.search()</span></code></p>
+</td>
+<td><p>Optuna over <code class="docutils literal notranslate"><span class="pre">search.params</span></code>: each trial is a training run, scored by
+<code class="docutils literal notranslate"><span class="pre">train.select_on</span></code> <strong>on the validation trials</strong>. Resumable — the study
+lives in a SQLite file. Returns a <code class="docutils literal notranslate"><span class="pre">SearchResult</span></code>.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{root}/searches/{name}/</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">study.db</span></code>, <code class="docutils literal notranslate"><span class="pre">trials.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">best.yaml</span></code></p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>Cross-validate</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code></p>
+</td>
+<td><p>One fold per session: train on the rest, predict the held-out one.
+<code class="docutils literal notranslate"><span class="pre">folds=</span></code> runs only some of them. Returns one DataFrame row per fold.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{root}/cross_validation/{name}/folds.tsv</span></code></p>
+<p>plus a prediction set per held-out session</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>Inference</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">project.inference()</span></code></p>
+</td>
+<td><p>Runs a run over the sessions and post-processes the predictions (purge →
+stitch → snap to changepoints → purge). Returns the prediction paths;
+<code class="docutils literal notranslate"><span class="pre">run=</span></code> picks another run, <code class="docutils literal notranslate"><span class="pre">sessions=</span></code> narrows to a few.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{session</span> <span class="pre">folder}/labels/predictions_{run}_{timestamp}/{stem}_predictions.tsv</span></code></p>
+<p>plus <code class="docutils literal notranslate"><span class="pre">_probs.npz</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">project.config</span></code> is the resolved config and <code class="docutils literal notranslate"><span class="pre">project.root</span></code> the project
+directory; <code class="docutils literal notranslate"><span class="pre">project.sessions()</span></code> opens every session, <code class="docutils literal notranslate"><span class="pre">project.runs()</span></code> names
+the runs already trained, and <code class="docutils literal notranslate"><span class="pre">project.load_run()</span></code> returns a trained run
+ready to predict with.</p>
+<p>The vocabulary — session, trial, sample, feature column, branch, curated
+label, materialised dataset, architecture, run, role, prediction set — is
+pinned in the repository’s <code class="docutils literal notranslate"><span class="pre">CONTEXT.md</span></code>.</p>
+</section>
+</section>
+<section id="features-are-built-with-the-session-not-by-the-pipeline">
+<h2>Features are built with the session, not by the pipeline<a class="headerlink" href="#features-are-built-with-the-session-not-by-the-pipeline" title="Link to this heading">#</a></h2>
+<p>The pipeline never invents features: it <strong>selects</strong> variables that already
+exist in the session file and pins their dims. Anything you want a model to
+see — egocentric coordinates, pairwise distances, headings, changepoint
+proximity, video embeddings — is a data variable you add when you build
+the <code class="docutils literal notranslate"><span class="pre">.nc</span></code> (or pynapple / NWB file), which also makes it plottable in the GUI
+so you can review what the model will read.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_changepoint_features</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">egocentric_position</span><span class="p">,</span> <span class="n">heading</span><span class="p">,</span> <span class="n">intra_distances</span>
+
+<span class="n">ds</span><span class="p">[</span><span class="s2">"position_ego"</span><span class="p">]</span> <span class="o">=</span> <span class="n">egocentric_position</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s2">"position"</span><span class="p">],</span> <span class="s2">"body"</span><span class="p">,</span> <span class="n">heading_keypoint</span><span class="o">=</span><span class="s2">"head"</span><span class="p">)</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"intra"</span><span class="p">]</span> <span class="o">=</span> <span class="n">intra_distances</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s2">"position"</span><span class="p">])</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"heading"</span><span class="p">]</span> <span class="o">=</span> <span class="n">heading</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s2">"position"</span><span class="p">],</span> <span class="s2">"body"</span><span class="p">,</span> <span class="s2">"head"</span><span class="p">)</span>   <span class="c1"># unit vector: attrs normalise=0</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">add_changepoint_features</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">sigmas</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>       <span class="c1"># *_cp_binary, *_cp_sigma3, …</span>
+</pre></div>
+</div>
+<p>Every function in <code class="xref py py-mod docutils literal notranslate"><span class="pre">ethograph.features.geometry</span></code> takes and returns
+xarray (the <code class="docutils literal notranslate"><span class="pre">movement</span></code> convention: <code class="docutils literal notranslate"><span class="pre">position</span> <span class="pre">(time,</span> <span class="pre">space,</span> <span class="pre">keypoint,</span> <span class="pre">individual)</span></code>), works in 2-D and 3-D, and keeps the <code class="docutils literal notranslate"><span class="pre">individual</span></code> dim. Outputs
+that must never be z-scored (unit vectors, angles, binary flags, segment ids)
+carry <code class="docutils literal notranslate"><span class="pre">attrs[&quot;normalise&quot;]</span> <span class="pre">=</span> <span class="pre">0</span></code>; the pipeline honours it.</p>
+<p>Spike trains are the exception in principle: a pynapple session’s units are
+a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code> of event times, which no loader can read as a feature, and how
+they are binned is a modelling choice worth sweeping. <code class="docutils literal notranslate"><span class="pre">features.neural</span></code> spells
+that binning as pynapple expressions and applies it at every session open —
+single-trial neural decoding with the same models and prediction sets. See
+<a class="reference internal" href="config.html"><span class="doc">Config reference</span></a> (<code class="docutils literal notranslate"><span class="pre">features.neural</span></code>).</p>
+<p>Video features are the one exception in mechanics, not in principle — a
+pretrained network (S3D <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id410" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span> by default, a timm <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id412" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> backbone such as DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id411" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> by name) is expensive enough to
+run once per video and cache. See <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>; the short version is</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># a folder of videos, before any session exists</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># or: the videos this config's sessions already name, then merge them in</span>
+<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">(</span><span class="n">merge</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>which leaves an ordinary <code class="docutils literal notranslate"><span class="pre">s3d</span> <span class="pre">(time,</span> <span class="pre">s3d_dims)</span></code> variable on each trial —
+plottable in the GUI, and named in <code class="docutils literal notranslate"><span class="pre">features.columns</span></code> like anything else.</p>
+</section>
+<section id="a-config">
+<h2>A config<a class="headerlink" href="#a-config" title="Link to this heading">#</a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span><span class="w">                       </span><span class="c1"># data/ and runs/ live here (default: this file's folder)</span>
+
+<span class="nt">sessions</span><span class="p">:</span><span class="w">                     </span><span class="c1"># every path explicit — no sidecar/folder guessing</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav/Trial_data.nc</span>
+<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav/Trial_data_labels.tsv</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../videos</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-02/behav/Trial_data.nc</span>
+<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-02/behav/Trial_data_labels.tsv</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../videos</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-03/behav/Trial_data.nc</span>
+<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-03/behav/Trial_data_labels.tsv</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../videos</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-02/ses-01/behav/Trial_data.nc</span>
+<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-02/ses-01/behav/Trial_data_labels.tsv</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../videos</span>
+
+<span class="nt">trials</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">where</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">num_pellets</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]}</span><span class="w">     </span><span class="c1"># the metadata-table filter, every stage</span>
+
+<span class="nt">features</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kin_cp</span><span class="w">                     </span><span class="c1"># → data/kin_cp/</span>
+<span class="w">  </span><span class="nt">columns</span><span class="p">:</span><span class="w">                         </span><span class="c1"># feature → dim → values; the individual dim is never listed</span>
+<span class="w">    </span><span class="nt">position_ego</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">z</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">stickTip</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">speed</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">speed_cp_sigma3</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">inter_beak</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">{</span><span class="nt">other</span><span class="p">:</span><span class="w"> </span><span class="s">"*"</span><span class="p p-Indicator">}</span><span class="w">     </span><span class="c1"># a second individual dim: the others, in order</span>
+<span class="w">  </span><span class="nt">preprocess</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">likelihood_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.6</span><span class="w">      </span><span class="c1"># needs a `confidence` feature</span>
+<span class="w">    </span><span class="nt">clip_percentiles</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">98</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">zscore</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                   </span><span class="c1"># statistics from the training samples only</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">mapping</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mapping.txt</span>
+<span class="w">    </span><span class="nt">branch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">                      </span><span class="c1"># one model per branch</span>
+
+<span class="nt">model</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">c2f_tcn</span><span class="w">            </span><span class="c1"># eto.segment.architectures()</span>
+<span class="w">  </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">}</span>
+
+<span class="nt">train</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">run_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">c2f_kin_cp</span>
+<span class="w">  </span><span class="nt">epochs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<span class="w">  </span><span class="nt">eval_every</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<span class="w">  </span><span class="nt">select_on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">f1@50</span><span class="w">               </span><span class="c1"># what val is scored on, and what a search maximises</span>
+<span class="w">  </span><span class="nt">loss</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="nv">0.01</span><span class="p p-Indicator">}</span><span class="w">            </span><span class="c1"># only the keys you want to change</span>
+<span class="w">  </span><span class="nt">augment</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">noise_std</span><span class="p">:</span><span class="w"> </span><span class="nv">0.05</span><span class="p p-Indicator">,</span><span class="nt"> stretch</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.2</span><span class="p p-Indicator">],</span><span class="nt"> mirror</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> rotate_deg</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># the three ratios, drawn by whole trial across every session; they must sum to 1</span>
+<span class="w">  </span><span class="nt">split</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.6</span><span class="p p-Indicator">,</span><span class="nt"> val_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> test_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">}</span>
+
+<span class="nt">search</span><span class="p">:</span><span class="w">                          </span><span class="c1"># stage 1 — keys are the same dotted paths an override uses</span>
+<span class="w">  </span><span class="nt">n_trials</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">  </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">train.learning_rate</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-5</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-2</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">train.loss.alpha</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">0.0</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">0.5</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">model.params.num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">256</span><span class="p p-Indicator">]}</span>
+
+<span class="nt">infer</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">postprocess</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">min_duration_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">stitch_gap_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.015</span>
+<span class="w">    </span><span class="nt">changepoint_correction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">changepoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="nv">beakTip</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">max_expansion_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">max_shrink_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+</pre></div>
+</div>
+<p>Every key is documented in <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>. Two conveniences: <code class="docutils literal notranslate"><span class="pre">base:</span> <span class="pre">other.yaml</span></code>
+merges a file over another, and any key can be overridden without editing the
+file, using the same dotted spelling the YAML has — passed to the constructor
+or accumulated with <code class="docutils literal notranslate"><span class="pre">update()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">,</span> <span class="s2">"model.architecture=mstcn"</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">"train.run_name=mstcn"</span><span class="p">,</span> <span class="s2">"train.loss.gamma=2"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Values are parsed as YAML, and the config is rebuilt from the file each time,
+so a typo is caught there rather than half-way through a run. That is how a
+benchmark is written — one base file, a loop over overrides, then <code class="docutils literal notranslate"><span class="pre">compare()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">architecture</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"c2f_tcn"</span><span class="p">,</span> <span class="s2">"mstcn"</span><span class="p">,</span> <span class="s2">"mlp"</span><span class="p">):</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span>
+        <span class="s2">"project.yaml"</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"model.architecture=</span><span class="si">{</span><span class="n">architecture</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"train.run_name=</span><span class="si">{</span><span class="n">architecture</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">compare</span><span class="p">())</span>
+</pre></div>
+</div>
+<section id="the-session-lines">
+<span id="target-segment-session-lines"></span><h3>The session lines<a class="headerlink" href="#the-session-lines" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">sessions:</span></code> is read the same way by both pipelines (<code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code>, shared
+with <a class="reference internal" href="../spot/index.html"><span class="doc">pixel event spotting</span></a>): a session is a <code class="docutils literal notranslate"><span class="pre">source</span></code>
+plus whatever the stage you run needs from it.</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">source</span></code></strong> — the session file. Always.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">labels_path</span></code></strong> — its curated labels TSV. Unset, it is <code class="docutils literal notranslate"><span class="pre">{stem}_labels.tsv</span></code>
+beside <code class="docutils literal notranslate"><span class="pre">source</span></code> (the GUI’s own convention; the log says what was assumed).
+Training and scoring read it. A session you only <strong>predict into</strong> needs
+none — a <code class="docutils literal notranslate"><span class="pre">labels_path</span></code> naming a file that does not exist simply means the
+session has no labels, and it contributes nothing to a training set.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">video_dir</span></code></strong> — the folder searched for a trial’s video when the
+alignment does not already resolve it. Optional here: this pipeline reads
+feature columns, and only the video features
+(<a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>) ever open a video.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">name</span></code></strong> — the session id in every output (fold names, prediction
+sources, log lines). Optional: unset, it is the file’s stem, and sessions
+whose stems collide — <code class="docutils literal notranslate"><span class="pre">Trial_data3.nc</span></code> in every <code class="docutils literal notranslate"><span class="pre">behav/</span></code> folder — are named
+by the nearest folder that tells them apart,
+<code class="docutils literal notranslate"><span class="pre">ses-000_date-20250309_01_Trial_data3</span></code>, listed in the log. Quote a name
+that is all digits, or YAML reads it as a number.</p></li>
+</ul>
+<p>So a session to train on and one to predict into sit side by side:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-000_date-20250503_02/behav/Trial_data3.nc</span>
+<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-000_date-20250503_02/behav/Trial_data_labels.tsv</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-000_date-20250506_02/behav/Trial_data3.nc</span><span class="w">     </span><span class="c1"># no labels: predict into it</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">inference()</span></code> covers every listed session unless <code class="docutils literal notranslate"><span class="pre">sessions=</span></code> narrows it, so
+that is the stage an unlabelled session is listed for. <code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code> is
+for labelled sessions only: each fold scores the session it held out, which
+takes labels to score against.</p>
+</section>
+</section>
+<section id="what-a-sample-is">
+<h2>What a sample is<a class="headerlink" href="#what-a-sample-is" title="Link to this heading">#</a></h2>
+<p>One <strong>(trial, individual)</strong>. Its columns are the configured features with
+the individual dim pinned to that individual (<code class="docutils literal notranslate"><span class="pre">individual=self</span></code> in the
+layout) and, for pair features, the <code class="docutils literal notranslate"><span class="pre">other</span></code> dim enumerating the remaining
+individuals in dataset order (<code class="docutils literal notranslate"><span class="pre">other1</span></code>, <code class="docutils literal notranslate"><span class="pre">other2</span></code>, …). Its target is that
+individual’s labels <em>as actor</em>. So a trial with two individuals is two
+samples, a dataset with one individual is unaffected, and every session must
+carry the same number of individuals.</p>
+<p>Only <strong><code class="docutils literal notranslate"><span class="pre">manual</span></code> and <code class="docutils literal notranslate"><span class="pre">curated</span></code> labels</strong> ever become training targets; an
+<code class="docutils literal notranslate"><span class="pre">automated</span></code> label — the output of any model — never does. Point events are
+skipped (the lightgbm model owns them). One branch per model is the exclusive
+target; <code class="docutils literal notranslate"><span class="pre">features.labels.branches</span></code> lists several and the target becomes
+multi-label — one binary channel per (subject, class), decoded one <em>track</em>
+(subject, branch) at a time, so labels of different branches overlap and
+labels of one branch never do (see the config reference).</p>
+</section>
+<section id="the-materialised-dataset">
+<h2>The materialised dataset<a class="headerlink" href="#the-materialised-dataset" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">{root}/data/{features.name}/</span></code> uses the layout of the <a class="reference external" href="https://github.com/nus-cvml/awesome-temporal-action-segmentation">action-segmentation literature</a> for interopability with newer architectures.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>features/{key}.npy       (F, T) float32, session-level preprocessed
+groundTruth/{key}.txt    one class name per frame
+mapping.txt              "{index} {name}", contiguous, 0 = background
+index.tsv                key → session, source, trial, individual, n_frames, fs, n_labelled
+columns.yaml             the input layout: names, normalise flags, vector groups
+classes.yaml             class index ↔ label id
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">key</span></code> is <code class="docutils literal notranslate"><span class="pre">{session_id}_trial{trial}_{individual}</span></code>; <code class="docutils literal notranslate"><span class="pre">session_id</span></code> is the
+source’s stem plus a path hash, so two <code class="docutils literal notranslate"><span class="pre">Trial_data.nc</span></code> never collide. Roles
+and normalisation statistics are <em>not</em> part of the dataset — they belong to
+a run (<code class="docutils literal notranslate"><span class="pre">runs/{run}/splits/*.bundle</span></code>, <code class="docutils literal notranslate"><span class="pre">stats.npz</span></code>).</p>
+</section>
+<section id="architectures">
+<h2>Architectures<a class="headerlink" href="#architectures" title="Link to this heading">#</a></h2>
+<p>Ten networks are available; <code class="docutils literal notranslate"><span class="pre">eto.segment.architectures()</span></code> lists them.
+Switching between them is a one-line change, and <code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> puts the
+runs side by side, so trying two or three is cheap.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Shape</p></th>
+<th class="head"><p>When to reach for it</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id340" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span></p></td>
+<td><p>U-Net over time</p></td>
+<td><p>The default. Fast, and sees long-range context cheaply. Needs trials of at least 384 frames.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">c2f_transformer</span></code> <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id336" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>]</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> + attention</p></td>
+<td><p>Same size limit; worth a run when <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> misses long-range structure.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mstcn</span></code> (MS-TCN3) <span class="bibtex-citation" id="id6">[<a class="reference internal" href="../../community/references.html#id336" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>]</span></p></td>
+<td><p>Dilated TCN, refined in stages</p></td>
+<td><p>Works at any trial length. The usual baseline.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">asformer</span></code> <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id339" title="Fangqiu Yi, Hongyu Wen, and Tingting Jiang. ASFormer: transformer for action segmentation. In British Machine Vision Conference (BMVC). 2021. URL: https://arxiv.org/abs/2110.08568, arXiv:2110.08568.">Yi <em>et al.</em>, 2021</a>]</span></p></td>
+<td><p>Sliding-window attention + decoders</p></td>
+<td><p>Strongest context modelling, several times slower per epoch.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">edtcn</span></code> <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id341" title="Colin Lea, Michael D. Flynn, René Vidal, Austin Reiter, and Gregory D. Hager. Temporal convolutional networks for action segmentation and detection. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR). 2017. URL: https://arxiv.org/abs/1611.05267, arXiv:1611.05267.">Lea <em>et al.</em>, 2017</a>]</span></p></td>
+<td><p>Encoder–decoder, wide kernels</p></td>
+<td><p>Small and quick.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rnn</span></code></p></td>
+<td><p>Bidirectional GRU or LSTM over the trial</p></td>
+<td><p>Ours: a recurrent baseline, any trial length. Defaults in <code class="docutils literal notranslate"><span class="pre">ethograph/segment/models/config/rnn.yaml</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mlp</span></code> <span class="bibtex-citation" id="id9">[<a class="reference internal" href="../../community/references.html#id336" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>]</span></p></td>
+<td><p>Per-frame, no temporal context</p></td>
+<td><p>A floor to compare against: how much is temporal context buying you?</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">motionbert</span></code> <span class="bibtex-citation" id="id10">[<a class="reference internal" href="../../community/references.html#id342" title="Wentao Zhu, Xiaoxuan Ma, Zhaoyang Liu, Libin Liu, Wayne Wu, and Yizhou Wang. MotionBERT: a unified perspective on learning human motion representations. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV). 2023. URL: https://arxiv.org/abs/2210.06551, arXiv:2210.06551.">Zhu <em>et al.</em>, 2023</a>]</span></p></td>
+<td><p>Attention across joints, then across time</p></td>
+<td><p>For pose columns that factor into joints: set <code class="docutils literal notranslate"><span class="pre">model.params.num_joints</span></code> (it has no default and must divide the column count). Reads a fixed 128-frame window at a time.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> <span class="bibtex-citation" id="id11">[<a class="reference internal" href="../../community/references.html#id343" title="Haoyu Ji, Bowen Chen, Zhihao Yang, Wenze Huang, Yu Gao, Xueting Liu, Weihong Ren, Zhiyong Wang, and Honghai Liu. Spectral scalpel: amplifying adjacent action discrepancy via frequency-selective filtering for skeleton-based action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/SpecScalpel, arXiv:2603.24134.">Ji <em>et al.</em>, 2026</a>]</span></p></td>
+<td><p>Skeleton graph + frequency-selective filtering</p></td>
+<td><p><strong>Pose-native.</strong> Reads a skeleton of keypoints and sharpens the boundaries between adjacent behaviours in the frequency domain. Needs <code class="docutils literal notranslate"><span class="pre">model.params.keypoints</span></code> and (optionally) <code class="docutils literal notranslate"><span class="pre">skeleton</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lady</span></code> <span class="bibtex-citation" id="id12">[<a class="reference internal" href="../../community/references.html#id344" title="Haoyu Ji, Xueting Liu, Yu Gao, Wenze Huang, Zhihao Yang, Weihong Ren, Zhiyong Wang, and Honghai Liu. LaDy: lagrangian-dynamic informed network for skeleton-based action segmentation via spatial-temporal modulation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/LaDy, arXiv:2603.24097.">Ji <em>et al.</em>, 2026</a>]</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> + a learned Lagrangian-dynamics stream</p></td>
+<td><p><strong>Pose-native.</strong> Adds a physics-informed stream (torque, power, energy) over the skeleton’s generalised coordinates. Needs <code class="docutils literal notranslate"><span class="pre">keypoints</span></code>, a <code class="docutils literal notranslate"><span class="pre">skeleton</span></code> with edges, and the root-frame landmarks <code class="docutils literal notranslate"><span class="pre">root</span></code>/<code class="docutils literal notranslate"><span class="pre">spine</span></code> (+ <code class="docutils literal notranslate"><span class="pre">left</span></code>/<code class="docutils literal notranslate"><span class="pre">right</span></code> in 3D); reads raw positions only.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">eto.segment.tunable_params(name)</span></code> lists each one’s hyperparameters; set only
+the ones you want to change under <code class="docutils literal notranslate"><span class="pre">model.params</span></code>. For the vendored models they
+come, with a comment on each and its default, from
+<code class="docutils literal notranslate"><span class="pre">ethograph/segment/dlc2action/config/model/{file}.yaml</span></code> (<code class="docutils literal notranslate"><span class="pre">mstcn</span></code> reads
+<code class="docutils literal notranslate"><span class="pre">ms_tcn3.yaml</span></code>); <code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> and <code class="docutils literal notranslate"><span class="pre">lady</span></code> read their skeleton-graph defaults, and
+<code class="docutils literal notranslate"><span class="pre">rnn</span></code> reads <code class="docutils literal notranslate"><span class="pre">ethograph/segment/models/config/rnn.yaml</span></code>. The loss is configured the same
+way under <code class="docutils literal notranslate"><span class="pre">train.loss</span></code>, from <code class="docutils literal notranslate"><span class="pre">config/losses.yaml</span></code>. See <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The networks and the loss come from
+<a class="reference external" href="https://github.com/amathislab/DLC2Action">DLC2Action</a> (AGPLv3, compatible
+with this project’s GPLv3 — see <code class="docutils literal notranslate"><span class="pre">ethograph/segment/dlc2action/NOTICE.md</span></code>). To
+plug in your own, register a builder with <code class="docutils literal notranslate"><span class="pre">&#64;register_architecture(&quot;name&quot;)</span></code>, or
+ship one from another package through the <code class="docutils literal notranslate"><span class="pre">ethograph.segment.architectures</span></code>
+entry-point group. It takes <code class="docutils literal notranslate"><span class="pre">(x</span> <span class="pre">(B,F,T),</span> <span class="pre">mask</span> <span class="pre">(B,1,T))</span></code> and returns
+<code class="docutils literal notranslate"><span class="pre">logits</span> <span class="pre">(S,B,C,T)</span></code>, finest stage last — or a <code class="docutils literal notranslate"><span class="pre">ModelOutput</span></code> carrying those
+logits.</p>
+</div>
+</section>
+<section id="stage-1-find-the-settings">
+<h2>Stage 1: find the settings<a class="headerlink" href="#stage-1-find-the-settings" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">project.search()</span></code> runs an Optuna study over
+<code class="docutils literal notranslate"><span class="pre">search.params</span></code>. Every trial is a full training run, and its score is
+<code class="docutils literal notranslate"><span class="pre">train.select_on</span></code> measured on the <strong>validation</strong> trials — the one thing
+validation is for. <code class="docutils literal notranslate"><span class="pre">test</span></code> is never read, so it is still an honest number at
+the end.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">search</span><span class="p">()</span>               <span class="c1"># or search(n_trials=50)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best_params</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best_score</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">trials</span><span class="p">)</span>                    <span class="c1"># one row per trial</span>
+</pre></div>
+</div>
+<p>A parameter is keyed by the same dotted path an override uses, so there is one
+spelling for “learning rate” and it works in the file, in an override and in a
+search space alike. Three kinds of space, mirroring Optuna’s three suggest
+calls:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">search</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">n_trials</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">  </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">train.learning_rate</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-5</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-2</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">model.params.num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">256</span><span class="p p-Indicator">,</span><span class="nt"> step</span><span class="p">:</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">train.augment.mirror</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">]}</span>
+</pre></div>
+</div>
+<p>The winner is written to <code class="docutils literal notranslate"><span class="pre">searches/{name}/best.yaml</span></code> — a config that inherits
+yours and pins the parameters that won, which is what stage 2 reads:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../../project.yaml</span>
+<span class="nt">train</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">learning_rate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.00043</span>
+<span class="w">  </span><span class="nt">loss</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="nv">0.087</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<p>The study itself lives in <code class="docutils literal notranslate"><span class="pre">searches/{name}/study.db</span></code>, so calling <code class="docutils literal notranslate"><span class="pre">search()</span></code>
+again <strong>adds</strong> trials rather than starting over — stop a study, look at
+<code class="docutils literal notranslate"><span class="pre">trials.tsv</span></code>, continue it. Trials that fall behind the running median are
+abandoned early (<code class="docutils literal notranslate"><span class="pre">search.prune</span></code>), and only the winning trial keeps its weights
+(<code class="docutils literal notranslate"><span class="pre">search.keep_weights</span></code>); every trial’s config, split and metrics are kept
+either way.</p>
+<section id="sweeping-several-architectures">
+<h3>Sweeping several architectures<a class="headerlink" href="#sweeping-several-architectures" title="Link to this heading">#</a></h3>
+<p>Searching more than one architecture is a loop of searches, not one search
+with <code class="docutils literal notranslate"><span class="pre">model.architecture</span></code> in the space — because the architectures share
+almost no hyperparameter names (<code class="docutils literal notranslate"><span class="pre">mlp</span></code> takes <code class="docutils literal notranslate"><span class="pre">f_maps_list</span></code>, <code class="docutils literal notranslate"><span class="pre">mstcn</span></code> takes
+<code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>), so each needs its own space. <code class="docutils literal notranslate"><span class="pre">eto.segment.tunable_params(name)</span></code>
+lists what each one accepts.</p>
+<p>Give each its own <code class="docutils literal notranslate"><span class="pre">train.run_name</span></code>: that names the study as well, and without
+it every architecture would pool incomparable trials into one <code class="docutils literal notranslate"><span class="pre">study.db</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
+
+<span class="n">SHARED</span> <span class="o">=</span> <span class="p">{</span>   <span class="c1"># keys that mean the same thing to every architecture</span>
+    <span class="s2">"train.learning_rate"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mf">1.0e-5</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mf">1.0e-2</span><span class="p">,</span> <span class="s2">"log"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+    <span class="s2">"train.loss.alpha"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
+<span class="p">}</span>
+<span class="n">VARIANTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"asformer_enc"</span><span class="p">:</span> <span class="p">{</span>                       <span class="c1"># ASFormer, encoder only</span>
+        <span class="s2">"architecture"</span><span class="p">:</span> <span class="s2">"asformer"</span><span class="p">,</span>
+        <span class="s2">"params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_decoders"</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>      <span class="c1"># pinned</span>
+        <span class="s2">"space"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_f_maps"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"categorical"</span><span class="p">,</span> <span class="s2">"choices"</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">]}},</span>
+    <span class="p">},</span>
+    <span class="s2">"asformer_dec"</span><span class="p">:</span> <span class="p">{</span>                       <span class="c1"># ASFormer as published: does refinement pay?</span>
+        <span class="s2">"architecture"</span><span class="p">:</span> <span class="s2">"asformer"</span><span class="p">,</span>
+        <span class="s2">"params"</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s2">"space"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_decoders"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
+    <span class="p">},</span>
+    <span class="s2">"mstcn"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"architecture"</span><span class="p">:</span> <span class="s2">"mstcn"</span><span class="p">,</span>
+        <span class="s2">"params"</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s2">"space"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_R"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>      <span class="c1"># once, for every variant</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">variant</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">VARIANTS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">overrides</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">as_overrides</span><span class="p">({</span>
+        <span class="s2">"model.architecture"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"architecture"</span><span class="p">],</span>
+        <span class="s2">"train.run_name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">variant</span><span class="si">}</span><span class="s2">_kin"</span><span class="p">,</span>            <span class="c1"># → searches/search_{variant}_kin/</span>
+        <span class="s2">"model.params"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"params"</span><span class="p">],</span>
+        <span class="s2">"search.params"</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="n">SHARED</span><span class="p">,</span> <span class="o">**</span><span class="n">spec</span><span class="p">[</span><span class="s2">"space"</span><span class="p">]},</span>
+    <span class="p">})</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">,</span> <span class="o">*</span><span class="n">overrides</span><span class="p">)</span><span class="o">.</span><span class="n">search</span><span class="p">()</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">result</span><span class="o">.</span><span class="n">best_score</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">config_path</span><span class="p">))</span>
+
+<span class="n">best_score</span><span class="p">,</span> <span class="n">best_variant</span><span class="p">,</span> <span class="n">best_config</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">best_config</span><span class="p">)</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">()</span>      <span class="c1"># stage 2 on the winner only</span>
+</pre></div>
+</div>
+<p>Two entries may share an architecture and differ only in what is pinned versus
+searched — the two ASFormers above ask “does refinement earn its cost here?”,
+which one study cannot answer cleanly because a pinned <code class="docutils literal notranslate"><span class="pre">num_decoders:</span> <span class="pre">0</span></code> and a
+searched <code class="docutils literal notranslate"><span class="pre">1..3</span></code> are different questions.</p>
+<p><code class="docutils literal notranslate"><span class="pre">eto.segment.as_overrides({...})</span></code> turns a dict into the dotted <code class="docutils literal notranslate"><span class="pre">key=value</span></code>
+strings <code class="docutils literal notranslate"><span class="pre">Project</span></code> takes, through YAML — so a nested dict or a float in
+exponent form survives, where an f-string would hand over Python’s <code class="docutils literal notranslate"><span class="pre">repr</span></code>.</p>
+<p>Cross-validate the <strong>winner only</strong>: a fold is a training run per session, so
+it is not something to spend on the variants that already lost.</p>
+</section>
+</section>
+<section id="stage-2-cross-validate-and-look-at-the-mistakes">
+<h2>Stage 2: cross-validate, and look at the mistakes<a class="headerlink" href="#stage-2-cross-validate-and-look-at-the-mistakes" title="Link to this heading">#</a></h2>
+<p>With the settings settled, hold out a whole <strong>session</strong> per fold:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">best</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span>
+<span class="n">folds</span> <span class="o">=</span> <span class="n">best</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">()</span>           <span class="c1"># one fold per session</span>
+</pre></div>
+</div>
+<p>Fold <em>i</em> trains on every session but the <em>i</em>-th and then predicts that one, so
+each session ends up with a prediction set from a model that never saw a frame
+of it. <code class="docutils literal notranslate"><span class="pre">folds</span></code> is one row per fold — its run, its metrics on the held-out
+session, and the path of the prediction set:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>session</p></th>
+<th class="head"><p>run</p></th>
+<th class="head"><p>postprocessed.f1&#64;50</p></th>
+<th class="head"><p>predictions</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>ses-01</p></td>
+<td><p>fold-ses-01_…</p></td>
+<td><p>0.71</p></td>
+<td><p>…/ses-01/behav/labels/predictions_fold-ses-01_…_{timestamp}/Trial_data_predictions.tsv</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Folds are independent, so you can run some of them:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">best</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">(</span><span class="n">folds</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-01"</span><span class="p">,</span> <span class="s2">"ses-02"</span><span class="p">])</span>     <span class="c1"># two folds, not all four</span>
+</pre></div>
+</div>
+<p>which is how you compare two parameter sets at a fraction of the cost. When
+you actually want to <em>inspect</em> a session in the GUI, run its own fold — a
+model that trained on the session it is predicting tells you nothing.</p>
+<section id="one-session-fold-by-trial">
+<h3>One session: fold by trial<a class="headerlink" href="#one-session-fold-by-trial" title="Link to this heading">#</a></h3>
+<p>A session cannot be held out when it is the only one — which is every
+neural decoding project (<code class="docutils literal notranslate"><span class="pre">features.neural</span></code>), since units exist in one
+recording only. Fold by <strong>trial</strong> instead:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">folds</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">(</span><span class="n">n_folds</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Every trial is dealt into exactly one of the five folds (seeded by
+<code class="docutils literal notranslate"><span class="pre">train.split.seed</span></code>, so the folds are the same for every transform you
+compare); fold <em>k</em> trains on the other four and predicts its own, through
+<code class="docutils literal notranslate"><span class="pre">train.split.holdout_trials</span></code>; and the five prediction sets are merged into
+<strong>one</strong> per session, under
+<code class="docutils literal notranslate"><span class="pre">labels/predictions_cv_{run_name}_{timestamp}/</span></code>, so the whole session opens
+in the GUI with every trial predicted once by a model that never saw it —
+<code class="docutils literal notranslate"><span class="pre">cross_validation/{name}/predictions.tsv</span></code> lists it. <code class="docutils literal notranslate"><span class="pre">folds.tsv</span></code> still has one
+row per fold, with the trials it held out and its metrics on them; each
+row’s <code class="docutils literal notranslate"><span class="pre">prediction_source</span></code> says which fold wrote it.</p>
+<p>Comparing binnings is then a loop over configs that share this one
+(<code class="docutils literal notranslate"><span class="pre">base:</span></code>), one materialised dataset each:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.segment</span><span class="w"> </span><span class="kn">import</span> <span class="n">as_overrides</span>
+
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">steps</span> <span class="ow">in</span> <span class="p">{</span>
+    <span class="s2">"rate_5ms_boxcar25ms"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"x.count(0.005) / 0.005"</span><span class="p">,</span> <span class="s2">"sliding_window(x, window_size=0.025)"</span><span class="p">],</span>
+    <span class="s2">"sqrt_count_10ms"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"x.count(0.01)"</span><span class="p">,</span> <span class="s2">"np.sqrt(x)"</span><span class="p">],</span>
+<span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span>
+        <span class="s2">"decoding.yaml"</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"features.name=</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"train.run_name=</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">as_overrides</span><span class="p">({</span><span class="s2">"features.neural.transform"</span><span class="p">:</span> <span class="n">steps</span><span class="p">}),</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">(</span><span class="n">n_folds</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>giving <code class="docutils literal notranslate"><span class="pre">cross_validation/cv_{name}/folds.tsv</span></code> per transform — the same
+folds, so the numbers are paired.</p>
+</section>
+<section id="ablating-the-loss-one-model-per-individual">
+<h3>Ablating the loss, one model per individual<a class="headerlink" href="#ablating-the-loss-one-model-per-individual" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/bench.py</span></code> is that loop turned on the objective. One config per
+individual sits beside the project’s (<code class="docutils literal notranslate"><span class="pre">data/crow1.yaml</span></code>: <code class="docutils literal notranslate"><span class="pre">base:</span> <span class="pre">project.yaml</span></code>,
+its own four sessions, its own <code class="docutils literal notranslate"><span class="pre">features.name</span></code> — a run draws its split over
+the whole materialised index it reads, so a shared one would train on the
+other individuals), and for each of them and each architecture the bench
+cross-validates three arms: every term, no smoothing (<code class="docutils literal notranslate"><span class="pre">train.loss.alpha=0</span></code>),
+no circle (<code class="docutils literal notranslate"><span class="pre">train.circle.weight=0</span></code>), the “with” weights pinned in the script.
+<code class="docutils literal notranslate"><span class="pre">data/bench_loss.pdf</span></code> then shows segmental F1 per individual, architecture
+and arm — one dot per held-out session — and, per individual × architecture,
+the three arms’ IoU distributions, boundary deltas and class-wise F1 side by
+side (<code class="xref py py-func docutils literal notranslate"><span class="pre">write_factorial_pdf()</span></code>). Folds that
+finished are read back, never retrained; <code class="docutils literal notranslate"><span class="pre">--report-only</span></code> draws without
+training.</p>
+<p>There is no validation slice by default (<code class="docutils literal notranslate"><span class="pre">val_fraction=0</span></code>): the
+hyperparameters, <code class="docutils literal notranslate"><span class="pre">epochs</span></code> included, came out of stage 1, so every remaining
+trial is worth training on and <code class="docutils literal notranslate"><span class="pre">best.pt</span></code> is the last epoch. Pass
+<code class="docutils literal notranslate"><span class="pre">val_fraction=0.15</span></code> if you want checkpoint selection back.</p>
+</section>
+</section>
+<section id="reviewing-predictions-in-the-gui">
+<h2>Reviewing predictions in the GUI<a class="headerlink" href="#reviewing-predictions-in-the-gui" title="Link to this heading">#</a></h2>
+<p>A prediction set is a labels TSV in the GUI’s own format, every row
+<code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code> with the model’s confidence. Load it with
+<strong>File ▸ Import labels…</strong> and it enters the <a class="reference internal" href="../curation.html"><span class="doc">curation</span></a>
+workflow: automated labels draw dotted, the grid views rank them by
+confidence, and every label you confirm becomes <code class="docutils literal notranslate"><span class="pre">curated</span></code>. Loading several
+runs side by side for comparison is noted in <span class="xref std std-doc">later</span>.</p>
+<p>This is what makes stage 2 worth its cost: the fold’s predictions and the
+labels you drew are the same kind of object on the same axis, so “60% F1”
+becomes <em>which</em> class, <em>which</em> trials and <em>how far off</em> the boundaries are.</p>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Models</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="quickstart.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Quickstart</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-stages-of-a-workflow">The two stages of a workflow</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-stages-themselves">The stages themselves</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features-are-built-with-the-session-not-by-the-pipeline">Features are built with the session, not by the pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-config">A config</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-session-lines">The session lines</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-sample-is">What a sample is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-materialised-dataset">The materialised dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architectures">Architectures</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-1-find-the-settings">Stage 1: find the settings</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sweeping-several-architectures">Sweeping several architectures</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-2-cross-validate-and-look-at-the-mistakes">Stage 2: cross-validate, and look at the mistakes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-session-fold-by-trial">One session: fold by trial</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ablating-the-loss-one-model-per-individual">Ablating the loss, one model per individual</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reviewing-predictions-in-the-gui">Reviewing predictions in the GUI</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/models/segment/index.md">
+      
+        <i class="fa-solid fa-file-lines"></i> Show Source
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, Akseli Ilmanen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

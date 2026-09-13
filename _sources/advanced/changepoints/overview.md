@@ -1,7 +1,7 @@
 (target-changepoints-overview)=
 # Overview
 
-Changepoint detection methods (Xu et al., 2025) allow finding transitions in
+Changepoint detection methods {cite:p}`xu2025changepoint` allow finding transitions in
 time series data. This can be leveraged to identify **candidates** of action
 boundaries in various data formats (kinematic, audio, spectral).
 
@@ -19,8 +19,7 @@ Ethograph uses changepoints in two ways:
    the GUI will refine the selection to jump exactly to that minima. This
    increases the accuracy and consistency of human labelling.
 
-2. Changepoint detection methods often have a false-positive problem (Cohen,
-   2022), where a large subset of the detections are not at real behavioural
+2. Changepoint detection methods often have a false-positive problem {cite:p}`cohen2022tweetynet`, where a large subset of the detections are not at real behavioural
    boundaries but false positives. Similarly, the changepoint algorithms
    often **overspecify** by providing too many changepoints. The
    human-in-the-loop through labelling can then specify which of these
@@ -43,9 +42,3 @@ Ethograph uses changepoints in two ways:
 
 ---
 
-## References
-
-- Cohen, Y., Nicholson, D. A., Sanchioni, A., Mallaber, E. K., Skidanova, V., & Gardner, T. J. (2022). Automated annotation of birdsong with a neural network that segments spectrograms. eLife, 11, e63853. <https://doi.org/10.7554/eLife.63853>
-- Gu, N., Lee, K., Basha, M., Kumar Ram, S., You, G., & Hahnloser, R. H. R. (2024). Positive Transfer of the Whisper Speech Transformer to Human and Animal Voice Activity Detection. ICASSP 2024. <https://doi.org/10.1109/ICASSP48485.2024.10447620>
-- Kozlova, E., Bonnetto, A., & Mathis, A. (2025). DLC2Action: A Deep Learning-based Toolbox for Automated Behavior Segmentation. bioRxiv. <https://doi.org/10.1101/2025.09.27.678941>
-- Xu, R., Song, Z., Wu, J., Wang, C., & Zhou, S. (2025). Change-point detection with deep learning: A review. Frontiers of Engineering Management, 12(1), 154-176. <https://doi.org/10.1007/s42524-025-4109-z>

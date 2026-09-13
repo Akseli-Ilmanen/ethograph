@@ -157,6 +157,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../examples/index.html">
     Examples
   </a>
@@ -281,6 +288,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../advanced/index.html">
     Advanced
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
+    Models
   </a>
 </li>
 
@@ -433,10 +447,10 @@ is applied before angle computation.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tsdframe</strong> (<em>nap.TsdFrame</em>) – Position data with at least two columns (x and y).  If more than two
 columns are present, <em>xy_columns</em> selects which two to use.</p></li>
-<li><p><strong>smoothing_params</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Keyword arguments forwarded to
+<li><p><strong>smoothing_params</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Keyword arguments forwarded to
 <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html#scipy.ndimage.gaussian_filter1d" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.ndimage.gaussian_filter1d()</span></code></a> (e.g. <code class="docutils literal notranslate"><span class="pre">{&quot;sigma&quot;:</span> <span class="pre">3}</span></code>).</p></li>
-<li><p><strong>position_key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Input type passed to <code class="docutils literal notranslate"><span class="pre">get_angle_rgb</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;position&quot;</span></code>).</p></li>
-<li><p><strong>xy_columns</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Column names to use as x and y when <em>tsdframe</em> has more than two
+<li><p><strong>position_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Input type passed to <code class="docutils literal notranslate"><span class="pre">get_angle_rgb</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;position&quot;</span></code>).</p></li>
+<li><p><strong>xy_columns</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Column names to use as x and y when <em>tsdframe</em> has more than two
 columns (default <code class="docutils literal notranslate"><span class="pre">[&quot;x&quot;,</span> <span class="pre">&quot;y&quot;]</span></code>).</p></li>
 </ul>
 </dd>

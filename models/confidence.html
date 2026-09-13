@@ -1,0 +1,745 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Model confidence &#8212; ethograph</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=17f663f2" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'models/confidence';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/confidence.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Curating labels" href="curation.html" />
+    <link rel="prev" title="Config reference" href="spot/config.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/icon.png" class="logo__image only-light" alt=""/>
+    <img src="../_static/icon.png" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">ethograph</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../community/index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Advanced
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Models
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api_index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../community/index.html">
+    Community
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/Akseli-Ilmanen/ethograph" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events from features)</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Model confidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="curation.html">Curating labels</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Models</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Model confidence</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="model-confidence">
+<span id="target-confidence"></span><h1>Model confidence<a class="headerlink" href="#model-confidence" title="Link to this heading">#</a></h1>
+<p>Every predicted label carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code> in the labels TSV (a hand-placed
+label is <code class="docutils literal notranslate"><span class="pre">1.0</span></code>), and the review tools threshold on it: the label grid outlines
+tiles below <strong>Flag confidence below</strong>, <strong>Histogram…</strong> shows where the scores
+sit per class, and <em>Mark low-confidence as uncurated</em> pre-selects exactly those
+tiles. The number is computed by the model that made the prediction, and
+<strong>how</strong> it is computed depends on what kind of question that model answered.
+There are two kinds.</p>
+<section id="state-events-which-class-is-this-frame">
+<h2>State events: which class is this frame?<a class="headerlink" href="#state-events-which-class-is-this-frame" title="Link to this heading">#</a></h2>
+<p>The segmentation pipeline (<code class="docutils literal notranslate"><span class="pre">eto.segment</span></code>) predicts <strong>state events</strong> — spans.
+Its output is one probability distribution <strong>over the classes at every
+frame</strong>: <span class="math notranslate nohighlight">\(p_1(t), \dots, p_C(t)\)</span> with <span class="math notranslate nohighlight">\(\sum_c p_c(t) = 1\)</span>. The label at a
+frame is the largest. A segment’s <code class="docutils literal notranslate"><span class="pre">confidence</span></code> in the TSV is the mean
+probability of its own class over its frames (<code class="docutils literal notranslate"><span class="pre">ethograph/segment/inference.py</span></code>):</p>
+<div class="math notranslate nohighlight">
+\[
+\text{confidence} = \frac{1}{|S|} \sum_{t \in S} p_{c}(t),
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(S\)</span> is the segment’s frames and <span class="math notranslate nohighlight">\(c\)</span> its class. The question at each
+frame is “which one”, so the number is how much of the distribution the
+chosen class holds.</p>
+<p>The confidence overlay drawn during review is a per-frame curve instead: how
+far the distribution is from uniform, its normalised entropy
+(<code class="docutils literal notranslate"><span class="pre">ethograph/labels/predictions.py</span></code>):</p>
+<div class="math notranslate nohighlight">
+\[
+H(t) = -\sum_{c=1}^{C} p_c(t)\,\log p_c(t), \qquad
+\text{confidence}(t) = 1 - \frac{H(t)}{\log C}.
+\]</div>
+<p><code class="docutils literal notranslate"><span class="pre">1</span></code> means all the mass sits on one class, <code class="docutils literal notranslate"><span class="pre">0</span></code> means every class is equally
+likely.</p>
+</section>
+<section id="point-events-when-did-it-happen">
+<h2>Point events: when did it happen?<a class="headerlink" href="#point-events-when-did-it-happen" title="Link to this heading">#</a></h2>
+<p>The LightGBM lightgbm model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> and the E2E-Spot pixel model <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> predict <strong>point
+events</strong>. For each class they produce a <strong>curve over time</strong>, <span class="math notranslate nohighlight">\(p_k(t)\)</span>, the
+per-frame belief that class <span class="math notranslate nohighlight">\(k\)</span>’s event is <em>here</em>, and the prediction is the
+tallest peak of that curve, <span class="math notranslate nohighlight">\(t^\ast = \arg\max_t p_k(t)\)</span> (a local maximum —
+a curve still climbing at the trial’s edge is not a peak).</p>
+<p>Entropy across classes says nothing useful about this: the question is not
+“which class” but “<strong>where</strong> on the curve”, and the alternatives are other
+<em>moments</em>, not other classes. So the confidence is a statistic of the
+curve’s <strong>shape around its peak</strong>, read within a window <span class="math notranslate nohighlight">\(w\)</span> of the peak
+(<code class="docutils literal notranslate"><span class="pre">ethograph/labels/curve_confidence.py</span></code>):</p>
+<div class="math notranslate nohighlight">
+\[
+\text{peak} = p(t^\ast), \qquad
+\text{focus} = \frac{\sum_{|t - t^\ast| \le w} p(t)}{\sum_t p(t)}, \qquad
+\text{ratio} = 1 - \frac{\max_{t' \in \text{peaks},\; |t' - t^\ast| &gt; w} p(t')}{p(t^\ast)},
+\]</div>
+<div class="math notranslate nohighlight">
+\[
+\text{confidence} = \text{focus} \times \text{ratio}.
+\]</div>
+<ul class="simple">
+<li><p><strong>peak</strong> — the model’s own score at the event.</p></li>
+<li><p><strong>focus</strong> — the share of the curve’s mass within <span class="math notranslate nohighlight">\(w\)</span> of the peak: <code class="docutils literal notranslate"><span class="pre">1</span></code> is one
+clean bump, lower means a broad bump or belief spread elsewhere.</p></li>
+<li><p><strong>ratio</strong> — one minus the tallest <em>rival</em> over the peak, a rival being
+another local maximum outside <span class="math notranslate nohighlight">\(w\)</span> (never the peak’s own shoulder): <code class="docutils literal notranslate"><span class="pre">1</span></code> is
+no rival, <code class="docutils literal notranslate"><span class="pre">0</span></code> a second candidate as tall as the first. Blind to width by
+design — width is <code class="docutils literal notranslate"><span class="pre">focus</span></code>’s job.</p></li>
+<li><p><strong>confidence</strong> — both at once: a lone sharp bump reads near <code class="docutils literal notranslate"><span class="pre">1</span></code>, a rival
+or a smeared bump pulls it down.</p></li>
+</ul>
+<p><img alt="peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival" src="../_images/confidence_curve_stats.png" /></p>
+<p><strong>Two curves read <code class="docutils literal notranslate"><span class="pre">0</span></code> whatever their shape</strong>: one that is nearly nothing
+everywhere (its tallest peak below 0.05 — otherwise a single surviving blip
+would be the cleanest bump imaginable and read <code class="docutils literal notranslate"><span class="pre">1</span></code>), and one with no
+interior peak at all, or higher at an edge than at any peak inside (still
+climbing at the trial’s end — the event may lie past it). Whatever rule is
+chosen, such a label’s confidence is <code class="docutils literal notranslate"><span class="pre">0</span></code>: flagged for review, never dropped.</p>
+<p><strong>The window is the user’s timescale, not a constant.</strong> <span class="math notranslate nohighlight">\(w = 2 \times\)</span> the
+tolerance the labels are believed to: the lightgbm model takes it from its own
+<code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, the pixel model from <code class="docutils literal notranslate"><span class="pre">infer.focus_window_ms</span></code> (twice the label
+precision). A bump wider than twice the label precision is smeared by the
+user’s own definition; a peak further away than that is a rival.</p>
+<p><strong>Which statistic is written is a property of the model, and it is
+measured, not assumed.</strong> On the same held-out trials, how well each
+candidate separates the model’s hits from its misses (AUC) decides:</p>
+<ul class="simple">
+<li><p>The <strong>lightgbm model</strong> ranks every candidate per class when it trains
+(<code class="docutils literal notranslate"><span class="pre">fit_confidence_calibration</span></code>) and writes <code class="docutils literal notranslate"><span class="pre">peak</span></code> unless <code class="docutils literal notranslate"><span class="pre">focus</span></code>, <code class="docutils literal notranslate"><span class="pre">ratio</span></code> or
+their product wins by a clear margin — its curve is shape-constrained by construction (a
+Gaussian-weighted target smoothed with the matching kernel), so its bumps
+all look alike and height is what varies. The training message says which
+was chosen.</p></li>
+<li><p>The <strong>pixel model</strong> writes <code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code>. E2E-Spot’s per-frame softmax
+normalises across classes and nothing normalises across time, so a class
+can sit moderately high for a long stretch and its peak still reads as
+confident: height was near chance (AUC 0.58) where <code class="docutils literal notranslate"><span class="pre">focus</span></code>, <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and
+their product reached ~0.8. The two halves behave differently in a histogram — <code class="docutils literal notranslate"><span class="pre">ratio</span></code>
+is bimodal (one candidate or two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> sits in a middle band — so how
+much each should count is a review preference, not a model constant: the
+written number is the plain product, and the emphasis is set in the GUI
+with the histogram in view.</p></li>
+</ul>
+<p>Every candidate stays readable off the curve frame-by-frame review draws
+under the label (one per class in scope, on a fixed 0–1 axis): the peak the
+label sits on, the rival that pulled <code class="docutils literal notranslate"><span class="pre">ratio</span></code> down, the smear that pulled
+<code class="docutils literal notranslate"><span class="pre">focus</span></code> down. That is what lets a threshold be set by looking.</p>
+<p><strong>How often a model is right is a verdict on the model, not on a label.</strong>
+Training reports the held-out hit rate per class (<em>peck: 6/8 within
+0.05 s</em>); it is never folded into any label’s confidence.</p>
+</section>
+<section id="changing-the-rule-in-the-gui">
+<h2>Changing the rule in the GUI<a class="headerlink" href="#changing-the-rule-in-the-gui" title="Link to this heading">#</a></h2>
+<p>Which reading is the confidence is a review preference, so it is set where
+its effect is seen: the <strong>Histogram…</strong> popup of the label grid and the video
+grid carries a <em>Confidence rule</em> panel above the bars, whenever the session
+has a prediction run with curves beside it (every run merged, newest per
+class).</p>
+<ul class="simple">
+<li><p><strong>Rule</strong> — <code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code> (the default the pixel model writes), <code class="docutils literal notranslate"><span class="pre">ratio</span></code>
+alone (one candidate or two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> alone (sharp or smeared), <code class="docutils literal notranslate"><span class="pre">peak</span></code>, or
+<strong>custom</strong>: <code class="docutils literal notranslate"><span class="pre">ratio</span> <span class="pre">×</span> <span class="pre">(α</span> <span class="pre">+</span> <span class="pre">(1</span> <span class="pre">−</span> <span class="pre">α)·focus)</span></code> with one slider — α = 1 is
+<code class="docutils literal notranslate"><span class="pre">ratio</span></code>, α = 0 is the product.</p></li>
+<li><p><strong>Same event within</strong> — the window <span class="math notranslate nohighlight">\(w\)</span> in ms.</p></li>
+</ul>
+<p>Every change redraws the histogram and restyles the grid’s tiles at once, so
+leaning toward candidates or sharpness is judged on the distribution it
+produces, with the threshold line in the same picture. <strong>Apply to labels</strong>
+confirms it: the values are written into the labels — only automated labels
+that have a curve; manual and curated ones are a human’s word and never
+change — as one undo step per trial (<code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> takes it back). Closing the
+popup without applying puts the original values back. The rule, α and window
+are remembered across sessions.</p>
+<p><strong>Copy for project.yaml</strong> puts the same choice on the clipboard as the
+<code class="docutils literal notranslate"><span class="pre">infer:</span></code> lines of a spot project config —</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">infer</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">confidence</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ratio</span>
+<span class="w">  </span><span class="nt">focus_window_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</pre></div>
+</div>
+<p>— so the next <code class="docutils literal notranslate"><span class="pre">inference()</span></code> writes confidence the way the review settled on,
+and the grid and the pipeline never disagree about what the number means
+(<code class="docutils literal notranslate"><span class="pre">infer.confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">infer.confidence_alpha</span></code> for the custom rule).</p>
+</section>
+<section id="reviewing-by-confidence">
+<h2>Reviewing by confidence<a class="headerlink" href="#reviewing-by-confidence" title="Link to this heading">#</a></h2>
+<p><strong>Label grid view…</strong> (Labels tab ▸ Curation) puts each label’s confidence
+and <code class="docutils literal notranslate"><span class="pre">labeling_method</span></code> on its tile and outlines everything below <strong>Flag
+confidence below</strong> in red, in the grid and in the exported PDF. The threshold
+is typed in full rather than stepped, so a model whose scores sit at the
+bottom of the range can be flagged at <code class="docutils literal notranslate"><span class="pre">0.0002</span></code> as easily as at <code class="docutils literal notranslate"><span class="pre">0.6</span></code>;
+<strong>Histogram…</strong> beside it shows where the scores actually sit, per class,
+before you commit — with a bimodal statistic such as <code class="docutils literal notranslate"><span class="pre">ratio</span></code> the gap is
+where the threshold goes.</p>
+<p>In the <em>Click = uncurated, rest = curated</em> mode, <strong>Mark low-confidence
+as uncurated</strong> pre-clicks exactly the outlined tiles; click any other tile
+that looks wrong, and <strong>Done</strong> curates everything else in one go. With the
+Curation section in frame-by-frame review, a tile click drops straight into
+that boundary instead: <code class="docutils literal notranslate"><span class="pre">Enter</span></code> moves the event onto the right frame,
+<code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes one that never happened, <code class="docutils literal notranslate"><span class="pre">N</span></code> marks it curated (with <strong>Click N curates current</strong> ticked).</p>
+<p>Judge a cutoff by what it buys: on a session with curated labels, “reviewing
+everything below <em>t</em> catches what share of the errors?” is the question the
+confidence exists to answer, and it is a better guide than how the histogram
+looks.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="spot/config.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Config reference</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="curation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Curating labels</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-events-which-class-is-this-frame">State events: which class is this frame?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#point-events-when-did-it-happen">Point events: when did it happen?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changing-the-rule-in-the-gui">Changing the rule in the GUI</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reviewing-by-confidence">Reviewing by confidence</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection sourcelink">
+    <a href="../_sources/models/confidence.md">
+      
+        <i class="fa-solid fa-file-lines"></i> Show Source
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, Akseli Ilmanen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
