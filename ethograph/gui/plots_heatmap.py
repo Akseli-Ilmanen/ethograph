@@ -28,6 +28,8 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
     when the user zooms in/out.
     """
 
+    default_free_dims = 1
+
     def __init__(self, app_state, parent=None):
         super().__init__(app_state, parent)
 

@@ -71,6 +71,30 @@ class TestStorage:
         assert wf.list_workflows() == ["new"]
         assert wf.load_workflow("new").description == "keep me"
 
+    def test_an_open_project_stores_its_own_workflows(self, tmp_path):
+        project = tmp_path / "study"
+        wf.save_workflow(wf.CurationWorkflow(name="home"))
+        wf.save_workflow(wf.CurationWorkflow(name="study"), project)
+        assert (project / "workflows" / "study.yaml").is_file()
+        assert wf.list_workflows(project) == ["study"]
+        assert wf.list_workflows() == ["home"]
+
+    def test_the_dialog_lists_the_open_projects_workflows(self, qapp, tmp_path):
+        project = tmp_path / "study"
+        wf.save_workflow(wf.CurationWorkflow(name="study"), project)
+        state = ObservableAppState()
+        state._yaml_path = str(tmp_path / "gui_settings.yaml")
+        state.project_path = str(project)
+        trials = TrialsWidget(state)
+        trials.setup(METADATA)
+        dialog = dcw.CurationWorkflowDialog(_DialogMeta(state, trials))
+        try:
+            assert dialog.workflow_list.item(0).text() == "study"
+            assert dialog.workflow_list.count() == 1
+        finally:
+            dialog.close()
+            trials.deleteLater()
+
     def test_a_name_becomes_a_usable_file_stem(self):
         assert wf.safe_name("wt / tone review") == "wt _ tone review"
         with pytest.raises(ValueError):

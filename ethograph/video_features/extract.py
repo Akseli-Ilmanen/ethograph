@@ -248,8 +248,9 @@ def extract_s3d(
                 progress(consumed)
 
     if cfg.mode == "windows":
-        parts = list(window_features(_embedder(model, dev, cfg.precision), chunks(), plan.stack_frames, cfg.batch))
-        feats = torch.cat(parts).cpu().numpy() if parts else np.zeros((0, stage.channels), dtype=np.float32)
+        windows = window_features(_embedder(model, dev, cfg.precision), chunks(), plan.stack_frames, cfg.batch)
+        parts = [p.cpu() for p in windows]
+        feats = torch.cat(parts).numpy() if parts else np.zeros((0, stage.channels), dtype=np.float32)
     else:
         centres, positions = dense_positions(_trunk(model, stage_name, dev, cfg.precision), stage, chunks(), cfg.chunk)
         feats = dense_to_frames(centres, positions, consumed, plan.stack_frames)

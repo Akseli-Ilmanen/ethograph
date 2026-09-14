@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from qtpy.QtCore import QMimeData, QSize, Qt, Signal
 from qtpy.QtGui import QColor, QDrag
 from qtpy.QtWidgets import (
@@ -53,7 +54,7 @@ from ethograph.labels.intervals import (
     subject_mask,
 )
 from ethograph.labels.plots import plot_confidence_pdf
-from ethograph.labels.predictions import PredictionsStore, merge_as_labels
+from ethograph.labels.predictions import PredictionSet, PredictionsStore, add_prediction_set, merge_as_labels
 from ethograph.labels.tsv_store import get_trial_from_tsv, load_labels_tsv
 
 # Glyphs used to indicate the kind of a label in the table.
@@ -196,9 +197,7 @@ class LabelsWidget(QWidget):
         self.current_labels_pos: int | None = None  # DataFrame index of selected interval
         self.current_labels: int | None = None  # ID of currently selected
         self.current_labels_is_prediction: bool = False  # Whether selected  is from predictions
-        # Edge-triggered: warn once when Predictions loses its Top1/Top2 slot to
-        # shown branches, not on every redraw. Reset once a slot is free again.
-        self._predictions_slot_warned = False
+        self._selected_prediction_path: Path | None = None
 
         # Edit mode state
         self.old_labels_pos: int | None = None  # Original interval index when editing
@@ -360,7 +359,7 @@ class LabelsWidget(QWidget):
             self.data_widget.update_main_plot(preserve_x_range=True)
         self.refresh_labels_shapes_layer()
 
-    def plot_all_labels(self, intervals_df, predictions_df=None):
+    def plot_all_labels(self, intervals_df, prediction_dfs=None):
         """Plot all labels for current trial based on interval data.
 
         Builds the per-slot draw config (Main / Top1 / Top2) from the
@@ -368,21 +367,20 @@ class LabelsWidget(QWidget):
 
         Args:
             intervals_df: DataFrame with onset_s, offset_s, labels, individual columns
-            predictions_df: Optional prediction intervals DataFrame
+            prediction_dfs: Prediction panel → the rows it shows
         """
         if self.plot_container is None:
             return
 
-        slots = self._compute_label_slots(intervals_df, predictions_df)
+        slots = self._compute_label_slots(intervals_df, prediction_dfs or {})
         self.plot_container.draw_all_labels(slots)
 
-    def _compute_label_slots(self, intervals_df, predictions_df):
-        """Build draw-ready slot dicts from shown branches (fixed positions) + predictions.
+    def _compute_label_slots(self, intervals_df, prediction_dfs):
+        """Build draw-ready slot dicts from shown branches (fixed positions) + prediction panels.
 
         Branch 0 always draws "main" (full), branch 1 "top1", branch 2 "top2" —
         each only if that branch exists and its visibility checkbox is on.
-        Predictions (toggled separately) fill whichever of top1/top2 isn't
-        already occupied by a shown branch.
+        Each prediction panel gets one full-height slot drawn on it alone.
         """
         state = self.app_state
         slots: list[dict] = []
@@ -401,19 +399,8 @@ class LabelsWidget(QWidget):
                     continue
                 slots.append({"df": intervals_df, "label_ids": branch_ids, "position": position})
 
-        if state._show_predictions_overlay and predictions_df is not None and not predictions_df.empty:
-            occupied = {slot["position"] for slot in slots}
-            pred_position = "top1" if "top1" not in occupied else ("top2" if "top2" not in occupied else None)
-            if pred_position is not None:
-                slots.append({"df": predictions_df, "label_ids": None, "position": pred_position})
-                self._predictions_slot_warned = False
-            elif not self._predictions_slot_warned:
-                self._predictions_slot_warned = True
-                notify(
-                    "Predictions has no free strip — Top1 and Top2 are both taken by shown branches. "
-                    "Hide a branch to make room.",
-                    severity="warning",
-                )
+        for panel, df in prediction_dfs.items():
+            slots.append({"df": df, "label_ids": None, "position": "main", "plots": [panel]})
 
         return slots
 
@@ -875,7 +862,7 @@ class LabelsWidget(QWidget):
             notify(str(e), severity="error")
             return
         self._pin_curve_run(folder)
-        self._finish_predictions_import(labels_df, store, folder)
+        self._finish_predictions_import(labels_df, store, store.tsv_path)
 
     def _pin_curve_run(self, folder: str) -> None:
         """A folder picked here by hand is the frame-review confidence source too.
@@ -911,28 +898,33 @@ class LabelsWidget(QWidget):
         except (FileNotFoundError, ValueError) as e:
             notify(str(e), severity="error")
             return
-        self._finish_predictions_import(labels_df, None, path)
+        self._finish_predictions_import(labels_df, None, Path(path))
 
-    def _finish_predictions_import(self, labels_df, store, source_text: str):
+    def _finish_predictions_import(self, labels_df, store, path: Path):
         """A predictions set was loaded — dispatch on the panel's Load-as combo.
 
         "Import as labels" writes it into the working labels themselves and
-        never touches the overlay state; everything below is the overlay
-        ("compare with ground truth") path.
+        never touches the prediction panels; everything below is the overlay
+        ("compare with ground truth") path: the file joins
+        ``app_state.prediction_sets`` and gets its own panel, one per file.
         """
         if self.io_widget.pred_load_mode() == "labels":
-            self._import_predictions_as_labels(labels_df, source_text)
+            self._import_predictions_as_labels(labels_df, str(path))
             return
         threshold = self.io_widget.pred_confidence_threshold_spin.value()
+        self.app_state.prediction_sets = add_prediction_set(
+            self.app_state.prediction_sets, PredictionSet(path, labels_df, store)
+        )
         self.app_state.pred_labels_df = labels_df
         self.app_state.pred_store = store
         self.app_state.pred_confidence_threshold = threshold
 
-        self.app_state._show_predictions_overlay = True
+        if self.plot_container is not None and self.plot_container.prediction_panel_for(path) is None:
+            self.plot_container.add_panel("predictions", prediction_path=path)
         if self.data_widget:
             self.data_widget.refresh_trials_confidence()
         self.io_widget.pred_confidence_pdf_btn.setEnabled(store is not None)
-        self.io_widget.pred_file_path_edit.setText(source_text)
+        self.io_widget.pred_file_path_edit.setText(str(path))
 
         if self.data_widget:
             self.data_widget.update_main_plot(preserve_x_range=True)
@@ -1349,7 +1341,7 @@ class LabelsWidget(QWidget):
             if button == Qt.LeftButton and not self.ready_for_label_click:
                 if click_trial != self.app_state.trials_sel:
                     self._switch_trial_for_click(click_trial)
-                self._check_labels_click(t_rel, individual)
+                self._check_labels_click(t_rel, individual, clicked_plot)
 
         except (KeyError, IndexError, ValueError, AttributeError) as e:
             logger.error("Error in plot click handling: %s", e)
@@ -1429,7 +1421,7 @@ class LabelsWidget(QWidget):
             return False
         return self._mappings[lid].get("event_type", EVENT_TYPE_STATE) == EVENT_TYPE_POINT
 
-    def _check_labels_click(self, t_clicked: float, individual: str) -> bool:
+    def _check_labels_click(self, t_clicked: float, individual: str, panel=None) -> bool:
         """Check if the click is on an existing interval or point, and select it.
 
         **Any label the user can see is selectable** — the gate is the shown
@@ -1441,14 +1433,17 @@ class LabelsWidget(QWidget):
         :meth:`_edit_label` refuse a selection outside the active branch, and
         the clicked class is only adopted for drawing when it is editable.
 
-        A click that misses every branch falls through to the shown
-        Predictions overlay (:meth:`_check_predictions_click`) — clicking a
-        predicted segment selects it too, so V plays back *that* segment.
+        A click on a prediction panel selects among that panel's predictions
+        instead (:meth:`_check_predictions_click`), so V plays back *that*
+        segment.
 
         Args:
             t_clicked: Time in seconds of the click
             individual: Individual name to check
+            panel: The panel clicked
         """
+        if getattr(panel, "panel_type", None) == "predictions":
+            return self._check_predictions_click(t_clicked, individual, panel.prediction_path)
         df = self.app_state.label_intervals
         if df is not None and not df.empty:
             active_ids = self.app_state.active_label_ids
@@ -1488,26 +1483,28 @@ class LabelsWidget(QWidget):
                 self._adopt_clicked_class(labels)
                 return True
 
-        return self._check_predictions_click(t_clicked, individual)
+        return False
 
-    def _check_predictions_click(self, t_clicked: float, individual: str) -> bool:
-        """Same lookup as :meth:`_check_labels_click`, over the shown Predictions overlay.
+    def _prediction_rows(self, path: Path | None) -> pd.DataFrame | None:
+        """The current trial's rows of the imported prediction file *path*."""
+        prediction_set = next((s for s in self.app_state.prediction_sets if s.path == path), None)
+        if prediction_set is None:
+            return None
+        df = prediction_set.labels_df
+        if "trial" in df.columns:
+            df = df[df["trial"] == self.app_state.trials_sel]
+        return df
+
+    def _check_predictions_click(self, t_clicked: float, individual: str, path: Path | None) -> bool:
+        """Same lookup as :meth:`_check_labels_click`, over one prediction panel's file.
 
         Predictions are read-only — no branch/mapping, no class adoption,
         and :meth:`_delete_label`/:meth:`_edit_label` refuse a prediction
         selection — but they select and drive V playback just the same.
-        Only searched while the overlay is actually shown: a click where a
-        hidden prediction sits should not select it.
         """
-        if not self.app_state._show_predictions_overlay:
-            return False
-        df = self.app_state.pred_labels_df
+        df = self._prediction_rows(path)
         if df is None or df.empty:
             return False
-        if "trial" in df.columns:
-            df = df[df["trial"] == self.app_state.trials_sel]
-            if df.empty:
-                return False
 
         tolerance_s = self._point_click_tolerance_s()
         idx = find_point_at(df, t_clicked, individual, tolerance_s)
@@ -1519,6 +1516,7 @@ class LabelsWidget(QWidget):
             self.current_labels = int(row["labels"])
             self.current_labels_pos = idx
             self.current_labels_is_prediction = True
+            self._selected_prediction_path = path
             self.highlight_spaceplot.emit(self._to_display(t), self._to_display(t))
             return True
 
@@ -1530,6 +1528,7 @@ class LabelsWidget(QWidget):
             self.current_labels = labels
             self.current_labels_pos = idx
             self.current_labels_is_prediction = True
+            self._selected_prediction_path = path
             self.highlight_spaceplot.emit(self._to_display(onset_s), self._to_display(offset_s))
             return True
         return False
@@ -1947,9 +1946,7 @@ class LabelsWidget(QWidget):
             return
 
         if self.current_labels_is_prediction:
-            df = self.app_state.pred_labels_df
-            if df is not None and "trial" in df.columns:
-                df = df[df["trial"] == self.app_state.trials_sel]
+            df = self._prediction_rows(self._selected_prediction_path)
         else:
             df = self.app_state.label_intervals
         if df is None or self.current_labels_pos not in df.index:

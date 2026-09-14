@@ -686,8 +686,7 @@ class CircleConfig:
     Off by default (``weight: 0``). Pulls same-class frames' logit vectors
     together and pushes different-class ones apart, independent of the frame
     cross-entropy above — see :class:`~ethograph.segment.losses.CircleLoss`.
-    Ported from an older CETNet training script
-    (``segment/archive/cetnet_encoder.py``), which applied it to an encoder
+    Ported from an older CETNet training script, which applied it to an encoder
     trunk's own normalised feature map; that layer is not part of the current
     registry contract (:class:`~ethograph.segment.models.ModelOutput`), so
     here it reads the class logits instead — the one per-frame representation

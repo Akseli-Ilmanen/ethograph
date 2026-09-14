@@ -7,6 +7,8 @@ a label the user could plainly see and had just clicked.  The gate is now the
 labels are drawn with stay scoped to the active branch.
 """
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -15,6 +17,7 @@ pytest.importorskip("qtpy")
 from ethograph.gui.app_state import ObservableAppState  # noqa: E402
 from ethograph.gui.widgets_labels import LabelsWidget  # noqa: E402
 from ethograph.labels.intervals import empty_intervals  # noqa: E402
+from ethograph.labels.predictions import PredictionSet  # noqa: E402
 
 # Branch 0 holds label 1, branch 1 holds label 2.
 MAPPINGS = {
@@ -37,8 +40,7 @@ class _State:
         self.label_intervals = _intervals()
         self.trials_sel = 0
         self.video = None
-        self._show_predictions_overlay = False
-        self.pred_labels_df = None
+        self.prediction_sets: list[PredictionSet] = []
 
     def set_trial_intervals(self, _trial, df):
         self.label_intervals = df
@@ -60,6 +62,7 @@ class _Labels:
 
     _check_labels_click = LabelsWidget._check_labels_click
     _check_predictions_click = LabelsWidget._check_predictions_click
+    _prediction_rows = LabelsWidget._prediction_rows
     _is_editable_label = LabelsWidget._is_editable_label
     _adopt_clicked_class = LabelsWidget._adopt_clicked_class
     _refuse_foreign_branch = LabelsWidget._refuse_foreign_branch
@@ -75,6 +78,7 @@ class _Labels:
         self.current_labels = None
         self.current_labels_pos = None
         self.current_labels_is_prediction = False
+        self._selected_prediction_path = None
         self.old_labels_pos = None
         self.old_labels = None
         self.ready_for_label_click = False
@@ -162,36 +166,49 @@ def test_editing_another_branchs_label_is_refused(widget):
 
 
 # ---------------------------------------------------------------------------
-# Predictions: a click that misses every branch falls through to the
-# Predictions overlay, but only while it is shown; selecting one never lets
-# it be deleted or edited.
+# Predictions: each imported file is its own panel. A click on that panel
+# selects among that file's predictions only; a click elsewhere never does;
+# selecting one never lets it be deleted or edited.
 # ---------------------------------------------------------------------------
 
+RUN_A = Path("run_a_predictions.tsv")
+RUN_B = Path("run_b_predictions.tsv")
 
-def _predictions() -> pd.DataFrame:
-    rows = [{"trial": 0, "onset_s": 6.0, "offset_s": 7.0, "labels": 1, "individual": "bird1", "event_type": "state"}]
+
+class _PredictionPanel:
+    panel_type = "predictions"
+
+    def __init__(self, path: Path):
+        self.prediction_path = path
+
+
+def _predictions(label: int = 1) -> pd.DataFrame:
+    rows = [
+        {"trial": 0, "onset_s": 6.0, "offset_s": 7.0, "labels": label, "individual": "bird1", "event_type": "state"}
+    ]
     return pd.concat([empty_intervals(), pd.DataFrame(rows)], ignore_index=True)
 
 
-def test_a_prediction_is_selectable_when_the_overlay_is_shown(widget):
-    widget.app_state._show_predictions_overlay = True
-    widget.app_state.pred_labels_df = _predictions()
-    assert widget._check_labels_click(6.5, "bird1") is True
-    assert widget.current_labels_is_prediction is True
-    assert widget.current_labels == 1
+@pytest.fixture
+def with_predictions(widget):
+    widget.app_state.prediction_sets = [PredictionSet(RUN_A, _predictions(1)), PredictionSet(RUN_B, _predictions(2))]
+    return widget
 
 
-def test_a_prediction_is_unclickable_while_the_overlay_is_hidden(widget):
-    widget.app_state._show_predictions_overlay = False
-    widget.app_state.pred_labels_df = _predictions()
-    assert widget._check_labels_click(6.5, "bird1") is False
-    assert widget.current_labels_pos is None
+def test_a_click_on_a_prediction_panel_selects_that_files_prediction(with_predictions):
+    assert with_predictions._check_labels_click(6.5, "bird1", _PredictionPanel(RUN_B)) is True
+    assert with_predictions.current_labels_is_prediction is True
+    assert with_predictions.current_labels == 2, "the click selected another file's prediction"
 
 
-def test_a_selected_prediction_cannot_be_deleted_or_edited(widget):
-    widget.app_state._show_predictions_overlay = True
-    widget.app_state.pred_labels_df = _predictions()
-    widget._check_labels_click(6.5, "bird1")
+def test_a_prediction_is_unclickable_from_a_label_panel(with_predictions):
+    assert with_predictions._check_labels_click(6.5, "bird1") is False
+    assert with_predictions.current_labels_pos is None
+
+
+def test_a_selected_prediction_cannot_be_deleted_or_edited(with_predictions):
+    widget = with_predictions
+    widget._check_labels_click(6.5, "bird1", _PredictionPanel(RUN_A))
 
     widget._delete_label()
     assert widget.current_labels_pos is not None, "a prediction was deleted"

@@ -48,6 +48,9 @@ class _FakeAppState:
     def get_selections(self) -> dict:
         return dict(self._selections)
 
+    def panel_individual(self, _panel):
+        return None
+
 
 class _Panel(PanelStateMixin):
     def __init__(self, app_state):

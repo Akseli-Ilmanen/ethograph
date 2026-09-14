@@ -577,15 +577,18 @@ def describe_filter(entry: dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Storage: ~/.ethograph/defaults/workflows/{name}.yaml
+# Storage: {project}/workflows/{name}.yaml, else ~/.ethograph/defaults/workflows/{name}.yaml
 # ---------------------------------------------------------------------------
 
 _NAME_RE = re.compile(r"[^A-Za-z0-9 _.-]+")
+WORKFLOWS_DIRNAME = "workflows"
 
 
-def workflows_root() -> Path:
-    """The workflow store used while no project is open, ``~/.ethograph/defaults/workflows``."""
-    return defaults_dir("workflows")
+def workflows_root(project: Path | None = None) -> Path:
+    """``{project}/workflows``, or ``~/.ethograph/defaults/workflows`` while no project is open."""
+    if project is not None:
+        return Path(project) / WORKFLOWS_DIRNAME
+    return defaults_dir(WORKFLOWS_DIRNAME)
 
 
 def safe_name(name: str) -> str:
@@ -596,41 +599,41 @@ def safe_name(name: str) -> str:
     return cleaned
 
 
-def workflow_path(name: str) -> Path:
-    return workflows_root() / f"{safe_name(name)}.yaml"
+def workflow_path(name: str, project: Path | None = None) -> Path:
+    return workflows_root(project) / f"{safe_name(name)}.yaml"
 
 
-def list_workflows() -> list[str]:
+def list_workflows(project: Path | None = None) -> list[str]:
     """Names of every stored workflow, alphabetically."""
-    root = workflows_root()
+    root = workflows_root(project)
     if not root.is_dir():
         return []
     return sorted(p.stem for p in root.glob("*.yaml"))
 
 
-def load_workflow(name: str) -> CurationWorkflow:
-    path = workflow_path(name)
+def load_workflow(name: str, project: Path | None = None) -> CurationWorkflow:
+    path = workflow_path(name, project)
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     raw.setdefault("name", path.stem)
     return CurationWorkflow.from_dict(raw)
 
 
-def save_workflow(workflow: CurationWorkflow) -> Path:
-    path = workflow_path(workflow.name)
+def save_workflow(workflow: CurationWorkflow, project: Path | None = None) -> Path:
+    path = workflow_path(workflow.name, project)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(workflow.to_dict(), sort_keys=False), encoding="utf-8")
     return path
 
 
-def delete_workflow(name: str) -> None:
-    workflow_path(name).unlink(missing_ok=True)
+def delete_workflow(name: str, project: Path | None = None) -> None:
+    workflow_path(name, project).unlink(missing_ok=True)
 
 
-def rename_workflow(old: str, new: str) -> Path:
+def rename_workflow(old: str, new: str, project: Path | None = None) -> Path:
     """Store *old* under *new* and drop the old file."""
-    workflow = load_workflow(old)
+    workflow = load_workflow(old, project)
     workflow.name = safe_name(new)
-    path = save_workflow(workflow)
+    path = save_workflow(workflow, project)
     if safe_name(old) != workflow.name:
-        delete_workflow(old)
+        delete_workflow(old, project)
     return path

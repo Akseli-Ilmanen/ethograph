@@ -16,6 +16,7 @@ Panels (every one optional):
 """
 
 import base64
+from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
@@ -50,7 +51,7 @@ from .plots_base import ThrottleDebounce, right_gutter_width
 from .plots_console import ConsolePanel
 from .plots_ephystrace import EphysTracePlot
 from .plots_heatmap import HeatmapPlot
-from .plots_labelribbon import LabelRibbonPlot
+from .plots_labelribbon import LabelRibbonPlot, PredictionPanelPlot
 from .plots_lineplot import LinePlot
 from .plots_overlay import OverlayManager
 from .plots_raster import RasterPlot
@@ -115,6 +116,8 @@ _DYNAMIC_PANEL_SPECS = {
     # Label timeline: an empty axis carrying only the label overlay, for a
     # session (video-only) that would otherwise have no panel to show labels on.
     "labels": {"cls": LabelRibbonPlot, "group": "labels", "overlay_rescale": False},
+    # One imported prediction file per panel, stacked above the time series.
+    "predictions": {"cls": PredictionPanelPlot, "group": "predictions", "overlay_rescale": False},
 }
 
 #: Share of the dock host a label timeline takes by default — a ribbon, not a plot.
@@ -473,6 +476,13 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def _label_ribbons(self) -> list:
         return self._panels_of_group("labels")
 
+    def prediction_panels(self) -> list:
+        return self._panels_of_group("predictions")
+
+    def prediction_panel_for(self, path: Path):
+        """The panel showing the prediction file *path*, or ``None``."""
+        return next((p for p in self.prediction_panels() if p.prediction_path == path), None)
+
     def has_open_plots(self) -> bool:
         """Whether any time-axis panel is on screen (the console is not one)."""
         return any(True for _ in self._visible_plots())
@@ -490,7 +500,8 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         return self._fallback
 
     def _open_docks(self) -> list[QDockWidget]:
-        docks = [self._dyn_docks[p] for p in self._audio_plots() if not self._dyn_docks[p].isHidden()]
+        docks = [self._dyn_docks[p] for p in self.prediction_panels() if not self._dyn_docks[p].isHidden()]
+        docks += [self._dyn_docks[p] for p in self._audio_plots() if not self._dyn_docks[p].isHidden()]
         docks += [self._dyn_docks[p] for p in self._neo_plots() if not self._dyn_docks[p].isHidden()]
         docks += [self._panel_docks[n] for n, _ in _PANEL_ORDER if not self._panel_docks[n].isHidden()]
         docks += [self._dyn_docks[p] for p in self._panels_of_group("feature") if not self._dyn_docks[p].isHidden()]
@@ -613,6 +624,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         mic_name: str | None = None,
         stream_name: str | None = None,
         channels: list[int] | None = None,
+        prediction_path: Path | None = None,
     ):
         """Create a NEW panel instance of any dynamic type ("lineplot",
         "heatmap", "audiotrace", "spectrogram", "neo").
@@ -642,6 +654,11 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             title = f"Neo — {stream_name}" if stream_name else "Neo"
         elif group == "labels":
             title = "Labels"
+        elif group == "predictions":
+            if prediction_path is None:
+                raise ValueError("A predictions panel needs the prediction file it shows")
+            plot.prediction_path = prediction_path
+            title = f"Predictions — {prediction_path.name}"
         else:
             plot.mic_name = mic_name
             title = f"{panel_type} — {mic_name}" if mic_name else panel_type
@@ -651,7 +668,12 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         dock.setObjectName(f"panel_{panel_type}_{self._dyn_counter}")
         self._dyn_docks[plot] = dock
         anchor = self._anchor_dock_for_group(group)
-        if anchor is None:
+        top = self._top_open_dock() if group == "predictions" and anchor is None else None
+        if top is not None:
+            # No "insert above" in Qt: split below the top dock, then move it below the new one.
+            self._dock_host.splitDockWidget(top, dock, Qt.Vertical)
+            self._dock_host.splitDockWidget(dock, top, Qt.Vertical)
+        elif anchor is None:
             self._dock_host.addDockWidget(Qt.LeftDockWidgetArea, dock)
         else:
             self._dock_host.splitDockWidget(anchor, dock, Qt.Vertical)
@@ -663,7 +685,9 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             plot.vb.sigYRangeChanged.connect(lambda *_, p=plot: self.overlay_manager.rescale_for_plot(p))
         if panel_type == "spectrogram":
             plot.bufferUpdated.connect(self.spectrogram_buffer_updated)
-        clicked_key = {"feature": "feature", "neo": "neo", "labels": "feature"}.get(group, "audio")
+        clicked_key = {"feature": "feature", "neo": "neo", "labels": "feature", "predictions": "feature"}.get(
+            group, "audio"
+        )
         plot.plot_clicked.connect(lambda _: setattr(self, "_last_clicked_panel", clicked_key))
         if group == "feature":
             plot.plot_clicked.connect(lambda _, p=plot: self.panel_content_changed.emit(p))
@@ -803,7 +827,17 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
                 dock = self._dyn_docks[plot]
                 if not dock.isHidden() and not dock.isFloating():
                     return dock
+        if group == "predictions":
+            for plot in reversed(self.prediction_panels()):
+                dock = self._dyn_docks[plot]
+                if not dock.isHidden() and not dock.isFloating():
+                    return dock
+            return None
         return self._last_open_dock()
+
+    def _top_open_dock(self) -> QDockWidget | None:
+        """The first docked panel of the default vertical stack."""
+        return next((d for d in self._open_docks() if not d.isFloating()), None)
 
     def _last_open_dock(self) -> QDockWidget | None:
         """The bottom anchor for a new feature dock (default vertical stack)."""
@@ -813,6 +847,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             [self._panel_docks[n] for n, _ in _PANEL_ORDER],
             [self._dyn_docks[p] for p in self._neo_plots()],
             [self._dyn_docks[p] for p in self._audio_plots()],
+            [self._dyn_docks[p] for p in self.prediction_panels()],
         ):
             for dock in reversed(docks):
                 if not dock.isHidden() and not dock.isFloating():
@@ -966,11 +1001,11 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         A label timeline has no content, but its x-extent follows the trial
         the same way.
         """
-        for plot in self._panels_of_group("feature") + self._label_ribbons():
+        for plot in self._panels_of_group("feature") + self._label_ribbons() + self.prediction_panels():
             plot.update_plot(**kwargs)
 
     def _get_all_plots(self) -> list:
-        return super()._get_all_plots() + list(self.line_plots) + self._label_ribbons()
+        return super()._get_all_plots() + list(self.line_plots) + self._label_ribbons() + self.prediction_panels()
 
     def sizeHint(self):
         return QSize(self.width(), PLOT_CONTAINER_SIZE_HINT_HEIGHT)
@@ -1011,7 +1046,8 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def _visible_panel_widgets(self) -> list:
         """All open panels in visual order: audio + fixed panels + feature panels."""
         return (
-            self._audio_plots()
+            self.prediction_panels()
+            + self._audio_plots()
             + self._neo_plots()
             + [self._get_panel_widget(n) for n in self._visible_panel_names()]
             + self._panels_of_group("feature")
@@ -1190,7 +1226,10 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         # Every audio / neo instance gets its group's ratio share.
         audio_raw = [(self._dyn_docks[plot], ratios.get(plot.panel_type, 0.2) * total) for plot in self._audio_plots()]
         neo_raw = [(self._dyn_docks[plot], ratios.get("neo", 0.15) * total) for plot in self._neo_plots()]
-        ribbon_raw = [(self._dyn_docks[plot], _LABEL_RIBBON_RATIO * total) for plot in self._label_ribbons()]
+        ribbon_raw = [
+            (self._dyn_docks[plot], _LABEL_RIBBON_RATIO * total)
+            for plot in self.prediction_panels() + self._label_ribbons()
+        ]
 
         raw = {}
         for name in visible_names:
@@ -1382,6 +1421,9 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             if not self._dyn_docks[plot].isHidden():
                 yield plot
         for plot in self._neo_plots():
+            if not self._dyn_docks[plot].isHidden():
+                yield plot
+        for plot in self.prediction_panels():
             if not self._dyn_docks[plot].isHidden():
                 yield plot
         for name, _ in _PANEL_ORDER:

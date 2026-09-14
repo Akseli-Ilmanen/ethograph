@@ -168,6 +168,21 @@ def test_io_subpanel_popups_are_separate(gui):
     assert io.export_panel.isHidden()  # only shown while borrowed by its popup
 
 
+def test_import_predictions_popup_offers_merge_once_labels_exist(moll2025_gui):
+    """The merge checkbox reflects the session when the popup opens, not when the panel was built."""
+    shell, meta = moll2025_gui
+    io = meta.io_widget
+    assert meta.app_state._all_labels_df is not None and not meta.app_state._all_labels_df.empty
+    io.pred_load_mode_combo.setCurrentIndex(io.pred_load_mode_combo.findData("labels"))
+    io.pred_merge_checkbox.setVisible(False)  # as built before any labels were loaded
+
+    shell._top_bar._popup_section("import_predictions", "Import predictions", io.pred_group)
+    try:
+        assert io.pred_merge_checkbox.isVisible()
+    finally:
+        shell._top_bar._open_popups["import_predictions"].close()
+
+
 def test_plot_click_shows_only_relevant_sections(birdpark_gui):
     """Clicking a plot shows only that plot's sections (minimal sidebar)."""
     meta = birdpark_gui[1]

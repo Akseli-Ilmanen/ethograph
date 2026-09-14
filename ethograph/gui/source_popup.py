@@ -101,6 +101,8 @@ def allowed_plot_types(kind: str, name: str, app_state) -> list[str]:
         return ["Python console"]
     if kind == "labels":
         return ["Label timeline"]
+    if kind == "predictions":
+        return ["Prediction timeline"]
     if kind == "phy":
         return ["Phy TraceView"]
     if kind == "feature":
@@ -318,6 +320,8 @@ class SourcePopup(QWidget):
         # gets to see the labels it places.
         self._add_header("Labels")
         self._add_source("Label timeline", "labels", "labels")
+        for prediction_set in getattr(self.app_state, "prediction_sets", None) or []:
+            self._add_source(f"Predictions ({prediction_set.name})", "predictions", str(prediction_set.path))
 
         self._add_header("Media")
         for cam in cameras:

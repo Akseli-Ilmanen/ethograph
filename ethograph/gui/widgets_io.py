@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QEvent, QObject, Qt
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -457,6 +457,8 @@ class IOWidget(QWidget):
         pred_group_layout.setContentsMargins(4, 4, 4, 4)
         pred_group_layout.setSpacing(2)
         self.pred_group.setLayout(pred_group_layout)
+        # Labels may have loaded since the panel was built: re-read them whenever it is shown.
+        self.pred_group.installEventFilter(self)
 
         # Row 0: load-as — overlay (the default, non-destructive) or
         # straight into the working labels, plus (import-as-labels only, and
@@ -569,6 +571,11 @@ class IOWidget(QWidget):
         # The saved mode may already be "labels" — reflect that immediately
         # rather than waiting for the combo's first change.
         self._update_pred_merge_visibility()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if watched is self.pred_group and event.type() == QEvent.Type.Show:
+            self._update_pred_merge_visibility()
+        return super().eventFilter(watched, event)
 
     def pred_load_mode(self) -> str:
         """``"overlay"`` or ``"labels"`` — the Predictions panel's Load-as combo."""

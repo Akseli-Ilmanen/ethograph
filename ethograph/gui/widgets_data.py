@@ -1182,6 +1182,9 @@ class DataWidget(QWidget):
         self.app_state.source_collection = None
         self.app_state._all_labels_df = None
         self.app_state.clear_label_history()
+        self.app_state.prediction_sets = []
+        self.app_state.pred_labels_df = None
+        self.app_state.pred_store = None
         self.app_state.labels_confidence_ds = None
         self.catalog = None
         self.app_state.ready = False
@@ -1641,23 +1644,9 @@ class DataWidget(QWidget):
 
         # Overlays row 1 — label branches are shown/hidden via their own
         # checkboxes in the Labels panel (branch 0 = Full, 1 = Top1, 2 =
-        # Top2, fixed). This row carries the one Predictions toggle: it both
-        # occupies whichever of Top1/Top2 isn't already used by a shown
-        # branch, and gates the dotted prediction-confidence curve on every
-        # feature plot (`PanelStateMixin.show_predictions_enabled`) — there is
-        # no separate per-panel predictions checkbox.
+        # Top2, fixed); imported predictions each get their own panel.
         row1 = self.overlays_row1_layout
         row1.setSpacing(2)
-
-        self.show_predictions_overlay_checkbox = QCheckBox("Predictions")
-        self.show_predictions_overlay_checkbox.setChecked(False)
-        self.show_predictions_overlay_checkbox.setToolTip(
-            "Show imported predictions: as a top strip on the labels track (fills Top1, or "
-            "Top2 if Top1 is used by a branch) and as the dotted confidence curve on feature plots"
-        )
-        self.show_predictions_overlay_checkbox.stateChanged.connect(self._on_show_predictions_overlay_changed)
-        row1.addWidget(self.show_predictions_overlay_checkbox)
-
         row1.addStretch()
 
         # Overlays row 2 — secondary scalar overlays.
@@ -1692,10 +1681,6 @@ class DataWidget(QWidget):
         if not self.show_confidence_checkbox.isChecked():
             self.plot_container.hide_confidence_plot()
             return
-        host = self.plot_container.get_current_plot()
-        if hasattr(host, "show_predictions_enabled") and not host.show_predictions_enabled():
-            self.plot_container.hide_confidence_plot()
-            return
         trial = self.app_state.trials_sel
         store = getattr(self.app_state, "pred_store", None)
         if store is not None:
@@ -1718,23 +1703,6 @@ class DataWidget(QWidget):
                 self.plot_container.show_confidence_plot(label_confidence)
                 return
         self.plot_container.hide_confidence_plot()
-
-    # ------------------------------------------------------------------
-    # Predictions overlay toggle
-    # ------------------------------------------------------------------
-    # Label branches themselves are shown/hidden via their own checkboxes in
-    # the Labels panel (fixed position: branch 0 = Full, 1 = Top1, 2 = Top2).
-
-    def _on_show_predictions_overlay_changed(self, qt_state):
-        """User toggled the Predictions checkbox — the single control for both
-        the labels-track interval strip and every feature plot's dotted
-        prediction-confidence curve. Persist + redraw both."""
-        self.app_state._show_predictions_overlay = Qt.CheckState(qt_state) == Qt.Checked
-        if self.app_state.ready:
-            self.update_label_plot()
-            self._update_confidence_overlay()
-        if self.labels_widget is not None:
-            self.labels_widget.refresh_labels_shapes_layer()
 
     def cycle_neural_view(self):
         if not hasattr(self, "neural_view_combo") or not self.neural_view_combo.isVisible():
@@ -2736,11 +2704,13 @@ class DataWidget(QWidget):
                 _set(ckey, selections[ckey])
         _set("colors", color)
 
-        # 'All' checkboxes: a dimension absent from this plot's selections means
-        # "show all values" for it → the box is checked and its combo disabled.
+        # 'All' checkboxes: a multi-value dimension of this plot's feature absent
+        # from its selections means "show all values" for it → the box is checked
+        # and its combo disabled. A dim the feature lacks is never "All".
+        dims = plot._panel_feature_dims()
         all_checkboxes = getattr(self, "all_checkboxes", {})
         for akey, checkbox in all_checkboxes.items():
-            is_all = akey not in selections
+            is_all = akey not in selections and len(dims.get(akey, ())) > 1
             checkbox.blockSignals(True)
             checkbox.setChecked(is_all)
             checkbox.blockSignals(False)
@@ -3272,9 +3242,10 @@ class DataWidget(QWidget):
         return select_subject(df, actor)
 
     def update_label_plot(self):
-        # Labels are hidden when no branch is shown and predictions aren't toggled on.
+        # Labels are hidden when no branch is shown and no predictions panel is open.
         state = self.app_state
-        any_slot = bool(state._branch_shown and any(state._branch_shown.values())) or state._show_predictions_overlay
+        prediction_panels = self.plot_container.prediction_panels() if self.plot_container else []
+        any_slot = bool(state._branch_shown and any(state._branch_shown.values())) or bool(prediction_panels)
         if not any_slot:
             if self.plot_container:
                 for plot in self.plot_container._get_all_plots():
@@ -3317,19 +3288,26 @@ class DataWidget(QWidget):
         # so a pinned panel shows its own individual's labels.
         self.plot_container.subject_filter = self._subject_intervals
 
-        predictions_df = None
-        if self.app_state.pred_labels_df is not None:
-            trial = self.app_state.trials_sel
-            df = self.app_state.pred_labels_df
-            predictions_df = df[df["trial"] == trial] if "trial" in df.columns else df
-            if predictions_df is not None and self.app_state.display_basis == "session":
-                shift = self.app_state.to_display(trial, 0.0)
-                if shift:
-                    predictions_df = predictions_df.copy()
-                    predictions_df["onset_s"] = predictions_df["onset_s"] + shift
-                    predictions_df["offset_s"] = predictions_df["offset_s"] + shift
+        sets = {s.path: s for s in self.app_state.prediction_sets}
+        prediction_dfs = {
+            panel: self._display_predictions(sets[panel.prediction_path].labels_df)
+            for panel in prediction_panels
+            if panel.prediction_path in sets
+        }
+        self.labels_widget.plot_all_labels(intervals_df, prediction_dfs)
 
-        self.labels_widget.plot_all_labels(intervals_df, predictions_df)
+    def _display_predictions(self, df: pd.DataFrame) -> pd.DataFrame:
+        """The current trial's prediction rows, on the display clock."""
+        trial = self.app_state.trials_sel
+        if "trial" in df.columns:
+            df = df[df["trial"] == trial]
+        if self.app_state.display_basis == "session":
+            shift = self.app_state.to_display(trial, 0.0)
+            if shift:
+                df = df.copy()
+                df["onset_s"] = df["onset_s"] + shift
+                df["offset_s"] = df["offset_s"] + shift
+        return df
 
     # ------------------------------------------------------------------
     # Video / audio / pose / space

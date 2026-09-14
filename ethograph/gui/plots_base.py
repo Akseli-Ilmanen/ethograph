@@ -191,6 +191,9 @@ class PanelStateMixin:
 
     #: Initial feature for a panel created with an explicit feature (drag-drop).
     feature_override: str | None = None
+    #: Dims a fresh panel leaves "All": none for a line plot (one trace until
+    #: the user ticks All), one for the heatmap, whose rows are that dim.
+    default_free_dims: int = 0
 
     @property
     def panel_state(self) -> dict:
@@ -258,6 +261,7 @@ class PanelStateMixin:
         stored per panel as the absence of that dim.
         """
         if key == "features":
+            old_dims = self._panel_feature_dims()
             self.panel_state["feature"] = value
             # A new feature brings its own dims. Selections carried over from the
             # old one can leave two or more of them free, and `sel_valid` then
@@ -265,7 +269,9 @@ class PanelStateMixin:
             # Re-reducing here is what makes a feature with dims the session did
             # not start with (`keypoints_position`: space/keypoint/individual)
             # plottable the moment it is picked.
-            self.panel_state["selections"] = self._sanitize_selections(self._effective_selections())
+            sels = self._effective_selections()
+            new_dims = {d: v for d, v in self._panel_feature_dims().items() if d not in old_dims}
+            self.panel_state["selections"] = self._sanitize_selections(self._pin_defaults(sels, new_dims))
         elif key == "colors":
             self.panel_state["color"] = value
         else:
@@ -279,11 +285,6 @@ class PanelStateMixin:
             # ends up with two free dims, and the very next update_plot() then
             # trips sel_valid's (time,)/(time, dim) assertion.
             self.panel_state["selections"] = self._sanitize_selections(sels)
-
-    def show_predictions_enabled(self) -> bool:
-        """Whether the dotted prediction-confidence curve is shown, per the
-        single global "Predictions" toggle in the Labels widget."""
-        return bool(getattr(self.app_state, "_show_predictions_overlay", False))
 
     def panel_settings(self) -> dict:
         """This panel's coords-section settings in serializable form (used by
@@ -313,6 +314,27 @@ class PanelStateMixin:
         if settings.get("color"):
             self.panel_state["color"] = settings["color"]
         self.set_pinned_individual(settings.get("individual"))
+
+    def _panel_feature_dims(self) -> dict:
+        loader = getattr(self.app_state, "data_loader", None)
+        feature = self._effective_feature()
+        if loader is None or not feature:
+            return {}
+        return loader.feature_dims(feature)
+
+    def _pin_defaults(self, selections: dict, dims: dict) -> dict:
+        """*selections* with the multi-value *dims* it leaves free pinned to their first value,
+        keeping :attr:`default_free_dims` of them "All".
+
+        Only a dim with a sidebar combo is pinned: one without (a ``stack``'s
+        columns) could never be set back to "All".
+        """
+        sels = dict(selections)
+        combos = self.app_state.data_loader.catalog.combos if dims else {}
+        free = [d for d, vals in dims.items() if d not in sels and len(vals) > 1 and d in combos]
+        for d in free[self.default_free_dims :]:
+            sels[d] = dims[d][0]
+        return sels
 
     def _sanitize_selections(self, selections: dict) -> dict:
         """Make *selections* valid for this panel's feature.
@@ -364,7 +386,9 @@ class PanelStateMixin:
         # Sanitized on the way in: the globals are a mirror of whichever panel
         # was last edited, so they can leave this panel's feature with more than
         # one free dim — which renders as nothing at all.
-        ps.setdefault("selections", self._sanitize_selections(self.app_state.get_selections()))
+        if "selections" not in ps:
+            defaults = self._pin_defaults(self.app_state.get_selections(), self._panel_feature_dims())
+            ps["selections"] = self._sanitize_selections(defaults)
         ps.setdefault("color", getattr(self.app_state, "colors_sel", None))
 
 

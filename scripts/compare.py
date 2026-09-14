@@ -21,8 +21,8 @@ mstcn. It all lands in one timestamped ``compare.pdf``:
     That model's own evaluation — the IoU illustration, its overall metrics,
     its IoU distribution with a TP/FP/FN inset, its boundary-delta histogram,
     and its class-wise F1 raw vs post-processed. It is the successor to the
-    archived ``segment/archive/eval_plotting.py``'s ``plot_metrics_best_model``,
-    reading a run directory instead of that script's ``test_results_epoch{N}.npy``.
+    old ``plot_metrics_best_model``, reading a run directory instead of
+    ``test_results_epoch{N}.npy``.
 
 ``search()`` and ``cross_validate()`` draw the comparison figure over their own
 trials and folds (``searches/{name}/eval_comparison.pdf``,

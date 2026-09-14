@@ -108,7 +108,7 @@ class LabelDrawingMixin:
         return candidates
 
     def _plot_type_key(self, plot) -> str:
-        if getattr(plot, "panel_type", None) == "labels":
+        if getattr(plot, "panel_type", None) in ("labels", "predictions"):
             return "labels"
         if plot in (getattr(self, "spectrogram_plots", ()) or ()):
             return "spectrogram"
@@ -141,6 +141,9 @@ class LabelDrawingMixin:
           - ``label_ids``: filter set; if None, every non-zero label is drawn (used
             for the predictions slot, since it isn't gated by branch membership).
           - ``position``: ``"main"``, ``"top1"`` or ``"top2"``.
+          - ``plots`` (optional): the only plots this slot draws on — a prediction
+            panel's own slot. A slot without it draws on every plot except
+            prediction panels.
         """
         if not self.label_mappings:
             return
@@ -163,7 +166,11 @@ class LabelDrawingMixin:
             mode = self._label_overlay_mode(plot)
             if mode == LABEL_OVERLAY_MODE_NONE:
                 continue
+            is_prediction_panel = getattr(plot, "panel_type", None) == "predictions"
             for slot in slots or []:
+                targets = slot.get("plots")
+                if (plot not in targets) if targets is not None else is_prediction_panel:
+                    continue
                 df = slot["df"] if subject_filter is None else subject_filter(slot["df"], plot)
                 self._draw_intervals_on_plot(
                     plot,
@@ -171,7 +178,8 @@ class LabelDrawingMixin:
                     label_ids=slot.get("label_ids"),
                     position=slot["position"],
                     mode=mode,
-                    top_positions_present=top_positions_present,
+                    top_positions_present=top_positions_present if targets is None else frozenset(),
+                    register=targets is None,
                 )
 
     def _clear_labels_on_plot(self, plot):
@@ -193,6 +201,7 @@ class LabelDrawingMixin:
         position="main",
         mode=LABEL_OVERLAY_MODE_FULL,
         top_positions_present: frozenset = frozenset(),
+        register: bool = True,
     ):
         if not hasattr(plot, "label_items"):
             plot.label_items = []
@@ -200,9 +209,11 @@ class LabelDrawingMixin:
             return
         has_event_type = "event_type" in intervals_df.columns
         has_method = "labeling_method" in intervals_df.columns
-        index = getattr(self, "_label_item_index", None)
-        if index is None:
-            index = self._label_item_index = {}
+        # A prediction's items are never restyled by a label's curation.
+        index: dict[tuple, list] = {}
+        if register:
+            index = getattr(self, "_label_item_index", None) or {}
+            self._label_item_index = index
         for _, row in intervals_df.iterrows():
             labels = int(row["labels"])
             if labels == 0:

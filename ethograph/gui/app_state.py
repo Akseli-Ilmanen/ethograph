@@ -186,8 +186,11 @@ class AppStateSpec:
         "ds_temp": (xr.Dataset | None, None, False),
         "dt": (xr.DataTree | None, None, False),
         "labels_confidence_ds": (xr.Dataset | None, None, False),
+        # Every imported prediction file, each shown in its own panel;
+        # pred_labels_df / pred_store are the most recent one (confidence curve, PDF).
+        "prediction_sets": (list, [], False),
         "pred_labels_df": (pd.DataFrame | None, None, False),
-        "pred_store": (object, None, False),
+        "pred_store": (object | None, None, False),
         "pred_confidence_threshold": (float, 0.75, True),
         "pred_segment_confidence_threshold": (float, 0.6, True),
         # Import Predictions panel's "Load as" combo — "overlay" or "labels".
@@ -642,7 +645,6 @@ class ObservableAppState(QObject):
         # each branch's overlay visibility is independent of whether it's active.
         self._active_branch: int = 0
         self._branch_shown: dict[int, bool] = {0: True}
-        self._show_predictions_overlay: bool = False
         # The panel the user last clicked, whose pinned individual (if any)
         # is the one a new label is about. See selected_individual().
         self._subject_panel = None
@@ -1005,7 +1007,6 @@ class ObservableAppState(QObject):
             "_label_mappings",
             "_active_branch",
             "_branch_shown",
-            "_show_predictions_overlay",
         ):
             super().__setattr__(name, value)
             return

@@ -1,6 +1,12 @@
 (target-label-branches)=
 # Label branches
 
+```{warning}
+Don't open a new branch unless you need one. Segmentation models treat each
+branch as a separate classification problem, so use a second branch only when
+labels genuinely overlap in time (e.g. transient events vs. longer states).
+```
+
 Within a single branch, each timepoint can only belong to **one label** ---
 overlapping labels in the same branch are trimmed/split automatically.
 Branches let you keep **independent, overlapping tiers** (e.g. transient
@@ -20,7 +26,7 @@ time, and changes you make in one branch can never change labels in another.
 
 ## Fixed branch positions
 
-There are at most **3 branches**, each with a fixed draw position:
+You can have up to **3 branches**, shown simultaneously, each with a fixed draw position:
 
 | Branch | Draws as |
 |--------|----------|
@@ -36,8 +42,8 @@ branch's labels can be created, deleted (Ctrl+D) or edited (Ctrl+E) ---
 labels on other branches are protected while shown.
 
 Any label you can **see** can be clicked to select it, whatever branch is
-active, so playback (V) works on every shown branch — and on a shown
-**prediction** too, once nothing else matches the click. Selecting a label
+active, so playback (V) works on every shown branch — and on a
+**prediction** too, clicked on its own predictions panel. Selecting a label
 from another branch leaves the active branch alone: it does not change which
 label class a new label would be drawn with, and Ctrl+D / Ctrl+E on it are
 refused with a message telling you to activate its branch first. A selected
@@ -51,10 +57,8 @@ deletable.
 - Drag a label row between branch tables to move it; the mapping file
   updates automatically.
 - **+** adds a new branch (max 3); **x** deletes one (must be empty first).
-- Imported **predictions** are a separate overlay, toggled with the
-  "Predictions" checkbox, filling whichever of Top 1/Top 2 isn't already used
-  by a shown branch. If both are already taken by shown branches, predictions
-  get no strip and a warning says so — hide a branch to make room.
+- Imported **predictions** never use a branch strip: each file gets its own
+  panel (see {ref}`target-prediction-panels`).
 
 ---
 

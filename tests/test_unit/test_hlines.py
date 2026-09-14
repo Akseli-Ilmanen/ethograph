@@ -42,6 +42,9 @@ def plot(qtbot):
         def get_selections(self):
             return {}
 
+        def panel_individual(self, _panel):
+            return None
+
     state = _State()
     state.ds = ds
     widget = LinePlot(state)

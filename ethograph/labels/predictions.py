@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -82,6 +83,30 @@ def merge_as_labels(existing: pd.DataFrame | None, predicted: pd.DataFrame) -> p
     predicted_keys = predicted[key_cols].astype(str).apply(tuple, axis=1)
     new_rows = predicted[~predicted_keys.isin(existing_keys)]
     return pd.concat([existing, new_rows], ignore_index=True)
+
+
+@dataclass
+class PredictionSet:
+    """One imported prediction file: its rows, and the run's store when it came from a run folder."""
+
+    path: Path
+    labels_df: pd.DataFrame
+    store: PredictionsStore | None = None
+
+    @property
+    def name(self) -> str:
+        return self.path.name
+
+
+def add_prediction_set(sets: list[PredictionSet], new: PredictionSet) -> list[PredictionSet]:
+    """*sets* with *new* appended — re-importing the same file replaces it in place."""
+    out = list(sets)
+    for i, existing in enumerate(out):
+        if existing.path == new.path:
+            out[i] = new
+            return out
+    out.append(new)
+    return out
 
 
 class PredictionsStore:

@@ -47,7 +47,7 @@ ethograph launch
 > **`ethograph` not recognized?** uv has not added its bin directory to your
 > `PATH` yet. Run `uv tool update-shell`, then open a **new** terminal.
 
-For installing into a dedicated virtual environment and optional extras, and troubleshooting, see
+For installing into a dedicated virtual environment,segmentation models, and troubleshooting, see
 [installation guide](https://akseli-ilmanen.github.io/ethograph/getting_started/installation.html).
 
 After launching, there are some

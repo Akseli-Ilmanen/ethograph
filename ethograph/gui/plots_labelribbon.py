@@ -12,6 +12,7 @@ Labels tab asks for one and nothing else is open.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
 from .plots_base import BasePlot
@@ -41,3 +42,14 @@ class LabelRibbonPlot(BasePlot):
 
     def _apply_y_constraints(self):
         self.vb.setLimits(yMin=0.0, yMax=1.0)
+
+
+class PredictionPanelPlot(LabelRibbonPlot):
+    """One imported prediction file drawn on its own axis, so several can be compared stacked."""
+
+    panel_type = "predictions"
+    panel_group = "predictions"
+
+    def __init__(self, app_state, parent=None):
+        super().__init__(app_state, parent)
+        self.prediction_path: Path | None = None

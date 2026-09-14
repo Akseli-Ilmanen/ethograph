@@ -31,6 +31,7 @@ of doing any of it.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Callable
 
 from qtpy.QtCore import QObject, Qt, QTimer, Signal
@@ -61,6 +62,7 @@ from qtpy.QtWidgets import (
 from ethograph.gui.dialog_label_gridview import ConfidenceEdit, format_confidence, open_gui_panels
 from ethograph.gui.dialog_onset_model import predict_onsets
 from ethograph.gui.notify import notify
+from ethograph.gui.project import project_dir_of
 from ethograph.labels import onset_model as om
 from ethograph.labels import workflow as wf
 
@@ -1147,10 +1149,13 @@ class CurationWorkflowDialog(QDialog):
     # Workflow list
     # ------------------------------------------------------------------
 
+    def _project(self) -> Path | None:
+        return project_dir_of(self.app_state)
+
     def _refresh_workflows(self, select: str | None = None) -> None:
         self.workflow_list.blockSignals(True)
         self.workflow_list.clear()
-        names = wf.list_workflows()
+        names = wf.list_workflows(self._project())
         self.workflow_list.addItems(names)
         self.workflow_list.blockSignals(False)
         if not names:
@@ -1161,7 +1166,7 @@ class CurationWorkflowDialog(QDialog):
 
     def _on_workflow_selected(self, name: str) -> None:
         self._flush_save()  # the one being left behind, before it is replaced
-        self._set_workflow(wf.load_workflow(name) if name else None)
+        self._set_workflow(wf.load_workflow(name, self._project()) if name else None)
 
     def _set_workflow(self, workflow: wf.CurationWorkflow | None) -> None:
         self._workflow = workflow
@@ -1187,7 +1192,7 @@ class CurationWorkflowDialog(QDialog):
         """
         self._save_timer.stop()
         if self._workflow is not None and self._dirty:
-            wf.save_workflow(self._workflow)
+            wf.save_workflow(self._workflow, self._project())
         self._dirty = False
 
     def _new(self) -> None:
@@ -1198,7 +1203,7 @@ class CurationWorkflowDialog(QDialog):
     def _new_named(self, name: str) -> None:
         """Create an empty workflow called *name* and select it."""
         workflow = wf.CurationWorkflow(name=wf.safe_name(name))
-        wf.save_workflow(workflow)
+        wf.save_workflow(workflow, self._project())
         self._refresh_workflows(select=workflow.name)
 
     def _duplicate(self) -> None:
@@ -1209,7 +1214,7 @@ class CurationWorkflowDialog(QDialog):
             return
         copy = wf.CurationWorkflow.from_dict(self._workflow.to_dict())
         copy.name = wf.safe_name(name)
-        wf.save_workflow(copy)
+        wf.save_workflow(copy, self._project())
         self._refresh_workflows(select=copy.name)
 
     def _rename(self) -> None:
@@ -1233,7 +1238,7 @@ class CurationWorkflowDialog(QDialog):
         if new == old:
             return
         self._flush_save()  # pending edits belong to the old file
-        wf.rename_workflow(old, new)
+        wf.rename_workflow(old, new, self._project())
         # So a later flush targets the new file rather than resurrecting the old.
         self._workflow.name = new
         self._refresh_workflows(select=new)
@@ -1250,7 +1255,7 @@ class CurationWorkflowDialog(QDialog):
         """Remove the selected workflow's file and leave nothing behind."""
         if self._workflow is None:
             return
-        wf.delete_workflow(self._workflow.name)
+        wf.delete_workflow(self._workflow.name, self._project())
         # Dropped before the selection changes: the flush that a selection
         # change triggers must have nothing left to write back.
         self._workflow = None

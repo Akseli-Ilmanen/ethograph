@@ -171,12 +171,14 @@ dev = [
 
 # Documentation
 docs = [
-    "sphinx",
+    "sphinx>=7.4.7,<9",
     "sphinx-autobuild",
+    "jinja2>=3.1.4",
     "pydata-sphinx-theme",
     "sphinx-autodoc-typehints",
     "sphinx-sitemap",
     "sphinx-design",
+    "sphinxcontrib-bibtex",
     "sphinxcontrib-mermaid",
     "myst-nb",
     "linkify-it-py",

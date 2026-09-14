@@ -356,7 +356,7 @@ def _train_run(
         raise ValueError(
             f"train.drop_kinds={tcfg.drop_kinds} but no column of {config.data_dir} declares a kind, "
             "so the ablation would silently train the full model. Describe the session's variables "
-            "and materialise again (see docs/source/advanced/variable_schema.md)."
+            "(ethograph.io.schema.describe) and materialise again."
         )
     keep = store.layout.keep_mask(tcfg.drop_kinds)
     layout = store.layout if keep.all() else store.layout.subset(keep)

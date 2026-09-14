@@ -591,6 +591,12 @@ class MetaWidget(GridSectionContainer):
             plot = pc.add_panel("labels")
             if plot is not None:
                 self._activate_panel(plot, "labels")
+        elif kind == "predictions":
+            if pc.prediction_panel_for(Path(name)) is not None:
+                notify(f"{Path(name).name} already has a predictions panel.", "warning")
+                return
+            plot = pc.add_panel("predictions", prediction_path=Path(name))
+            self._activate_panel(plot, "predictions")
 
     def ensure_label_ribbon(self):
         """Open a label timeline when nothing else is on screen.

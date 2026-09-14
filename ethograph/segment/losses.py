@@ -263,7 +263,7 @@ def _label_similarity_pairs(normed: torch.Tensor, label: torch.Tensor) -> tuple[
     """Every unordered pair's cosine similarity, split by whether the two frames share a label.
 
     *normed* is ``(N, C)``, already L2-normalised per row. Ported from
-    CETNet's ``convert_label_to_similarity`` (``segment/archive/cetnet_encoder.py``).
+    CETNet's ``convert_label_to_similarity``.
     """
     similarity = (normed @ normed.transpose(1, 0)).view(-1)
     same_label = label.unsqueeze(1) == label.unsqueeze(0)
