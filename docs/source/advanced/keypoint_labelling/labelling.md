@@ -88,4 +88,3 @@ CoTracker3 is evaluated at for this task (6 labelled frames of 60 {cite:p}`pan20
 the end; plain `←` / `→` still move one frame at a time. There is no key for the
 *previous* suggestion: the list is a queue to work down, and clicking a row of
 the points table seeks to any frame, suggested or not.
-

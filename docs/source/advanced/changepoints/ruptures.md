@@ -39,4 +39,3 @@ needed.
 4. Click **Detect**.
 
 ---
-

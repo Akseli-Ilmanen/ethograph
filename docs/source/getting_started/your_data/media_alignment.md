@@ -258,7 +258,7 @@ video_interface.alignment["session"].set_times(frame_pulse_times)
 
 The assertion is the whole point of the wiring. A few pulses short means the
 camera dropped frames; a few too many means the recorder started before the
-camera. 
+camera.
 
 #### 5. Write `session.nwb`
 

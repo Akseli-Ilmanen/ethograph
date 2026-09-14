@@ -154,4 +154,3 @@ next to your curated labels, and confirming one makes it `curated`. See
   in turn — so every session ends up with predictions from a model that never
   saw it, not just ses-03. That is {doc}`index`.
 - **Every key**, with its default: {doc}`config`.
-

@@ -41,4 +41,3 @@ Ethograph uses changepoints in two ways:
 - {doc}`correction` — label-boundary correction pipeline
 
 ---
-

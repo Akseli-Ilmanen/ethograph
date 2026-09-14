@@ -241,4 +241,3 @@ Predictions land beside each session, never under `root`:
 `{session}/labels/predictions_spot_{run}_{timestamp}/` holds the labels TSV
 (`{stem}_predictions.tsv`) the GUI imports and `onset_curves.npz`, the curves frame-by-frame review
 draws.
-

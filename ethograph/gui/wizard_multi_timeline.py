@@ -377,9 +377,7 @@ def draw_session_timeline(
     if not acq_names and not ephys_rows and not feature_rows:
         return 0.0
 
-    all_row_names = (
-        list(acq_names) + [label for label, _, _ in ephys_rows] + [label for label, _ in feature_rows]
-    )
+    all_row_names = list(acq_names) + [label for label, _, _ in ephys_rows] + [label for label, _ in feature_rows]
     n_rows = len(all_row_names)
     rows_rev = list(reversed(all_row_names))
     y_ticks = [(i + 0.5, rows_rev[i]) for i in range(n_rows)]
