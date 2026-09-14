@@ -429,7 +429,7 @@ def _train_run(
             x, y, mask, candidates = x.to(device), y.to(device), mask.to(device), candidates.to(device)
             optimizer.zero_grad()
             output = as_output(model(x, mask))
-            loss, parts = objective(output, y, mask, candidates)
+            loss, parts = objective(output, y, candidates)
             loss.backward()
             if tcfg.grad_clip > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=tcfg.grad_clip)

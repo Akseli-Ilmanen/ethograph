@@ -529,9 +529,9 @@ def test_write_factorial_pdf_uneven_grid(tmp_path: Path):
     classes = ClassTable([0, 1, 2], ["background", "a", "b"])
     cells = [
         FactorCell("g1", "mlp", "all", [_fake_run_eval("f1", 1), _fake_run_eval("f2", 2)]),
-        FactorCell("g1", "mlp", "no_circle", [_fake_run_eval("f1", 3)]),
+        FactorCell("g1", "mlp", "all_no_cp", [_fake_run_eval("f1", 3)]),
         FactorCell("g2", "mlp", "all", [_fake_run_eval("f1", 4), _fake_run_eval("f2", 5)]),
-        FactorCell("g2", "mstcn", "no_circle", [_fake_run_eval("f1", 6), _fake_run_eval("f2", 7)]),
+        FactorCell("g2", "mstcn", "all_no_cp", [_fake_run_eval("f1", 6), _fake_run_eval("f2", 7)]),
     ]
     path = write_factorial_pdf(tmp_path / "factorial.pdf", cells, classes, title="fake", stamp="stamp")
     assert path.is_file() and path.stat().st_size > 0

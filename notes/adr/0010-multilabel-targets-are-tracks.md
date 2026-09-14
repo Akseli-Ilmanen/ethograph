@@ -49,6 +49,11 @@ Metrics flatten each channel into its own exclusive sample
 `classwise[c + 1]` is channel `c`'s F1. The circle loss, which pairs frames
 by their one label, is refused for a multi-label run.
 
+> **Amended 2026-09-14**: the circle loss has since been removed from the
+> codebase (it earned nothing in `scripts/bench.py`'s ablation), so the last
+> sentence no longer describes any code. `train.circle` is a retired config
+> key — see `RETIRED_KEYS` in `ethograph/segment/config.py`.
+
 ## Consequences
 
 - One config key decides the target; the exclusive path is byte-for-byte

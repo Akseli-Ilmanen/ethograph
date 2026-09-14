@@ -1,14 +1,8 @@
-"""The training loss: DLC2Action's own :class:`MS_TCN_Loss`, plus the circle term.
+"""The training loss: DLC2Action's own :class:`MS_TCN_Loss`.
 
-:func:`build_objective` is what training calls. It composes the two terms a
-run can have, each weighted by the config and each reported separately so a
-metrics row says where the loss went:
-
-* the **frame** loss below (``train.frame_weight``) — upstream's, near enough
-  unmodified;
-* the **circle** loss (``train.circle.weight``) — a deep metric-learning term
-  over the finest-stage logits, see :class:`CircleLoss`. Architecture-agnostic,
-  since every registered model produces logits.
+:func:`build_objective` is what training calls. It wraps the **frame** loss
+below (weighted by ``train.frame_weight``) and reports its value separately,
+so a metrics row says where the loss went.
 
 The frame loss itself is cross-entropy (optionally focal) plus upstream's consistency term — the
 truncated MSE between consecutive log-probabilities, weighted by ``alpha`` —
@@ -60,7 +54,6 @@ import math
 from typing import Any
 
 import torch
-import torch.nn.functional as F
 import yaml
 from torch import nn
 
@@ -259,6 +252,7 @@ def build_loss(
     return TruncatedMSTCNLoss(num_classes=n_classes, tau=tau, candidate_gate=bool(gate), **kwargs), settings
 
 
+<<<<<<< HEAD
 def _label_similarity_pairs(normed: torch.Tensor, label: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """Every unordered pair's cosine similarity, split by whether the two frames share a label.
 
@@ -335,8 +329,10 @@ def circle_term(
     return circle_loss(sp, sn)
 
 
+=======
+>>>>>>> 00e34945184bcb6a0de19cf2166a4203aec58d23
 class Objective(nn.Module):
-    """The whole training loss: frame + circle, weighted and itemised.
+    """The whole training loss: the frame term, weighted and itemised.
 
     ``forward`` returns ``(total, parts)`` where *parts* holds each term's own
     value as a plain float — that is what the run's ``metrics.tsv`` and log
@@ -344,45 +340,22 @@ class Objective(nn.Module):
     stopped moving.
     """
 
-    def __init__(
-        self,
-        frame_loss: nn.Module,
-        frame_weight: float = 1.0,
-        circle_loss: CircleLoss | None = None,
-        circle_weight: float = 0.0,
-        circle_max_frames: int | None = None,
-    ) -> None:
+    def __init__(self, frame_loss: nn.Module, frame_weight: float = 1.0) -> None:
         super().__init__()
         self.frame_loss = frame_loss
         self.frame_weight = float(frame_weight)
-        self.circle_loss = circle_loss
-        self.circle_weight = float(circle_weight)
-        self.circle_max_frames = circle_max_frames
 
     def forward(
-        self, output: ModelOutput, y: torch.Tensor, mask: torch.Tensor, candidates: torch.Tensor | None = None
+        self, output: ModelOutput, y: torch.Tensor, candidates: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, dict[str, float]]:
-        total = output.logits.new_zeros(())
-        parts: dict[str, float] = {}
-        if self.frame_weight:
-            if isinstance(self.frame_loss, TruncatedMSTCNLoss):
-                frame = self.frame_loss(output.logits, y, candidates)
-            else:
-                frame = self.frame_loss(output.logits, y)
-            total = total + self.frame_weight * frame
-            parts["frame"] = float(frame.detach())
-        if self.circle_weight:
-            assert self.circle_loss is not None
-            circle = circle_term(self.circle_loss, output.logits, y, mask, self.circle_max_frames)
-            if circle is not None:
-                total = total + self.circle_weight * circle
-                parts["circle"] = float(circle.detach())
-        if not parts:
-            raise ValueError(
-                "Every loss term is switched off (train.frame_weight=0 and train.circle.weight=0) — "
-                "there is nothing to train on."
-            )
-        parts["total"] = float(total.detach())
+        if not self.frame_weight:
+            raise ValueError("train.frame_weight is 0 — there is nothing to train on.")
+        if isinstance(self.frame_loss, TruncatedMSTCNLoss):
+            frame = self.frame_loss(output.logits, y, candidates)
+        else:
+            frame = self.frame_loss(output.logits, y)
+        total = self.frame_weight * frame
+        parts = {"frame": float(frame.detach()), "total": float(total.detach())}
         return total, parts
 
 
@@ -393,29 +366,11 @@ def build_objective(
 
     *layout* is the materialised dataset's full :class:`~ethograph.segment.samples.ColumnLayout`;
     it decides the candidate gate's default (see :func:`build_loss`).
-    *exclusive* is the target's (see :func:`build_loss`); the circle loss
-    compares frames by their one label, so a multi-label run cannot have it.
+    *exclusive* is the target's (see :func:`build_loss`).
     """
     tcfg = config.train
     has_candidates = None if layout is None else bool(layout.candidate_columns().size)
     frame_loss, frame_settings = build_loss(tcfg.loss, n_classes, has_candidates=has_candidates, exclusive=exclusive)
-    ccfg = tcfg.circle
-    if ccfg.weight and not exclusive:
-        raise ValueError(
-            "train.circle.weight > 0 with a multi-label target — the circle loss pairs frames by their one "
-            "class, which a frame with several channels on does not have. Set train.circle.weight: 0."
-        )
-    circle_loss = CircleLoss(m=ccfg.m, gamma=ccfg.gamma) if ccfg.weight else None
-    objective = Objective(
-        frame_loss=frame_loss,
-        frame_weight=tcfg.frame_weight,
-        circle_loss=circle_loss,
-        circle_weight=ccfg.weight,
-        circle_max_frames=ccfg.max_frames,
-    )
-    settings = {
-        "frame_weight": tcfg.frame_weight,
-        "frame": frame_settings,
-        "circle": {"weight": ccfg.weight, "m": ccfg.m, "gamma": ccfg.gamma, "max_frames": ccfg.max_frames},
-    }
+    objective = Objective(frame_loss=frame_loss, frame_weight=tcfg.frame_weight)
+    settings = {"frame_weight": tcfg.frame_weight, "frame": frame_settings}
     return objective, settings

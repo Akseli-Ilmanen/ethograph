@@ -299,25 +299,21 @@ For what each architecture is good at, see {doc}`index`.
 | `f1_thresholds` | `[0.5, 0.75, 0.9]` | IoU thresholds of the segmental F1 scores. |
 | `seed`, `device` | `0`, auto | `device` = `cuda`, `mps`, `cpu`; auto picks the best available. |
 | `drop_kinds` | `[]` | Feature categories to leave out of this run — the ablation axis. `[video_feature]` trains the same model without the video features. Applied to the materialised dataset's columns, so an ablation costs a run rather than a re-materialisation; columns whose `kind` is undeclared are always kept. |
-| `frame_weight` | `1.0` | Weight of `train.loss` in the total. `0` leaves `train.circle` as the only thing training. |
+| `frame_weight` | `1.0` | Weight of `train.loss` in the total. `0` is a `ValueError` — there would be nothing to train on. |
 | `subsample` | `1` | Train and predict at `fs / subsample` — the temporal-resolution axis, run-level like `drop_kinds`, so one materialised dataset serves every rate. Every frame count the run reports (its metrics, its `_probs.npz`) is then in *its* frames, so runs at different rates are only comparable once their predictions are scored back on one grid. Striding, with no anti-alias filter. |
 
 ### Losses
 
-The total objective is a sum of up to two terms, each independently
-switched on by its own weight — `Objective` in
-{mod}`ethograph.segment.losses` computes and itemises them, and every
-weighted term's value lands in `metrics.tsv`/the console log by the name
-below, so a loss that stops moving can be traced to the term that stopped
-moving.
+The objective is the frame term, weighted by `train.frame_weight` —
+`Objective` in {mod}`ethograph.segment.losses` computes and itemises it, and
+its value lands in `metrics.tsv`/the console log, so a loss that stops moving
+can be traced to the term that stopped moving.
 
 | Term | Weight key | Default | Config section | Needs |
 |---|---|---|---|---|
 | frame (CE + consistency) | `train.frame_weight` | `1.0` | `train.loss` | any architecture |
-| circle (metric-learning) | `train.circle.weight` | `0` | `train.circle` | any architecture |
 
-`frame_weight: 0` with `circle.weight` left at `0` is a `ValueError`
-("nothing to train on") — at least one term must be active.
+`frame_weight: 0` is a `ValueError` ("nothing to train on").
 
 ### `train.loss`
 
@@ -346,171 +342,6 @@ on each, live in `ethograph/segment/dlc2action/config/losses.yaml`.
 
 
 **TODO**: See if inverse_frequency weights loss is detrimental
-
-### `train.circle`
-
-A deep metric-learning term over the finest-stage logits (circle loss
-{cite:p}`sun2020circle`) — pulls same-class frames' logit vectors together and pushes
-different-class ones apart, independent of the frame cross-entropy above.
-Architecture-agnostic — every registered model produces logits.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `weight` | `0` | Weight of the circle loss in the total. `0` leaves it untrained — this is the default, so circle loss is off unless you set it. |
-| `m` | `0.25` | Margin: how far inside the unit circle a pair may sit before it counts against the loss. |
-| `gamma` | `128` | Scale applied to the (margin-weighted) similarities before the softplus. |
-| `max_frames` | `2048` | Subsample the batch's frames to at most this many before forming pairs (`O(n^2)` pairs otherwise); `null` = no cap. |
-
-```yaml
-train:
-  circle: {weight: 0.001}   # the weighting it was ported with; 0 (the default) switches it off
-```
-
-#### Choosing a weight
-
-Start at **`0.001`**, with `m` and `gamma` at their defaults. The term is a
-softplus of a log-sum-exp over every same-class and different-class pair,
-scaled by `gamma` = 128, so its raw value runs to tens where the frame
-cross-entropy sits below 1 — the weight is what brings the two onto one
-scale, and `0.001` is exactly the weighting the CETNet training script this
-was ported from used (`0.001 * CircleLoss(m=0.25, gamma=128)`). One
-difference to keep in mind: that script applied it to the encoder's feature
-map, whereas here it reads the class logits, a vector only as wide as the
-number of classes, so the same weight is a starting point rather than a
-tuned answer. Whether the term earns its place is what `scripts/bench.py`
-measures — every architecture, with and without it, cross-validated per
-individual.
-
-### `train.augment`
-
-| Key | Default | Meaning |
-|---|---|---|
-| `noise_std` | `0` | Gaussian noise, as a fraction of each column's std (`normalise=0` columns untouched). |
-| `stretch` | `null` | Random temporal stretch range, e.g. `[0.8, 1.2]` (labels follow by nearest frame). |
-| `mirror` | `false` | Negate the first component of every vector group with probability ½. |
-| `rotate_deg` | `0` | Rotate every vector group's (x, y) by a random angle within ±this. |
-
-Vector groups are columns spanning the `space` dim of one vector (position,
-velocity, …); the layout records them, so a dataset without coordinates
-silently gets no geometric augmentation.
-
-### `train.split`
-
-Three ratios. Your trials — every trial of every session, after
-`trials.where` — are pooled, shuffled once and cut into the three roles.
-
-| Role | What it is for |
-|---|---|
-| **train** | The model learns from these. |
-| **val** | The model never learns from these. They decide **which epoch's weights you keep**, and they are the objective a `search` maximises. |
-| **test** | Touched exactly once, at the very end, to report a number you can trust. |
-
-| Key | Default | Meaning |
-|---|---|---|
-| `train_fraction` | `0.6` | Fraction of trials the model learns from. |
-| `val_fraction` | `0.2` | Fraction held back to choose settings and checkpoints. `0` turns validation off. |
-| `test_fraction` | `0.2` | Fraction read once, at the end. |
-| `seed` | `0` | Change it to re-draw the split. |
-| `holdout_sessions` | `[]` | Sessions held out *whole* as `test` — a cross-validation fold. Written per fold by `project.cross_validate()`; see below. |
-| `holdout_trials` | `[]` | Trial ids held out whole as `test`, in every session — a trial-level fold. Written per fold by `project.cross_validate(n_folds=k)`; exclusive with `holdout_sessions`. |
-
-The three fractions must sum to **1**, and an override that breaks that is an
-error rather than a silent renormalisation. Splitting is by **whole trial**,
-never mid-trial, so no trial ever appears in two roles.
-
-```{warning}
-The random split depends on the full list of trials, so **adding a session
-reshuffles the existing ones**, same `seed` or not. Two runs across a growing
-dataset are therefore not strictly comparable — some of what was training data
-in the first run is validation data in the second.
-
-When you need runs to be comparable, pin the split instead of drawing it:
-`holdout_sessions` names sessions held out whole, which is exactly what a
-cross-validation fold does. Each run records the split it used in
-`runs/{run}/splits/*.bundle`, so you can always check after the fact which
-trials went where.
-```
-
-#### `holdout_sessions` — one fold
-
-Name one or more sessions and **all** of their trials become `test`, whatever
-the fractions say; the sessions that remain are split train/val by
-`val_fraction` renormalised against `train_fraction`. That is one
-leave-one-session-out fold, and `project.cross_validate()` writes it once per
-session rather than asking you to. You rarely set this key by hand — it is
-documented because you will see it in a fold's `runs/{run}/config.yaml`.
-
-#### `holdout_trials` — one trial fold
-
-The same thing one level down, for a project whose sessions cannot be held
-out — one session of neural decoding (`features.neural`), whose units exist
-in that recording only. Every sample of a trial id named here is `test`, in
-every session; the rest is split train/val as above. A trial id no session
-has is an error, since a fold that holds out nothing would score the
-training set. `project.cross_validate(n_folds=k)` deals every trial into
-exactly one of `k` folds and writes this per fold; you will see it in a
-fold's `runs/{run}/config.yaml`.
-
-#### What validation actually buys you
-
-Every `eval_every` epochs the run scores the validation trials and writes a row
-to `metrics.tsv`. Three things then happen:
-
-- **The best epoch is saved as `best.pt`.** Training a segmentation model past
-  its best is normal — it keeps fitting the training trials while getting worse
-  on new ones. Validation is what notices, so you keep the good weights instead
-  of whatever the last epoch happened to produce. `best.pt` is what
-  `project.inference()` uses.
-- **You get the metric curve** in `metrics.tsv` — one row per validation —
-  which is how you find the right `epochs` for a later run. Each row also
-  carries a test readout (raw and post-processed, `test_raw_*`/`test_post_*`)
-  computed on the current epoch's weights — a training-time diagnostic only;
-  it never influences `best.pt`, which stays keyed on validation.
-- **`search` reads the best of that curve** as its objective, and can abandon a
-  trial whose curve is already behind the others (`search.prune`).
-
-Runs are never cut short: `epochs` is the budget and every run trains it out.
-Set `val_fraction: 0` and you lose all three — `best.pt` becomes the last
-epoch, no `metrics.tsv` is written, and a search refuses to start. The log says
-so:
-
-```
-No validation samples — no metrics curve, and best.pt is the last epoch.
-```
-
-#### Choosing values
-
-- **Leave it at 60/20/20 while you are developing**, which is what a search
-  needs: a validation set big enough that the score it hands Optuna means
-  something, and a test set that stays untouched underneath it.
-- **Drop `val_fraction` to `0` once the settings are settled.** That is the
-  cross-validation default: the hyperparameters, `epochs` included, came out of
-  the search, so every remaining trial is worth training on.
-- **Set it to `0` when you have very few labelled trials.** The count is
-  rounded, so `0.2` gives you **1** validation trial anywhere between 3 and 7
-  trials, and **0** at 2 — a score from one trial is noise, and will pick a
-  checkpoint more or less at random. Below roughly 15 trials, prefer a fixed
-  `epochs` over a validation set you cannot trust. Check the count in the log:
-
-  ```
-  Samples — train: 24, val: 6, test: 8
-  ```
-
-Validation trials come out of the pool the model would otherwise learn from, so
-raising `val_fraction` gives it less to learn from. `0.2` of a reasonable
-number of trials is a sensible balance.
-
-#### Getting a number you can trust
-
-`val` is used repeatedly to make choices — every search trial reads it — so its
-score is optimistic: it is the best of many peeks, not an unbiased estimate.
-`test` is what you report, and nothing selects on it.
-
-The strongest version is a session the model has never seen at all — a
-different recording day or animal — since trials from the same session share
-lighting, camera position and the animal's mood, and a random trial split
-flatters the model accordingly. That is cross-validation, and it is the second
-stage of the workflow rather than a setting: see {doc}`index`.
 
 ## `search`
 

@@ -237,7 +237,7 @@ def test_loss_follows_the_target(project: Path):
     y[:, :, 15:] = PAD_TARGET
     mask = torch.ones(3, 1, 20)
     mask[:, :, 15:] = 0
-    total, parts = objective(ModelOutput(logits=logits), y, mask, torch.zeros(3, 20, dtype=torch.bool))
+    total, parts = objective(ModelOutput(logits=logits), y, torch.zeros(3, 20, dtype=torch.bool))
     assert torch.isfinite(total) and "frame" in parts
     total.backward()
     assert torch.isfinite(logits.grad).all()
@@ -247,8 +247,6 @@ def test_spelling_exclusive_against_the_target_is_refused(project: Path):
     cfg = load_config(project / "config.yaml", ["train.loss.exclusive=true"])
     with pytest.raises(ValueError, match="contradicts the target"):
         build_objective(cfg, 4, exclusive=False)
-    with pytest.raises(ValueError, match="circle"):
-        build_objective(load_config(project / "config.yaml", ["train.circle.weight=0.5"]), 4, exclusive=False)
 
 
 # ---------------------------------------------------------------------------

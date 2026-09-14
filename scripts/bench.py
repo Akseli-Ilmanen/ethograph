@@ -1,10 +1,9 @@
 """Which loss terms and which feature groups earn their place — per individual, per architecture.
 
-Two axes, crossed where it is worth the GPU. The **objective** is a sum of up
-to three terms (``docs/source/models/segment/config.md``, *Losses*): the
-frame cross-entropy, the consistency (smoothing) term it carries at
-``train.loss.alpha``, and the circle metric-learning term at
-``train.circle.weight``. The **inputs** fall into three declared kinds
+Two axes, crossed where it is worth the GPU. The **objective** is the frame
+cross-entropy plus the consistency (smoothing) term it carries at
+``train.loss.alpha`` (``docs/source/models/segment/config.md``, *Losses*).
+The **inputs** fall into three declared kinds
 (``ethograph/io/schema.py``): the pose-derived columns
 (``kinematic_feature``), the S3D video columns (``video_feature``), and the
 columns ``features.changepoint_features`` expands out of the raw changepoint
@@ -16,7 +15,6 @@ An arm is one point of :data:`LOSS_TERMS` × :data:`FEATURE_SETS`, named
 =====================  ==================================================
 ``all``                every term, every column — the reference
 ``no_smooth``          ``train.loss.alpha = 0`` — no consistency term
-``no_circle``          ``train.circle.weight = 0`` — no circle term
 ``all_no_cp``          every term, no changepoint columns
 ``all_no_kin``         every term, no pose columns (S3D + changepoints only)
 ``all_no_s3d``         every term, no video columns
@@ -25,15 +23,11 @@ An arm is one point of :data:`LOSS_TERMS` × :data:`FEATURE_SETS`, named
 ``no_smooth_no_s3d``   no consistency term, no video columns
 =====================  ==================================================
 
-The circle term is crossed with nothing: :data:`LOSS_TERMS` asks whether it
-earns its place at all, and :data:`FEATURE_SETS` is crossed with the two
-objectives worth ablating features under.
-
 Every knob is pinned in every arm rather than read from the project config:
-the "with" values are :data:`SMOOTHING_ALPHA` and :data:`CIRCLE_WEIGHT`, so
-what an arm trained with is in this file and in the run's ``config.yaml``,
-nowhere else. Dropping a feature group is ``train.drop_kinds`` — the
-run-level ablation axis — never a second column list, so one materialised
+the "with" value is :data:`SMOOTHING_ALPHA`, so what an arm trained with is in
+this file and in the run's ``config.yaml``, nowhere else. Dropping a feature
+group is ``train.drop_kinds`` — the run-level ablation axis — never a second
+column list, so one materialised
 dataset per individual serves every arm. That only works if the session
 declares its kinds: run ``python scripts/describe_sessions.py`` once (it
 writes each session's ``.ethograph/schema.yaml``), or
@@ -85,13 +79,13 @@ import yaml
 
 import ethograph as eto
 from ethograph.io.schema import CHANGEPOINT_FEATURE, KINEMATIC_FEATURE, VIDEO_FEATURE
-from ethograph.labels.onset_model import session_id
 from ethograph.segment.crossval import cross_validation_name_for
 from ethograph.segment.inference import PREDICTIONS_PREFIX, prediction_run_dir
 from ethograph.segment.materialise import COLUMNS_FILE, read_layout
 from ethograph.segment.metrics import EVAL_ARRAYS_FILE, TEST_METRICS_FILE
 from ethograph.segment.plotting import FactorCell, load_run_eval, write_factorial_pdf
 from ethograph.segment.samples import ClassTable
+from ethograph.utils.paths import session_id
 
 #: Where the configs live. Set BENCH_CONFIG_DIR to point at another machine's copy.
 CONFIG_DIR = Path(os.environ.get("BENCH_CONFIG_DIR") or Path(__file__).resolve().parents[1] / "data")
@@ -113,16 +107,10 @@ ARCHITECTURES = ["mlp", "c2f_tcn", "c2f_transformer", "mstcn"]
 #: ``all`` and ``no_smooth`` to sit close and read the gap accordingly.
 SMOOTHING_ALPHA = 0.001
 
-#: ``train.circle.weight`` of the arms that keep the circle term — the same
-#: script's ``0.001 * CircleLoss(m=0.25, gamma=128)``; ``m`` and ``gamma`` stay
-#: at those defaults.
-CIRCLE_WEIGHT = 0.001
-
 #: The objective axis: what each arm's loss is made of.
 LOSS_TERMS: dict[str, dict[str, Any]] = {
-    "all": {"train.loss.alpha": SMOOTHING_ALPHA, "train.circle.weight": CIRCLE_WEIGHT},
-    "no_smooth": {"train.loss.alpha": 0.0, "train.circle.weight": CIRCLE_WEIGHT},
-    "no_circle": {"train.loss.alpha": SMOOTHING_ALPHA, "train.circle.weight": 0.0},
+    "all": {"train.loss.alpha": SMOOTHING_ALPHA},
+    "no_smooth": {"train.loss.alpha": 0.0},
 }
 
 #: The input axis: which declared kind each arm withholds. ``""`` keeps every
@@ -136,13 +124,10 @@ FEATURE_SETS: dict[str, list[str]] = {
     "no_s3d": [VIDEO_FEATURE],
 }
 
-#: Which points of ``LOSS_TERMS`` × ``FEATURE_SETS`` are trained. The full
-#: cross is 12 cells per individual per architecture; dropping a feature group
-#: under ``no_circle`` as well would answer nothing the other two do not.
+#: Which points of ``LOSS_TERMS`` × ``FEATURE_SETS`` are trained.
 CROSS: list[tuple[str, str]] = [
     ("all", ""),
     ("no_smooth", ""),
-    ("no_circle", ""),
     ("all", "no_cp"),
     ("all", "no_kin"),
     ("all", "no_s3d"),

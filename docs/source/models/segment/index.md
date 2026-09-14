@@ -568,12 +568,13 @@ individual sits beside the project's (`data/crow1.yaml`: `base: project.yaml`,
 its own four sessions, its own `features.name` — a run draws its split over
 the whole materialised index it reads, so a shared one would train on the
 other individuals), and for each of them and each architecture the bench
-cross-validates three arms: every term, no smoothing (`train.loss.alpha=0`),
-no circle (`train.circle.weight=0`), the "with" weights pinned in the script.
-`data/bench_loss.pdf` then shows segmental F1 per individual, architecture
-and arm — one dot per held-out session — and, per individual × architecture,
-the three arms' IoU distributions, boundary deltas and class-wise F1 side by
-side ({func}`~ethograph.segment.plotting.write_factorial_pdf`). Folds that
+cross-validates the arms of `LOSS_TERMS` × `FEATURE_SETS`: the objective with
+and without smoothing (`train.loss.alpha=0`), crossed with dropping each
+declared feature kind (`train.drop_kinds`), the "with" weight pinned in the
+script. `data/bench_loss.pdf` then shows segmental F1 per individual,
+architecture and arm — one dot per held-out session — and, per individual ×
+architecture, the arms' IoU distributions, boundary deltas and class-wise F1
+side by side ({func}`~ethograph.segment.plotting.write_factorial_pdf`). Folds that
 finished are read back, never retrained; `--report-only` draws without
 training.
 
