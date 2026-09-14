@@ -416,7 +416,8 @@ To open the GUI, run:
    ethograph launch
 
 .. note::
-   For installing into a dedicated virtual environment, optional extras, and **troubleshooting**, see the
+   For installing into a dedicated virtual environment, optional extras (segmentation models,
+   DANDI downloads, …) and **troubleshooting**, see the
    :doc:`installation guide <getting_started/installation>`.
 
 After launching, there are some :doc:`example datasets <examples/index>` you can explore the GUI. To

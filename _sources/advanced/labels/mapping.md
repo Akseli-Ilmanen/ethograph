@@ -62,41 +62,38 @@ See {func}`~ethograph.labels.intervals.load_mapping` and
 
 ---
 
-## Resolution order
+## Where `mapping.txt` lives
 
-A study keeps its vocabulary in **`mapping.txt` at the root of its project
-folder** (the folder chosen on the start page). When the GUI needs a mapping,
-{func}`~ethograph.utils.paths.find_mapping_file` takes the most specific one:
-
-1. `.ethograph/mapping.txt` beside the loaded session, walking up through its
-   parent folders — a session's own copy overrides the study's.
-2. `{project}/mapping.txt` — the project's copy.
-3. `~/.ethograph/defaults/mapping.txt` — the backup every install ships with.
-   With no project folder chosen this is the one in use.
+Define the label vocabulary once per research project: put `mapping.txt` at the
+root of your **project folder** (chosen on the start page), and every session
+you open uses it.
 
 ```
-session_01/.ethograph/mapping.txt                 # a session's own copy: overrides the project
-my_study/mapping.txt                              # the study's vocabulary
-~/.ethograph/defaults/mapping.txt                 # backup: the bundled default
+my_project/
+    ├── mapping.txt                    # the project's label_id → name vocabulary
+    ├── data/                          # optional: your session folders, if you keep them here
+    ├── config/
+    │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
+    │   ├── spot.yaml                  # pixel event-spotting config
+    │   └── space/                     # reference geometries for the Space plot
 ```
 
-When a session's own copy disagrees with the project's, the GUI says so on
-load — the override applies, but never unnoticed.
+```{tip}
+A local `session_01/.ethograph/mapping.txt` overrides the project's copy for that
+session (the GUI warns when they disagree). Without a project `mapping.txt`,
+the default in `~/.ethograph/defaults/mapping.txt` is used.
+```
 
 ---
 
 (target-auto-mapping)=
-## Importing labels with new class names
+## Importing labels from other formats
 
-Every import format (Crowsetta, pynapple / NWB `IntervalSet`) uses the same
-`mapping.txt`, the one shown in the mapping path field. A name that is already
-in it keeps its ID, branch and event type. A new name is appended with the next
-free ID, as a state class on branch 0, and the GUI says which classes it added.
-With no mapping in use, the classes go into the session's
-`.ethograph/mapping.txt`. `background` and `sil` are treated as background and
-never added.
-
-See {func}`~ethograph.labels.converters.extend_mapping`.
+You can also import labels from Crowsetta or pynapple / NWB `IntervalSet`
+files. These carry a label string (e.g. `grasp`) instead of EthoGraph's integer
+ID. On import, names already in `mapping.txt` keep their ID; new names are
+appended to the project's `mapping.txt` with the next free ID, and the GUI says
+which classes it added.
 
 ---
 
@@ -117,7 +114,6 @@ playhead instead of starting an interval drag.
 
 Point events pass through every interval operation (purge, stitch, snap,
 changepoint correction) untouched — they have no duration, so concepts like
-"too short" or "stitch the gap" don't apply to them.  Internally this is
-enforced by `split_by_kind()` in `ethograph.labels.intervals`.
+"too short" or "stitch the gap" don't apply to them.
 
 ---

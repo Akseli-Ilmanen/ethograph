@@ -509,6 +509,19 @@ format</strong> combo offers:</p>
 </table>
 </div>
 <hr class="docutils" />
+<section id="comparing-predictions">
+<span id="target-prediction-panels"></span><h2>Comparing predictions<a class="headerlink" href="#comparing-predictions" title="Link to this heading">#</a></h2>
+<p><strong>File → Import predictions…</strong> loads a model’s prediction file (a run folder
+or a plain <code class="docutils literal notranslate"><span class="pre">.tsv</span></code>). With <strong>Load as: overlay</strong>, each file opens in its own
+<strong>Predictions — <code class="docutils literal notranslate"><span class="pre">&lt;file&gt;.tsv</span></code></strong> panel: a thin strip above the time-series
+panels, below the video. Import several files to stack them and compare
+models against each other and against your labels.</p>
+<p>Each file gets at most one panel. Closed one? Add it back from the ➕ <strong>Add
+panel</strong> popup, which lists every imported file. Click a prediction on its
+panel to select it and press <code class="docutils literal notranslate"><span class="pre">V</span></code> to play it back. Predictions are read-only.
+If you want to load predictions and accept/curate them, use <strong>File → Import predictions → Import as Labels…</strong></p>
+</section>
+<hr class="docutils" />
 <section id="pynapple-nwb-intervalsets">
 <h2>Pynapple / NWB IntervalSets<a class="headerlink" href="#pynapple-nwb-intervalsets" title="Link to this heading">#</a></h2>
 <p>Selecting <strong><code class="docutils literal notranslate"><span class="pre">pynapple</span> <span class="pre">(.npz)</span></code></strong> or <strong><code class="docutils literal notranslate"><span class="pre">pynapple</span> <span class="pre">(.nwb)</span></code></strong> loads the file with
@@ -519,7 +532,7 @@ then the first set with <code class="docutils literal notranslate"><span class="
 when <code class="docutils literal notranslate"><span class="pre">trials</span></code> exists, is imported as labels.
 Each <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> name becomes a label class.</p>
 <p>Label names already in the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their IDs; new names are
-appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels with new class names</span></a>). The labels are written to the
+appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels from other formats</span></a>). The labels are written to the
 canonical <code class="docutils literal notranslate"><span class="pre">_labels.tsv</span></code> alongside the <code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</p>
 <p>Global-time intervals are split across trials using the <code class="docutils literal notranslate"><span class="pre">trials</span></code> /
 <code class="docutils literal notranslate"><span class="pre">epochs</span></code> <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> (or the session’s trial table). See
@@ -566,7 +579,7 @@ string names (resolved via <code class="docutils literal notranslate"><span clas
 </pre></div>
 </div>
 <p>On import, label names already in the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their IDs and
-new names are appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels with new class names</span></a>); <code class="docutils literal notranslate"><span class="pre">background</span></code> and
+new names are appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels from other formats</span></a>); <code class="docutils literal notranslate"><span class="pre">background</span></code> and
 <code class="docutils literal notranslate"><span class="pre">sil</span></code> count as background.</p>
 </section>
 <hr class="docutils" />
@@ -639,6 +652,7 @@ back through <code class="docutils literal notranslate"><span class="pre">existi
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#comparing-predictions">Comparing predictions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pynapple-nwb-intervalsets">Pynapple / NWB IntervalSets</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#boris">BORIS</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#crowsetta-interop">Crowsetta interop</a></li>

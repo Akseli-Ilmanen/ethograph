@@ -15,6 +15,22 @@ format** combo offers:
 
 ---
 
+(target-prediction-panels)=
+## Comparing predictions
+
+**File → Import predictions…** loads a model's prediction file (a run folder
+or a plain `.tsv`). With **Load as: overlay**, each file opens in its own
+**Predictions — `<file>.tsv`** panel: a thin strip above the time-series
+panels, below the video. Import several files to stack them and compare
+models against each other and against your labels.
+
+Each file gets at most one panel. Closed one? Add it back from the ➕ **Add
+panel** popup, which lists every imported file. Click a prediction on its
+panel to select it and press `V` to play it back. Predictions are read-only.
+If you want to load predictions and accept/curate them, use **File → Import predictions → Import as Labels…**
+
+---
+
 
 ## Pynapple / NWB IntervalSets
 

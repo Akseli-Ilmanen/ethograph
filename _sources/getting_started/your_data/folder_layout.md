@@ -6,7 +6,7 @@ you:
 | Folder | Who writes it | What lives there |
 |---|---|---|
 | **Session folder** — one per recording | You: the session file and the media. The GUI: labels, alignment, layout. | The data. Any location — inside the project folder or anywhere else; media folders are selected in the GUI and can live elsewhere too. |
-| **Project folder** — one per study | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, kept drag & drops. Your session folders can live here too, but don't have to — EthoGraph never copies data into it. |
+| **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, kept drag & drops. Your session folders can live here too, but don't have to — EthoGraph never copies data into it. |
 | `~/.ethograph/` | The GUI. | Your settings, caches, and a starter project used while no project folder is chosen. |
 
 ## The project folder
@@ -17,9 +17,9 @@ session folders inside it (as below) or on another drive. Either way, the
 folder holds what you build on top of them:
 
 ```
-my_study/                              # chosen on the start page
+my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
-    ├── mapping.txt                    # the study's label_id → name vocabulary
+    ├── mapping.txt                    # the project's label_id → name vocabulary
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config

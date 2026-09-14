@@ -22,7 +22,7 @@ session_20260903/
 
 The TSV uses integer label IDs in the `labels` column. Label names are
 managed centrally in `mapping.txt` — rename a label once there, and it
-applies everywhere. See {doc}`mapping` for the format and resolution order.
+applies everywhere. See {doc}`mapping` for the format and where it lives.
 
 ---
 
@@ -70,9 +70,6 @@ These have the same value for every row in a trial:
 | `prediction_source` | str | Path to the prediction file that produced these labels (empty for human-labeled) |
 | `n_samples` | int | The trial's sample count, used for dense conversion; `0` if unknown |
 
-A `human_verified` column in an older file is carried along unchanged and
-never read: whether a trial has been reviewed is answered per label by
-`labeling_method`, and per trial by the metadata table's `curated` column.
 
 ### Computed columns (generated on save)
 

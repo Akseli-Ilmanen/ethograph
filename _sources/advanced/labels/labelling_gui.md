@@ -52,14 +52,6 @@ dropdowns:
 - **Receiver** — for dyadic interactions (one bird mounting another, one
   animal grooming another). It is `None` by default, meaning a solo behaviour.
 
-Together they are the *subject* of a label. The receiver is an attribute of
-the label you place next, not a second track: an animal does one thing at a
-time, so a label directed at a partner and a solo label of the same animal
-trim each other exactly as two solo labels do. Every label of the individual
-is drawn whatever its receiver, a directed one carrying a small `→ partner`
-tag at its onset, and switching the receiver changes nothing on screen — only
-what the next label records.
-
 ```{note}
 A new label is placed for the individual of the panel you last clicked —
 whether that panel follows the sidebar combo or is pinned to another animal
@@ -88,14 +80,6 @@ Use the labels widget interface:
 
 - **Edit**: Select a label (Left-click) and press `Ctrl + E`. Then click twice to set the new start and end, or once to move a point event. In the *at the current frame* mode, press the label's key at the new start and again at the new end instead (once for a point event).
 - **Delete**: Select a label (Left-click), press `Ctrl + D` to delete.
-
----
-
-## Frame-accurate boundaries
-
-When a boundary must sit on an exact video frame, refine your existing labels
-frame-by-frame instead of re-placing them on the plots — see
-{doc}`../../models/curation`.
 
 ---
 

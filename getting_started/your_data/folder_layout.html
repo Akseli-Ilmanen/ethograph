@@ -468,7 +468,7 @@ you:</p>
 <td><p>You: the session file and the media. The GUI: labels, alignment, layout.</p></td>
 <td><p>The data. Any location — inside the project folder or anywhere else; media folders are selected in the GUI and can live elsewhere too.</p></td>
 </tr>
-<tr class="row-odd"><td><p><strong>Project folder</strong> — one per study</p></td>
+<tr class="row-odd"><td><p><strong>Project folder</strong> — one per research project</p></td>
 <td><p>You, on the start page.</p></td>
 <td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, kept drag &amp; drops. Your session folders can live here too, but don’t have to — EthoGraph never copies data into it.</p></td>
 </tr>
@@ -485,9 +485,9 @@ you:</p>
 restarts. Sessions are <em>listed</em> from wherever they are, so you can keep your
 session folders inside it (as below) or on another drive. Either way, the
 folder holds what you build on top of them:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_study/                              # chosen on the start page
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
-    ├── mapping.txt                    # the study's label_id → name vocabulary
+    ├── mapping.txt                    # the project's label_id → name vocabulary
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config

@@ -493,7 +493,7 @@ references and non-label metadata. Labels live exclusively in the TSV.</p>
 </div>
 <p>The TSV uses integer label IDs in the <code class="docutils literal notranslate"><span class="pre">labels</span></code> column. Label names are
 managed centrally in <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> — rename a label once there, and it
-applies everywhere. See <a class="reference internal" href="mapping.html"><span class="doc">Label mapping (mapping.txt)</span></a> for the format and resolution order.</p>
+applies everywhere. See <a class="reference internal" href="mapping.html"><span class="doc">Label mapping (mapping.txt)</span></a> for the format and where it lives.</p>
 </section>
 <hr class="docutils" />
 <section id="saving-labels-ctrl-s">
@@ -589,9 +589,6 @@ next label you create. Files written before recipients existed have no
 </tbody>
 </table>
 </div>
-<p>A <code class="docutils literal notranslate"><span class="pre">human_verified</span></code> column in an older file is carried along unchanged and
-never read: whether a trial has been reviewed is answered per label by
-<code class="docutils literal notranslate"><span class="pre">labeling_method</span></code>, and per trial by the metadata table’s <code class="docutils literal notranslate"><span class="pre">curated</span></code> column.</p>
 </section>
 <section id="computed-columns-generated-on-save">
 <h3>Computed columns (generated on save)<a class="headerlink" href="#computed-columns-generated-on-save" title="Link to this heading">#</a></h3>
