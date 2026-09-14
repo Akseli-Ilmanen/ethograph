@@ -1492,16 +1492,17 @@ window.runMermaid = runMermaid;</script>
     <span class="k">def</span><span class="w"> </span><span class="nf">_file_for_trial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">acq</span><span class="p">,</span> <span class="n">trial</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_FileSpan</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""The external file of *acq* that holds *trial*.</span>
 
-<span class="sd">        With real trial timing the file is the one overlapping the trial most</span>
+<span class="sd">        With session timing the file is the one overlapping the trial most</span>
 <span class="sd">        (the trial's start lies in it; a trial that starts in a gap before a</span>
-<span class="sd">        triggered file takes that file). Without timing every trial starts at</span>
-<span class="sd">        0.0 and time says nothing, so the trial's position is used -- one file</span>
-<span class="sd">        per trial when the counts agree, else the first file.</span>
+<span class="sd">        triggered file takes that file). When every trial starts at the same</span>
+<span class="sd">        time (no timing, or trial-relative timing with per-trial files all</span>
+<span class="sd">        starting at 0) time says nothing, so the trial's position is used --</span>
+<span class="sd">        one file per trial when the counts agree, else the first file.</span>
 <span class="sd">        """</span>
         <span class="n">spans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_acq_spans</span><span class="p">(</span><span class="n">acq</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">spans</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_real_timing</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_real_timing</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trials_df</span><span class="p">[</span><span class="s2">"start_time"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">best</span> <span class="o">=</span> <span class="n">_span_overlapping</span><span class="p">(</span><span class="n">spans</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="n">trial</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop_time</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">best</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">best</span>

@@ -486,10 +486,9 @@ needed. No audio.</p></li>
 </ul>
 <section id="speed-and-high-rate-ultrasonic-audio">
 <h3>Speed and high-rate (ultrasonic) audio<a class="headerlink" href="#speed-and-high-rate-ultrasonic-audio" title="Link to this heading">#</a></h3>
-<p>Playback speed is set as a <strong>% of the original recording</strong> (the “Speed” field
-in the bottom bar), not a raw FPS — 100% is native speed, 50% half (one octave
-lower), 200% double. It drives video FPS and audio pitch/rate together; a
-readout shows the effective rates, e.g. <code class="docutils literal notranslate"><span class="pre">(120.0</span> <span class="pre">fps,</span> <span class="pre">44.1</span> <span class="pre">kHz)</span></code>.</p>
+<p>The <strong>Speed</strong> field in the bottom bar is a % of the recording’s native speed
+(50% = half speed). Video and audio slow down or speed up together, and a
+readout shows the resulting rates, e.g. <code class="docutils literal notranslate"><span class="pre">(120.0</span> <span class="pre">fps,</span> <span class="pre">44.1</span> <span class="pre">kHz)</span></code>.</p>
 <p>Audio is resampled to a fixed 48 kHz output, so the sound card’s max rate never
 caps playback. Any speed works (very fast audio just chirps), and <strong>high-rate
 recordings</strong> (e.g. ultrasonic audio at 200–384 kHz) play even though no card
