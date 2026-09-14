@@ -822,7 +822,7 @@ be un-z-scored</strong> — that normalisation happens later, per run, and lands
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">architecture</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code></p></td>
-<td><p>Which network to train (the default is <span class="bibtex-citation" id="id1">Singhania <em>et al.</em> [<a class="reference internal" href="../../community/references.html#id340" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">2021</a>]</span>). <code class="docutils literal notranslate"><span class="pre">eto.segment.architectures()</span></code> lists the names.</p></td>
+<td><p>Which network to train (the default is <span class="bibtex-citation" id="id1">Singhania <em>et al.</em> [<a class="reference internal" href="../../community/references.html#id335" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">2021</a>]</span>). <code class="docutils literal notranslate"><span class="pre">eto.segment.architectures()</span></code> lists the names.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">params</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{}</span></code></p></td>
@@ -845,7 +845,7 @@ architecture, with a comment on each and its default value, open its file:</p>
 </div>
 <p>One name differs from its file: <code class="docutils literal notranslate"><span class="pre">mstcn</span></code> reads <code class="docutils literal notranslate"><span class="pre">ms_tcn3.yaml</span></code>. Every other
 architecture matches.</p>
-<p>The two skeleton-graph architectures (<code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id343" title="Haoyu Ji, Bowen Chen, Zhihao Yang, Wenze Huang, Yu Gao, Xueting Liu, Weihong Ren, Zhiyong Wang, and Honghai Liu. Spectral scalpel: amplifying adjacent action discrepancy via frequency-selective filtering for skeleton-based action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/SpecScalpel, arXiv:2603.24134.">Ji <em>et al.</em>, 2026</a>]</span>, <code class="docutils literal notranslate"><span class="pre">lady</span></code> <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id344" title="Haoyu Ji, Xueting Liu, Yu Gao, Wenze Huang, Zhihao Yang, Weihong Ren, Zhiyong Wang, and Honghai Liu. LaDy: lagrangian-dynamic informed network for skeleton-based action segmentation via spatial-temporal modulation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/LaDy, arXiv:2603.24097.">Ji <em>et al.</em>, 2026</a>]</span>) are the
+<p>The two skeleton-graph architectures (<code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id338" title="Haoyu Ji, Bowen Chen, Zhihao Yang, Wenze Huang, Yu Gao, Xueting Liu, Weihong Ren, Zhiyong Wang, and Honghai Liu. Spectral scalpel: amplifying adjacent action discrepancy via frequency-selective filtering for skeleton-based action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/SpecScalpel, arXiv:2603.24134.">Ji <em>et al.</em>, 2026</a>]</span>, <code class="docutils literal notranslate"><span class="pre">lady</span></code> <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id339" title="Haoyu Ji, Xueting Liu, Yu Gao, Wenze Huang, Zhihao Yang, Weihong Ren, Zhiyong Wang, and Honghai Liu. LaDy: lagrangian-dynamic informed network for skeleton-based action segmentation via spatial-temporal modulation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/LaDy, arXiv:2603.24097.">Ji <em>et al.</em>, 2026</a>]</span>) are the
 exception to “params are architecture hyperparameters only”: their <code class="docutils literal notranslate"><span class="pre">params</span></code>
 also carry the <strong>joint layout</strong> — <code class="docutils literal notranslate"><span class="pre">keypoints</span></code> (the ordered keypoint names) and
 <code class="docutils literal notranslate"><span class="pre">skeleton</span></code> (a skeleton-config YAML, an ndx-pose <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>, or <code class="docutils literal notranslate"><span class="pre">[a,</span> <span class="pre">b]</span></code> pairs) — and,
@@ -928,7 +928,7 @@ space. See <a class="reference internal" href="index.html"><span class="doc">Seg
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">frame_weight</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
-<td><p>Weight of <code class="docutils literal notranslate"><span class="pre">train.loss</span></code> in the total. <code class="docutils literal notranslate"><span class="pre">0</span></code> leaves <code class="docutils literal notranslate"><span class="pre">train.circle</span></code> as the only thing training.</p></td>
+<td><p>Weight of <code class="docutils literal notranslate"><span class="pre">train.loss</span></code> in the total. <code class="docutils literal notranslate"><span class="pre">0</span></code> is a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> — there would be nothing to train on.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">subsample</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
@@ -939,12 +939,10 @@ space. See <a class="reference internal" href="index.html"><span class="doc">Seg
 </div>
 <section id="losses">
 <h3>Losses<a class="headerlink" href="#losses" title="Link to this heading">#</a></h3>
-<p>The total objective is a sum of up to two terms, each independently
-switched on by its own weight — <code class="docutils literal notranslate"><span class="pre">Objective</span></code> in
-<code class="xref py py-mod docutils literal notranslate"><span class="pre">ethograph.segment.losses</span></code> computes and itemises them, and every
-weighted term’s value lands in <code class="docutils literal notranslate"><span class="pre">metrics.tsv</span></code>/the console log by the name
-below, so a loss that stops moving can be traced to the term that stopped
-moving.</p>
+<p>The objective is the frame term, weighted by <code class="docutils literal notranslate"><span class="pre">train.frame_weight</span></code> —
+<code class="docutils literal notranslate"><span class="pre">Objective</span></code> in <code class="xref py py-mod docutils literal notranslate"><span class="pre">ethograph.segment.losses</span></code> computes and itemises it, and
+its value lands in <code class="docutils literal notranslate"><span class="pre">metrics.tsv</span></code>/the console log, so a loss that stops moving
+can be traced to the term that stopped moving.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Term</p></th>
@@ -961,17 +959,10 @@ moving.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">train.loss</span></code></p></td>
 <td><p>any architecture</p></td>
 </tr>
-<tr class="row-odd"><td><p>circle (metric-learning)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">train.circle.weight</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">train.circle</span></code></p></td>
-<td><p>any architecture</p></td>
-</tr>
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">frame_weight:</span> <span class="pre">0</span></code> with <code class="docutils literal notranslate"><span class="pre">circle.weight</span></code> left at <code class="docutils literal notranslate"><span class="pre">0</span></code> is a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>
-(“nothing to train on”) — at least one term must be active.</p>
+<p><code class="docutils literal notranslate"><span class="pre">frame_weight:</span> <span class="pre">0</span></code> is a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> (“nothing to train on”).</p>
 </section>
 <section id="train-loss">
 <h3><code class="docutils literal notranslate"><span class="pre">train.loss</span></code><a class="headerlink" href="#train-loss" title="Link to this heading">#</a></h3>
@@ -988,7 +979,7 @@ stops the output flickering between classes mid-behaviour.</p>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">alpha</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0.001</span></code></p></td>
-<td><p>Weight of the consistency term. Raise it if predictions flicker; lower it if short behaviours are being swallowed by their neighbours. The default is DLC2Action’s <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id336" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>]</span>, at which the term barely registers; MS-TCN’s <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id337" title="Yazan Abu Farha and Juergen Gall. MS-TCN: multi-stage temporal convolutional network for action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2019. URL: https://arxiv.org/abs/1903.01945, arXiv:1903.01945.">Abu Farha and Gall, 2019</a>]</span> published value is <code class="docutils literal notranslate"><span class="pre">0.15</span></code>, which is what the earlier CETNet training script used and what <code class="docutils literal notranslate"><span class="pre">scripts/bench.py</span></code> pins when it asks whether the term helps at all.</p></td>
+<td><p>Weight of the consistency term. Raise it if predictions flicker; lower it if short behaviours are being swallowed by their neighbours. The default is DLC2Action’s <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id331" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>]</span>, at which the term barely registers; MS-TCN’s <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id332" title="Yazan Abu Farha and Juergen Gall. MS-TCN: multi-stage temporal convolutional network for action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2019. URL: https://arxiv.org/abs/1903.01945, arXiv:1903.01945.">Abu Farha and Gall, 2019</a>]</span> published value is <code class="docutils literal notranslate"><span class="pre">0.15</span></code>, which is what the earlier CETNet training script used and what <code class="docutils literal notranslate"><span class="pre">scripts/bench.py</span></code> pins when it asks whether the term helps at all.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">candidate_gate</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
@@ -1029,250 +1020,10 @@ stops the output flickering between classes mid-behaviour.</p>
 on each, live in <code class="docutils literal notranslate"><span class="pre">ethograph/segment/dlc2action/config/losses.yaml</span></code>.</p>
 <p><strong>TODO</strong>: See if inverse_frequency weights loss is detrimental</p>
 </section>
-<section id="train-circle">
-<h3><code class="docutils literal notranslate"><span class="pre">train.circle</span></code><a class="headerlink" href="#train-circle" title="Link to this heading">#</a></h3>
-<p>A deep metric-learning term over the finest-stage logits (circle loss
-<span class="bibtex-citation" id="id6">[<a class="reference internal" href="../../community/references.html#id345" title="Yifan Sun, Changmao Cheng, Yuhan Zhang, Chi Zhang, Liang Zheng, Zhongdao Wang, and Yichen Wei. Circle loss: a unified perspective of pair similarity optimization. 2020. URL: https://arxiv.org/abs/2002.10857, arXiv:2002.10857.">Sun <em>et al.</em>, 2020</a>]</span>) — pulls same-class frames’ logit vectors together and pushes
-different-class ones apart, independent of the frame cross-entropy above.
-Architecture-agnostic — every registered model produces logits.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Key</p></th>
-<th class="head"><p>Default</p></th>
-<th class="head"><p>Meaning</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">weight</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
-<td><p>Weight of the circle loss in the total. <code class="docutils literal notranslate"><span class="pre">0</span></code> leaves it untrained — this is the default, so circle loss is off unless you set it.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">m</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0.25</span></code></p></td>
-<td><p>Margin: how far inside the unit circle a pair may sit before it counts against the loss.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gamma</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">128</span></code></p></td>
-<td><p>Scale applied to the (margin-weighted) similarities before the softplus.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_frames</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">2048</span></code></p></td>
-<td><p>Subsample the batch’s frames to at most this many before forming pairs (<code class="docutils literal notranslate"><span class="pre">O(n^2)</span></code> pairs otherwise); <code class="docutils literal notranslate"><span class="pre">null</span></code> = no cap.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">circle</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="nv">0.001</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># the weighting it was ported with; 0 (the default) switches it off</span>
-</pre></div>
-</div>
-<section id="choosing-a-weight">
-<h4>Choosing a weight<a class="headerlink" href="#choosing-a-weight" title="Link to this heading">#</a></h4>
-<p>Start at <strong><code class="docutils literal notranslate"><span class="pre">0.001</span></code></strong>, with <code class="docutils literal notranslate"><span class="pre">m</span></code> and <code class="docutils literal notranslate"><span class="pre">gamma</span></code> at their defaults. The term is a
-softplus of a log-sum-exp over every same-class and different-class pair,
-scaled by <code class="docutils literal notranslate"><span class="pre">gamma</span></code> = 128, so its raw value runs to tens where the frame
-cross-entropy sits below 1 — the weight is what brings the two onto one
-scale, and <code class="docutils literal notranslate"><span class="pre">0.001</span></code> is exactly the weighting the CETNet training script this
-was ported from used (<code class="docutils literal notranslate"><span class="pre">0.001</span> <span class="pre">*</span> <span class="pre">CircleLoss(m=0.25,</span> <span class="pre">gamma=128)</span></code>). One
-difference to keep in mind: that script applied it to the encoder’s feature
-map, whereas here it reads the class logits, a vector only as wide as the
-number of classes, so the same weight is a starting point rather than a
-tuned answer. Whether the term earns its place is what <code class="docutils literal notranslate"><span class="pre">scripts/bench.py</span></code>
-measures — every architecture, with and without it, cross-validated per
-individual.</p>
-</section>
-</section>
-<section id="train-augment">
-<h3><code class="docutils literal notranslate"><span class="pre">train.augment</span></code><a class="headerlink" href="#train-augment" title="Link to this heading">#</a></h3>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Key</p></th>
-<th class="head"><p>Default</p></th>
-<th class="head"><p>Meaning</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">noise_std</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
-<td><p>Gaussian noise, as a fraction of each column’s std (<code class="docutils literal notranslate"><span class="pre">normalise=0</span></code> columns untouched).</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stretch</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
-<td><p>Random temporal stretch range, e.g. <code class="docutils literal notranslate"><span class="pre">[0.8,</span> <span class="pre">1.2]</span></code> (labels follow by nearest frame).</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mirror</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
-<td><p>Negate the first component of every vector group with probability ½.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rotate_deg</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
-<td><p>Rotate every vector group’s (x, y) by a random angle within ±this.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Vector groups are columns spanning the <code class="docutils literal notranslate"><span class="pre">space</span></code> dim of one vector (position,
-velocity, …); the layout records them, so a dataset without coordinates
-silently gets no geometric augmentation.</p>
-</section>
-<section id="train-split">
-<h3><code class="docutils literal notranslate"><span class="pre">train.split</span></code><a class="headerlink" href="#train-split" title="Link to this heading">#</a></h3>
-<p>Three ratios. Your trials — every trial of every session, after
-<code class="docutils literal notranslate"><span class="pre">trials.where</span></code> — are pooled, shuffled once and cut into the three roles.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Role</p></th>
-<th class="head"><p>What it is for</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><strong>train</strong></p></td>
-<td><p>The model learns from these.</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>val</strong></p></td>
-<td><p>The model never learns from these. They decide <strong>which epoch’s weights you keep</strong>, and they are the objective a <code class="docutils literal notranslate"><span class="pre">search</span></code> maximises.</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>test</strong></p></td>
-<td><p>Touched exactly once, at the very end, to report a number you can trust.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Key</p></th>
-<th class="head"><p>Default</p></th>
-<th class="head"><p>Meaning</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">train_fraction</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0.6</span></code></p></td>
-<td><p>Fraction of trials the model learns from.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">val_fraction</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
-<td><p>Fraction held back to choose settings and checkpoints. <code class="docutils literal notranslate"><span class="pre">0</span></code> turns validation off.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_fraction</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
-<td><p>Fraction read once, at the end.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
-<td><p>Change it to re-draw the split.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">holdout_sessions</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
-<td><p>Sessions held out <em>whole</em> as <code class="docutils literal notranslate"><span class="pre">test</span></code> — a cross-validation fold. Written per fold by <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code>; see below.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">holdout_trials</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
-<td><p>Trial ids held out whole as <code class="docutils literal notranslate"><span class="pre">test</span></code>, in every session — a trial-level fold. Written per fold by <code class="docutils literal notranslate"><span class="pre">project.cross_validate(n_folds=k)</span></code>; exclusive with <code class="docutils literal notranslate"><span class="pre">holdout_sessions</span></code>.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>The three fractions must sum to <strong>1</strong>, and an override that breaks that is an
-error rather than a silent renormalisation. Splitting is by <strong>whole trial</strong>,
-never mid-trial, so no trial ever appears in two roles.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The random split depends on the full list of trials, so <strong>adding a session
-reshuffles the existing ones</strong>, same <code class="docutils literal notranslate"><span class="pre">seed</span></code> or not. Two runs across a growing
-dataset are therefore not strictly comparable — some of what was training data
-in the first run is validation data in the second.</p>
-<p>When you need runs to be comparable, pin the split instead of drawing it:
-<code class="docutils literal notranslate"><span class="pre">holdout_sessions</span></code> names sessions held out whole, which is exactly what a
-cross-validation fold does. Each run records the split it used in
-<code class="docutils literal notranslate"><span class="pre">runs/{run}/splits/*.bundle</span></code>, so you can always check after the fact which
-trials went where.</p>
-</div>
-<section id="holdout-sessions-one-fold">
-<h4><code class="docutils literal notranslate"><span class="pre">holdout_sessions</span></code> — one fold<a class="headerlink" href="#holdout-sessions-one-fold" title="Link to this heading">#</a></h4>
-<p>Name one or more sessions and <strong>all</strong> of their trials become <code class="docutils literal notranslate"><span class="pre">test</span></code>, whatever
-the fractions say; the sessions that remain are split train/val by
-<code class="docutils literal notranslate"><span class="pre">val_fraction</span></code> renormalised against <code class="docutils literal notranslate"><span class="pre">train_fraction</span></code>. That is one
-leave-one-session-out fold, and <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code> writes it once per
-session rather than asking you to. You rarely set this key by hand — it is
-documented because you will see it in a fold’s <code class="docutils literal notranslate"><span class="pre">runs/{run}/config.yaml</span></code>.</p>
-</section>
-<section id="holdout-trials-one-trial-fold">
-<h4><code class="docutils literal notranslate"><span class="pre">holdout_trials</span></code> — one trial fold<a class="headerlink" href="#holdout-trials-one-trial-fold" title="Link to this heading">#</a></h4>
-<p>The same thing one level down, for a project whose sessions cannot be held
-out — one session of neural decoding (<code class="docutils literal notranslate"><span class="pre">features.neural</span></code>), whose units exist
-in that recording only. Every sample of a trial id named here is <code class="docutils literal notranslate"><span class="pre">test</span></code>, in
-every session; the rest is split train/val as above. A trial id no session
-has is an error, since a fold that holds out nothing would score the
-training set. <code class="docutils literal notranslate"><span class="pre">project.cross_validate(n_folds=k)</span></code> deals every trial into
-exactly one of <code class="docutils literal notranslate"><span class="pre">k</span></code> folds and writes this per fold; you will see it in a
-fold’s <code class="docutils literal notranslate"><span class="pre">runs/{run}/config.yaml</span></code>.</p>
-</section>
-<section id="what-validation-actually-buys-you">
-<h4>What validation actually buys you<a class="headerlink" href="#what-validation-actually-buys-you" title="Link to this heading">#</a></h4>
-<p>Every <code class="docutils literal notranslate"><span class="pre">eval_every</span></code> epochs the run scores the validation trials and writes a row
-to <code class="docutils literal notranslate"><span class="pre">metrics.tsv</span></code>. Three things then happen:</p>
-<ul class="simple">
-<li><p><strong>The best epoch is saved as <code class="docutils literal notranslate"><span class="pre">best.pt</span></code>.</strong> Training a segmentation model past
-its best is normal — it keeps fitting the training trials while getting worse
-on new ones. Validation is what notices, so you keep the good weights instead
-of whatever the last epoch happened to produce. <code class="docutils literal notranslate"><span class="pre">best.pt</span></code> is what
-<code class="docutils literal notranslate"><span class="pre">project.inference()</span></code> uses.</p></li>
-<li><p><strong>You get the metric curve</strong> in <code class="docutils literal notranslate"><span class="pre">metrics.tsv</span></code> — one row per validation —
-which is how you find the right <code class="docutils literal notranslate"><span class="pre">epochs</span></code> for a later run. Each row also
-carries a test readout (raw and post-processed, <code class="docutils literal notranslate"><span class="pre">test_raw_*</span></code>/<code class="docutils literal notranslate"><span class="pre">test_post_*</span></code>)
-computed on the current epoch’s weights — a training-time diagnostic only;
-it never influences <code class="docutils literal notranslate"><span class="pre">best.pt</span></code>, which stays keyed on validation.</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">search</span></code> reads the best of that curve</strong> as its objective, and can abandon a
-trial whose curve is already behind the others (<code class="docutils literal notranslate"><span class="pre">search.prune</span></code>).</p></li>
-</ul>
-<p>Runs are never cut short: <code class="docutils literal notranslate"><span class="pre">epochs</span></code> is the budget and every run trains it out.
-Set <code class="docutils literal notranslate"><span class="pre">val_fraction:</span> <span class="pre">0</span></code> and you lose all three — <code class="docutils literal notranslate"><span class="pre">best.pt</span></code> becomes the last
-epoch, no <code class="docutils literal notranslate"><span class="pre">metrics.tsv</span></code> is written, and a search refuses to start. The log says
-so:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>No validation samples — no metrics curve, and best.pt is the last epoch.
-</pre></div>
-</div>
-</section>
-<section id="choosing-values">
-<h4>Choosing values<a class="headerlink" href="#choosing-values" title="Link to this heading">#</a></h4>
-<ul>
-<li><p><strong>Leave it at 60/20/20 while you are developing</strong>, which is what a search
-needs: a validation set big enough that the score it hands Optuna means
-something, and a test set that stays untouched underneath it.</p></li>
-<li><p><strong>Drop <code class="docutils literal notranslate"><span class="pre">val_fraction</span></code> to <code class="docutils literal notranslate"><span class="pre">0</span></code> once the settings are settled.</strong> That is the
-cross-validation default: the hyperparameters, <code class="docutils literal notranslate"><span class="pre">epochs</span></code> included, came out of
-the search, so every remaining trial is worth training on.</p></li>
-<li><p><strong>Set it to <code class="docutils literal notranslate"><span class="pre">0</span></code> when you have very few labelled trials.</strong> The count is
-rounded, so <code class="docutils literal notranslate"><span class="pre">0.2</span></code> gives you <strong>1</strong> validation trial anywhere between 3 and 7
-trials, and <strong>0</strong> at 2 — a score from one trial is noise, and will pick a
-checkpoint more or less at random. Below roughly 15 trials, prefer a fixed
-<code class="docutils literal notranslate"><span class="pre">epochs</span></code> over a validation set you cannot trust. Check the count in the log:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Samples — train: 24, val: 6, test: 8
-</pre></div>
-</div>
-</li>
-</ul>
-<p>Validation trials come out of the pool the model would otherwise learn from, so
-raising <code class="docutils literal notranslate"><span class="pre">val_fraction</span></code> gives it less to learn from. <code class="docutils literal notranslate"><span class="pre">0.2</span></code> of a reasonable
-number of trials is a sensible balance.</p>
-</section>
-<section id="getting-a-number-you-can-trust">
-<h4>Getting a number you can trust<a class="headerlink" href="#getting-a-number-you-can-trust" title="Link to this heading">#</a></h4>
-<p><code class="docutils literal notranslate"><span class="pre">val</span></code> is used repeatedly to make choices — every search trial reads it — so its
-score is optimistic: it is the best of many peeks, not an unbiased estimate.
-<code class="docutils literal notranslate"><span class="pre">test</span></code> is what you report, and nothing selects on it.</p>
-<p>The strongest version is a session the model has never seen at all — a
-different recording day or animal — since trials from the same session share
-lighting, camera position and the animal’s mood, and a random trial split
-flatters the model accordingly. That is cross-validation, and it is the second
-stage of the workflow rather than a setting: see <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a>.</p>
-</section>
-</section>
 </section>
 <section id="search">
 <h2><code class="docutils literal notranslate"><span class="pre">search</span></code><a class="headerlink" href="#search" title="Link to this heading">#</a></h2>
-<p>Stage 1 of the workflow: Optuna <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id349" title="Takuya Akiba, Shotaro Sano, Toshihiko Yanase, Takeru Ohta, and Masanori Koyama. Optuna: a next-generation hyperparameter optimization framework. In Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery &amp; Data Mining (KDD). 2019. URL: https://arxiv.org/abs/1907.10902, arXiv:1907.10902.">Akiba <em>et al.</em>, 2019</a>]</span> over the config, every
+<p>Stage 1 of the workflow: Optuna <span class="bibtex-citation" id="id6">[<a class="reference internal" href="../../community/references.html#id343" title="Takuya Akiba, Shotaro Sano, Toshihiko Yanase, Takeru Ohta, and Masanori Koyama. Optuna: a next-generation hyperparameter optimization framework. In Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery &amp; Data Mining (KDD). 2019. URL: https://arxiv.org/abs/1907.10902, arXiv:1907.10902.">Akiba <em>et al.</em>, 2019</a>]</span> over the config, every
 trial a full training run scored by <code class="docutils literal notranslate"><span class="pre">train.select_on</span></code> on the <strong>validation</strong>
 trials. Run it with <code class="docutils literal notranslate"><span class="pre">project.search()</span></code>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -1386,7 +1137,7 @@ seconds — frame counts come from each video’s own rate. See <a class="refere
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">extractor</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code></p></td>
-<td><p>The network, by registry name: <code class="docutils literal notranslate"><span class="pre">s3d</span></code> (clip-wise; Kinetics-400 <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id409" title="Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: https://arxiv.org/abs/1705.06950, arXiv:1705.06950.">Kay <em>et al.</em>, 2017</a>]</span> S3D <span class="bibtex-citation" id="id9">[<a class="reference internal" href="../../community/references.html#id410" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span>) or <code class="docutils literal notranslate"><span class="pre">timm</span></code> (frame-wise; any timm <span class="bibtex-citation" id="id10">[<a class="reference internal" href="../../community/references.html#id412" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> image backbone; <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code>). Names the sidecar suffix and the merged variable.</p></td>
+<td><p>The network, by registry name: <code class="docutils literal notranslate"><span class="pre">s3d</span></code> (clip-wise; Kinetics-400 <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id402" title="Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: https://arxiv.org/abs/1705.06950, arXiv:1705.06950.">Kay <em>et al.</em>, 2017</a>]</span> S3D <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id403" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span>) or <code class="docutils literal notranslate"><span class="pre">timm</span></code> (frame-wise; any timm <span class="bibtex-citation" id="id9">[<a class="reference internal" href="../../community/references.html#id405" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> image backbone; <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code>). Names the sidecar suffix and the merged variable.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model_name</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
@@ -1610,19 +1361,6 @@ cross_validation/{name}/
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train"><code class="docutils literal notranslate"><span class="pre">train</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#losses">Losses</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-loss"><code class="docutils literal notranslate"><span class="pre">train.loss</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-circle"><code class="docutils literal notranslate"><span class="pre">train.circle</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-a-weight">Choosing a weight</a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-augment"><code class="docutils literal notranslate"><span class="pre">train.augment</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-split"><code class="docutils literal notranslate"><span class="pre">train.split</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#holdout-sessions-one-fold"><code class="docutils literal notranslate"><span class="pre">holdout_sessions</span></code> — one fold</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#holdout-trials-one-trial-fold"><code class="docutils literal notranslate"><span class="pre">holdout_trials</span></code> — one trial fold</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#what-validation-actually-buys-you">What validation actually buys you</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-values">Choosing values</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-a-number-you-can-trust">Getting a number you can trust</a></li>
-</ul>
-</li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#search"><code class="docutils literal notranslate"><span class="pre">search</span></code></a></li>
