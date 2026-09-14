@@ -680,43 +680,6 @@ class SplitConfig:
 
 
 @dataclass
-class CircleConfig:
-    """Deep metric-learning term over the finest-stage logits (Sun et al. 2020, circle loss).
-
-    Off by default (``weight: 0``). Pulls same-class frames' logit vectors
-    together and pushes different-class ones apart, independent of the frame
-    cross-entropy above — see :class:`~ethograph.segment.losses.CircleLoss`.
-    Ported from an older CETNet training script
-    (``segment/archive/cetnet_encoder.py``), which applied it to an encoder
-    trunk's own normalised feature map; that layer is not part of the current
-    registry contract (:class:`~ethograph.segment.models.ModelOutput`), so
-    here it reads the class logits instead — the one per-frame representation
-    every architecture produces.
-    """
-
-    #: Weight of the circle loss in the total; ``0`` leaves it untrained.
-    weight: float = 0.0
-    #: Margin: how far inside the unit circle a pair may sit before it counts
-    #: against the loss.
-    m: float = 0.25
-    #: Scale applied to the (margin-weighted) similarities before the softplus.
-    gamma: float = 128.0
-    #: Randomly subsample to at most this many (unpadded) frames per batch
-    #: before building the pairwise similarity matrix, which is O(frames^2).
-    #: ``None`` uses every frame, which for a whole trial at a high sampling
-    #: rate can be large.
-    max_frames: int | None = 2048
-
-    def __post_init__(self) -> None:
-        if not 0.0 < self.m < 1.0:
-            raise ValueError(f"train.circle.m must be between 0 and 1, got {self.m}")
-        if self.gamma <= 0:
-            raise ValueError(f"train.circle.gamma must be positive, got {self.gamma}")
-        if self.max_frames is not None and self.max_frames < 2:
-            raise ValueError(f"train.circle.max_frames must be at least 2 (need a pair), got {self.max_frames}")
-
-
-@dataclass
 class TrainConfig:
     #: Base run name; ``None`` derives one from architecture + features name.
     #: Every call to :func:`~ethograph.segment.train.train` creates its own,
@@ -761,11 +724,8 @@ class TrainConfig:
     #: ``MS_TCN_Loss``; we write no default for it. See
     #: :func:`ethograph.segment.losses.build_loss`.
     loss: dict[str, Any] = field(default_factory=dict)
-    #: Weight of the frame-wise loss above in the total; ``0`` leaves the
-    #: circle term as the only thing training.
+    #: Weight of the frame-wise loss above in the total.
     frame_weight: float = 1.0
-    #: The circle (deep metric-learning) term. Architecture-agnostic.
-    circle: CircleConfig = field(default_factory=CircleConfig)
     augment: AugmentConfig = field(default_factory=AugmentConfig)
     split: SplitConfig = field(default_factory=SplitConfig)
 
@@ -1062,6 +1022,18 @@ _PATH_LIST_FIELDS = {"holdout_sessions"}
 _TUPLE_FIELDS = {"clip_percentiles", "stretch"}
 
 
+#: Settings that were removed, spelled as the dotted path :func:`_build` sees.
+#: A key here is dropped with a log line instead of being refused as unknown:
+#: a run's ``config.yaml`` is the record of what it trained with and is read
+#: back by :func:`~ethograph.segment.inference.inference`, so retiring a
+#: setting must not make every run trained before it unloadable. Removing an
+#: entry from this table is what finally breaks those runs.
+RETIRED_KEYS: dict[str, str] = {
+    "config.train.circle": "the circle metric-learning term was removed; runs that set it trained with it, "
+    "but nothing reads it now",
+}
+
+
 def _build(cls: type, data: Any, where: str, base_dir: Path, nested: dict[str, type] | None = None) -> Any:
     """Build dataclass *cls* from *data*, failing on unknown keys.
 
@@ -1074,6 +1046,11 @@ def _build(cls: type, data: Any, where: str, base_dir: Path, nested: dict[str, t
     if not isinstance(data, dict):
         raise ValueError(f"{where}: expected a mapping, got {type(data).__name__}")
     known = {f.name: f for f in fields(cls)}
+    retired = [name for name in data if f"{where}.{name}" in RETIRED_KEYS]
+    if retired:
+        data = {k: v for k, v in data.items() if k not in retired}
+        for name in retired:
+            logger.info("%s.%s is a retired setting, ignored: %s", where, name, RETIRED_KEYS[f"{where}.{name}"])
     unknown = set(data) - set(known)
     if unknown:
         raise ValueError(f"{where}: unknown key(s) {sorted(unknown)}; valid keys: {sorted(known)}")
@@ -1101,7 +1078,6 @@ _NESTED: dict[str, type] = {
     "features": FeaturesConfig,
     "model": ModelConfig,
     "augment": AugmentConfig,
-    "circle": CircleConfig,
     "split": SplitConfig,
     "train": TrainConfig,
     "search": SearchConfig,

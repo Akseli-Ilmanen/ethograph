@@ -1,14 +1,8 @@
-"""The training loss: DLC2Action's own :class:`MS_TCN_Loss`, plus the circle term.
+"""The training loss: DLC2Action's own :class:`MS_TCN_Loss`.
 
-:func:`build_objective` is what training calls. It composes the two terms a
-run can have, each weighted by the config and each reported separately so a
-metrics row says where the loss went:
-
-* the **frame** loss below (``train.frame_weight``) — upstream's, near enough
-  unmodified;
-* the **circle** loss (``train.circle.weight``) — a deep metric-learning term
-  over the finest-stage logits, see :class:`CircleLoss`. Architecture-agnostic,
-  since every registered model produces logits.
+:func:`build_objective` is what training calls. It wraps the **frame** loss
+below (weighted by ``train.frame_weight``) and reports its value separately,
+so a metrics row says where the loss went.
 
 The frame loss itself is cross-entropy (optionally focal) plus upstream's consistency term — the
 truncated MSE between consecutive log-probabilities, weighted by ``alpha`` —
@@ -60,7 +54,6 @@ import math
 from typing import Any
 
 import torch
-import torch.nn.functional as F
 import yaml
 from torch import nn
 
@@ -259,84 +252,8 @@ def build_loss(
     return TruncatedMSTCNLoss(num_classes=n_classes, tau=tau, candidate_gate=bool(gate), **kwargs), settings
 
 
-def _label_similarity_pairs(normed: torch.Tensor, label: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Every unordered pair's cosine similarity, split by whether the two frames share a label.
-
-    *normed* is ``(N, C)``, already L2-normalised per row. Ported from
-    CETNet's ``convert_label_to_similarity`` (``segment/archive/cetnet_encoder.py``).
-    """
-    similarity = (normed @ normed.transpose(1, 0)).view(-1)
-    same_label = label.unsqueeze(1) == label.unsqueeze(0)
-    positive = same_label.triu(diagonal=1).view(-1)
-    negative = same_label.logical_not().triu(diagonal=1).view(-1)
-    return similarity[positive], similarity[negative]
-
-
-class CircleLoss(nn.Module):
-    """Deep metric-learning loss (Sun et al., CVPR 2020, ``arXiv:2002.10857``).
-
-    Pulls same-class pairs' cosine similarity toward ``1 - m`` and pushes
-    different-class pairs' toward ``m``, weighting each pair by how far it
-    already sits from that margin — so pairs the model already gets right
-    contribute almost nothing and gradient goes to the pairs still confused.
-
-    Ported unmodified from an older CETNet training script
-    (github.com/Wangjhdeveloper/CETNet/blob/main/model.py), which applied it to an encoder
-    trunk's L2-normalised feature map — a representation this project's
-    architecture contract does not expose (every registered model returns
-    only class logits, see :class:`~ethograph.segment.models.ModelOutput`).
-    :func:`build_objective` instead feeds it the finest-stage logits,
-    L2-normalised per frame.
-    """
-
-    def __init__(self, m: float = 0.25, gamma: float = 128.0) -> None:
-        super().__init__()
-        self.m = m
-        self.gamma = gamma
-        self.soft_plus = nn.Softplus()
-
-    def forward(self, sp: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
-        ap = torch.clamp_min(-sp.detach() + 1 + self.m, min=0.0)
-        an = torch.clamp_min(sn.detach() + self.m, min=0.0)
-        delta_p = 1 - self.m
-        delta_n = self.m
-        logit_p = -ap * (sp - delta_p) * self.gamma
-        logit_n = an * (sn - delta_n) * self.gamma
-        return self.soft_plus(torch.logsumexp(logit_n, dim=0) + torch.logsumexp(logit_p, dim=0))
-
-
-def circle_term(
-    circle_loss: CircleLoss,
-    logits: torch.Tensor,
-    y: torch.Tensor,
-    mask: torch.Tensor,
-    max_frames: int | None,
-) -> torch.Tensor | None:
-    """The circle loss over one batch's finest-stage logits, or ``None`` if there is nothing to compare.
-
-    Pools every unpadded frame across the whole batch into one set of
-    (logit-vector, label) pairs — same-class frames are drawn together and
-    different-class frames pushed apart regardless of which sample or
-    timestep they came from, exactly as :func:`_label_similarity_pairs` does
-    with the trunk feature it was ported from. Returns ``None`` when the pool
-    has no positive pair (every frame the same class) or no negative pair
-    (every frame a different class), since :class:`CircleLoss` would
-    otherwise ``logsumexp`` an empty tensor.
-    """
-    frame_mask = mask[:, 0, :] > 0
-    embeddings = logits[-1].permute(0, 2, 1)[frame_mask]  # (N, C)
-    labels = y[frame_mask]  # (N,)
-    if max_frames is not None and embeddings.shape[0] > max_frames:
-        keep = torch.randperm(embeddings.shape[0], device=embeddings.device)[:max_frames]
-        embeddings, labels = embeddings[keep], labels[keep]
-    sp, sn = _label_similarity_pairs(F.normalize(embeddings, dim=-1), labels)
-    if sp.numel() == 0 or sn.numel() == 0:
-        return None
-    return circle_loss(sp, sn)
-
-
 class Objective(nn.Module):
-    """The whole training loss: frame + circle, weighted and itemised.
+    """The whole training loss: the frame term, weighted and itemised.
 
     ``forward`` returns ``(total, parts)`` where *parts* holds each term's own
     value as a plain float — that is what the run's ``metrics.tsv`` and log
@@ -344,45 +261,22 @@ class Objective(nn.Module):
     stopped moving.
     """
 
-    def __init__(
-        self,
-        frame_loss: nn.Module,
-        frame_weight: float = 1.0,
-        circle_loss: CircleLoss | None = None,
-        circle_weight: float = 0.0,
-        circle_max_frames: int | None = None,
-    ) -> None:
+    def __init__(self, frame_loss: nn.Module, frame_weight: float = 1.0) -> None:
         super().__init__()
         self.frame_loss = frame_loss
         self.frame_weight = float(frame_weight)
-        self.circle_loss = circle_loss
-        self.circle_weight = float(circle_weight)
-        self.circle_max_frames = circle_max_frames
 
     def forward(
-        self, output: ModelOutput, y: torch.Tensor, mask: torch.Tensor, candidates: torch.Tensor | None = None
+        self, output: ModelOutput, y: torch.Tensor, candidates: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, dict[str, float]]:
-        total = output.logits.new_zeros(())
-        parts: dict[str, float] = {}
-        if self.frame_weight:
-            if isinstance(self.frame_loss, TruncatedMSTCNLoss):
-                frame = self.frame_loss(output.logits, y, candidates)
-            else:
-                frame = self.frame_loss(output.logits, y)
-            total = total + self.frame_weight * frame
-            parts["frame"] = float(frame.detach())
-        if self.circle_weight:
-            assert self.circle_loss is not None
-            circle = circle_term(self.circle_loss, output.logits, y, mask, self.circle_max_frames)
-            if circle is not None:
-                total = total + self.circle_weight * circle
-                parts["circle"] = float(circle.detach())
-        if not parts:
-            raise ValueError(
-                "Every loss term is switched off (train.frame_weight=0 and train.circle.weight=0) — "
-                "there is nothing to train on."
-            )
-        parts["total"] = float(total.detach())
+        if not self.frame_weight:
+            raise ValueError("train.frame_weight is 0 — there is nothing to train on.")
+        if isinstance(self.frame_loss, TruncatedMSTCNLoss):
+            frame = self.frame_loss(output.logits, y, candidates)
+        else:
+            frame = self.frame_loss(output.logits, y)
+        total = self.frame_weight * frame
+        parts = {"frame": float(frame.detach()), "total": float(total.detach())}
         return total, parts
 
 
@@ -393,29 +287,11 @@ def build_objective(
 
     *layout* is the materialised dataset's full :class:`~ethograph.segment.samples.ColumnLayout`;
     it decides the candidate gate's default (see :func:`build_loss`).
-    *exclusive* is the target's (see :func:`build_loss`); the circle loss
-    compares frames by their one label, so a multi-label run cannot have it.
+    *exclusive* is the target's (see :func:`build_loss`).
     """
     tcfg = config.train
     has_candidates = None if layout is None else bool(layout.candidate_columns().size)
     frame_loss, frame_settings = build_loss(tcfg.loss, n_classes, has_candidates=has_candidates, exclusive=exclusive)
-    ccfg = tcfg.circle
-    if ccfg.weight and not exclusive:
-        raise ValueError(
-            "train.circle.weight > 0 with a multi-label target — the circle loss pairs frames by their one "
-            "class, which a frame with several channels on does not have. Set train.circle.weight: 0."
-        )
-    circle_loss = CircleLoss(m=ccfg.m, gamma=ccfg.gamma) if ccfg.weight else None
-    objective = Objective(
-        frame_loss=frame_loss,
-        frame_weight=tcfg.frame_weight,
-        circle_loss=circle_loss,
-        circle_weight=ccfg.weight,
-        circle_max_frames=ccfg.max_frames,
-    )
-    settings = {
-        "frame_weight": tcfg.frame_weight,
-        "frame": frame_settings,
-        "circle": {"weight": ccfg.weight, "m": ccfg.m, "gamma": ccfg.gamma, "max_frames": ccfg.max_frames},
-    }
+    objective = Objective(frame_loss=frame_loss, frame_weight=tcfg.frame_weight)
+    settings = {"frame_weight": tcfg.frame_weight, "frame": frame_settings}
     return objective, settings
