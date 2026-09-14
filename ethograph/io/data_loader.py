@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from movement.io import load_dataset

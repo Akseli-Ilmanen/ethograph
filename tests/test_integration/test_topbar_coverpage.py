@@ -9,7 +9,9 @@ drag&drop alignment builder are driven end-to-end rather than only imported.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
+import numpy as np
 import pytest
 
 from ethograph.io.validation import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
@@ -902,6 +904,50 @@ def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui):
     for trial in range(1, len(videos) + 1):
         resolved = align.resolve_media_path(trial, "video", device="cam-1")
         assert resolved and Path(resolved) in videos
+
+
+def test_cover_page_many_npy_drop_is_one_trial_each(gui, tmp_path):
+    """Several .npy files are trials whatever the layout; with no media, each
+    array's length at the given rate is its trial."""
+    import ethograph as eto
+    from ethograph.gui.cover_page import CoverPage, classify_files
+
+    npys = []
+    for i, n in enumerate((100, 50)):
+        path = tmp_path / f"trial_{i + 1}.npy"
+        np.save(path, np.arange(n * 2, dtype=float).reshape(n, 2))
+        npys.append(str(path))
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    page._populate_io_from_buckets(classify_files(npys), {"data_sr": 10.0, "pose_fps": None})
+
+    dt = eto.open(meta.app_state.nc_file_path)
+    assert [dt.itrial(i)["data"].shape for i in range(2)] == [(100, 2), (50, 2)]
+    align = meta.app_state.nwb_alignment
+    assert align.stop_time(2) == pytest.approx(15.0)
+
+
+def test_cover_page_npy_rate_defaults_to_video_fps(gui):
+    from ethograph.datasets import dataset_dir, is_dataset_downloaded
+    from ethograph.gui import cover_page
+    from ethograph.gui.video_manager import probe_video
+
+    if not is_dataset_downloaded("moll2025"):
+        pytest.skip("moll2025 not downloaded")
+    videos = sorted(dataset_dir("moll2025").glob("*.mp4"))
+    shell, meta = gui
+    page = cover_page.CoverPage(shell, meta.io_widget)
+    seen = {}
+
+    class _Dialog(cover_page._DropDetailsDialog):
+        def exec_(self):
+            seen["sr"] = self.data_sr()
+            return False
+
+    with patch.object(cover_page, "_DropDetailsDialog", _Dialog):
+        page._collect_drop_details(cover_page.classify_files([str(videos[0]), str(videos[0].with_suffix(".npy"))]))
+    assert seen["sr"] == pytest.approx(probe_video(videos[0]).fps, abs=1e-3)
 
 
 def test_cover_page_labels_drop_loads_on_first_load(gui, birdpark_data_dir):

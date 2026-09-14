@@ -244,6 +244,7 @@ ignore = [
     "*.txt",
     "*.ipynb",
     "tox.ini",
+    "uv.lock",
     "Usersaksel.pypirc",
     "tests/*",
     "docs/*",

@@ -38,6 +38,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import natsort
+import numpy as np
 import pandas as pd
 import xarray as xr
 from qtpy.QtCore import Qt
@@ -57,7 +58,6 @@ from qtpy.QtWidgets import (
     QMenu,
     QPushButton,
     QScrollArea,
-    QSpinBox,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -356,10 +356,10 @@ class _DropDetailsDialog(QDialog):
         need_npy_sr: bool,
         npy_name: str | None,
         need_pose_software: bool,
-        npy_sr_default: float = 30.0,
         need_pose_fps: bool = False,
         audio_track_videos: list[str] | None = None,
         extract_audio_default: bool = True,
+        npy_sr_default: float = 30.0,
         parent=None,
     ):
         super().__init__(parent)
@@ -1095,7 +1095,16 @@ class CoverPage(QDialog):
                 "audio_track_videos": [],
             }
 
-        npy_name = Path(buckets["npy"][0]).name if need_npy_sr else None
+        npy_name = None
+        npy_sr_default = 30.0
+        if need_npy_sr:
+            npys = buckets["npy"]
+            npy_name = Path(npys[0]).name if len(npys) == 1 else f"{len(npys)} numpy files"
+            if buckets["video"]:
+                from ethograph.gui.video_manager import probe_video
+
+                # Data dropped with a video is most likely sampled per frame.
+                npy_sr_default = probe_video(natsort.natsorted(buckets["video"])[0]).fps or npy_sr_default
         dlg = _DropDetailsDialog(
             need_npy_sr,
             npy_name,
@@ -1103,6 +1112,7 @@ class CoverPage(QDialog):
             need_pose_fps,
             audio_track_videos=audio_track_videos,
             extract_audio_default=not buckets["audio"],
+            npy_sr_default=npy_sr_default,
             parent=self,
         )
         if not dlg.exec_():
@@ -1119,7 +1129,7 @@ class CoverPage(QDialog):
     def _is_multi_trial_drop(buckets: dict[str, list[str]]) -> bool:
         """Whether several files sit in one stream — the signal that this is
         several trials of one device, not several cameras on one trial."""
-        return any(len(buckets[k]) > 1 for k in ("video", "pose", "audio"))
+        return any(len(buckets[k]) > 1 for k in ("video", "pose", "audio", "npy"))
 
     def _populate_io_from_buckets(self, buckets: dict[str, list[str]], details: dict):
         io = self.io_widget
@@ -1129,7 +1139,9 @@ class CoverPage(QDialog):
         poses = buckets["pose"]
         images = buckets["image"]
 
-        if self._drop_layout() == "multi_trial" and self._is_multi_trial_drop(buckets):
+        # Several numpy files cannot be several cameras, so they are always trials.
+        many_npys = len(buckets["npy"]) > 1
+        if many_npys or (self._drop_layout() == "multi_trial" and self._is_multi_trial_drop(buckets)):
             self._populate_io_from_multi_trial(buckets, details)
             return
 
@@ -1269,13 +1281,15 @@ class CoverPage(QDialog):
         from ethograph.gui.video_manager import probe_video
         from ethograph.gui.wizard_multi_builder import build_multi_trial_dt
         from ethograph.gui.wizard_state import WizardState
+        from ethograph.io.data_loader import npy_feature_dataset
 
         videos = natsort.natsorted(buckets["video"])
         poses = natsort.natsorted(buckets["pose"])
         audios = natsort.natsorted(buckets["audio"])
-        counts = {k: len(v) for k, v in (("video", videos), ("pose", poses), ("audio", audios)) if v}
+        npys = natsort.natsorted(buckets["npy"])
+        counts = {k: len(v) for k, v in (("video", videos), ("pose", poses), ("audio", audios), ("npy", npys)) if v}
         if not counts:
-            raise RuntimeError("Multiple trials needs at least one video, pose or audio file.")
+            raise RuntimeError("Multiple trials needs at least one video, pose, audio or numpy file.")
         if len(set(counts.values())) > 1:
             detail = ", ".join(f"{k}={n}" for k, n in counts.items())
             raise RuntimeError(f"Multiple trials: streams disagree on file count ({detail}).")
@@ -1310,12 +1324,25 @@ class CoverPage(QDialog):
             state.audio.audio_sr = rate
             columns["audio_mic-1"] = audios
 
+        npy_datasets: list[xr.Dataset] = []
+        if npys:
+            # A pose feature already owns `time`; the npy keeps its own clock.
+            time_dim = "time_data" if poses else "time"
+            npy_datasets = [npy_feature_dataset(p, details["data_sr"], time_dim) for p in npys]
+            if not (videos or poses or audios):
+                # Nothing to probe a duration from: each array's length is its trial.
+                stops = np.cumsum([ds.sizes[time_dim] / details["data_sr"] for ds in npy_datasets])
+                columns["start_time"] = [0.0, *stops[:-1]]
+                columns["stop_time"] = list(stops)
+
         state.trial_table = pd.DataFrame(columns)
         self._drop_tmp_dir = self._prepare_drop_dir()
         state.session_dir = str(self._drop_tmp_dir)
         state.output_path = str(self._drop_tmp_dir / "session.nc")
 
         dt = build_multi_trial_dt(state)
+        for trial_id, npy_ds in zip(columns["trial"], npy_datasets, strict=False):
+            dt.update_trial(trial_id, lambda ds, npy_ds=npy_ds: ds.merge(npy_ds))
         dt.to_netcdf(state.output_path)
 
         app_state = self.app_state
@@ -1434,7 +1461,6 @@ class CoverPage(QDialog):
         (:func:`~ethograph.features.movement.extract_packet_motion`): no
         decoding, so the drop loads in a second instead of a minute per video.
         """
-        import numpy as np
 
         from ethograph.features.movement import extract_packet_motion
         from ethograph.gui.video_manager import probe_video
