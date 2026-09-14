@@ -356,6 +356,7 @@ class _DropDetailsDialog(QDialog):
         need_npy_sr: bool,
         npy_name: str | None,
         need_pose_software: bool,
+        npy_sr_default: float = 30.0,
         need_pose_fps: bool = False,
         audio_track_videos: list[str] | None = None,
         extract_audio_default: bool = True,
@@ -390,9 +391,10 @@ class _DropDetailsDialog(QDialog):
             )
             row = QHBoxLayout()
             row.addWidget(QLabel("Data sampling rate:"))
-            self._sr_spin = QSpinBox()
-            self._sr_spin.setRange(1, 1000000)
-            self._sr_spin.setValue(30)
+            self._sr_spin = QDoubleSpinBox()
+            self._sr_spin.setRange(0.001, 1000000.0)
+            self._sr_spin.setDecimals(3)
+            self._sr_spin.setValue(npy_sr_default)
             self._sr_spin.setSuffix(" Hz")
             row.addWidget(self._sr_spin, 1)
             layout.addLayout(row)
@@ -428,7 +430,7 @@ class _DropDetailsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    def data_sr(self) -> int | None:
+    def data_sr(self) -> float | None:
         return self._sr_spin.value() if self._sr_spin is not None else None
 
     def source_software(self) -> str | None:

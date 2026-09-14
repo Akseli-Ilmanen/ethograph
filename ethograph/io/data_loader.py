@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 from movement.io import load_dataset
@@ -581,6 +580,25 @@ def wizard_single_from_pose(
     return ds
 
 
+def npy_feature_dataset(npy_path: str | Path, data_sr: float, time_dim: str = "time") -> xr.Dataset:
+    """A ``.npy`` array as one ``data`` feature on a ``(time_dim, variable)`` grid.
+
+    The longer axis is time; a 1-D array is a single variable.
+    """
+    data = np.load(npy_path)
+    if data.ndim == 1:
+        data = data.reshape(-1, 1)
+    if data.ndim != 2:
+        raise ValueError(f"{Path(npy_path).name}: expected a 1-D or 2-D array, got shape {data.shape}")
+    if data.shape[0] < data.shape[1]:
+        data = data.T
+    time_coords = np.arange(data.shape[0]) / data_sr
+    return xr.Dataset(
+        data_vars={"data": ([time_dim, "variable"], data)},
+        coords={time_dim: time_coords},
+    )
+
+
 def wizard_single_from_npy_file(
     video_path,
     fps,
@@ -599,23 +617,7 @@ def wizard_single_from_npy_file(
             "individual 4",
         ]
 
-    data = np.load(npy_path)
-
-    if data.ndim == 1:
-        data = data.reshape(-1, 1)
-
-    n_samples, n_variables = data.shape
-
-    if n_samples < n_variables:
-        data = data.T
-        n_samples, n_variables = data.shape
-
-    time_coords = np.arange(n_samples) / data_sr
-
-    ds = xr.Dataset(
-        data_vars={"data": (["time", "variable"], data)},
-        coords={"time": time_coords, "individuals": individuals},
-    )
+    ds = npy_feature_dataset(npy_path, data_sr).assign_coords(individuals=individuals)
     ds.attrs["fps"] = fps
 
     if video_motion and video_path is not None:
