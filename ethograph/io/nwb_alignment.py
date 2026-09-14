@@ -678,16 +678,17 @@ class NWBAlignment:
     def _file_for_trial(self, acq, trial) -> _FileSpan | None:
         """The external file of *acq* that holds *trial*.
 
-        With real trial timing the file is the one overlapping the trial most
+        With session timing the file is the one overlapping the trial most
         (the trial's start lies in it; a trial that starts in a gap before a
-        triggered file takes that file). Without timing every trial starts at
-        0.0 and time says nothing, so the trial's position is used -- one file
-        per trial when the counts agree, else the first file.
+        triggered file takes that file). When every trial starts at the same
+        time (no timing, or trial-relative timing with per-trial files all
+        starting at 0) time says nothing, so the trial's position is used --
+        one file per trial when the counts agree, else the first file.
         """
         spans = self._acq_spans(acq)
         if not spans:
             return None
-        if self.has_real_timing:
+        if self.has_real_timing and self.trials_df["start_time"].nunique() > 1:
             best = _span_overlapping(spans, self.start_time(trial), self.stop_time(trial))
             if best is not None:
                 return best

@@ -113,6 +113,27 @@ def split_files(tmp_path: Path) -> NWBAlignment:
 
 
 @pytest.fixture
+def trial_relative(tmp_path: Path) -> NWBAlignment:
+    """One file per trial, every trial and every file starting at 0, trials of different lengths."""
+    nwbfile = _nwbfile()
+    lengths = [180, 300, 240]
+    ts = np.concatenate([np.arange(n) / FPS for n in lengths])
+    nwbfile.add_acquisition(
+        ImageSeries(
+            name=NAME,
+            description="",
+            unit="Frames",
+            format="external",
+            external_file=["r1.mp4", "r2.mp4", "r3.mp4"],
+            starting_frame=np.cumsum([0, *lengths[:-1]]),
+            timestamps=ts,
+        )
+    )
+    _add_trials(nwbfile, [(0.0, n / FPS) for n in lengths])
+    return _write(nwbfile, tmp_path / "relative.nwb")
+
+
+@pytest.fixture
 def trialless(tmp_path: Path) -> NWBAlignment:
     """Free-running camera and no trials table at all."""
     nwbfile = _nwbfile()
@@ -187,6 +208,14 @@ class TestSplitFiles:
             ("part2.mp4", 10.0, 20.0),
             ("part3.mp4", 20.0, 30.0),
         ]
+
+
+class TestTrialRelative:
+    def test_each_trial_takes_its_own_file(self, trial_relative: NWBAlignment):
+        # Every file overlaps every trial in time, so the longest would win a time match.
+        for trial, name in zip((1, 2, 3), ("r1.mp4", "r2.mp4", "r3.mp4")):
+            assert Path(trial_relative.resolve_media_path(trial, "video", NAME)).name == name
+            assert trial_relative.stream_offset_for_trial(trial, "video", NAME) == pytest.approx(0.0)
 
 
 class TestTrialless:

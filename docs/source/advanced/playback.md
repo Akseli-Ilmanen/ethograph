@@ -15,10 +15,9 @@ The **playback mode** dropdown in the bottom bar picks how video (and audio) pla
 
 ### Speed and high-rate (ultrasonic) audio
 
-Playback speed is set as a **% of the original recording** (the "Speed" field
-in the bottom bar), not a raw FPS — 100% is native speed, 50% half (one octave
-lower), 200% double. It drives video FPS and audio pitch/rate together; a
-readout shows the effective rates, e.g. `(120.0 fps, 44.1 kHz)`.
+The **Speed** field in the bottom bar is a % of the recording's native speed
+(50% = half speed). Video and audio slow down or speed up together, and a
+readout shows the resulting rates, e.g. `(120.0 fps, 44.1 kHz)`.
 
 Audio is resampled to a fixed 48 kHz output, so the sound card's max rate never
 caps playback. Any speed works (very fast audio just chirps), and **high-rate
