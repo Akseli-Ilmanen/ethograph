@@ -94,4 +94,3 @@ learn from a model that knows less than it does.
   which is the cheaper first try on the same features).
 - Pose available only for the labelled sessions → option 4, gated as above.
 - No pose → neither; E2E-Spot alone.
-

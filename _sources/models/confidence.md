@@ -173,4 +173,3 @@ Judge a cutoff by what it buys: on a session with curated labels, "reviewing
 everything below *t* catches what share of the errors?" is the question the
 confidence exists to answer, and it is a better guide than how the histogram
 looks.
-

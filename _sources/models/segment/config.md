@@ -507,4 +507,3 @@ cross_validation/{name}/
   folds.tsv          one row per fold: session, run, run_dir, best_epoch, held-out metrics, predictions
   crossval.log       everything logged during the folds
 ```
-

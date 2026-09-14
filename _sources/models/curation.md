@@ -202,4 +202,3 @@ way every time you review the same behaviour. **Model ▸ Curation workflows…*
 records that whole routine — filters, prediction, scope, grid,
 review, save — and replays it in one press. See
 {doc}`../advanced/labels/workflows`.
-

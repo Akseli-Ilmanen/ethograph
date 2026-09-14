@@ -59,8 +59,8 @@ divided, and that is the only thing that changes between them.
   - A prediction set beside **every** session, each written by a model that
     never saw it. Load them in the GUI.
 ```
-In stage 2 (cross-validation), we recommend taking an entire behavioural session 
-as the held-out test set. This is convenient as you can use the GUI to open any trial 
+In stage 2 (cross-validation), we recommend taking an entire behavioural session
+as the held-out test set. This is convenient as you can use the GUI to open any trial
 in that session and compare your ground truth labels with predictions visually.
 
 ### The stages themselves
@@ -69,7 +69,7 @@ in that session and compare your ground truth labels with predictions visually.
 :header-rows: 1
 :widths: 18 42 40
 
-* - Stage 
+* - Stage
   - What it does
   - Writes
 * - **Feature engineering**

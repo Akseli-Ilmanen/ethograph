@@ -283,4 +283,3 @@ mapped to a class with `name`, `plan(video_fps)` and `extract(video)` — whose
 `extract` returns `to_dataarray(...)`. Its package is pip-installed, never
 copied into the tree (`notes/adr/0009-extractors-pip-installed-not-vendored.md`); if the package cannot share the GUI
 environment, the extractor runs it by subprocess and reads the file back.
-

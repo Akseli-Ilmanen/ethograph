@@ -120,7 +120,7 @@ the returned dataset shares its underlying data with the tree:
 
 .. code-block:: python
 
-   dt.trial(1).attrs["labeling_method"] = "curated" 
+   dt.trial(1).attrs["labeling_method"] = "curated"
    dt.trial(1)["speed"].values[:10] = 0.0
 
 **Structural changes** (adding/removing variables) require

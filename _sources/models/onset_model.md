@@ -120,4 +120,3 @@ the label, so the number is always something you can see. The statistics,
 the equations and how they compare with the segmentation pipeline's entropy
 are in {doc}`the confidence page <confidence>`, together with reviewing
 by confidence in the label grid.
-
