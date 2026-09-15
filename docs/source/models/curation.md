@@ -128,7 +128,7 @@ prediction review is for. *Manual or curated* is there for checking your own
 work: both mean a human vouched for the label, and which of the two it is says
 only how it got there — *Manual only* and *Curated only* are available
 alongside it when you want to isolate one. Like the rest of the grid setup the choice is remembered across
-sessions, and a {doc}`workflow <../advanced/labels/workflows>` step sets it per grid.
+sessions, and a {doc}`workflow <workflows>` step sets it per grid.
 
 Both grids take a **Sort**: by trial (the default in the label grid) or by
 **confidence**, lowest or highest first. Sorting by confidence is the point of
@@ -201,4 +201,4 @@ Scope, mode, grid layout and review window are settings you will set the same
 way every time you review the same behaviour. **Model ▸ Curation workflows…**
 records that whole routine — filters, prediction, scope, grid,
 review, save — and replays it in one press. See
-{doc}`../advanced/labels/workflows`.
+{doc}`workflows`.

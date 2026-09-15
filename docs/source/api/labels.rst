@@ -5,7 +5,7 @@ Labels
 
 Labels are stored as interval DataFrames (``onset_s``, ``offset_s``,
 ``labels``, ``individual``, ``trial``, ...) in a TSV file alongside each
-``.nc`` dataset. See :doc:`../advanced/labels/index` for the user-facing
+``.nc`` dataset. See :doc:`../getting_started/labels/index` for the user-facing
 workflow and the storage-format reference.
 
 ----

@@ -13,14 +13,6 @@ the {doc}`user manual <../getting_started/user_manual>`.
 Per-trial conditions (metadata table) and the trials table filter UI.
 :::
 
-:::{grid-item-card} {fas}`tags` Labels
-:link: labels/index
-:link-type: doc
-
-
-Labelling in the GUI, predicting point events, importing/exporting labels.
-:::
-
 :::{grid-item-card} {fas}`wave-square` Changepoints
 :link: changepoints/index
 :link-type: doc
@@ -63,7 +55,6 @@ Common issues and fixes.
 :maxdepth: 2
 :hidden:
 
-labels/index
 changepoints/index
 keypoint_labelling/index
 metadata

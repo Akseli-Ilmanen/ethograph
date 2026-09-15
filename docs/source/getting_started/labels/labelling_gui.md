@@ -85,7 +85,7 @@ Use the labels widget interface:
 
 ## Changepoint correction
 
-See {doc}`../changepoints/correction` for how label boundaries are snapped to
+See {doc}`../../advanced/changepoints/correction` for how label boundaries are snapped to
 detected changepoints.
 
 ---

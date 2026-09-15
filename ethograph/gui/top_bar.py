@@ -211,7 +211,7 @@ class TopBarBuilder:
         one ``HistGradientBoostingClassifier`` per ticked class (plus an
         optional sequence CRF); Predict fills those events into the trials
         that don't carry them yet, each with the model's own confidence.
-        Documented in ``docs/source/advanced/labels/onset_model.md``.
+        Documented in ``docs/source/models/onset_model.md``.
 
         The third entry fits nothing: it ranks a video-feature bank's
         dimensions by how well each separates a behaviour class from the rest

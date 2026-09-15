@@ -25,6 +25,13 @@ Conda environments, extras, troubleshooting.
 Dataset schema, trials, media alignment, ephys recordings and folder layout.
 :::
 
+:::{grid-item-card} {fas}`tags` Labels
+:link: labels/index
+:link-type: doc
+
+Labelling in the GUI, the mapping file, branches, importing/exporting labels.
+:::
+
 ::::
 
 ```{toctree}
@@ -34,4 +41,5 @@ Dataset schema, trials, media alignment, ephys recordings and folder layout.
 user_manual
 installation
 your_data/index
+labels/index
 ```
