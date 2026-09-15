@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/curation.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Examples" href="../examples/index.html" />
+    <link rel="next" title="Curation workflows" href="workflows.html" />
     <link rel="prev" title="Model confidence" href="confidence.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -394,6 +394,7 @@
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="confidence.html">Model confidence</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Curating labels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </div>
 </nav></div>
@@ -587,7 +588,7 @@ by hand have no curve and none is drawn.</p>
 TSV, you can generate first-guess labels <strong>programmatically from a time-series
 criterion</strong> — say, the first frame where beak opening exceeds a threshold
 width — write them into the <code class="docutils literal notranslate"><span class="pre">{name}_labels.tsv</span></code> file with
-<code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code> (see <a class="reference internal" href="../advanced/labels/exporting.html#target-exporting-labels"><span class="std std-ref">the column reference</span></a>), load it into the GUI, and walk the guesses here.
+<code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code> (see <a class="reference internal" href="../getting_started/labels/exporting.html#target-exporting-labels"><span class="std std-ref">the column reference</span></a>), load it into the GUI, and walk the guesses here.
 A rough automatic pass plus a fast frame-accurate review is often far quicker
 than either alone.</p>
 </section>
@@ -604,7 +605,7 @@ prediction review is for. <em>Manual or curated</em> is there for checking your 
 work: both mean a human vouched for the label, and which of the two it is says
 only how it got there — <em>Manual only</em> and <em>Curated only</em> are available
 alongside it when you want to isolate one. Like the rest of the grid setup the choice is remembered across
-sessions, and a <a class="reference internal" href="../advanced/labels/workflows.html"><span class="doc">workflow</span></a> step sets it per grid.</p>
+sessions, and a <a class="reference internal" href="workflows.html"><span class="doc">workflow</span></a> step sets it per grid.</p>
 <p>Both grids take a <strong>Sort</strong>: by trial (the default in the label grid) or by
 <strong>confidence</strong>, lowest or highest first. Sorting by confidence is the point of
 having it — it puts every doubtful label on the first screens instead of
@@ -672,7 +673,7 @@ is quick. Clicks mean the same as in the label grid.</p>
 way every time you review the same behaviour. <strong>Model ▸ Curation workflows…</strong>
 records that whole routine — filters, prediction, scope, grid,
 review, save — and replays it in one press. See
-<a class="reference internal" href="../advanced/labels/workflows.html"><span class="doc">Curation workflows</span></a>.</p>
+<a class="reference internal" href="workflows.html"><span class="doc">Curation workflows</span></a>.</p>
 </section>
 </section>
 
@@ -696,11 +697,11 @@ review, save — and replays it in one press. See
       </div>
     </a>
     <a class="right-next"
-       href="../examples/index.html"
+       href="workflows.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Examples</p>
+        <p class="prev-next-title">Curation workflows</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

@@ -35,7 +35,7 @@ binary classifier over the same inputs.
 1. **Name the model** — leave the combo on *New model…* and type a name, or
    pick an existing model to add more training data to it.
 2. **Tick the point events to predict.** Only classes marked as point events
-   in {doc}`mapping.txt <../advanced/labels/mapping>` are listed.
+   in {doc}`mapping.txt <../getting_started/labels/mapping>` are listed.
 3. **Tick the features.** Ticking `speed ▸ keypoints ▸ beak, head` gives two
    input columns. Every dim has to be pinned to explicit values — that frozen
    list *is* the model's input layout, which is what lets it run on another

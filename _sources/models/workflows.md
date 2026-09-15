@@ -34,8 +34,8 @@ Everything is saved as you type, so there is no Save button — **New**,
 
 | Step | What it does |
 |------|--------------|
-| **Filter trials** | Sets the trials table's column filters. Every later step runs over exactly the trials the table then shows — this is the one trial filter (see {doc}`../metadata`). |
-| **Predict onsets** | Runs a trained LightGBM model over those trials, filling classes they do not already carry (see {doc}`../../models/onset_model`). |
+| **Filter trials** | Sets the trials table's column filters. Every later step runs over exactly the trials the table then shows — this is the one trial filter (see {doc}`../advanced/metadata`). |
+| **Predict onsets** | Runs a trained LightGBM model over those trials, filling classes they do not already carry (see {doc}`onset_model`). |
 | **Set curation scope** | Drops label classes into the Curation section's scope area and picks the curation mode. |
 | **Label grid view** | Opens the frame grid on the scope, from the chosen cameras, laid out and generated as configured. |
 | **Video grid** | Opens the clip player on the scope, from the chosen cameras. |

@@ -52,4 +52,5 @@ Action segmentation (state events) <segment/index>
 PES (point events from pixels) <spot/index>
 confidence
 curation
+workflows
 ```
