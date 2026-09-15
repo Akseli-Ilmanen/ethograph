@@ -116,7 +116,7 @@ card uses the run's stride. A strided prediction is read back at the
 | `batch_size`, `acc_grad` | `4`, `4` | Clips per optimiser step and gradient-accumulation steps: `batch_size / acc_grad` clips per loader batch, i.e. `clip_len × batch_size / acc_grad` frames — the number `MAX_FRAMES_PER_BATCH` caps. |
 | `retries` | `2` | Resume-and-retry a training that crashed (a GPU hiccup), from its last checkpoint. |
 | `seed`, `device` | `0`, auto | `device` = `cuda`, `mps`, `cpu`; auto picks the best available. |
-| `features_dropout` | `0.3` | Share of training clips whose feature block is zeroed (modality dropout), so the pixels are trained to carry the event on their own too — which is what keeps `evaluate(zero_features=True)` meaningful. |
+| `features_dropout` | `0` | Share of training clips whose feature block is zeroed (modality dropout). Off by default; set it (e.g. `0.3`) when some trials will have no pose, or to make `evaluate(zero_features=True)` a fair ablation. |
 
 ### `train.split`
 
@@ -154,6 +154,37 @@ written once per trial to `features/{video_id}.npz` at `materialise()` and
 fed to the pixel model beside the frames (z-scored on the training split
 under `features/block/`). Absent,
 the model is E2E-Spot on pixels alone. See {doc}`multimodal`.
+
+(spot-config-label-inputs)=
+## `label_inputs`
+
+Optional. The **labels of other branches** as input columns, appended to
+`features:` so they ride into the GRU beside the pose — the segmentation
+pipeline's {ref}`features.label_inputs <segment-config-label-inputs>`, same
+keys, same renderings (a state's indicator, a point's Laplacian bump per
+width in `point_sigmas_s`). Two differences:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `mapping` | `~/.ethograph/defaults/mapping.txt` | This config names no mapping of its own, so say where the branches are read from when it is not the default one. |
+| `clock` | the first of `features:` | With no pose listed there is no feature to take the clock from — name the session variable whose time coordinate the columns should be rendered on. |
+
+```yaml
+labels:
+  classes: [7]                        # first contact, branch 1 of the mapping
+features:
+  pellet_stickClosest_dist: {}
+label_inputs:
+  branches: [0]                       # the earlier question's labels, branch 0
+```
+
+**A branch holding any of `labels.classes` is refused**: the model would
+learn to copy its input. The columns are rendered for `individual` (the one
+event stream this pipeline predicts) and a trial with none of these labels
+renders zeros. With `label_inputs` set the run is a `_features` run, `train`
+z-scores the block on the training split as for the pose, and
+`evaluate(zero_features=True)` measures what the block — pose and old labels
+together — contributes.
 
 ## `infer`
 

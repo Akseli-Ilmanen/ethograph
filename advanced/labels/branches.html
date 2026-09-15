@@ -488,6 +488,17 @@ Branches let you keep <strong>independent, overlapping tiers</strong> (e.g. tran
 that never trim each other.</p>
 <p>Analogous to <strong>git branches</strong>: only one branch is active (editable) at a
 time, and changes you make in one branch can never change labels in another.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><strong>A new question is a new branch — and the old branch can help answer it.</strong>
+If you trained a segmentation model on one question and your labels are
+curated across every session, start the finer question (a moment inside a
+state, an event that only follows another) on a new branch and feed the old
+branch’s labels to the new model as inputs:
+<a class="reference internal" href="../../models/segment/config.html#segment-config-label-inputs"><span class="std std-ref">features.label_inputs</span></a>. The two must be
+different branches — the config refuses the same one, since a model handed
+its own targets learns to copy them.</p>
+</div>
 <video autoplay loop muted playsinline style="width:100%">
   <source src="../../_static/media/branch.mp4" type="video/mp4">
 </video><hr class="docutils" />

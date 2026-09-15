@@ -751,6 +751,83 @@ and <code class="docutils literal notranslate"><span class="pre">train.drop_kind
 land in the session’s own <code class="docutils literal notranslate"><span class="pre">labels/predictions_{run}_{timestamp}/</span></code> like any
 other run’s, so they open in the GUI against the curated labels.</p>
 </section>
+<section id="features-label-inputs">
+<span id="segment-config-label-inputs"></span><h3><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code><a class="headerlink" href="#features-label-inputs" title="Link to this heading">#</a></h3>
+<p>Optional. Feeds the <strong>labels of other branches</strong> to the model as input
+columns. Labelling is expensive, and the labels of an earlier question often
+say a great deal about <em>when</em> the answer to a new one can happen — a peck
+rarely comes before the head has turned. Every class of the named branches
+becomes one column of a variable <code class="docutils literal notranslate"><span class="pre">label_inputs</span></code>, rendered per trial at
+session-open time on the clock of <code class="docutils literal notranslate"><span class="pre">clock</span></code> and <strong>merged straight into
+<code class="docutils literal notranslate"><span class="pre">features.columns</span></code></strong> like <code class="docutils literal notranslate"><span class="pre">changepoint_features</span></code> — you never spell the entry
+yourself.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">branches</span></code></p></td>
+<td><p>required</p></td>
+<td><p>Branches of the mapping whose classes become inputs. Never a branch <code class="docutils literal notranslate"><span class="pre">features.labels</span></code> predicts.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mapping</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">features.labels.mapping</span></code></p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> the branches are read from.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">classes</span></code></p></td>
+<td><p>every class of the branches</p></td>
+<td><p>Label ids to feed; an id outside the branches is refused.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">point_sigmas_s</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[0.1,</span> <span class="pre">1.0]</span></code></p></td>
+<td><p>Widths (seconds) of the Laplacian bump a <strong>point</strong> event is rendered at, one column each — a sharp one for timing, a wide one for reach.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">clock</span></code></p></td>
+<td><p>the first of <code class="docutils literal notranslate"><span class="pre">features.columns</span></code></p></td>
+<td><p>The feature whose time coordinate the columns are rendered onto, so they share its rate exactly.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">include_automated</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Read <code class="docutils literal notranslate"><span class="pre">automated</span></code> rows too — another model’s predictions as input. Off, only <code class="docutils literal notranslate"><span class="pre">manual</span></code>/<code class="docutils literal notranslate"><span class="pre">curated</span></code> labels count, exactly as for targets.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A <strong>state</strong> class is its on/off indicator: <code class="docutils literal notranslate"><span class="pre">1</span></code> inside every interval, <code class="docutils literal notranslate"><span class="pre">0</span></code>
+outside. A <strong>point</strong> class is <code class="docutils literal notranslate"><span class="pre">max_i</span> <span class="pre">exp(−|t</span> <span class="pre">−</span> <span class="pre">t_i|</span> <span class="pre">/</span> <span class="pre">σ)</span></code> per width in
+<code class="docutils literal notranslate"><span class="pre">point_sigmas_s</span></code> — the kernel <code class="docutils literal notranslate"><span class="pre">changepoint_features</span></code> draws around a
+changepoint, for the same reason: the narrow peak points at the moment, the
+long tails stay readable from far away. The columns are named by class:
+<code class="docutils literal notranslate"><span class="pre">label_inputs|label_input=walk,individual=self</span></code>,
+<code class="docutils literal notranslate"><span class="pre">label_inputs|label_input=peck&#64;0.1s,individual=self</span></code>. They live in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code> and are never z-scored
+(<code class="docutils literal notranslate"><span class="pre">normalise:</span> <span class="pre">0</span></code>); they are declared <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">label_input</span></code>, so
+<code class="docutils literal notranslate"><span class="pre">train.drop_kinds:</span> <span class="pre">[label_input]</span></code> trains the same model without them — the
+ablation that says what the old labels are worth.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">features</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">speed</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">]}</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">branch</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">}</span><span class="w">                 </span><span class="c1"># the new question: branch 1's classes</span>
+<span class="w">  </span><span class="nt">label_inputs</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">]</span><span class="w">                     </span><span class="c1"># the old answers: branch 0's classes, as inputs</span>
+<span class="w">    </span><span class="nt">point_sigmas_s</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.0</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+<p><strong>An input branch is never a target branch.</strong> A config whose <code class="docutils literal notranslate"><span class="pre">label_inputs.branches</span></code>
+overlaps <code class="docutils literal notranslate"><span class="pre">features.labels.branch</span></code>/<code class="docutils literal notranslate"><span class="pre">branches</span></code> is refused at load: a model fed
+the labels it is asked to predict learns to copy them, scores perfectly under
+cross-validation, and has learned nothing about its other inputs. Putting the
+two questions on two branches of the mapping is what makes the rule
+checkable.</p>
+<p>Each sample reads its <strong>own animal’s</strong> labels: the variable carries the
+individual dim (the dataset’s, or one made from the config’s individuals) and
+is pinned per sample like every other feature. A trial with none of these
+labels renders zeros — which is also what a session predicted later, before
+anyone has labelled its old branch, reads as. The log says how many trials
+carried them. Xarray sessions only.</p>
+</section>
 <section id="features-preprocess">
 <h3><code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code><a class="headerlink" href="#features-preprocess" title="Link to this heading">#</a></h3>
 <p>All five keys live under <code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code> in the YAML, but they run at
@@ -1350,6 +1427,7 @@ cross_validation/{name}/
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-sin-cos"><code class="docutils literal notranslate"><span class="pre">features.sin_cos</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-changepoint-features"><code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-neural"><code class="docutils literal notranslate"><span class="pre">features.neural</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-label-inputs"><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-preprocess"><code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code></a></li>
 </ul>
 </li>

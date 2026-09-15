@@ -16,6 +16,17 @@ that never trim each other.
 Analogous to **git branches**: only one branch is active (editable) at a
 time, and changes you make in one branch can never change labels in another.
 
+```{tip}
+**A new question is a new branch — and the old branch can help answer it.**
+If you trained a segmentation model on one question and your labels are
+curated across every session, start the finer question (a moment inside a
+state, an event that only follows another) on a new branch and feed the old
+branch's labels to the new model as inputs:
+{ref}`features.label_inputs <segment-config-label-inputs>`. The two must be
+different branches — the config refuses the same one, since a model handed
+its own targets learns to copy them.
+```
+
 ```{raw} html
 <video autoplay loop muted playsinline style="width:100%">
   <source src="../../_static/media/branch.mp4" type="video/mp4">

@@ -605,7 +605,7 @@ ready to predict with.</p>
 <h2>Feature engineering is done by user, not the pipeline<a class="headerlink" href="#feature-engineering-is-done-by-user-not-the-pipeline" title="Link to this heading">#</a></h2>
 <p>The pipeline only <strong>selects</strong> variables already in the session file, so
 anything a model should see is a variable you add (and can plot in the GUI).
-Three config sections are the exception, derived at session open:</p>
+Four config sections are the exception, derived at session open:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Section</p></th>
@@ -626,12 +626,25 @@ Three config sections are the exception, derived at session open:</p>
 <td><p>a pynapple <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code> of spikes</p></td>
 <td><p>a binned <code class="docutils literal notranslate"><span class="pre">TsdFrame</span></code></p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code></p></td>
+<td><p>curated labels of <em>another</em> branch</p></td>
+<td><p>an indicator per state class, a Laplacian bump per point class</p></td>
+</tr>
 </tbody>
 </table>
 </div>
 <p>A changepoint mask is a binary variable with <code class="docutils literal notranslate"><span class="pre">attrs[&quot;changepoint_mask&quot;]</span> <span class="pre">=</span> <span class="pre">1</span></code>,
-as the GUI’s <strong>Detect</strong> button writes. <code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code> is
-currently supported for <code class="docutils literal notranslate"><span class="pre">.nc</span></code> sessions only, not pynapple / NWB.</p>
+as the GUI’s <strong>Detect</strong> button writes. <code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code> and
+<code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code> are currently supported for <code class="docutils literal notranslate"><span class="pre">.nc</span></code> sessions only, not
+pynapple / NWB.</p>
+<p><strong>Reuse the labels you already have.</strong> If one question is answered — a
+behaviour labelled and curated across every session — and the next one is
+finer (a moment inside a state, an event that only follows another), put the
+new labels on a new <a class="reference internal" href="../../advanced/labels/branches.html#target-label-branches"><span class="std std-ref">branch</span></a> and list the old
+branch under <code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code>: its labels become input columns, so the
+new model learns <em>when</em> the new event can happen from work already done. The
+input branch is never the target branch; the config refuses the overlap. See
+<a class="reference internal" href="config.html#segment-config-label-inputs"><span class="std std-ref">features.label_inputs</span></a>.</p>
 <p>Feature engineering may look like:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_changepoint_features</span>

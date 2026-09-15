@@ -486,19 +486,37 @@ put on the training scale rather than its own.</p>
 is named <code class="docutils literal notranslate"><span class="pre">{clip}_features</span></code>, beside a video-only baseline. Every predicted
 trial then needs its pose — <code class="docutils literal notranslate"><span class="pre">inference()</span></code> exports and scales a session’s
 features before predicting it — which is the price of using it.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">features_dropout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span><span class="w">       </span><span class="c1"># share of training clips that see zeros in place of the features</span>
-</pre></div>
-</div>
 <p>Nothing makes a network use an input, so the contribution is measured, not
 assumed: <code class="docutils literal notranslate"><span class="pre">evaluate(run,</span> <span class="pre">zero_features=True)</span></code> scores the trained model with
 zeros in place of the block (<code class="docutils literal notranslate"><span class="pre">test_metrics_nofeatures.yaml</span></code>), and the
 difference to <code class="docutils literal notranslate"><span class="pre">test_metrics.yaml</span></code> is what the pose adds, per class and
-tolerance. <code class="docutils literal notranslate"><span class="pre">features_dropout</span></code> is what keeps that ablation meaningful — a share
-of training clips see no features, so the pixels are trained to carry the
-event on their own too.</p>
+tolerance.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">train</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">features_dropout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span><span class="w">       </span><span class="c1"># optional: share of training clips that see zeros in place of the features</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">features_dropout</span></code> is off by default — with pose on every predicted trial,
+zeroing it during training only handicaps the pose. Set it when some trials
+will have no pose (the pixels are then trained to carry the event on their
+own), or to make the ablation fair: a model that never saw zeros is scored on
+an input it never trained on, so <code class="docutils literal notranslate"><span class="pre">zero_features=True</span></code> then overstates what
+the pose contributes.</p>
 <p>Adding, removing or renaming a column afterwards means a new run: the block’s
 width and column order are part of the trained model.</p>
+</section>
+<section id="labels-of-an-earlier-question">
+<h2>Labels of an earlier question<a class="headerlink" href="#labels-of-an-earlier-question" title="Link to this heading">#</a></h2>
+<p>The block can also carry <strong>labels you already have</strong>. When one behaviour was
+labelled in full and the new question is a finer one — the moment inside a
+state, an event that only ever follows another — those labels say a lot
+about <em>when</em> the new one can happen, and <a class="reference internal" href="config.html#spot-config-label-inputs"><span class="std std-ref">label_inputs</span></a> feeds them in as columns: a state as its on/off
+indicator, a point event as a Laplacian bump. The one rule is that the
+branch they come from is never the branch being predicted; the config refuses
+the overlap, since a model handed its own targets learns to copy them.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">label_inputs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">]</span><span class="w">                       </span><span class="c1"># the earlier question's branch</span>
+</pre></div>
+</div>
 </section>
 <section id="choosing">
 <h2>Choosing<a class="headerlink" href="#choosing" title="Link to this heading">#</a></h2>
@@ -558,6 +576,7 @@ which is the cheaper first try on the same features).</p></li>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-features-ride-into-the-gru">The features ride into the GRU</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#labels-of-an-earlier-question">Labels of an earlier question</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing">Choosing</a></li>
 </ul>
   </nav></div>
