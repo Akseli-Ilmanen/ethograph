@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/spot/quickstart.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Pixels + Pose (extra features/ model distillation)" href="multimodal.html" />
+    <link rel="next" title="Pixels + Pose (extra features)" href="multimodal.html" />
     <link rel="prev" title="Precise event spotting (PES) from pixels" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -388,7 +388,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events from features)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -460,11 +460,11 @@
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-spot-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimal setup for spotting point events from video: three sessions
-with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
+with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id264" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
 on pixels only. It trains on two sessions, is scored on the third, and writes
 predictions you then open in the GUI next to the labels you drew.</p>
 <p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a> is the same pipeline with the
-choices put back in: pose features, the teacher, distillation, MSAGSM.</p>
+choices put back in: pose features, MSAGSM.</p>
 <p>ethograph does not install PyTorch for you. Install it first, then the extra
 (see <em>Train models</em> in <a class="reference internal" href="../../getting_started/installation.html"><span class="doc">Installation</span></a>):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
@@ -562,8 +562,7 @@ model hesitated. See <a class="reference internal" href="../curation.html"><span
 <li><p><strong>A wider temporal aperture</strong>: <code class="docutils literal notranslate"><span class="pre">model.architecture=rny008_msagsm</span></code>, then
 <code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> shows the two runs side by side (see <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>).</p></li>
 <li><p><strong>You have pose</strong>: list pose variables under <code class="docutils literal notranslate"><span class="pre">features:</span></code> and the model reads
-them next to the pixels. If pose exists only for the training sessions,
-distil a pose teacher instead. See <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features/ model distillation)</span></a>.</p></li>
+them next to the pixels. See <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features)</span></a>.</p></li>
 <li><p><strong>Every session held out in turn</strong>: <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code>, so each
 session gets predictions from a model that never saw it.</p></li>
 <li><p><strong>Every key</strong>, with its default: <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p></li>
@@ -595,7 +594,7 @@ session gets predictions from a model that never saw it.</p></li>
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Pixels + Pose (extra features/ model distillation)</p>
+        <p class="prev-next-title">Pixels + Pose (extra features)</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

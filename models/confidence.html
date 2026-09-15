@@ -390,7 +390,7 @@
 <li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events from features)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -492,7 +492,7 @@ likely.</p>
 </section>
 <section id="point-events-when-did-it-happen">
 <h2>Point events: when did it happen?<a class="headerlink" href="#point-events-when-did-it-happen" title="Link to this heading">#</a></h2>
-<p>The LightGBM lightgbm model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id267" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> and the E2E-Spot pixel model <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> predict <strong>point
+<p>The LightGBM lightgbm model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id263" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> and the E2E-Spot pixel model <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id264" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> predict <strong>point
 events</strong>. For each class they produce a <strong>curve over time</strong>, <span class="math notranslate nohighlight">\(p_k(t)\)</span>, the
 per-frame belief that class <span class="math notranslate nohighlight">\(k\)</span>’s event is <em>here</em>, and the prediction is the
 tallest peak of that curve, <span class="math notranslate nohighlight">\(t^\ast = \arg\max_t p_k(t)\)</span> (a local maximum —

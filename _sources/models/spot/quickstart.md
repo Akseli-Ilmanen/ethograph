@@ -7,7 +7,7 @@ on pixels only. It trains on two sessions, is scored on the third, and writes
 predictions you then open in the GUI next to the labels you drew.
 
 Everything here is a default. {doc}`index` is the same pipeline with the
-choices put back in: pose features, the teacher, distillation, MSAGSM.
+choices put back in: pose features, MSAGSM.
 
 ethograph does not install PyTorch for you. Install it first, then the extra
 (see *Train models* in {doc}`../../getting_started/installation`):
@@ -110,8 +110,7 @@ model hesitated. See {doc}`../curation`.
 - **A wider temporal aperture**: `model.architecture=rny008_msagsm`, then
   `project.compare()` shows the two runs side by side (see {doc}`index`).
 - **You have pose**: list pose variables under `features:` and the model reads
-  them next to the pixels. If pose exists only for the training sessions,
-  distil a pose teacher instead. See {doc}`multimodal`.
+  them next to the pixels. See {doc}`multimodal`.
 - **Every session held out in turn**: `project.cross_validate()`, so each
   session gets predictions from a model that never saw it.
 - **Every key**, with its default: {doc}`config`.

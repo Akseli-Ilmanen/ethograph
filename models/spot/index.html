@@ -388,7 +388,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events from features)</a></li>
 <li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -469,16 +469,14 @@ pose features you already have.</p>
 <span class="n">project</span><span class="o">.</span><span class="n">compare</span><span class="p">()</span>            <span class="c1"># every scored run side by side -&gt; runs/compare.tsv</span>
 <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">()</span>          <span class="c1"># a run's predictions into each session's labels/ folder</span>
 <span class="n">project</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">()</span>     <span class="c1"># one fold per session: train on the rest, predict the held-out one</span>
-<span class="n">project</span><span class="o">.</span><span class="n">train_teacher</span><span class="p">()</span>      <span class="c1"># option 4: the pose-only teacher</span>
-<span class="n">project</span><span class="o">.</span><span class="n">distil</span><span class="p">()</span>             <span class="c1"># option 4: the student, taught by the teacher, video only at inference</span>
 </pre></div>
 </div>
-<p>The model is <strong>E2E-Spot</strong> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>: a RegNetY-008 backbone <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id269" title="Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming He, and Piotr Dollár. Designing network design spaces. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/2003.13678, arXiv:2003.13678.">Radosavovic <em>et al.</em>, 2020</a>]</span>
-with Gate Shift Modules <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id270" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span> for temporal mixing and a bi-GRU head emitting a
+<p>The model is <strong>E2E-Spot</strong> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id264" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>: a RegNetY-008 backbone <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id265" title="Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming He, and Piotr Dollár. Designing network design spaces. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/2003.13678, arXiv:2003.13678.">Radosavovic <em>et al.</em>, 2020</a>]</span>
+with Gate Shift Modules <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id266" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span> for temporal mixing and a bi-GRU head emitting a
 per-frame softmax over <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">+</span> <span class="pre">1</span></code> classes. Upstream’s
 code ships inside EthoGraph (<code class="docutils literal notranslate"><span class="pre">ethograph/spot/e2espot/</span></code>), in its own layout.</p>
-<section id="four-ways-to-spot-a-point-event">
-<h2>Four ways to spot a point event<a class="headerlink" href="#four-ways-to-spot-a-point-event" title="Link to this heading">#</a></h2>
+<section id="three-ways-to-spot-a-point-event">
+<h2>Three ways to spot a point event<a class="headerlink" href="#three-ways-to-spot-a-point-event" title="Link to this heading">#</a></h2>
 <p>Which one to use is decided by <strong>what is available when the model runs</strong>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
@@ -498,14 +496,14 @@ code ships inside EthoGraph (<code class="docutils literal notranslate"><span cl
 </thead>
 <tbody>
 <tr class="row-even"><td><p>1</p></td>
-<td><p><strong>LightGBM lightgbm model</strong> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id267" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> — a boosted-tree classifier on a window of the
+<td><p><strong>LightGBM model</strong> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id263" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> — a boosted-tree classifier on a window of the
 features you tick</p></td>
 <td><p>pose features</p></td>
 <td><p>pose features</p></td>
 <td><p>the GUI, <code class="docutils literal notranslate"><span class="pre">Model</span> <span class="pre">▸</span> <span class="pre">LightGBM:</span> <span class="pre">Train…</span></code> (<a class="reference internal" href="../onset_model.html"><span class="doc">LightGBM for point events</span></a>)</p></td>
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
-<td><p><strong>E2E-Spot</strong> <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> — pixels only; <code class="docutils literal notranslate"><span class="pre">rny008_msagsm</span></code> <span class="bibtex-citation" id="id6">[<a class="reference internal" href="../../community/references.html#id271" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> widens its temporal aperture</p></td>
+<td><p><strong>E2E-Spot</strong> <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id264" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> — pixels only; <code class="docutils literal notranslate"><span class="pre">rny008_msagsm</span></code> <span class="bibtex-citation" id="id6">[<a class="reference internal" href="../../community/references.html#id267" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> widens its temporal aperture</p></td>
 <td><p>video</p></td>
 <td><p>video</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>, no <code class="docutils literal notranslate"><span class="pre">features:</span></code></p></td>
@@ -517,13 +515,6 @@ beside the CNN features</p></td>
 <td><p>video + pose</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>, <code class="docutils literal notranslate"><span class="pre">features:</span></code> listed</p></td>
 </tr>
-<tr class="row-odd"><td><p>4</p></td>
-<td><p><strong>Pose teacher → distilled E2E-Spot</strong> <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id272" title="Zhaoyu Liu, Kan Jiang, Murong Ma, Zhe Hou, Yun Lin, and Jin Song Dong. Few-shot precise event spotting via unified multi-entity graph and distillation. In Proceedings of the AAAI Conference on Artificial Intelligence (AAAI). 2026. URL: https://arxiv.org/abs/2511.14186, arXiv:2511.14186.">Liu <em>et al.</em>, 2026</a>]</span> — a small pose-only model on the
-listed features teaches the pixel model, then is set aside</p></td>
-<td><p>video + pose</p></td>
-<td><p>video</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>, <code class="docutils literal notranslate"><span class="pre">features:</span></code> + <code class="docutils literal notranslate"><span class="pre">train.features_as_input:</span> <span class="pre">false</span></code></p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -533,43 +524,24 @@ every input is a variable you can plot. If a class stays weak, <strong>3</strong
 the pixels to the same features; <code class="docutils literal notranslate"><span class="pre">evaluate(zero_features=True)</span></code> scores that
 run with the features zeroed, so what the pose contributes is a number
 rather than an assumption.</p></li>
-<li><p><strong>Video only, no pose anywhere</strong> → <strong>2</strong>.</p></li>
-<li><p><strong>Video only at inference, but pose can be made for the training
-sessions</strong> — label a few frames in the GUI, <code class="docutils literal notranslate"><span class="pre">fill_poses()</span></code> → dense pose →
-<strong>4</strong>. Its gate: <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> the teacher on the same test split as the
-video-only baseline first, and distil only from a teacher that beats it. A
-student cannot learn from a model that knows less.</p></li>
+<li><p><strong>Video only at inference</strong> → <strong>2</strong>.</p></li>
 </ul>
 <section id="which-stages-to-run">
 <h3>Which stages to run<a class="headerlink" href="#which-stages-to-run" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">scripts/spot.py</span></code> runs the stages you name, in order — it has no default
-list, because the right list depends on the case above, and running a stage
-you do not need is not harmless: distilling when pose is always available
-makes the pixel model <em>approximate</em> features it could simply be given.</p>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/spot.py</span></code> runs the stages you name, in order.</p>
 <p><strong>Pose in every session, now and later</strong> (option 3). The features ride into
-the GRU; no teacher, no distillation:</p>
+the GRU:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/spot.py<span class="w"> </span>materialise<span class="w"> </span>baseline<span class="w"> </span>evaluate
 python<span class="w"> </span>scripts/spot.py<span class="w"> </span>inference<span class="w"> </span>--run<span class="w"> </span>ctx2s_res10ms_features<span class="w"> </span>--sessions<span class="w"> </span>20260308_01
 </pre></div>
 </div>
 <p><strong>Video only, no pose anywhere</strong> (option 2). The same two lines with no
 <code class="docutils literal notranslate"><span class="pre">features:</span></code> listed; the run is named <code class="docutils literal notranslate"><span class="pre">ctx2s_res10ms</span></code>.</p>
-<p><strong>Pose for the labelled sessions, none where you will predict</strong> (option 4).
-Train the teacher and the baseline, and read <code class="docutils literal notranslate"><span class="pre">compare.tsv</span></code> before spending a
-run on distillation — a student cannot learn from a model that knows less:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/spot.py<span class="w"> </span>materialise<span class="w"> </span>teacher<span class="w"> </span>baseline<span class="w"> </span>evaluate<span class="w">   </span><span class="c1"># the gate</span>
-python<span class="w"> </span>scripts/spot.py<span class="w"> </span>distil<span class="w"> </span>evaluate<span class="w">                         </span><span class="c1"># once; the student is a run like any other</span>
-python<span class="w"> </span>scripts/spot.py<span class="w"> </span>inference<span class="w"> </span>--run<span class="w"> </span>ctx2s_res10ms_distil_64d5ef46<span class="w"> </span>--sessions<span class="w"> </span>20260308_01
-</pre></div>
-</div>
-<p>Distil once; every later session is plain <code class="docutils literal notranslate"><span class="pre">inference</span> <span class="pre">--run</span> <span class="pre">&lt;student&gt;</span></code>. The
-only reasons to distil again are a changed <code class="docutils literal notranslate"><span class="pre">features:</span></code>/<code class="docutils literal notranslate"><span class="pre">teacher:</span></code> section or
-new labelled data — the fingerprint in the run name tells those apart.</p>
 <p><strong>Every pose input is a variable in your session file</strong>, spelled the way the
 segmentation pipeline spells feature columns — <code class="docutils literal notranslate"><span class="pre">velocity:</span> <span class="pre">{space:</span> <span class="pre">[x,</span> <span class="pre">y],</span> <span class="pre">keypoint:</span> <span class="pre">[stickTip]}</span></code>, <code class="docutils literal notranslate"><span class="pre">pellet_stickClosest_dist:</span> <span class="pre">{}</span></code>. Build it with
 <code class="docutils literal notranslate"><span class="pre">movement.kinematics</span></code> or <code class="docutils literal notranslate"><span class="pre">features/geometry.py</span></code> or your own code,
 plot it in the GUI, list it. The model gets exactly that; there is no graph, no adjacency, no learned
-geometry to reason about. Options 3 and 4 are described in <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features/ model distillation)</span></a>.</p>
+geometry to reason about. Option 3 is described in <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features)</span></a>.</p>
 </section>
 </section>
 <section id="why-this-shares-the-segmentation-pipelines-workflow">
@@ -669,7 +641,7 @@ path per trial, its frame rate, its offset — so a session is one line:</p>
 <span class="w">  </span><span class="nt">epoch_frames</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">250000</span>
 <span class="w">  </span><span class="nt">split</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.6</span><span class="p p-Indicator">,</span><span class="nt"> val_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> test_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">}</span>
 
-<span class="nt">features</span><span class="p">:</span><span class="w">                          </span><span class="c1"># optional — options 3 and 4, see multimodal</span>
+<span class="nt">features</span><span class="p">:</span><span class="w">                          </span><span class="c1"># optional — option 3, see multimodal</span>
 <span class="w">  </span><span class="nt">velocity</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stickTip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pellet</span><span class="p p-Indicator">]}</span>
 <span class="w">  </span><span class="nt">pellet_stickClosest_dist</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
 </pre></div>
@@ -685,7 +657,7 @@ with <a class="reference internal" href="../segment/index.html"><span class="doc
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">source</span></code></strong> — the session file. Always.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">labels_path</span></code></strong> — its curated labels TSV. Unset, it is <code class="docutils literal notranslate"><span class="pre">{stem}_labels.tsv</span></code>
 beside <code class="docutils literal notranslate"><span class="pre">source</span></code> (the GUI’s own convention; the log says what was assumed).
-Training, the teacher and <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> read it. A session you only
+Training and <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> read it. A session you only
 <strong>predict into</strong> needs none — a <code class="docutils literal notranslate"><span class="pre">labels_path</span></code> naming a file that does not
 exist simply means the session has no labels, and it contributes nothing to
 a training set.</p></li>
@@ -793,16 +765,10 @@ ms, hit rate at 10/20/50/100 ms → <code class="docutils literal notranslate"><
 <td><p>Seconds, once predictions exist.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">compare()</span></code></p></td>
-<td><p>Every scored run — teachers included — as one table, <code class="docutils literal notranslate"><span class="pre">runs/compare.tsv</span></code>.</p></td>
+<td><p>Every scored run as one table, <code class="docutils literal notranslate"><span class="pre">runs/compare.tsv</span></code>.</p></td>
 <td><p>Seconds.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">train_teacher()</span></code> / <code class="docutils literal notranslate"><span class="pre">distil()</span></code></p></td>
-<td><p>Option 4: the pose-only teacher on <code class="docutils literal notranslate"><span class="pre">features/</span></code>, then the student — the
-baseline’s weights taught the teacher’s per-frame embedding on every
-clip with pose (no labels), then its head the labels with the CNN frozen.</p></td>
-<td><p>Teacher: minutes. Student: one more training run.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inference()</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">inference()</span></code></p></td>
 <td><p>A run’s predictions for chosen sessions — every trial with video,
 labelled or not — as the GUI’s labels TSV (<code class="docutils literal notranslate"><span class="pre">labeling_method=automated</span></code>)
 plus the curves beside them, under <code class="docutils literal notranslate"><span class="pre">labels/predictions_spot_{run}_{time}/</span></code>.
@@ -814,7 +780,7 @@ The folder also holds <code class="docutils literal notranslate"><span class="pr
 reconstructed without the project.</p></td>
 <td><p>Minutes.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code></p></td>
 <td><p>One fold per session: hold it out, train on the rest, score it, predict
 into it. Each session ends up with predictions from a model that never
 saw it.</p></td>
@@ -853,8 +819,8 @@ with no new GUI code. Every model writes under one convention,
 </section>
 <section id="msagsm">
 <h2>MSAGSM<a class="headerlink" href="#msagsm" title="Link to this heading">#</a></h2>
-<p>MSAGSM <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id271" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> is a drop-in replacement for the
-Gate Shift Module <span class="bibtex-citation" id="id9">[<a class="reference internal" href="../../community/references.html#id270" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span>: the same gated split-and-shift, applied at <strong>several
+<p>MSAGSM <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id267" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> is a drop-in replacement for the
+Gate Shift Module <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id266" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span>: the same gated split-and-shift, applied at <strong>several
 temporal dilations at once</strong> and preceded by channel-grouped spatial
 attention. GSM shifts by ±1 frame — at a high frame rate, a very narrow
 aperture in real time. Widening it with <code class="docutils literal notranslate"><span class="pre">stride</span></code> costs label resolution;
@@ -926,7 +892,7 @@ are the paper’s (<code class="docutils literal notranslate"><span class="pre">
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#four-ways-to-spot-a-point-event">Four ways to spot a point event</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#three-ways-to-spot-a-point-event">Three ways to spot a point event</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-stages-to-run">Which stages to run</a></li>
 </ul>
 </li>

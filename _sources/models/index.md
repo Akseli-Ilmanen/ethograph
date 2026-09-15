@@ -12,23 +12,20 @@ flowchart TD
     shape -->|"State event<br/>(an interval: onset + offset)"| segment[Action segmentation<br/><code>eto.segment</code><br/><i>DLC2Action models + added architectures</i>]
     shape -->|"Point event<br/>(one moment per trial)"| inference{What is available<br/>when the model runs?}
 
-    inference -->|"Pose / time-series features,<br/>and you want to stay in the GUI"| lgbm[LightGBM model<br/><i>Model ▸ LightGBM: Train… / Predict…</i>]
+    inference -->|"Pose / time-series features"| lgbm[LightGBM model<br/><i>CPU, GUI native, no scripting</i><br/><i>Model ▸ LightGBM: Train… / Predict…</i>]
     inference -->|Video only| spot[Event spotting: E2E-Spot<br/><code>eto.spot</code>]
     inference -->|Video + pose features| spotfeat[E2E-Spot + features]
-    inference -->|"Video now,<br/>pose only for training"| distil[Pose teacher,<br/>distilled into E2E-Spot]
 
     segment --> curate
     lgbm --> curate
     spot --> curate
     spotfeat --> curate
-    distil --> curate
     curate([Curate the predictions in the GUI]) --> conf[Read and threshold confidence]
 
     click segment "segment/index.html"
     click lgbm "onset_model.html"
     click spot "spot/index.html"
     click spotfeat "spot/multimodal.html"
-    click distil "spot/multimodal.html"
     click curate "curation.html"
     click conf "confidence.html"
 ```
@@ -37,7 +34,9 @@ flowchart TD
 
 ## Where the models come from
 
-- **LightGBM** {cite:p}`ke2017lightgbm`.
+- **LightGBM** {cite:p}`ke2017lightgbm` — runs on a CPU and lives entirely in the GUI: no scripting, and no
+  separate Python environment. The GUI install (`uv tool install "ethograph[gui,audio]"`, see
+  {doc}`../getting_started/installation`) is all it needs.
 - **Action segmentation** — `eto.segment` vendors the models and loss of DLC2Action {cite:p}`kozlova2025dlc2action`, adapted there to pose/kinematic input:
   - DLC2Action's own variants: `mstcn` (MS-TCN3, which feeds the last two layers of the first stage into the second; from MS-TCN++ {cite:p}`li2020mstcnpp`) and `c2f_transformer` (C2F-TCN {cite:p}`singhania2021c2ftcn` with attention in place of convolution).
   - Original architectures, as adapted in DLC2Action: `asformer` {cite:p}`yi2021asformer`, `c2f_tcn` {cite:p}`singhania2021c2ftcn`, `edtcn` {cite:p}`lea2017edtcn`, `motionbert` {cite:p}`zhu2023motionbert`, and `mlp`, a per-frame baseline.

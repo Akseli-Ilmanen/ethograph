@@ -388,7 +388,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events from features)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -460,7 +460,7 @@
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-segment-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimalistic setup for training an action segmentation model: Three curated sessions, a few kinematic
-features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id335" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
+features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id329" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.</p>
 <p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a> is the same pipeline with the
 choices put back in.</p>
@@ -577,7 +577,7 @@ split it drew, the weights, <code class="docutils literal notranslate"><span cla
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> needs trials of at least 384 frames — it pools the time axis in
-half six times. If yours are shorter, <code class="docutils literal notranslate"><span class="pre">model.architecture:</span> <span class="pre">mstcn</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id331" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>, <a class="reference internal" href="../../community/references.html#id333" title="Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020. URL: https://arxiv.org/abs/2006.09220, arXiv:2006.09220.">Li <em>et al.</em>, 2020</a>]</span> works at any
+half six times. If yours are shorter, <code class="docutils literal notranslate"><span class="pre">model.architecture:</span> <span class="pre">mstcn</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id325" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>, <a class="reference internal" href="../../community/references.html#id327" title="Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020. URL: https://arxiv.org/abs/2006.09220, arXiv:2006.09220.">Li <em>et al.</em>, 2020</a>]</span> works at any
 length and is the usual baseline; nothing else in the config changes.</p>
 </div>
 </section>

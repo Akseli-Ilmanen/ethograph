@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Pixels + Pose (extra features/ model distillation) &#8212; ethograph</title>
+    <title>Pixels + Pose (extra features) &#8212; ethograph</title>
   
   
   
@@ -388,7 +388,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events from features)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Pixels + Pose (extra features/ model distillation)</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Pixels + Pose (extra features)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -440,7 +440,7 @@
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Precise event spotting (PES) from pixels</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Pixels + Pose (extra features/ model distillation)</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Pixels + Pose (extra features)</span></li>
   </ul>
 </nav>
 </div>
@@ -457,11 +457,11 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="pixels-pose-extra-features-model-distillation">
-<span id="target-spot-multimodal"></span><h1>Pixels + Pose (extra features/ model distillation)<a class="headerlink" href="#pixels-pose-extra-features-model-distillation" title="Link to this heading">#</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code> reads video. Where pose exists too, there are two ways to use it,
-and both start from the same thing — a flat list of variables in your session
-file, spelled the way the segmentation pipeline spells feature columns:</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="pixels-pose-extra-features">
+<span id="target-spot-multimodal"></span><h1>Pixels + Pose (extra features)<a class="headerlink" href="#pixels-pose-extra-features" title="Link to this heading">#</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code> reads video. Where pose exists too, it can read that as well — a
+flat list of variables in your session file, spelled the way the
+segmentation pipeline spells feature columns:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">velocity</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">stickTip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pellet</span><span class="p p-Indicator">]}</span>
 <span class="w">  </span><span class="nt">pellet_stickClosest_dist</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">          </span><span class="c1"># a variable you computed into the .nc</span>
@@ -479,15 +479,14 @@ the pose’s own rate, and every temporal setting is then resolved against that
 rate exactly as the clip is against the video’s. The columns are z-scored on
 the training split; the statistics are saved, so a session predicted later is
 put on the training scale rather than its own.</p>
-<section id="option-3-the-features-ride-into-the-gru">
-<h2>Option 3 — the features ride into the GRU<a class="headerlink" href="#option-3-the-features-ride-into-the-gru" title="Link to this heading">#</a></h2>
+<section id="the-features-ride-into-the-gru">
+<h2>The features ride into the GRU<a class="headerlink" href="#the-features-ride-into-the-gru" title="Link to this heading">#</a></h2>
 <p>With <code class="docutils literal notranslate"><span class="pre">features:</span></code> listed, <code class="docutils literal notranslate"><span class="pre">train()</span></code> hands the pixel model the columns as a
 <strong>second input</strong>, concatenated to the CNN features before the bi-GRU. The run
 is named <code class="docutils literal notranslate"><span class="pre">{clip}_features</span></code>, beside a video-only baseline. Every predicted
 trial then needs its pose — <code class="docutils literal notranslate"><span class="pre">inference()</span></code> exports and scales a session’s
 features before predicting it — which is the price of using it.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">features_as_input</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">     </span><span class="c1"># the default when features: is listed</span>
 <span class="w">  </span><span class="nt">features_dropout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span><span class="w">       </span><span class="c1"># share of training clips that see zeros in place of the features</span>
 </pre></div>
 </div>
@@ -501,47 +500,12 @@ event on their own too.</p>
 <p>Adding, removing or renaming a column afterwards means a new run: the block’s
 width and column order are part of the trained model.</p>
 </section>
-<section id="option-4-a-pose-teacher-distilled-video-only-at-inference">
-<h2>Option 4 — a pose teacher, distilled; video only at inference<a class="headerlink" href="#option-4-a-pose-teacher-distilled-video-only-at-inference" title="Link to this heading">#</a></h2>
-<p>For the case where pose exists only for the training sessions — label a few
-frames in the GUI, <code class="docutils literal notranslate"><span class="pre">fill_poses()</span></code> → dense pose — and the deployed model must
-read video alone:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">features_as_input</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">     </span><span class="c1"># the list is for the teacher only</span>
-<span class="nt">teacher</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">shift_scales_ms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">40</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">80</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">160</span><span class="p p-Indicator">]</span>
-<span class="w">  </span><span class="nt">hidden</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
-<span class="w">  </span><span class="nt">depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<span class="w">  </span><span class="nt">epochs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">train_teacher()</span></code> fits the <strong>pose teacher</strong> (<code class="docutils literal notranslate"><span class="pre">pose_model.PoseSpotter</span></code>): the
-listed features → a linear embedding → <code class="docutils literal notranslate"><span class="pre">depth</span></code> blocks of a parameter-free
-multi-scale temporal shift (UMEG-Net’s <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id272" title="Zhaoyu Liu, Kan Jiang, Murong Ma, Zhe Hou, Yun Lin, and Jin Song Dong. Few-shot precise event spotting via unified multi-entity graph and distillation. In Proceedings of the AAAI Conference on Artificial Intelligence (AAAI). 2026. URL: https://arxiv.org/abs/2511.14186, arXiv:2511.14186.">Liu <em>et al.</em>, 2026</a>]</span>: a slice of channels copied from
-<code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">±</span> <span class="pre">k</span></code> for each scale, so a block sees several ranges of context at no
-parameter cost) → a bi-GRU → a <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">+</span> <span class="pre">1</span></code> softmax, E2E-Spot’s <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> own output
-contract. Minutes on a GPU. Every epoch writes val predictions in E2E-Spot’s
-schema, so <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> scores the teacher exactly as it scores a pixel run,
-and the sweep-chosen epoch writes its per-clip embeddings under
-<code class="docutils literal notranslate"><span class="pre">features/embeddings/</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">distil()</span></code> then runs the two distillation steps inside the vendored trainer:
-the baseline’s trunk + GRU learn to reproduce the teacher’s
-embedding on every clip that has pose (no labels), then the CNN is frozen and
-the head learns the labels. The student reads video only. Runs land under
-<code class="docutils literal notranslate"><span class="pre">runs/{baseline}_distil_{fingerprint}/</span></code>, where the fingerprint names the
-feature list + teacher settings, so an edited list lands beside the earlier
-result and <code class="docutils literal notranslate"><span class="pre">distil()</span></code> refuses embeddings another list’s teacher wrote.</p>
-<p><strong>The gate.</strong> Score the teacher on the same test split as the baseline before
-distilling, and distil only from a teacher that beats it. A student cannot
-learn from a model that knows less than it does.</p>
-</section>
-<section id="choosing-between-them">
-<h2>Choosing between them<a class="headerlink" href="#choosing-between-them" title="Link to this heading">#</a></h2>
+<section id="choosing">
+<h2>Choosing<a class="headerlink" href="#choosing" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Pose available at inference → option 3 (after the LightGBM lightgbm model <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id267" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>,
+<li><p>Pose available at inference → this (after the LightGBM model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id263" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>,
 which is the cheaper first try on the same features).</p></li>
-<li><p>Pose available only for the labelled sessions → option 4, gated as above.</p></li>
-<li><p>No pose → neither; E2E-Spot alone.</p></li>
+<li><p>No pose at inference → E2E-Spot alone <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id264" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>, no <code class="docutils literal notranslate"><span class="pre">features:</span></code>.</p></li>
 </ul>
 </section>
 </section>
@@ -593,9 +557,8 @@ which is the cheaper first try on the same features).</p></li>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3-the-features-ride-into-the-gru">Option 3 — the features ride into the GRU</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4-a-pose-teacher-distilled-video-only-at-inference">Option 4 — a pose teacher, distilled; video only at inference</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-between-them">Choosing between them</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-features-ride-into-the-gru">The features ride into the GRU</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing">Choosing</a></li>
 </ul>
   </nav></div>
 
