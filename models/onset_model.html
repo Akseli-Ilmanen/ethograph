@@ -385,7 +385,7 @@
 <li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">LightGBM (point events from features)</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">LightGBM (point events, GUI-only, CPU)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
@@ -456,49 +456,42 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="lightgbm-for-point-events">
 <span id="target-onset-model"></span><h1>LightGBM for point events<a class="headerlink" href="#lightgbm-for-point-events" title="Link to this heading">#</a></h1>
-<p>EthoGraph includes a lightweight model for predicting <strong>point events</strong>, built
-on scikit-learn’s <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id262" title="Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake VanderPlas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, and Edouard Duchesnay. Scikit-learn: machine learning in Python. Journal of Machine Learning Research, 12:2825–2830, 2011. URL: https://jmlr.org/papers/v12/pedregosa11a.html.">Pedregosa <em>et al.</em>, 2011</a>]</span> histogram-based gradient boosting (<code class="docutils literal notranslate"><span class="pre">HistGradientBoostingClassifier</span></code>), inspired by
-Microsoft’s LightGBM <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id263" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>. It is a small classifier that detects the onset of an
-event from a local window of hand-crafted features: the first time a mouse
-touches a lever, the frame a bird lands, the moment a beak opens. You label
-the moment in a handful of trials, tick the features it should look at, and it
-fills in the rest.</p>
+<p>A small classifier that predicts <strong>point events</strong> — the first time a mouse
+touches a lever, the frame a bird lands, the moment a beak opens — from a
+local window of your existing features. Label the moment in a handful of
+trials, tick the features it should look at, and it fills in the rest.</p>
+<p>Unlike <a class="reference internal" href="segment/index.html"><span class="doc">action segmentation</span></a> and
+<a class="reference internal" href="spot/index.html"><span class="doc">pixel event spotting</span></a>, this model is <strong>entirely in the
+GUI</strong>: no Python scripting, no config files, no GPU. It trains and predicts on
+an ordinary CPU in seconds, so it is the right starting point if you are not
+comfortable with code.</p>
 <p><strong>Model ▸ LightGBM: Train…</strong> and <strong>Model ▸ LightGBM: Predict…</strong></p>
+<p>Under the hood it is scikit-learn’s <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id262" title="Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake VanderPlas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, and Edouard Duchesnay. Scikit-learn: machine learning in Python. Journal of Machine Learning Research, 12:2825–2830, 2011. URL: https://jmlr.org/papers/v12/pedregosa11a.html.">Pedregosa <em>et al.</em>, 2011</a>]</span>
+<code class="docutils literal notranslate"><span class="pre">HistGradientBoostingClassifier</span></code>, inspired by LightGBM <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id263" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>.</p>
 <hr class="docutils" />
 <section id="how-it-works">
 <h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">#</a></h2>
 <p>For each frame, the model sees a <strong>window</strong> of your chosen features centred on
-that frame and answers one question: <em>is the event here?</em></p>
-<ul class="simple">
-<li><p><strong>Targets.</strong> Frames within <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code> of your labelled event count as
-positive, weighted by a Gaussian bump peaking at the event, so a frame one
-tick off counts less than the exact frame. Far negatives are subsampled.</p></li>
-<li><p><strong>Inference</strong> smooths the per-frame probability with the same tolerance — a
-plateau of near-hits beats one spurious spike — and takes the tallest peak.</p></li>
-</ul>
-<p>Each class gets <strong>its own binary classifier</strong> over the same features, window
-and tolerance. The design matrix is built once per trial and reused, so
-predicting five classes costs barely more than predicting one.</p>
+that frame and answers one question: <em>is the event here?</em> Frames within
+<code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code> of a labelled event count as positive, weighted so the exact
+frame counts most. At inference the per-frame probability is smoothed with the
+same tolerance and the label goes on the tallest peak. Each class gets its own
+binary classifier over the same inputs.</p>
 </section>
 <hr class="docutils" />
 <section id="training">
 <h2>Training<a class="headerlink" href="#training" title="Link to this heading">#</a></h2>
-<ol class="arabic">
+<ol class="arabic simple">
 <li><p><strong>Name the model</strong> — leave the combo on <em>New model…</em> and type a name, or
 pick an existing model to add more training data to it.</p></li>
 <li><p><strong>Tick the point events to predict.</strong> Only classes marked as point events
-in <a class="reference internal" href="../advanced/labels/mapping.html"><span class="doc">mapping.txt</span></a> are listed; tick as many as you like.</p></li>
+in <a class="reference internal" href="../advanced/labels/mapping.html"><span class="doc">mapping.txt</span></a> are listed.</p></li>
 <li><p><strong>Tick the features.</strong> Ticking <code class="docutils literal notranslate"><span class="pre">speed</span> <span class="pre">▸</span> <span class="pre">keypoints</span> <span class="pre">▸</span> <span class="pre">beak,</span> <span class="pre">head</span></code> gives two
-input columns. <strong>Every dim has to be pinned to explicit values</strong> — that
-frozen list <em>is</em> the model’s input layout, which is what lets the model run
-on another session.</p>
-<p>Ticking a feature’s <strong>d/dt</strong> box adds its rate of change beside every column
-it produces (<code class="docutils literal notranslate"><span class="pre">np.gradient</span></code>: central differences, centred on the frame, so a
-turn in the signal shows up at the frame it happened). The classifier sees
-each tap of the window on its own and cannot difference them, so <em>how fast
-is this changing</em> has to be handed to it as its own input — worth a tick
-when the event is a change of speed or direction rather than a level.</p>
-</li>
+input columns. Every dim has to be pinned to explicit values — that frozen
+list <em>is</em> the model’s input layout, which is what lets it run on another
+session. A feature’s <strong>d/dt</strong> box adds its rate of change as an extra
+column, worth ticking when the event is a change of speed or direction
+rather than a level.</p></li>
 <li><p><strong>Tick the existing labels to read as inputs</strong> (optional) — see
 <a class="reference internal" href="#target-onset-model-label-inputs"><span class="std std-ref">below</span></a>.</p></li>
 <li><p><strong>Set the parameters.</strong> <code class="docutils literal notranslate"><span class="pre">Window</span> <span class="pre">size</span></code> is how much context the classifier
@@ -508,26 +501,23 @@ labels.</p></li>
 </ol>
 <p>Only trials <strong>visible in the trials table</strong> contribute, so the table’s filters
 double as a training-set selector. A trial carrying none of the ticked events
-is skipped, and one carrying only some contributes only to those — an
-unlabelled trial is not evidence that the event never happened, so it is never
-used as a negative example for that class.</p>
+is skipped; one carrying only some contributes only to those, and is never
+used as a negative example for the classes it lacks.</p>
 <p>Once a model exists its targets, features, label inputs, window and tolerance
-are <strong>read-only</strong>: they define the classifier’s input columns, so editing them
-would invalidate every training trial already stored. To change them, make a
-new model. To add more sessions, open the dialog there, pick the model, and
-press <strong>Add current session’s events</strong>.</p>
+are <strong>read-only</strong>, because they define the input columns of every training
+trial already stored. To change them, make a new model. To add more sessions,
+open the dialog there, pick the model, and press <strong>Add current session’s
+events</strong>.</p>
 <section id="existing-labels-as-inputs">
 <span id="target-onset-model-label-inputs"></span><h3>Existing labels as inputs<a class="headerlink" href="#existing-labels-as-inputs" title="Link to this heading">#</a></h3>
-<p>You can also pass existing labels as features to the model.</p>
+<p>Labels of another class can be inputs too:</p>
 <ul class="simple">
-<li><p>a <strong>state</strong> class becomes its <strong>on/off indicator</strong> — <code class="docutils literal notranslate"><span class="pre">1</span></code> inside every
-interval of that class, <code class="docutils literal notranslate"><span class="pre">0</span></code> outside. That is the whole of what a state says.</p></li>
-<li><p>a <strong>point</strong> class becomes a <strong>Laplacian bump</strong> centred on the event, at two
-hard-coded widths (0.1 s and 1 s), one column each — the same kernel
-EthoGraph puts on <a class="reference internal" href="../advanced/changepoints/index.html"><span class="doc">changepoints</span></a>, for the same reason:
-the narrow peak points straight at the moment while the long tails stay
-readable from far away, so one column carries both <em>it is here</em> and <em>it was
-a while ago</em>.</p></li>
+<li><p>a <strong>state</strong> class becomes its on/off indicator — <code class="docutils literal notranslate"><span class="pre">1</span></code> inside every interval,
+<code class="docutils literal notranslate"><span class="pre">0</span></code> outside;</p></li>
+<li><p>a <strong>point</strong> class becomes a Laplacian bump centred on the event, at two
+widths (0.1 s and 1 s) — the same kernel EthoGraph puts on
+<a class="reference internal" href="../advanced/changepoints/index.html"><span class="doc">changepoints</span></a>, so one column says both
+<em>it is here</em> and <em>it was a while ago</em>.</p></li>
 </ul>
 </section>
 </section>
@@ -539,35 +529,19 @@ whose labels these are — and press <strong>Predict missing onsets</strong>. Tw
 never touched:</p>
 <ul class="simple">
 <li><p><strong>Trials that already carry a class</strong> keep what they have — the model fills
-gaps, it never overrides. A trial that already has <em>one</em> class can still
-receive the others.</p></li>
+gaps, it never overrides. A trial with <em>one</em> class can still receive the
+others.</p></li>
 <li><p><strong>Trials the trials table hides.</strong> Training and prediction both run over
-exactly the trials the <a class="reference internal" href="../advanced/metadata.html"><span class="doc">trials table</span></a> shows — its filters
-are the one trial filter in EthoGraph, so filtering <code class="docutils literal notranslate"><span class="pre">genotype</span> <span class="pre">=</span> <span class="pre">wt</span></code> there
-trains on and predicts into wild-type trials only. The dialog has no
-filters of its own; it says how many trials it will run over, read off the
-table.</p></li>
+exactly the trials the <a class="reference internal" href="../advanced/metadata.html"><span class="doc">trials table</span></a> shows; the
+dialog has no filters of its own and says how many trials it will run over.</p></li>
 </ul>
 <p>Predictions land in memory like any other label, stamped
-<code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code> — they draw dotted on the plots until you
-<a class="reference internal" href="curation.html"><span class="doc">curate</span></a> them, and a trial holding one stays red in the trial
-list. <strong>Review predictions…</strong> at the bottom of the dialog opens the
-label grid view on exactly what the run
-just wrote — those classes, those trials — so you can check the video frame at
-each one and either click through to fix it or mark it curated.</p>
-<hr class="docutils" />
-</section>
-<section id="confidence">
-<span id="target-onset-model-confidence"></span><h2>Confidence<a class="headerlink" href="#confidence" title="Link to this heading">#</a></h2>
-<p>A predicted label’s <strong><code class="docutils literal notranslate"><span class="pre">confidence</span></code></strong> is a statistic of that class’s
-probability curve around its tallest peak — its height, or how concentrated
-the curve is there and whether a rival peak stands elsewhere — chosen per
-class on the trials the model did not see, and named in the training
-message. The curve is the <strong>dashed line</strong> frame-by-frame review draws under
-the label, so the number is always something you can see. The statistics,
-the equations and how they compare with the segmentation pipeline’s entropy
-are in <a class="reference internal" href="confidence.html"><span class="doc">the confidence page</span></a>, together with reviewing
-by confidence in the label grid.</p>
+<code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code>: dotted on the plots until you
+<a class="reference internal" href="curation.html"><span class="doc">curate</span></a> them, red in the trial list. <strong>Review predictions…</strong>
+at the bottom of the dialog opens the label grid view on exactly what the run
+just wrote, so you can check the video frame at each one and fix it or mark it
+curated. Each prediction also carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, explained on
+<a class="reference internal" href="confidence.html"><span class="doc">the confidence page</span></a>.</p>
 </section>
 </section>
 
@@ -624,7 +598,6 @@ by confidence in the label grid.</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#predicting">Predicting</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#confidence">Confidence</a></li>
 </ul>
   </nav></div>
 
