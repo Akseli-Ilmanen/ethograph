@@ -318,19 +318,25 @@ def extract_features(
     time_ref: np.ndarray | None = None
     fs_ref = 0.0
     arrays: list[np.ndarray] = []
+    fetch = _ColumnFetcher(loader, features, t0, t1)
+    fs_of: dict[int, float] = {}
     for col in columns:
-        plot_data = loader.select(col.feature, col.selections, t0, t1)
-        if plot_data is None:
+        fetched = fetch.get(col)
+        if fetched is None:
             raise ValueError(f"Feature {col.feature!r} is not available in this session.")
-        data = np.asarray(plot_data.data, dtype=np.float64)
+        time, data = fetched
+        data = np.asarray(data, dtype=np.float64)
         if data.ndim != 1:
             raise ValueError(
                 f"Column {col.name!r} did not pin down to a single series "
                 f"(got shape {data.shape}) — the dataset has a dim the model "
                 "config does not cover. Recreate the model on this dataset."
             )
-        time = np.asarray(plot_data.time, dtype=np.float64)
-        fs = sampling_rate(time)
+        time = np.asarray(time, dtype=np.float64)
+        # One rate per fetched time vector, not one per column.
+        fs = fs_of.get(id(time))
+        if fs is None:
+            fs = fs_of[id(time)] = sampling_rate(time)
         if time_ref is None:
             time_ref, fs_ref = time, fs
         else:
@@ -353,6 +359,52 @@ def extract_features(
     n = min(len(time_ref), *(len(a) for a in arrays))
     stacked = np.column_stack([a[:n] for a in arrays])
     return time_ref[:n], stacked
+
+
+class _ColumnFetcher:
+    """One loader call per feature where the layout allows, one per column otherwise.
+
+    A feature whose config leaves at most one dim with several values — a
+    768-wide embedding, a keypoint's ``x``/``y``/``z`` — is selected once with
+    that dim free, giving ``(T, D)`` and its labels, and each column is a
+    slice of it; selecting column by column costs a full xarray ``.sel`` per
+    column, which at hundreds of columns per trial is what materialise spends
+    its time on. Two or more multi-valued dims fall back to one call per
+    column, exactly as before.
+    """
+
+    def __init__(self, loader: Any, features: dict[str, dict[str, Any]], t0: float | None, t1: float | None):
+        self._loader, self._t0, self._t1 = loader, t0, t1
+        self._plan: dict[str, tuple[dict[str, str], str | None]] = {}
+        for feature, dims in features.items():
+            expanded = {d: expand_dim_values(v) for d, v in dims.items()}
+            multi = [d for d, values in expanded.items() if len(values) > 1]
+            if len(multi) <= 1:
+                pinned = {d: values[0] for d, values in expanded.items() if len(values) == 1}
+                self._plan[feature] = (pinned, multi[0] if multi else None)
+        self._whole: dict[str, tuple[np.ndarray, np.ndarray, list[str] | None] | None] = {}
+
+    def get(self, col: FeatureColumn) -> tuple[np.ndarray, np.ndarray] | None:
+        if col.feature in self._plan:
+            pinned, free = self._plan[col.feature]
+            if col.feature not in self._whole:
+                plot_data = self._loader.select(col.feature, pinned, self._t0, self._t1)
+                self._whole[col.feature] = (
+                    None if plot_data is None else (plot_data.time, np.asarray(plot_data.data), plot_data.dim_labels)
+                )
+            whole = self._whole[col.feature]
+            if whole is None:
+                return None
+            time, data, labels = whole
+            if free is None or data.ndim == 1:
+                # No free dim, or the loader ignored one the feature lacks.
+                return time, data
+            if labels is not None and col.selections[free] in labels:
+                return time, data[:, labels.index(col.selections[free])]
+        plot_data = self._loader.select(col.feature, col.selections, self._t0, self._t1)
+        if plot_data is None:
+            return None
+        return plot_data.time, np.asarray(plot_data.data)
 
 
 def _compact_dim_value(values: list[str]) -> Any:

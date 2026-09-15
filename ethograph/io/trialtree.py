@@ -514,24 +514,51 @@ class TrialTree(xr.DataTree):
 
         path = Path(path) if path else Path(source_path)
 
-        if self._try_incremental_save(path):
-            self._source_path = str(path)
-            self._ensure_alignment_nwb(path.parent)
-            return
-
-        temp_path = path.with_suffix(".tmp.nc")
-
+        detached = self._detach_external()
         try:
-            self.load()
-            self.to_netcdf(temp_path, mode="w")
-            self._close_all()
-            temp_path.replace(path)
-            self._source_path = str(path)
-            self._ensure_alignment_nwb(path.parent)
-            self._dirty_trials.clear()
-            self._record_saved_state()
+            if self._try_incremental_save(path):
+                self._source_path = str(path)
+                self._ensure_alignment_nwb(path.parent)
+                return
+
+            temp_path = path.with_suffix(".tmp.nc")
+
+            try:
+                self.load()
+                self.to_netcdf(temp_path, mode="w")
+                self._close_all()
+                temp_path.replace(path)
+                self._source_path = str(path)
+                self._ensure_alignment_nwb(path.parent)
+                self._dirty_trials.clear()
+                self._record_saved_state()
+            finally:
+                self._close_all()
         finally:
-            self._close_all()
+            self._reattach_external(detached)
+
+    def _detach_external(self) -> dict[str, dict[str, xr.DataArray]]:
+        """Take every externally attached variable off the trial nodes.
+
+        A video feature attached in memory from files
+        (``io/video_feature_files.py``, ``attrs["attached_from"]``) is not the
+        session's data and is never written; :meth:`save` detaches them,
+        writes, and puts them back with :meth:`_reattach_external`.
+        """
+        from ethograph.io.video_feature_files import video_feature_vars
+
+        detached: dict[str, dict[str, xr.DataArray]] = {}
+        for name in self._current_trial_node_names():
+            ds = self[name].ds
+            names = video_feature_vars(ds)
+            if names:
+                detached[name] = {var: ds[var] for var in names}
+                self[name] = xr.DataTree(ds.drop_vars(names))
+        return detached
+
+    def _reattach_external(self, detached: dict[str, dict[str, xr.DataArray]]) -> None:
+        for name, variables in detached.items():
+            self[name] = xr.DataTree(self[name].ds.assign(variables))
 
     def _close_all(self) -> None:
         """Release every file handle this tree holds.

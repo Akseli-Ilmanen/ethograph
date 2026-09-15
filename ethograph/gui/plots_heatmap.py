@@ -15,6 +15,7 @@ from .app_constants import (
     HEATMAP_DEBOUNCE_MS,
     Z_INDEX_BACKGROUND,
 )
+from .heatmap_sort import argmax_window_order
 from .make_pretty import clean_display_labels
 from .plots_base import BasePlot, PanelStateMixin, ThrottleDebounce
 
@@ -47,6 +48,8 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self._n_channels = 1
         self._channel_labels = []
         self._sort_order: np.ndarray | None = None
+        # (feature, trial, selections) the trial-window sort was last computed for.
+        self._auto_sort_context: tuple | None = None
 
         # Unified buffer for xarray feature data
         self._buffer_multiplier = DEFAULT_BUFFER_MULTIPLIER
@@ -89,11 +92,67 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self.vb.setLimits(yMin=-margin, yMax=n - 1 + margin)
         self.plot_item.setYRange(-margin, n - 1 + margin, padding=0)
 
-    def set_sort_order(self, order: np.ndarray):
+    def set_sort_order(self, order: np.ndarray | None):
         self._sort_order = order
+        self._last_visible_labels = None
         if self._buffered_data is not None:
             t0, t1 = self.get_current_xlim()
             self._render_heatmap(t0, t1)
+
+    # --- Peak-window sorting (settings: heatmap_sort_*) ---
+
+    def _sort_params(self) -> tuple[float, float]:
+        window_s = float(self.app_state.get_with_default("heatmap_sort_window_s"))
+        overlap = float(self.app_state.get_with_default("heatmap_sort_overlap"))
+        return window_s, overlap
+
+    def _order_for_range(self, t0: float, t1: float) -> np.ndarray | None:
+        if self._normalized_buffer is None or self._buffered_time is None:
+            return None
+        mask = (self._buffered_time >= t0) & (self._buffered_time <= t1)
+        if not np.any(mask):
+            return None
+        window_s, overlap = self._sort_params()
+        return argmax_window_order(self._normalized_buffer[mask], self._buffered_time[mask], window_s, overlap)
+
+    def sort_by_visible_window(self) -> bool:
+        """Order rows by their peak window inside the visible x-range; keep it."""
+        t0, t1 = self.get_current_xlim()
+        if self._buffered_data is None:
+            self._render_heatmap(t0, t1)
+        order = self._order_for_range(t0, t1)
+        if order is None:
+            return False
+        self.set_sort_order(order)
+        return True
+
+    def resort_for_trial(self) -> None:
+        """Re-run the trial-window sort now (mode switched, parameters edited)."""
+        self._auto_sort_context = None
+        if self._buffered_data is not None or self._effective_feature() is not None:
+            t0, t1 = self.get_current_xlim()
+            self._render_heatmap(t0, t1)
+
+    def _trial_sort_range(self) -> tuple[float, float] | None:
+        bounds = self.app_state.window_bounds
+        if bounds is None:
+            return None
+        return float(bounds.start_s), float(bounds.end_s)
+
+    def _trial_sort_pending(self) -> tuple | None:
+        """The (feature, trial, selections) a trial-window sort is still owed for, else None."""
+        if self.app_state.get_with_default("heatmap_sort_mode") != "trial":
+            return None
+        context = (self._effective_feature(), getattr(self.app_state, "trials_sel", None), self._get_selections_hash())
+        return None if context == self._auto_sort_context else context
+
+    def _apply_trial_sort(self, context: tuple, tr0: float, tr1: float):
+        """Sort once per (feature, trial, selections) over the whole trial, from the buffer."""
+        self._auto_sort_context = context
+        order = self._order_for_range(tr0, tr1)
+        if order is not None:
+            self._sort_order = order
+            self._last_visible_labels = None
 
     def get_normalized_data_for_range(self, t0: float, t1: float) -> np.ndarray | None:
         if self._normalized_buffer is None or self._buffered_time is None:
@@ -446,7 +505,16 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             else:
                 self.setTitle(None)
 
-            result = self._get_buffered_data(t0, t1)
+            # A pending trial-window sort widens the load to the whole trial,
+            # so the sort sees every sample and later pans stay in the buffer.
+            pending = self._trial_sort_pending()
+            trial_range = self._trial_sort_range() if pending is not None else None
+            if trial_range is not None:
+                load_t0, load_t1 = min(t0, trial_range[0]), max(t1, trial_range[1])
+            else:
+                load_t0, load_t1 = t0, t1
+
+            result = self._get_buffered_data(load_t0, load_t1)
             if result[0] is None:
                 return
 
@@ -458,6 +526,8 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             if self._normalized_buffer is None or self._norm_data_id != id(data) or self._cached_norm_mode != norm_mode:
                 self._normalize_buffer()
 
+            if pending is not None and trial_range is not None:
+                self._apply_trial_sort(pending, *trial_range)
             normalized = self._normalized_buffer
 
             if self._sort_order is not None and len(self._sort_order) == normalized.shape[1]:

@@ -585,6 +585,9 @@ class MetaWidget(GridSectionContainer):
             self._add_camera_view(name)
         elif kind == "image":
             self._add_image_view(name)
+        elif kind == "video_features":
+            # The popup's browse entry: a folder of {video stem}.npy becomes a heatmap.
+            self.data_widget.browse_video_features()
         elif kind == "console":
             self._add_console_panel()
         elif kind == "labels":

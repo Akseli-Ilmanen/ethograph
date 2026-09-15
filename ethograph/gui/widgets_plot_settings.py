@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 import numpy as np
-from qtpy.QtCore import Qt, QTimer
+from qtpy.QtCore import QSignalBlocker, Qt, QTimer
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -22,6 +22,8 @@ from qtpy.QtWidgets import (
 )
 
 from .app_state import AppStateSpec
+from .heatmap_sort import SORT_MODES
+from .notify import notify
 
 HEATMAP_COLORMAPS = [
     "RdBu_r",
@@ -1094,6 +1096,48 @@ class PlotSettingsWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.heatmap_panel.setLayout(layout)
 
+        sort_group = QGroupBox("Heatmap sort")
+        sort_layout = QGridLayout()
+        sort_layout.setSpacing(2)
+        sort_layout.setContentsMargins(2, 2, 2, 2)
+        sort_group.setLayout(sort_layout)
+        layout.addWidget(sort_group)
+
+        sort_layout.addWidget(QLabel("Mode:"), 0, 0)
+        self.heatmap_sort_combo = QComboBox()
+        for key, label in SORT_MODES.items():
+            self.heatmap_sort_combo.addItem(label, key)
+        self.heatmap_sort_combo.setToolTip(
+            "Rows ordered by the window holding their largest mean: earliest on top.\n"
+            "Trial window: re-sorted whenever the trial changes.\n"
+            "Visible window: sorted when the button is pressed, then kept."
+        )
+        self.heatmap_sort_combo.currentIndexChanged.connect(self._on_heatmap_sort_mode_changed)
+        sort_layout.addWidget(self.heatmap_sort_combo, 0, 1, 1, 3)
+
+        sort_layout.addWidget(QLabel("Window (s):"), 1, 0)
+        self.heatmap_sort_window_spin = QDoubleSpinBox()
+        self.heatmap_sort_window_spin.setRange(0.001, 3600.0)
+        self.heatmap_sort_window_spin.setDecimals(3)
+        self.heatmap_sort_window_spin.setSingleStep(0.1)
+        self.heatmap_sort_window_spin.setToolTip("Length of each window the argmax is taken over")
+        self.heatmap_sort_window_spin.valueChanged.connect(self._on_heatmap_sort_params_changed)
+        sort_layout.addWidget(self.heatmap_sort_window_spin, 1, 1)
+
+        sort_layout.addWidget(QLabel("Overlap:"), 1, 2)
+        self.heatmap_sort_overlap_spin = QDoubleSpinBox()
+        self.heatmap_sort_overlap_spin.setRange(0.0, 0.95)
+        self.heatmap_sort_overlap_spin.setDecimals(2)
+        self.heatmap_sort_overlap_spin.setSingleStep(0.05)
+        self.heatmap_sort_overlap_spin.setToolTip("Fraction of a window shared with the next one (0.5 = half)")
+        self.heatmap_sort_overlap_spin.valueChanged.connect(self._on_heatmap_sort_params_changed)
+        sort_layout.addWidget(self.heatmap_sort_overlap_spin, 1, 3)
+
+        self.heatmap_sort_now_btn = QPushButton("Sort for current window")
+        self.heatmap_sort_now_btn.setToolTip("Sort rows by their peak inside the visible x-range and keep that order")
+        self.heatmap_sort_now_btn.clicked.connect(self._on_heatmap_sort_now_clicked)
+        sort_layout.addWidget(self.heatmap_sort_now_btn, 2, 0, 1, 4)
+
         hm_group = QGroupBox("Heatmap Display")
         hm_layout = QGridLayout()
         hm_layout.setSpacing(2)
@@ -1134,6 +1178,45 @@ class PlotSettingsWidget(QWidget):
         norm_key = self.app_state.get_with_default("heatmap_normalization")
         display = _NORM_KEY_TO_DISPLAY.get(norm_key, "Per-channel")
         self.heatmap_norm_combo.setCurrentText(display)
+
+        mode = self.app_state.get_with_default("heatmap_sort_mode")
+        with QSignalBlocker(self.heatmap_sort_combo):
+            self.heatmap_sort_combo.setCurrentIndex(max(0, self.heatmap_sort_combo.findData(mode)))
+        with QSignalBlocker(self.heatmap_sort_window_spin):
+            self.heatmap_sort_window_spin.setValue(self.app_state.get_with_default("heatmap_sort_window_s"))
+        with QSignalBlocker(self.heatmap_sort_overlap_spin):
+            self.heatmap_sort_overlap_spin.setValue(self.app_state.get_with_default("heatmap_sort_overlap"))
+        self.heatmap_sort_now_btn.setEnabled(mode == "visible")
+
+    def _on_heatmap_sort_mode_changed(self, _index: int):
+        mode = self.heatmap_sort_combo.currentData()
+        self.app_state.heatmap_sort_mode = mode
+        self.heatmap_sort_now_btn.setEnabled(mode == "visible")
+        if not self.plot_container:
+            return
+        for heatmap in self.plot_container.heatmap_plots:
+            if mode == "none":
+                heatmap.set_sort_order(None)
+            elif mode == "trial":
+                heatmap.resort_for_trial()
+            # "visible": the current order stays until the button is pressed.
+
+    def _on_heatmap_sort_params_changed(self, _value: float):
+        self.app_state.heatmap_sort_window_s = self.heatmap_sort_window_spin.value()
+        self.app_state.heatmap_sort_overlap = self.heatmap_sort_overlap_spin.value()
+        if self.plot_container and self.app_state.heatmap_sort_mode == "trial":
+            for heatmap in self.plot_container.heatmap_plots:
+                heatmap.resort_for_trial()
+
+    def _on_heatmap_sort_now_clicked(self):
+        if not self.plot_container:
+            return
+        heatmaps = self.plot_container.heatmap_plots
+        if not heatmaps:
+            notify("Open a heatmap panel first", "warning")
+            return
+        if not any(heatmap.sort_by_visible_window() for heatmap in heatmaps):
+            notify("No heatmap data in the visible window", "warning")
 
     def _on_heatmap_colormap_changed(self, colormap_name: str):
         self.app_state.heatmap_colormap = colormap_name

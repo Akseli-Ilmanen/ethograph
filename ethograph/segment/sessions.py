@@ -20,8 +20,15 @@ import pandas as pd
 from ethograph.features.columns import FS_RTOL, sampling_rate
 from ethograph.features.neural import transform_units
 from ethograph.io import schema
-from ethograph.io.catalog import INDIVIDUAL_DIMS, PynappleLoader, XarrayLoader, catalog_from_pynapple
+from ethograph.io.catalog import (
+    INDIVIDUAL_DIMS,
+    PynappleLoader,
+    XarrayLoader,
+    catalog_from_pynapple,
+    catalog_from_xarray,
+)
 from ethograph.io.data_loader import LoadResult, load_features_dataset
+from ethograph.io.video_feature_files import AttachResult, VideoFeatureFiles, attach_video_features
 from ethograph.labels.intervals import LABELING_AUTOMATED
 from ethograph.labels.tsv_store import get_trial_from_tsv
 from ethograph.segment.config import (
@@ -219,10 +226,36 @@ def open_session(
     sid = session_id(source)
     logger.info("Opened session %s (%s backend, %d trials)", sid, result.data_loader.backend, len(result.trial_ids))
     session = Session(spec=spec, id=sid, result=result)
+    attach_video_feature_folders(session)
     expand_neural_features(session, config)
     if expand_changepoints:
         expand_changepoint_features(session, config)
     return session
+
+
+def attach_video_feature_folders(session: Session) -> list[AttachResult]:
+    """Attach ``spec.video_feature_folders`` to the session's tree and rebuild its catalog.
+
+    Xarray sessions only: the folders are joined to trials through the
+    alignment's video names, exactly as a drop onto the GUI would, so the
+    variables exist for ``materialise`` and ``inference`` alike and never
+    reach the session file.
+    """
+    folders = session.spec.video_feature_folders
+    if not folders:
+        return []
+    dt = session.result.dt
+    if dt is None:
+        raise ValueError(f"{session.source}: video_feature_folders need an xarray (.nc) session")
+    alignment = session.result.nwb_alignment
+    results = [
+        attach_video_features(dt, alignment, VideoFeatureFiles.from_paths(name, [folder]))
+        for name, folder in folders.items()
+    ]
+    catalog = catalog_from_xarray(dt.itrial(0), dt, nwb_alignment=alignment)
+    session.result.catalog = catalog
+    session.result.data_loader = XarrayLoader(dt.itrial(0), catalog)
+    return results
 
 
 def expand_neural_features(session: Session, config: SegmentConfig | None) -> None:
