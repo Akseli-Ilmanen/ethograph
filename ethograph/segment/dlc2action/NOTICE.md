@@ -103,8 +103,8 @@ resolved from the run's own data.
 The adapters add only what a config file cannot carry: the padding mask
 (upstream cuts fixed-length windows and has no mask), the stage-order and
 temporal-resolution declarations, `exclusive`, which upstream takes from the
-task's single- vs multi-label problem type, and the window fold MotionBERT's
-fixed-length position embedding forces once a sample is a whole trial.
+task's single- vs multi-label problem type, and the window fold MotionBERT's and the Transformer's
+fixed-length position encodings force once a sample is a whole trial.
 
 ## Adding another upstream model or loss
 

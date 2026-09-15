@@ -18,7 +18,7 @@ import ethograph.segment.models.vendored  # noqa: E402, F401
 from ethograph.segment.models import ARCHITECTURES  # noqa: E402
 from ethograph.segment.models.vendored import C2F_MIN_FRAMES  # noqa: E402
 
-VENDORED = ["mstcn", "asformer", "c2f_tcn", "c2f_transformer", "edtcn", "mlp", "motionbert"]
+VENDORED = ["mstcn", "asformer", "c2f_tcn", "c2f_transformer", "edtcn", "mlp", "motionbert", "mp_transformer"]
 
 PARAMS: dict[str, dict[str, Any]] = {"motionbert": {"num_joints": 1}}
 """What an architecture cannot be built without — upstream's ``???`` keys."""
@@ -106,6 +106,7 @@ CONFIG_STEMS = {
     "edtcn": "edtcn",
     "mlp": "mlp",
     "motionbert": "motionbert",
+    "mp_transformer": "transformer",
 }
 
 
@@ -220,14 +221,15 @@ def test_c2f_puts_its_full_resolution_stage_last(name: str) -> None:
     assert step[-1] > 10 * step[0], f"stages are not ordered coarse -> fine: {step}"
 
 
-def test_motionbert_returns_its_windows_in_order() -> None:
-    """MotionBERT sees a fixed window; the trial is folded into windows and back.
+@pytest.mark.parametrize("name", ["motionbert", "mp_transformer"])
+def test_windowed_model_returns_its_windows_in_order(name: str) -> None:
+    """A fixed-window model's trial is folded into windows and back.
 
     The fold is a reshape and a permute, and the wrong permute still returns
     ``(S, B, C, T)`` and still trains — it just hands every frame another
     window's prediction. So compare against running the windows by hand.
     """
-    model = ARCHITECTURES["motionbert"](_params("motionbert"), N_FEATURES, N_CLASSES).eval()
+    model = ARCHITECTURES[name](_params(name), N_FEATURES, N_CLASSES).eval()
     window = model.window
     n_frames = 2 * window + window // 2  # deliberately not a whole number of windows
     x, mask = _inputs(n_frames)

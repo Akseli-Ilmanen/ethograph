@@ -69,6 +69,7 @@ gui = [
     "movement>=0.14",
     "ruptures",
     "jinja2",
+    "nbformat",
     "tqdm",
     "nwb-video-widgets",
     "phylib>=2.6.4",
@@ -301,8 +302,11 @@ python =
 passenv =
     CI
     GITHUB_ACTIONS
+setenv =
+    QT_QPA_PLATFORM = offscreen
 extras =
     dev
+    gui
 commands =
     pytest -v --color=yes --cov=ethograph --cov-report=xml
 """

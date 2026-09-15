@@ -24,7 +24,7 @@ eto.segment.Project(best.config_path).cross_validate()
 ```{tip}
 New here? {doc}`quickstart` is this page cut down to one architecture, three
 kinematic features and two sessions — a config you can copy and a model
-trained in four lines. Come back when you want the choices back.
+trained in four lines. This is a good starting point!
 ```
 
 ## The two stages of a workflow
@@ -124,18 +124,23 @@ directory; `project.sessions()` opens every session, `project.runs()` names
 the runs already trained, and `project.load_run()` returns a trained run
 ready to predict with.
 
-The vocabulary — session, trial, sample, feature column, branch, curated
-label, materialised dataset, architecture, run, role, prediction set — is
-pinned in the repository's `CONTEXT.md`.
+## Feature engineering is done by user, not the pipeline
 
-## Features are built with the session, not by the pipeline
+The pipeline only **selects** variables already in the session file, so
+anything a model should see is a variable you add (and can plot in the GUI).
+Three config sections are the exception, derived at session open:
 
-The pipeline never invents features: it **selects** variables that already
-exist in the session file and pins their dims. Anything you want a model to
-see — egocentric coordinates, pairwise distances, headings, changepoint
-proximity, video embeddings — is a data variable you add when you build
-the `.nc` (or pynapple / NWB file), which also makes it plottable in the GUI
-so you can review what the model will read.
+| Section | Reads | Generates |
+|---|---|---|
+| `features.sin_cos` | an angle | `(sin, cos)`, never z-scored |
+| `features.changepoint_features` | a changepoint mask | proximity / offset / segment-length columns |
+| `features.neural` | a pynapple `TsGroup` of spikes | a binned `TsdFrame` |
+
+A changepoint mask is a binary variable with `attrs["changepoint_mask"] = 1`,
+as the GUI's **Detect** button writes. `features.changepoint_features` is
+currently supported for `.nc` sessions only, not pynapple / NWB.
+
+Feature engineering may look like:
 
 ```python
 import ethograph as eto
@@ -154,14 +159,10 @@ individual)`), works in 2-D and 3-D, and keeps the `individual` dim. Outputs
 that must never be z-scored (unit vectors, angles, binary flags, segment ids)
 carry `attrs["normalise"] = 0`; the pipeline honours it.
 
-Spike trains are the exception in principle: a pynapple session's units are
-a `TsGroup` of event times, which no loader can read as a feature, and how
-they are binned is a modelling choice worth sweeping. `features.neural` spells
-that binning as pynapple expressions and applies it at every session open —
-single-trial neural decoding with the same models and prediction sets. See
-{doc}`config` (`features.neural`).
+See {doc}`config` for each section's keys.
 
-Video features are the one exception in mechanics, not in principle — a
+Video features are extracted by the pipeline too, but written into the
+session rather than derived at open — a
 pretrained network (S3D {cite:p}`xie2018s3d` by default, a timm {cite:p}`wightman2019timm` backbone such as DINOv2 {cite:p}`oquab2024dinov2` by name) is expensive enough to
 run once per video and cache. See {doc}`video_features`; the short version is
 
@@ -309,21 +310,38 @@ takes labels to score against.
 
 ## What a sample is
 
-One **(trial, individual)**. Its columns are the configured features with
-the individual dim pinned to that individual (`individual=self` in the
-layout) and, for pair features, the `other` dim enumerating the remaining
-individuals in dataset order (`other1`, `other2`, …). Its target is that
-individual's labels *as actor*. So a trial with two individuals is two
-samples, a dataset with one individual is unaffected, and every session must
-carry the same number of individuals.
+A sample is one **(trial, individual)** pair: an input `x (F, T)` and a
+target `y (T,)`.
 
-Only **`manual` and `curated` labels** ever become training targets; an
-`automated` label — the output of any model — never does. Point events are
-skipped (the lightgbm model owns them). One branch per model is the exclusive
-target; `features.labels.branches` lists several and the target becomes
-multi-label — one binary channel per (subject, class), decoded one *track*
-(subject, branch) at a time, so labels of different branches overlap and
-labels of one branch never do (see the config reference).
+**Input.** Each entry of `features.columns` is an xarray variable with a time
+dim. The sample's individual is selected (`.sel(individual=…)`), the listed
+dim values are selected, and whatever dims remain are flattened into columns.
+The columns of every feature are stacked into `F`:
+
+```text
+position_ego (time, space, keypoint, individual)
+  .sel(individual=ind, space=[x, y, z], keypoint=[beakTip, stickTip])
+  → (T, 6)
+speed        → (T, 1)
+                                     → x: (F=7, T)
+```
+
+A pair feature (`other: "*"`) keeps the remaining individuals as columns in
+dataset order (`other1`, `other2`, …), so every session must have the same
+number of individuals. Column names are written to `columns.yaml`.
+
+A pynapple or NWB session works the same way: a `Tsd` is one column, and
+a `TsdFrame` (or `TsdTensor`) selects the listed columns over time, giving
+`(T, n_columns)`.
+
+**Target.** Per frame, the class index of that individual's labels *as
+actor*; `0` is background. Only `manual` and `curated` labels count, never
+`automated` ones. Point events are skipped.
+
+A trial with two individuals therefore gives two samples. With
+`features.labels.branches` listing several branches, `y` becomes multi-label
+`(C, T)`: one binary channel per class. Labels within one branch never
+overlap; labels in different branches can (see {doc}`config`).
 
 ## The materialised dataset
 
@@ -339,13 +357,20 @@ classes.yaml             class index ↔ label id
 ```
 
 `key` is `{session_id}_trial{trial}_{individual}`; `session_id` is the
-source's stem plus a path hash, so two `Trial_data.nc` never collide. Roles
-and normalisation statistics are *not* part of the dataset — they belong to
-a run (`runs/{run}/splits/*.bundle`, `stats.npz`).
+source's stem plus a path hash, so two `Trial_data.nc` never collide.
+
+The dataset does not record which samples are for training, validation or
+testing, and it is not z-scored. Both depend on the split, and the split is
+chosen per run. So one materialised dataset can serve many runs (a search, each
+cross-validation fold). Each run writes its own:
+
+- `runs/{run}/splits/{train,val,test}.bundle`: the sample keys in each role.
+- `runs/{run}/stats.npz`: the per-column mean and std, computed on that
+  run's training samples only and applied when the run loads its data.
 
 ## Architectures
 
-Ten networks are available; `eto.segment.architectures()` lists them.
+Eleven networks are available; `eto.segment.architectures()` lists them.
 Switching between them is a one-line change, and `project.compare()` puts the
 runs side by side, so trying two or three is cheap.
 
@@ -355,10 +380,11 @@ runs side by side, so trying two or three is cheap.
 | `c2f_transformer` {cite:p}`kozlova2025dlc2action` | `c2f_tcn` + attention | Same size limit; worth a run when `c2f_tcn` misses long-range structure. |
 | `mstcn` (MS-TCN3) {cite:p}`kozlova2025dlc2action` | Dilated TCN, refined in stages | Works at any trial length. The usual baseline. |
 | `asformer` {cite:p}`yi2021asformer` | Sliding-window attention + decoders | Strongest context modelling, several times slower per epoch. |
-| `edtcn` {cite:p}`lea2017edtcn` | Encoder–decoder, wide kernels | Small and quick. |
+| `edtcn` {cite:p}`lea2017edtcn` | Encoder–decoder, wide kernels |  |
 | `rnn` | Bidirectional GRU or LSTM over the trial | Ours: a recurrent baseline, any trial length. Defaults in `ethograph/segment/models/config/rnn.yaml`. |
 | `mlp` {cite:p}`kozlova2025dlc2action` | Per-frame, no temporal context | A floor to compare against: how much is temporal context buying you? |
 | `motionbert` {cite:p}`zhu2023motionbert` | Attention across joints, then across time | For pose columns that factor into joints: set `model.params.num_joints` (it has no default and must divide the column count). Reads a fixed 128-frame window at a time. |
+| `mp_transformer` {cite:p}`kozlova2025dlc2action` | Max-pool → transformer encoder → upsample | DLC2Action's MP-Transformer: attention over a pooled timeline. Reads a fixed 128-frame window at a time (`model.params.len_segment`); `num_pool: 0` is a plain transformer encoder. |
 | `specscalpel` {cite:p}`ji2026specscalpel` | Skeleton graph + frequency-selective filtering | **Pose-native.** Reads a skeleton of keypoints and sharpens the boundaries between adjacent behaviours in the frequency domain. Needs `model.params.keypoints` and (optionally) `skeleton`. |
 | `lady` {cite:p}`ji2026lady` | `specscalpel` + a learned Lagrangian-dynamics stream | **Pose-native.** Adds a physics-informed stream (torque, power, energy) over the skeleton's generalised coordinates. Needs `keypoints`, a `skeleton` with edges, and the root-frame landmarks `root`/`spine` (+ `left`/`right` in 3D); reads raw positions only. |
 
@@ -366,9 +392,8 @@ runs side by side, so trying two or three is cheap.
 the ones you want to change under `model.params`. For the vendored models they
 come, with a comment on each and its default, from
 `ethograph/segment/dlc2action/config/model/{file}.yaml` (`mstcn` reads
-`ms_tcn3.yaml`); `specscalpel` and `lady` read their skeleton-graph defaults, and
-`rnn` reads `ethograph/segment/models/config/rnn.yaml`. The loss is configured the same
-way under `train.loss`, from `config/losses.yaml`. See {doc}`config`.
+`ms_tcn3.yaml`); `specscalpel` and `lady` read their skeleton-graph defaults.
+The loss is configured the same way under `train.loss`, from `config/losses.yaml`. See {doc}`config`.
 
 ```{note}
 The networks and the loss come from

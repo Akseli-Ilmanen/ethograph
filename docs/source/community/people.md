@@ -9,8 +9,7 @@
 
 ## Collaborations
 
-Come aboard!
-
+Collaborations are welcome. Pull requests are welcome (see {doc}`contributing`). For bigger project ideas, feel free to email me at akseli.ilmanen@gmail.com.
 
 ## People who helped along the way
 

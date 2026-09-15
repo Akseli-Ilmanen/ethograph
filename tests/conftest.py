@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,26 @@ except ImportError:
     GUI_AVAILABLE = False
 
 requires_gui = pytest.mark.skipif(not GUI_AVAILABLE, reason="Qt/pygfx not installed")
+
+# Files whose modules import an optional extra at collection time; skipped when it is absent.
+_OPTIONAL_TEST_FILES = {
+    "torch": [
+        "test_unit/test_dialog_video_feature_rank.py",
+        "test_unit/test_discover_columns.py",
+        "test_unit/test_s3d_*.py",
+        "test_unit/test_segment_changepoint_features.py",
+        "test_unit/test_segment_multilabel.py",
+        "test_unit/test_segment_video_features.py",
+        "test_unit/test_spot_*.py",
+    ],
+    "dandi": ["test_integration/test_dandi_download.py"],
+}
+collect_ignore_glob = [
+    pattern
+    for module, patterns in _OPTIONAL_TEST_FILES.items()
+    if importlib.util.find_spec(module) is None
+    for pattern in patterns
+]
 
 
 def pytest_addoption(parser):
