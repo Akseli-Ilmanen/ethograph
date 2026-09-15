@@ -4,11 +4,18 @@ import warnings
 
 import pytest
 import xarray as xr
-from movement.sample_data import fetch_dataset
+from requests.exceptions import RequestException
 
 from ethograph.gui.pose_convert import poses_ds_to_points
 from ethograph.gui.pose_render import PoseRenderData, load_pose_from_file
 from ethograph.io.data_loader import wizard_single_from_pose
+
+# movement downloads its sample metadata at import time, so the host being down
+# (GIN answers 403 to CI runners at times) must skip the module, not fail collection.
+try:
+    from movement.sample_data import fetch_dataset
+except RequestException as exc:
+    pytest.skip(f"movement sample data unavailable: {exc}", allow_module_level=True)
 
 # ---------------------------------------------------------------------------
 # Helpers

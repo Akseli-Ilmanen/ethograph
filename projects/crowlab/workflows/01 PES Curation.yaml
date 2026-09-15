@@ -42,7 +42,7 @@ steps:
       title: pellet_stickClosest_dist
     axis_auto: true
     skip_video: true
-    threshold: 0.8
+    threshold: 0.6
     grid_mode: uncurate
     mark_flagged: false
     generate: true
