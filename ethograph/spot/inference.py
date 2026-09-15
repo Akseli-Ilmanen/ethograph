@@ -25,7 +25,6 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-import sys
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -39,7 +38,7 @@ from ethograph.segment.sessions import Session, open_session
 from ethograph.spot import dataset as dataset_stage
 from ethograph.spot.config import ResolvedClip, SpotConfig, config_to_dict
 from ethograph.spot.predict import SpottedEvent, flagged, read_predictions, spot_entry, to_labels_frame
-from ethograph.spot.vendored import clone_root, run_logged
+from ethograph.spot.vendored import run_logged, script_command
 
 logger = logging.getLogger(__name__)
 
@@ -162,19 +161,14 @@ def _sweep(entries: list[dict], truth: dict[str, dict], config: SpotConfig, clip
 def val_truth_path(run_dir: Path, config: SpotConfig) -> Path | None:
     """The ``val.json`` a run's validation predictions are scored against.
 
-    The project's own first; else the dataset the run's ``config.json`` names
-    — absolute, or relative to the clone's ``data/`` as upstream spells it —
-    so a run trained before this project existed still picks its epoch by the
-    sweep rather than by its last checkpoint.
+    The project's own first; else the dataset directory the run's
+    ``config.json`` names, so a run trained before this project existed still
+    picks its epoch by the sweep rather than by its last checkpoint.
     """
     candidates = [config.dataset_dir / "val.json"]
     stored = json.loads((run_dir / "config.json").read_text(encoding="utf-8")).get("dataset")
     if stored:
         candidates.append(Path(stored) / "val.json")
-        try:
-            candidates.append(clone_root() / "data" / str(stored) / "val.json")
-        except FileNotFoundError:
-            pass
     return next((c for c in candidates if c.is_file()), None)
 
 
@@ -252,9 +246,7 @@ def predict_split(
     *zero_features* hands a model that reads the feature block zeros for it
     — the ablation behind ``evaluate(zero_features=True)``.
     """
-    command = [
-        sys.executable,
-        "test_e2e.py",
+    command = script_command("test_e2e") + [
         str(model_dir.resolve()),
         str(config.frames_dir.resolve()),
         "-s",
@@ -264,7 +256,8 @@ def predict_split(
         "-d",
         str(config.dataset_dir.resolve()),
     ] + (["--zero_fuse"] if zero_features else [])
-    code = run_logged(command, log_path, cwd=clone_root())
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    code = run_logged(command, log_path, cwd=log_path.parent)
     if code != 0:
         raise RuntimeError(f"test_e2e.py exited with {code}; see {log_path}")
     recall = Path(f"{out_prefix}.recall.json.gz")

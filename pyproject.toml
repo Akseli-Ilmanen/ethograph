@@ -130,6 +130,8 @@ model = [
     # `video_features.extractor: timm`): any timm image backbone, DINOv2 by
     # default. Pure Python on top of the torch `model` already expects.
     "timm>=1.0",
+    # Printed score tables in the vendored E2E-Spot (ethograph/spot/e2espot/util/score.py).
+    "tabulate",
 ]
 
 # Kept so `ethograph[timm]` still resolves; `model` already includes it.
@@ -201,6 +203,7 @@ ethograph = ["assets/*", "defaults/*", "defaults/**/*"]
 "ethograph.segment.dlc2action" = ["config/**/*.yaml", "NOTICE.md", "LICENSE.APGPL", "colors.txt"]
 "ethograph.segment.specscalpel" = ["config/*.yaml", "NOTICE.md", "LICENSE"]
 "ethograph.segment.lady" = ["config/*.yaml", "NOTICE.md", "LICENSE"]
+"ethograph.spot.e2espot" = ["NOTICE.md", "LICENSE"]
 
 [tool.setuptools.exclude-package-data]
 "ethograph.video_features" = ["checkpoint/*.pt"]
@@ -252,7 +255,7 @@ ignore = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["__init__.py", "build", ".eggs", "scripts", "ethograph/_vendor", "ethograph/segment/dlc2action", "ethograph/segment/specscalpel", "ethograph/segment/lady", "*.ipynb", ".archive"]
+exclude = ["__init__.py", "build", ".eggs", "scripts", "ethograph/_vendor", "ethograph/segment/dlc2action", "ethograph/segment/specscalpel", "ethograph/segment/lady", "ethograph/spot/e2espot", "*.ipynb", ".archive"]
 lint.select = [
     "E",
     "F",
@@ -269,7 +272,7 @@ docstring-code-format = true
 # (chiefly "this could be None and you didn't handle it") without demanding
 # that every function be annotated. Tighten later if the signal proves useful.
 files = ["ethograph"]
-exclude = ['ethograph/_vendor/', 'ethograph/segment/dlc2action/', 'ethograph/segment/specscalpel/', 'ethograph/segment/lady/', '/_test_']
+exclude = ['ethograph/_vendor/', 'ethograph/segment/dlc2action/', 'ethograph/segment/specscalpel/', 'ethograph/segment/lady/', 'ethograph/spot/e2espot/', '/_test_']
 ignore_missing_imports = true
 follow_imports = "silent"
 disallow_untyped_defs = false

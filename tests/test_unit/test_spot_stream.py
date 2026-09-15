@@ -10,7 +10,6 @@ frame.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +17,8 @@ import pytest
 
 from ethograph.io.video_decode import iter_rgb_frames
 from ethograph.spot.dataset import TrialRecord, export_frames
+from ethograph.spot.e2espot.dataset.frame import ActionSpotVideoDataset
+from ethograph.spot.e2espot.train_e2e import E2EModel
 from ethograph.spot.stream import (
     GraphedForward,
     eager_forward,
@@ -26,17 +27,6 @@ from ethograph.spot.stream import (
     prepare_frame,
     window_starts,
 )
-from ethograph.spot.vendored import clone_root
-
-
-def _clone():
-    try:
-        root = clone_root()
-    except FileNotFoundError:
-        pytest.skip("E2E-Spot clone not available")
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-    return root
 
 
 def _write_video(path: Path, n_frames: int, size=(64, 48), fps=25) -> None:
@@ -74,9 +64,7 @@ def _record(tmp_path, n_frames=60, crop=None) -> TrialRecord:
 
 def _fake_run(tmp_path, clip_len=8, stride=2, crop_dim=32) -> Path:
     """A tiny untrained bw model saved the way the trainer saves one."""
-    _clone()
     import torch
-    from train_e2e import E2EModel
 
     run_dir = tmp_path / "runs" / "r"
     run_dir.mkdir(parents=True)
@@ -100,9 +88,6 @@ def _fake_run(tmp_path, clip_len=8, stride=2, crop_dim=32) -> Path:
 class TestWindows:
     @pytest.mark.parametrize("num_frames,clip_len,stride", [(60, 8, 2), (1000, 200, 2), (7, 8, 1), (200, 200, 2)])
     def test_starts_are_the_vendored_datasets(self, tmp_path, num_frames, clip_len, stride):
-        _clone()
-        from dataset.frame import ActionSpotVideoDataset
-
         labels = tmp_path / "split.json"
         labels.write_text(json.dumps([{"video": "v", "num_frames": num_frames, "fps": 25.0, "events": []}]))
         ds = ActionSpotVideoDataset(
@@ -154,9 +139,7 @@ class TestFrame:
 
 class TestStreamMatchesTheFolder:
     def test_scores_agree_with_the_vendored_reader(self, tmp_path):
-        _clone()
         import torch
-        from dataset.frame import ActionSpotVideoDataset
 
         record = _record(tmp_path, n_frames=60, crop=(4, 2, 60, 46))
         run_dir = _fake_run(tmp_path)
@@ -164,7 +147,7 @@ class TestStreamMatchesTheFolder:
         streamed, total = predict_trial(model, stored, record, jpeg_roundtrip=True)
         assert total == 60 and streamed.shape == (30, 3)
 
-        # the folder path: export the frames, read them with the clone's own dataset
+        # the folder path: export the frames, read them with the vendored dataset
         frames_dir = tmp_path / "frames"
         export_frames(record, frames_dir)
         labels = tmp_path / "split.json"
@@ -190,7 +173,7 @@ class TestStreamMatchesTheFolder:
 
 
 class _Recorder:
-    """A model that only remembers what it was fed; no clone needed."""
+    """A model that only remembers what it was fed; no vendored model needed."""
 
     device = "cpu"
     _num_classes = 3

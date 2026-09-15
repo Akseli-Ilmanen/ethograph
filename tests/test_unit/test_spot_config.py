@@ -444,10 +444,8 @@ class TestArchitectures:
         assert "Multi-scale" in describe_architecture("rny008_msagsm")
         assert "no temporal mixing" in describe_architecture("rn18")
 
-    def test_the_real_clone_lists_the_two_that_matter(self):
-        from ethograph.spot import architectures, clone_available
+    def test_the_vendored_trainer_lists_the_two_that_matter(self):
+        from ethograph.spot import architectures
 
-        if not clone_available():
-            pytest.skip("no E2E-Spot clone")
         names = architectures()
         assert {"rny008_gsm", "rny008_msagsm"} <= set(names)

@@ -459,8 +459,7 @@ finished run does not change when the GUI does. The GUI's step checkboxes
 read as zeroed parameters (purge off → `min_duration_s: 0`, stitch off →
 `stitch_gap_s: 0`, snap off → `changepoint_correction: false`). Spell the
 values instead when one project needs settings the GUI does not hold.
-`changepoints` has no GUI counterpart and is always the config's. See
-`notes/adr/0006-postprocess-from-gui-settings.md`.
+`changepoints` has no GUI counterpart and is always the config's.
 
 | Key | Default | Meaning |
 |---|---|---|

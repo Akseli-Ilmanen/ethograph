@@ -42,7 +42,7 @@ from ethograph.spot.features import export_block, export_features
 from ethograph.spot.pose_batch import fill_and_export_video, merge_keypoints
 from ethograph.spot.pose_model import PoseSpotter
 from ethograph.spot.predict import SpottedEvent, read_predictions, spot_entry
-from ethograph.spot.project import Project, RunResult, architectures, clone_available
+from ethograph.spot.project import Project, RunResult, architectures
 from ethograph.spot.vendored import describe_architecture
 from ethograph.utils.logging import enable_console_logging
 
@@ -68,7 +68,6 @@ __all__ = [
     "TrialRecord",
     "architectures",
     "describe_architecture",
-    "clone_available",
     "config_from_dict",
     "curve_stats",
     "densify",

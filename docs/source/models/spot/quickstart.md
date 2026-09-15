@@ -17,13 +17,8 @@ uv pip install --torch-backend=auto torch torchvision
 uv pip install "ethograph[model]"
 ```
 
-The trainer is upstream's own E2E-Spot code, run from a clone. Clone it as
-`spot/` beside the ethograph repository, or put it anywhere and set
-`ETHOGRAPH_SPOT_ROOT` to that folder:
-
-```bash
-git clone https://github.com/jhong93/spot.git
-```
+The trainer is upstream's own E2E-Spot code, shipped inside ethograph; there
+is nothing else to clone.
 
 ## 1. What a session needs
 

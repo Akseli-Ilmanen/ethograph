@@ -10,6 +10,7 @@
 - Test/debug scripts live in `tests/`, never the project root. Prefix ad-hoc debug scripts `_test_` so pytest skips them.
 - Docs/docstrings: don't name individuals (Poppy, Freddy, Ivy).
 - `docs/add_to_docs_later/` is unpublished drafts: nothing (docs, code, comments, CLAUDE.md) links to or cites a file in it.
+- `docs/` is public-facing; `notes/adr/` is private (for the maintainer and Claude). Docs never cite an ADR.
 - Claude Code may change any file in this repo.
 
 ### How to maintain this file
@@ -152,13 +153,14 @@ ethograph/spot/               # Pixel point-event spotting (E2E-Spot); docs: doc
     inference.py              # Stage 4: best epoch by the sweep → test_e2e.py → labels TSV + onset_curves per session
     stream.py                 # Inference decodes the video straight into the model (rolling one-window buffer, JPEG round trip in memory; only the stride grid is converted + prepared, once each; the forward is a replayed CUDA graph — tests/test_unit/test_spot_stream.py TestRollingBuffer); never the frame folder
     metrics.py                # evaluate(): a run's chosen epoch on a labelled split → test_metrics.yaml (misses, error in ms, hit rate per tolerance)
-    vendored.py               # Locating and driving the E2E-Spot clone
+    vendored.py               # Driving the vendored E2E-Spot (python -m subprocesses, retries, logs)
+    e2espot/                  # Vendored BSD-3 E2E-Spot in upstream's layout — see its NOTICE.md; excluded from ruff/mypy
     msagsm.py                 # MultiScaleGatedShift from the paper, on the BSD GSM; `rny008_msagsm` (dilations are durations)
     features.py               # The pose side: the listed features per trial (features/*.npz + features.json), the z-scored block (features/block/) for the student
     pose_model.py             # PoseSpotter: features → multi-scale shift blocks → bi-GRU → (B,T,K+1)
     teacher.py                # Stage 1 of the distillation recipe: train the pose teacher on features/
     pose_batch.py             # Headless: fill every labelled clip's sidecar → <video>.keypoints.nc → merge onto the trial clock
-    # distillation lives in the vendored trainer (--stage 2/3, scripts/spot_windows_compat.patch); Project.distil() drives it
+    # distillation lives in the vendored trainer (--stage 2/3, e2espot/NOTICE.md); Project.distil() drives it
 
 ethograph/utils/              # io.py, xr_utils.py (sel_valid, get_time_coord), sequences.py, device.py (resolve_device)
 ethograph/utils/system_check.py # Linux preflight for the GUI wheels' system libs (`ethograph check`)

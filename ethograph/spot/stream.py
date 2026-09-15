@@ -31,7 +31,6 @@ from __future__ import annotations
 import io
 import json
 import logging
-import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -44,7 +43,7 @@ from PIL import Image
 
 from ethograph.io.video_decode import RGBConverter, decode_frames
 from ethograph.spot.dataset import JPEG_QUALITY, TrialRecord
-from ethograph.spot.vendored import clone_root
+from ethograph.spot.e2espot.train_e2e import E2EModel
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +62,6 @@ STREAM_WORKERS_MAX = 4
 
 def load_run_model(run_dir: Path, epoch: int, n_classes: int, device: str):
     """The vendored ``E2EModel`` of *run_dir* at *epoch*, built the way ``test_e2e.py`` builds it."""
-    root = str(clone_root())
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    from train_e2e import E2EModel  # the clone's own module, on its own path
-
     stored = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
     model = E2EModel(
         n_classes + 1,

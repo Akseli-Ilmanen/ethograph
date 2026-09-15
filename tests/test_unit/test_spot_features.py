@@ -11,12 +11,13 @@ must be refused by name rather than ignored.
 from __future__ import annotations
 
 import json
-import sys
 
 import numpy as np
 import pytest
 
 from ethograph.spot.config import config_from_dict
+from ethograph.spot.e2espot.dataset.frame import load_side_clip
+from ethograph.spot.e2espot.train_e2e import E2EModel
 from ethograph.spot.features import (
     NAMES_FILE,
     STATS_FILE,
@@ -27,7 +28,6 @@ from ethograph.spot.features import (
     write_trial_features,
 )
 from ethograph.spot.project import Project
-from ethograph.spot.vendored import clone_root
 
 FEATURES = {"speed": {"keypoint": ["beakTip", "stickTip"]}, "pellet_stickClosest_dist": {}}
 
@@ -119,15 +119,6 @@ class TestBlock:
 @pytest.fixture(scope="module")
 def e2e_model():
     """The vendored model on CPU, an untrained tiny backbone, with a 3-wide feature block."""
-    try:
-        root = clone_root()
-    except FileNotFoundError:
-        pytest.skip("E2E-Spot clone not available")
-    sys.path.insert(0, str(root))
-    try:
-        from train_e2e import E2EModel
-    finally:
-        sys.path.remove(str(root))
     # modality 'bw' skips the pretrained download; no shift module, so any clip length goes
     return E2EModel(3, "rny002", "gru", clip_len=8, modality="bw", device="cpu", fuse_dim=3)
 
@@ -157,15 +148,6 @@ class TestVendoredModel:
 
 class TestSideClip:
     def test_zero_hands_back_zeros_and_a_foreign_stride_is_refused(self, tmp_path):
-        try:
-            root = clone_root()
-        except FileNotFoundError:
-            pytest.skip("E2E-Spot clone not available")
-        sys.path.insert(0, str(root))
-        try:
-            from dataset.frame import load_side_clip
-        finally:
-            sys.path.remove(str(root))
         np.savez(tmp_path / "v.npz", features=np.arange(20, dtype=np.float32).reshape(10, 2), stride=2, fps=200.0)
         clip, mask = load_side_clip(str(tmp_path), "features", {}, "v", base_idx=4, clip_len=4, stride=2)
         np.testing.assert_array_equal(clip[:, 0], [4, 6, 8, 10])  # strided index 2..5

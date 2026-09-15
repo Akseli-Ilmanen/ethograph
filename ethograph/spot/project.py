@@ -32,10 +32,10 @@ from ethograph.spot.config import (
 )
 from ethograph.spot.vendored import (
     check_vram,
-    clone_root,
     describe_architecture,
     feature_architectures,
     run_with_retries,
+    script_command,
 )
 
 logger = logging.getLogger(__name__)
@@ -468,12 +468,10 @@ class Project:
 
         ``train_e2e.py`` builds its paths as ``os.path.join('data', dataset)``,
         and an absolute second argument wins — so the dataset directory is
-        passed as-is rather than copied into the clone. Every stage — the
+        passed as-is and nothing needs a ``data/`` folder. Every stage — the
         baseline, the two distillation steps — is this one command plus its
         stage flags.
         """
-        import sys
-
         cfg = self._config
         if epochs <= cfg.train.warm_up_epochs:
             # Upstream's schedule is linear warm-up then cosine over the rest;
@@ -482,9 +480,7 @@ class Project:
                 f"{epochs} epoch(s) with train.warm_up_epochs={cfg.train.warm_up_epochs}: the cosine schedule "
                 "needs at least one epoch after the warm-up. Raise the epochs or lower train.warm_up_epochs."
             )
-        command = [
-            sys.executable,
-            "train_e2e.py",
+        command = script_command("train_e2e") + [
             str(cfg.dataset_dir.resolve()),
             str(cfg.frames_dir.resolve()),
             "-s",
@@ -538,13 +534,4 @@ def architectures() -> list[str]:
     return feature_architectures()
 
 
-def clone_available() -> bool:
-    """Whether the vendored E2E-Spot clone can be found (for tests and dialogs)."""
-    try:
-        clone_root()
-    except FileNotFoundError:
-        return False
-    return True
-
-
-__all__ = ["Project", "RunResult", "architectures", "clone_available", "config_to_dict", "describe_architecture"]
+__all__ = ["Project", "RunResult", "architectures", "config_to_dict", "describe_architecture"]

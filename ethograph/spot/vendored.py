@@ -1,15 +1,10 @@
-"""Driving the vendored E2E-Spot clone.
+"""Driving the vendored E2E-Spot (``ethograph/spot/e2espot/``, see its ``NOTICE.md``).
 
 Upstream's training loop is run as a subprocess rather than imported: it owns
 ``argparse``, a global config dict and its own logging, and rewriting it is
 exactly what vendoring is meant to avoid. What this module adds is what a
 subprocess cannot do for itself — resume after a crash, and mirror the output
 to a log beside the run.
-
-The clone's location is ``$ETHOGRAPH_SPOT_ROOT`` if set, else a ``spot/`` or
-``repos/spot/`` folder beside the repository root. When it graduates from proof of principle
-it moves under this package as ``ethograph/spot/e2espot/``, the way
-``ethograph/segment/dlc2action/`` is laid out, with its own ``NOTICE.md``.
 """
 
 from __future__ import annotations
@@ -28,26 +23,13 @@ logger = logging.getLogger(__name__)
 #: context of the dead process to be released.
 RETRY_PAUSE_S = 20
 
-_ENV_VAR = "ETHOGRAPH_SPOT_ROOT"
+#: The vendored tree, in upstream's layout.
+E2ESPOT_DIR = Path(__file__).resolve().parent / "e2espot"
 
 
-def clone_root() -> Path:
-    """Where the E2E-Spot clone lives, or a ``FileNotFoundError`` saying how to say."""
-    override = os.environ.get(_ENV_VAR)
-    if override:
-        root = Path(override).expanduser().resolve()
-        if not (root / "train_e2e.py").is_file():
-            raise FileNotFoundError(f"{_ENV_VAR}={root} has no train_e2e.py")
-        return root
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        for candidate in (parent / "spot", parent / "repos" / "spot"):
-            if (candidate / "train_e2e.py").is_file():
-                return candidate
-    raise FileNotFoundError(
-        f"No E2E-Spot clone found. Clone it as `spot/` or `repos/spot/` beside the "
-        f"repository root, or point {_ENV_VAR} at it."
-    )
+def script_command(script: str) -> list[str]:
+    """``python -m`` for one of upstream's scripts (``train_e2e`` / ``test_e2e``), run from any directory."""
+    return [sys.executable, "-m", f"ethograph.spot.e2espot.{script}"]
 
 
 def has_checkpoint(save_dir: Path) -> bool:
@@ -85,14 +67,14 @@ def run_with_retries(command: list[str], save_dir: Path, retries: int) -> None:
     every epoch and ``--resume`` continues from the newest, so a failure costs
     at most one epoch. Every attempt's output lands in ``{save_dir}/train.log``.
     """
-    root = clone_root()
+    save_dir.mkdir(parents=True, exist_ok=True)
     log_path = save_dir / "train.log"
     for attempt in range(retries + 1):
         attempt_command = list(command)
         if attempt and has_checkpoint(save_dir):
             attempt_command.append("--resume")
         logger.info("Attempt %d/%d: %s", attempt + 1, retries + 1, " ".join(attempt_command))
-        code = run_logged(attempt_command, log_path, cwd=root)
+        code = run_logged(attempt_command, log_path, cwd=save_dir)
         if code == 0:
             return
         logger.error("train_e2e.py exited with %d (see %s)", code, log_path)
@@ -125,11 +107,11 @@ _CHOICES_RE = re.compile(r"--feature_arch'.*?choices=\[(.*?)\]", re.S)
 def feature_architectures(root: Path | None = None) -> list[str]:
     """Every ``--feature_arch`` the vendored trainer accepts, read off its CLI.
 
-    The clone's ``train_e2e.py`` is the one authority on what can be trained;
-    reading its ``choices=[...]`` keeps this list from drifting when the clone
-    gains an architecture. No import — the trainer pulls in torch and timm.
+    The vendored ``train_e2e.py`` is the one authority on what can be trained;
+    reading its ``choices=[...]`` keeps this list from drifting when it gains
+    an architecture. No import — the trainer pulls in torch and timm.
     """
-    source = (root or clone_root()) / "train_e2e.py"
+    source = (root or E2ESPOT_DIR) / "train_e2e.py"
     match = _CHOICES_RE.search(source.read_text(encoding="utf-8"))
     if match is None:
         raise ValueError(f"{source}: could not find the --feature_arch choices")
