@@ -48,7 +48,7 @@ flowchart TD
 :hidden:
 
 Action segmentation (state events) <segment/index>
-LightGBM (point events from features) <onset_model>
+LightGBM (point events, GUI-only, CPU) <onset_model>
 PES (point events from pixels) <spot/index>
 confidence
 curation
