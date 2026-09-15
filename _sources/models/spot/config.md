@@ -12,14 +12,6 @@ project = eto.spot.Project("project.yaml", "clip.context_s=4", "train.epochs=12"
 ```
 
 ```{important}
-An unknown key is an error, in the file and in an override alike — a typo
-must not silently become a default. So is a section this pipeline retired:
-`graph:` and `fuse:` are refused by name with the
-replacement, and a `columns:` key under `features:` (the segmentation
-pipeline's section shape) with the difference.
-```
-
-```{important}
 **Every temporal setting is a duration.** Seconds and milliseconds in the
 file; the frame counts the vendored trainer wants are derived from each
 video's own rate at run time, so a config moved between a 200 fps rig and a
@@ -59,8 +51,8 @@ session has no role; `train.split` gives every trial one.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `classes` | required | The point-event label ids to spot. Their order is the order the events happen in (first contact before last contact): `infer.flag_out_of_order` reads it. |
-| `camera` | the alignment's default | Which camera's video, one per project. |
+| `classes` | required | The point-event label ids to spot, **at most `infer.max_events_per_trial` of each per trial** — one by default: the class's prediction is the tallest peak of its curve. A trial labelled more often than that is refused at `materialise()`; either raise the cap or cut the trial in the trials table. Their order is the order the events happen in (first contact before last contact): `infer.flag_out_of_order` reads it. |
+| `camera` | the alignment's default | Which camera's video the model reads, one per project. Only matters with several cameras: give the camera's name as the alignment spells it (`side`, `top`, `0`…), or a piece of the video filename that exactly one camera's files carry (`cam-1` picks `…-cam-1.mp4`). A name no camera matches, or one several match, is refused naming the cameras the alignment has. Overlapping cameras: pick one; non-overlapping: a mosaic — see {ref}`target-spot-one-camera`. |
 | `crop` | `null` | `{x0, y0, x1, y1}` in source pixels, cut from the decoded frame **before** the resize, so a tight crop spends the model's pixels on less scene. Must fit inside every trial's video for the camera — checked at materialise time. The GUI writes it: Tools ▸ *Video: Pick a crop for a config…*. |
 | `frame_height` | `224` | Height the (cropped) frame is resized to; width follows the aspect ratio. E2E-Spot's own {cite:p}`hong2022e2espot`. |
 
@@ -191,7 +183,9 @@ together — contributes.
 | Key | Default | Meaning |
 |---|---|---|
 | `focus_window_ms` | `100` | ± this around the tallest peak counts as the same event when reading `focus`/`ratio` off a curve — twice the precision you believe your labels to (the lightgbm model takes it from its `tolerance_s`). See the confidence page. |
-| `flag_out_of_order` | `false` | A trial whose predicted events are not in `labels.classes` order has every event's confidence set to 0 — flagged, never reordered or dropped. |
+| `max_events_per_trial` | `1` | How many events of one class a trial may hold. `1`: the tallest peak of the class's curve is the event, no threshold needed — the best candidate wins. Above 1: every peak at least `min_event_gap_s` from a taller one is an event, up to this many, and the model now returns spurious ones too, so calibrate the confidence you flag below on the grid's histogram before reviewing. `ratio` and the rules built on it (`product`, `custom`) are refused — a second peak is another event, not a rival — so set `confidence: focus` or `peak`. `flag_out_of_order` is refused, since order between classes is undefined. Training refuses a trial labelled more often than this. |
+| `min_event_gap_s` | `0.5` | With several events per trial, two peaks closer than this are one event, the taller. Read only when `max_events_per_trial > 1`. |
+| `flag_out_of_order` | `false` | A trial whose predicted events are not in `labels.classes` order has every event's confidence set to 0 — flagged, never reordered or dropped. One event per class only. |
 | `source` | `spot:{run}@{epoch}` | Currently unused: every predicted row's `prediction_source` is always `spot:{run}@{epoch}`. |
 | `flag_confidence_below` | `0.01` | Events below this confidence are logged as flagged, never dropped. |
 | `jpeg_roundtrip` | `true` | Inference decodes the video straight into the model; each frame passes through JPEG in memory first, so the model sees what training saw (the export writes JPEGs). Off = an ablation. |

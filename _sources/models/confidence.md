@@ -80,6 +80,16 @@ interior peak at all, or higher at an edge than at any peak inside (still
 climbing at the trial's end — the event may lie past it). Whatever rule is
 chosen, such a label's confidence is `0`: flagged for review, never dropped.
 
+**Several events per trial change what a second peak means.** The pixel
+model can read a curve as up to `infer.max_events_per_trial` events, peaks at
+least `infer.min_event_gap_s` apart. Then a second peak is another event,
+not a rival, so `ratio` and the rules built on it are refused; `focus`
+(read over each event's own stretch of the curve) or `peak` is written
+instead. And with one event per trial the tallest peak simply wins, while
+with several the model also returns the spurious ones, so the threshold in
+**Flag confidence below** has to be calibrated on the histogram before
+review rather than left at its default.
+
 **The window is the user's timescale, not a constant.** $w = 2 \times$ the
 tolerance the labels are believed to: the lightgbm model takes it from its own
 `tolerance_s`, the pixel model from `infer.focus_window_ms` (twice the label

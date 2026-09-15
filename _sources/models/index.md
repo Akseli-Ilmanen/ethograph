@@ -2,19 +2,21 @@
 # Models
 
 Once you have labelled some trials by hand, a model can label the rest — and
-you then curate what it predicted. Which model depends on **the shape of the
-label** and on **what data exists when the model runs**.
+you then curate what it predicted. Which model depends on **whether you have a
+GPU**, on **the shape of the label**, and on **what the model sees**.
 
 ```{mermaid}
 flowchart TD
-    start([Hand-labelled trials]) --> shape{What kind of label?}
+    start([Hand-labelled trials]) --> gpu{Do you have a GPU?}
+
+    gpu -->|No| lgbm[LightGBM model<br/><i>point events only</i><br/><i>CPU, GUI native</i><br/><i>Model ▸ LightGBM: Train… / Predict…</i>]
+    gpu -->|Yes| shape{What kind of label?}
 
     shape -->|"State event<br/>(an interval: onset + offset)"| segment[Action segmentation<br/><code>eto.segment</code><br/><i>DLC2Action models + added architectures</i>]
-    shape -->|"Point event<br/>(one moment per trial)"| inference{What is available<br/>when the model runs?}
+    shape -->|"Point event<br/>(one moment per trial)"| input{What does the model see?}
 
-    inference -->|"Pose / time-series features"| lgbm[LightGBM model<br/><i>CPU, GUI native, no scripting</i><br/><i>Model ▸ LightGBM: Train… / Predict…</i>]
-    inference -->|Video only| spot[Event spotting: E2E-Spot<br/><code>eto.spot</code>]
-    inference -->|Video + pose features| spotfeat[E2E-Spot + features]
+    input -->|Video only| spot[Event spotting: E2E-Spot<br/><code>eto.spot</code>]
+    input -->|Video + pose| spotfeat[E2E-Spot + features]
 
     segment --> curate
     lgbm --> curate
@@ -29,8 +31,6 @@ flowchart TD
     click curate "curation.html"
     click conf "confidence.html"
 ```
-
-::::
 
 ## Where the models come from
 
@@ -47,8 +47,8 @@ flowchart TD
 :maxdepth: 1
 :hidden:
 
+LightGBM (point events, CPU-only) <onset_model>
 Action segmentation (state events) <segment/index>
-LightGBM (point events, GUI-only, CPU) <onset_model>
 PES (point events from pixels) <spot/index>
 confidence
 curation

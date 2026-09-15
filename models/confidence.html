@@ -381,13 +381,13 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, GUI-only, CPU)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
@@ -530,6 +530,15 @@ would be the cleanest bump imaginable and read <code class="docutils literal not
 interior peak at all, or higher at an edge than at any peak inside (still
 climbing at the trial’s end — the event may lie past it). Whatever rule is
 chosen, such a label’s confidence is <code class="docutils literal notranslate"><span class="pre">0</span></code>: flagged for review, never dropped.</p>
+<p><strong>Several events per trial change what a second peak means.</strong> The pixel
+model can read a curve as up to <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> events, peaks at
+least <code class="docutils literal notranslate"><span class="pre">infer.min_event_gap_s</span></code> apart. Then a second peak is another event,
+not a rival, so <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and the rules built on it are refused; <code class="docutils literal notranslate"><span class="pre">focus</span></code>
+(read over each event’s own stretch of the curve) or <code class="docutils literal notranslate"><span class="pre">peak</span></code> is written
+instead. And with one event per trial the tallest peak simply wins, while
+with several the model also returns the spurious ones, so the threshold in
+<strong>Flag confidence below</strong> has to be calibrated on the histogram before
+review rather than left at its default.</p>
 <p><strong>The window is the user’s timescale, not a constant.</strong> <span class="math notranslate nohighlight">\(w = 2 \times\)</span> the
 tolerance the labels are believed to: the lightgbm model takes it from its own
 <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, the pixel model from <code class="docutils literal notranslate"><span class="pre">infer.focus_window_ms</span></code> (twice the label

@@ -379,13 +379,13 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, GUI-only, CPU)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features)</a></li>
@@ -467,14 +467,6 @@ the YAML has, passed to <code class="docutils literal notranslate"><span class="
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">,</span> <span class="s2">"clip.context_s=4"</span><span class="p">,</span> <span class="s2">"train.epochs=12"</span><span class="p">)</span>
 </pre></div>
-</div>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>An unknown key is an error, in the file and in an override alike — a typo
-must not silently become a default. So is a section this pipeline retired:
-<code class="docutils literal notranslate"><span class="pre">graph:</span></code> and <code class="docutils literal notranslate"><span class="pre">fuse:</span></code> are refused by name with the
-replacement, and a <code class="docutils literal notranslate"><span class="pre">columns:</span></code> key under <code class="docutils literal notranslate"><span class="pre">features:</span></code> (the segmentation
-pipeline’s section shape) with the difference.</p>
 </div>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
@@ -583,11 +575,11 @@ session has no role; <code class="docutils literal notranslate"><span class="pre
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">classes</span></code></p></td>
 <td><p>required</p></td>
-<td><p>The point-event label ids to spot. Their order is the order the events happen in (first contact before last contact): <code class="docutils literal notranslate"><span class="pre">infer.flag_out_of_order</span></code> reads it.</p></td>
+<td><p>The point-event label ids to spot, <strong>at most <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> of each per trial</strong> — one by default: the class’s prediction is the tallest peak of its curve. A trial labelled more often than that is refused at <code class="docutils literal notranslate"><span class="pre">materialise()</span></code>; either raise the cap or cut the trial in the trials table. Their order is the order the events happen in (first contact before last contact): <code class="docutils literal notranslate"><span class="pre">infer.flag_out_of_order</span></code> reads it.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">camera</span></code></p></td>
 <td><p>the alignment’s default</p></td>
-<td><p>Which camera’s video, one per project.</p></td>
+<td><p>Which camera’s video the model reads, one per project. Only matters with several cameras: give the camera’s name as the alignment spells it (<code class="docutils literal notranslate"><span class="pre">side</span></code>, <code class="docutils literal notranslate"><span class="pre">top</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span></code>…), or a piece of the video filename that exactly one camera’s files carry (<code class="docutils literal notranslate"><span class="pre">cam-1</span></code> picks <code class="docutils literal notranslate"><span class="pre">…-cam-1.mp4</span></code>). A name no camera matches, or one several match, is refused naming the cameras the alignment has. Overlapping cameras: pick one; non-overlapping: a mosaic — see <span class="xref std std-ref">target-spot-one-camera</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">crop</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">null</span></code></p></td>
@@ -842,9 +834,17 @@ together — contributes.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">100</span></code></p></td>
 <td><p>± this around the tallest peak counts as the same event when reading <code class="docutils literal notranslate"><span class="pre">focus</span></code>/<code class="docutils literal notranslate"><span class="pre">ratio</span></code> off a curve — twice the precision you believe your labels to (the lightgbm model takes it from its <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>). See the confidence page.</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_events_per_trial</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>How many events of one class a trial may hold. <code class="docutils literal notranslate"><span class="pre">1</span></code>: the tallest peak of the class’s curve is the event, no threshold needed — the best candidate wins. Above 1: every peak at least <code class="docutils literal notranslate"><span class="pre">min_event_gap_s</span></code> from a taller one is an event, up to this many, and the model now returns spurious ones too, so calibrate the confidence you flag below on the grid’s histogram before reviewing. <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and the rules built on it (<code class="docutils literal notranslate"><span class="pre">product</span></code>, <code class="docutils literal notranslate"><span class="pre">custom</span></code>) are refused — a second peak is another event, not a rival — so set <code class="docutils literal notranslate"><span class="pre">confidence:</span> <span class="pre">focus</span></code> or <code class="docutils literal notranslate"><span class="pre">peak</span></code>. <code class="docutils literal notranslate"><span class="pre">flag_out_of_order</span></code> is refused, since order between classes is undefined. Training refuses a trial labelled more often than this.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">min_event_gap_s</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p>With several events per trial, two peaks closer than this are one event, the taller. Read only when <code class="docutils literal notranslate"><span class="pre">max_events_per_trial</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>.</p></td>
+</tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">flag_out_of_order</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
-<td><p>A trial whose predicted events are not in <code class="docutils literal notranslate"><span class="pre">labels.classes</span></code> order has every event’s confidence set to 0 — flagged, never reordered or dropped.</p></td>
+<td><p>A trial whose predicted events are not in <code class="docutils literal notranslate"><span class="pre">labels.classes</span></code> order has every event’s confidence set to 0 — flagged, never reordered or dropped. One event per class only.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">source</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">spot:{run}&#64;{epoch}</span></code></p></td>

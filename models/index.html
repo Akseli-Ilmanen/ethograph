@@ -408,7 +408,7 @@ window.runMermaid = runMermaid;</script>
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/index.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Segmentation pipeline" href="segment/index.html" />
+    <link rel="next" title="LightGBM for point events" href="onset_model.html" />
     <link rel="prev" title="Troubleshooting" href="../advanced/troubleshooting.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -737,13 +737,13 @@ window.runMermaid = runMermaid;</script>
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, GUI-only, CPU)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
@@ -812,18 +812,20 @@ window.runMermaid = runMermaid;</script>
   <section class="tex2jax_ignore mathjax_ignore" id="models">
 <span id="target-models"></span><h1>Models<a class="headerlink" href="#models" title="Link to this heading">#</a></h1>
 <p>Once you have labelled some trials by hand, a model can label the rest — and
-you then curate what it predicted. Which model depends on <strong>the shape of the
-label</strong> and on <strong>what data exists when the model runs</strong>.</p>
+you then curate what it predicted. Which model depends on <strong>whether you have a
+GPU</strong>, on <strong>the shape of the label</strong>, and on <strong>what the model sees</strong>.</p>
 <pre  class="mermaid">
         flowchart TD
-    start([Hand-labelled trials]) --&gt; shape{What kind of label?}
+    start([Hand-labelled trials]) --&gt; gpu{Do you have a GPU?}
+
+    gpu --&gt;|No| lgbm[LightGBM model&lt;br/&gt;&lt;i&gt;point events only&lt;/i&gt;&lt;br/&gt;&lt;i&gt;CPU, GUI native&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Model ▸ LightGBM: Train… / Predict…&lt;/i&gt;]
+    gpu --&gt;|Yes| shape{What kind of label?}
 
     shape --&gt;|&quot;State event&lt;br/&gt;(an interval: onset + offset)&quot;| segment[Action segmentation&lt;br/&gt;&lt;code&gt;eto.segment&lt;/code&gt;&lt;br/&gt;&lt;i&gt;DLC2Action models + added architectures&lt;/i&gt;]
-    shape --&gt;|&quot;Point event&lt;br/&gt;(one moment per trial)&quot;| inference{What is available&lt;br/&gt;when the model runs?}
+    shape --&gt;|&quot;Point event&lt;br/&gt;(one moment per trial)&quot;| input{What does the model see?}
 
-    inference --&gt;|&quot;Pose / time-series features&quot;| lgbm[LightGBM model&lt;br/&gt;&lt;i&gt;CPU, GUI native, no scripting&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Model ▸ LightGBM: Train… / Predict…&lt;/i&gt;]
-    inference --&gt;|Video only| spot[Event spotting: E2E-Spot&lt;br/&gt;&lt;code&gt;eto.spot&lt;/code&gt;]
-    inference --&gt;|Video + pose features| spotfeat[E2E-Spot + features]
+    input --&gt;|Video only| spot[Event spotting: E2E-Spot&lt;br/&gt;&lt;code&gt;eto.spot&lt;/code&gt;]
+    input --&gt;|Video + pose| spotfeat[E2E-Spot + features]
 
     segment --&gt; curate
     lgbm --&gt; curate
@@ -837,8 +839,8 @@ label</strong> and on <strong>what data exists when the model runs</strong>.</p>
     click spotfeat &quot;spot/multimodal.html&quot;
     click curate &quot;curation.html&quot;
     click conf &quot;confidence.html&quot;
-    </pre><div class="docutils">
-<p class="rubric" id="where-the-models-come-from">Where the models come from</p>
+    </pre><section id="where-the-models-come-from">
+<h2>Where the models come from<a class="headerlink" href="#where-the-models-come-from" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p><strong>LightGBM</strong> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id263" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> — runs on a CPU and lives entirely in the GUI: no scripting, and no
 separate Python environment. The GUI install (<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">install</span> <span class="pre">&quot;ethograph[gui,audio]&quot;</span></code>, see
@@ -854,7 +856,7 @@ separate Python environment. The GUI install (<code class="docutils literal notr
 </ul>
 <div class="toctree-wrapper compound">
 </div>
-</div>
+</section>
 </section>
 
 
@@ -877,11 +879,11 @@ separate Python environment. The GUI install (<code class="docutils literal notr
       </div>
     </a>
     <a class="right-next"
-       href="segment/index.html"
+       href="onset_model.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Segmentation pipeline</p>
+        <p class="prev-next-title">LightGBM for point events</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -895,6 +897,18 @@ separate Python environment. The GUI install (<code class="docutils literal notr
                 <dialog id="pst-secondary-sidebar-modal"></dialog>
                 <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-models-come-from">Where the models come from</a></li>
+</ul>
+  </nav></div>
 
   <div class="sidebar-secondary-item">
 

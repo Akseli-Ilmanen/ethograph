@@ -51,7 +51,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Quickstart" href="quickstart.html" />
-    <link rel="prev" title="LightGBM for point events" href="../onset_model.html" />
+    <link rel="prev" title="Video features" href="../segment/video_features.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -379,13 +379,13 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, GUI-only, CPU)</a></li>
 <li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features)</a></li>
@@ -647,7 +647,15 @@ path per trial, its frame rate, its offset — so a session is one line:</p>
 </pre></div>
 </div>
 <p>There is no preprocessing and no individuals. A point event’s subject comes
-from the labels; the pixels are whatever the camera saw.</p>
+from the labels; the pixels are whatever the camera saw. <strong>By default each
+class happens at most once per trial</strong>: the prediction is the tallest peak
+of the class’s curve, and its confidence reads a second peak as doubt, not
+as a second event. A recording in which the event repeats is either cut into
+trials at the alignment, or spotted with <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> raised
+— then peaks at least <code class="docutils literal notranslate"><span class="pre">infer.min_event_gap_s</span></code> apart are separate events, the
+confidence rule has to be <code class="docutils literal notranslate"><span class="pre">focus</span></code> or <code class="docutils literal notranslate"><span class="pre">peak</span></code>, and the threshold you flag below
+needs calibrating, since the model now returns spurious events as well as
+real ones (see <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>).</p>
 <section id="the-session-lines">
 <span id="target-spot-session-lines"></span><h3>The session lines<a class="headerlink" href="#the-session-lines" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">sessions:</span></code> is read the same way by both pipelines (<code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code>, shared
@@ -692,6 +700,14 @@ It must fit inside every trial’s video for the named camera — checked at
 materialise time, naming the trial it fails on. The GUI produces it (Tools ▸
 Video: <em>Pick a crop for a config…</em> — drag a rectangle, get back the box in
 this spelling).</p>
+<p id="target-spot-one-camera"><code class="docutils literal notranslate"><span class="pre">labels.camera</span></code> names <strong>one</strong> camera: the model reads a single video per
+prediction. With several cameras filming the same arena with large overlap,
+pick the one that shows the event most clearly. With cameras covering
+<strong>non-overlapping</strong> parts of the arena, tile them into one mosaic video as in
+the birdpark recording system <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id73" title="Linus Rüttimann, Yuhang Wang, Jörg Rychen, Tomas Tomka, Heiko Hörster, and Richard H. R. Hahnloser. Multimodal system for recording individual-level behaviors in songbird groups. PeerJ, 13:e20203, 2025. doi:10.7717/peerj.20203.">Rüttimann <em>et al.</em>, 2025</a>]</span>, register the
+mosaic in the alignment as a camera of its own, and name that. The cameras
+have to be frame-synchronous, and <code class="docutils literal notranslate"><span class="pre">frame_height</span></code> is then shared between the
+views, so each gets a fraction of the pixels.</p>
 <p><code class="docutils literal notranslate"><span class="pre">model.architecture</span></code> is a backbone plus a temporal module, in upstream’s own
 spelling — <code class="docutils literal notranslate"><span class="pre">rny008_gsm</span></code> is E2E-Spot’s default, <code class="docutils literal notranslate"><span class="pre">rny008_msagsm</span></code> the multi-scale
 variant below. The list is read off the vendored trainer’s CLI, so it cannot
@@ -819,8 +835,8 @@ with no new GUI code. Every model writes under one convention,
 </section>
 <section id="msagsm">
 <h2>MSAGSM<a class="headerlink" href="#msagsm" title="Link to this heading">#</a></h2>
-<p>MSAGSM <span class="bibtex-citation" id="id7">[<a class="reference internal" href="../../community/references.html#id267" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> is a drop-in replacement for the
-Gate Shift Module <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id266" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span>: the same gated split-and-shift, applied at <strong>several
+<p>MSAGSM <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id267" title="Hao Xu, Xinyu Wei, Sam Wells, and Sunil Aryal. MSAGSM: multi-scale attention gated shifting for precise event spotting. 2025. arXiv preprint; later versions retitled &quot;Multi-Focus Temporal Shifting for Precise Event Spotting in Sports Videos&quot;. URL: https://arxiv.org/abs/2507.07381, arXiv:2507.07381.">Xu <em>et al.</em>, 2025</a>]</span> is a drop-in replacement for the
+Gate Shift Module <span class="bibtex-citation" id="id9">[<a class="reference internal" href="../../community/references.html#id266" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span>: the same gated split-and-shift, applied at <strong>several
 temporal dilations at once</strong> and preceded by channel-grouped spatial
 attention. GSM shifts by ±1 frame — at a high frame rate, a very narrow
 aperture in real time. Widening it with <code class="docutils literal notranslate"><span class="pre">stride</span></code> costs label resolution;
@@ -856,12 +872,12 @@ are the paper’s (<code class="docutils literal notranslate"><span class="pre">
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../onset_model.html"
+       href="../segment/video_features.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">LightGBM for point events</p>
+        <p class="prev-next-title">Video features</p>
       </div>
     </a>
     <a class="right-next"

@@ -177,7 +177,15 @@ features:                          # optional — option 3, see multimodal
 ```
 
 There is no preprocessing and no individuals. A point event's subject comes
-from the labels; the pixels are whatever the camera saw.
+from the labels; the pixels are whatever the camera saw. **By default each
+class happens at most once per trial**: the prediction is the tallest peak
+of the class's curve, and its confidence reads a second peak as doubt, not
+as a second event. A recording in which the event repeats is either cut into
+trials at the alignment, or spotted with `infer.max_events_per_trial` raised
+— then peaks at least `infer.min_event_gap_s` apart are separate events, the
+confidence rule has to be `focus` or `peak`, and the threshold you flag below
+needs calibrating, since the model now returns spurious events as well as
+real ones (see {doc}`config`).
 
 (target-spot-session-lines)=
 ### The session lines
@@ -227,6 +235,16 @@ It must fit inside every trial's video for the named camera — checked at
 materialise time, naming the trial it fails on. The GUI produces it (Tools ▸
 Video: *Pick a crop for a config…* — drag a rectangle, get back the box in
 this spelling).
+
+(target-spot-one-camera)=
+`labels.camera` names **one** camera: the model reads a single video per
+prediction. With several cameras filming the same arena with large overlap,
+pick the one that shows the event most clearly. With cameras covering
+**non-overlapping** parts of the arena, tile them into one mosaic video as in
+the birdpark recording system {cite:p}`ruttimann2025birdpark`, register the
+mosaic in the alignment as a camera of its own, and name that. The cameras
+have to be frame-synchronous, and `frame_height` is then shared between the
+views, so each gets a fraction of the pixels.
 
 `model.architecture` is a backbone plus a temporal module, in upstream's own
 spelling — `rny008_gsm` is E2E-Spot's default, `rny008_msagsm` the multi-scale
