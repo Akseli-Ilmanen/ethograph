@@ -328,6 +328,16 @@ class InferConfig:
     #: a session's curves and copies the choice as these lines.
     confidence: str = "product"
     confidence_alpha: float = 0.5
+    #: How many events of one class a trial may hold. ``1`` (the default):
+    #: the class's prediction is the tallest peak of its curve, no threshold
+    #: needed — the best candidate wins. Above 1: every peak at least
+    #: ``min_event_gap_s`` from a taller one is an event, up to this many,
+    #: and the reviewer thresholds on ``confidence`` to drop the spurious
+    #: ones. Training refuses a trial labelled more often than this.
+    max_events_per_trial: int = 1
+    #: With several events per trial, two peaks closer than this are one
+    #: event (the taller one). Read only when ``max_events_per_trial > 1``.
+    min_event_gap_s: float = 0.5
 
     def validate(self) -> None:
         from ethograph.labels.rescore import RULES
@@ -338,6 +348,27 @@ class InferConfig:
             raise ValueError(f"infer.confidence_alpha must be in [0, 1], got {self.confidence_alpha!r}")
         if self.focus_window_ms <= 0:
             raise ValueError(f"infer.focus_window_ms must be positive, got {self.focus_window_ms!r}")
+        if self.max_events_per_trial < 1:
+            raise ValueError(f"infer.max_events_per_trial must be at least 1, got {self.max_events_per_trial!r}")
+        if self.min_event_gap_s <= 0:
+            raise ValueError(f"infer.min_event_gap_s must be positive, got {self.min_event_gap_s!r}")
+        if self.max_events_per_trial > 1:
+            if self.confidence in RIVAL_RULES:
+                raise ValueError(
+                    f"infer.confidence={self.confidence!r} reads a second peak as a rival, but with "
+                    f"infer.max_events_per_trial={self.max_events_per_trial} a second peak is another event "
+                    "— use 'focus' or 'peak'"
+                )
+            if self.flag_out_of_order:
+                raise ValueError(
+                    "infer.flag_out_of_order needs one event per class to define an order; "
+                    f"with infer.max_events_per_trial={self.max_events_per_trial} the order is undefined"
+                )
+
+
+#: The confidence rules that read ``ratio`` — meaningless once a second
+#: peak may be a second event.
+RIVAL_RULES = ("product", "ratio", "custom")
 
 
 @dataclass

@@ -47,8 +47,8 @@ class TestOrderFlag:
         assert out[0].confidence == pytest.approx(0.81)
 
     def test_the_switch_is_config(self, tmp_path):
-        assert _config(tmp_path).infer.flag_out_of_order is True
-        assert _config(tmp_path, infer={"flag_out_of_order": False}).infer.flag_out_of_order is False
+        assert _config(tmp_path).infer.flag_out_of_order is False
+        assert _config(tmp_path, infer={"flag_out_of_order": True}).infer.flag_out_of_order is True
 
 
 class TestPreflight:

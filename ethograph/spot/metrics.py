@@ -104,20 +104,41 @@ def score_predictions(
         fps = float(gt["fps"])
         entry = predicted.get(video)
         events = spot_entry(entry, config, clip, num_frames=int(gt["num_frames"]))[0] if entry else []
-        by_label = {e.label: e for e in events}
-        labelled = {config.class_label(ev["label"]): int(ev["frame"]) for ev in gt["events"]}
-        for label, frame in labelled.items():
-            score = scores[label]
-            score.n_truth += 1
-            hit = by_label.get(label)
-            if hit is None:
-                score.n_missing += 1
-            else:
-                score.errors_ms.append(abs(hit.frame - frame) / fps * 1000.0)
-        for label in by_label:
-            if label not in labelled and label in scores:
-                scores[label].n_spurious += 1
+        by_label: dict[int, list[float]] = {}
+        for e in events:
+            by_label.setdefault(e.label, []).append(e.frame)
+        labelled: dict[int, list[int]] = {}
+        for ev in gt["events"]:
+            labelled.setdefault(config.class_label(ev["label"]), []).append(int(ev["frame"]))
+        for label, score in scores.items():
+            truths = labelled.get(label, [])
+            matched, missing, spurious = match_events(by_label.get(label, []), truths)
+            score.n_truth += len(truths)
+            score.n_missing += missing
+            score.n_spurious += spurious
+            score.errors_ms.extend(abs(p - t) / fps * 1000.0 for p, t in matched)
     return scores
+
+
+def match_events(predicted: list[float], labelled: list[int]) -> tuple[list[tuple[float, int]], int, int]:
+    """Pair predictions with labelled events one-to-one, closest pair first.
+
+    Returns ``(pairs, n_missing, n_spurious)``: the labelled events left
+    without a prediction and the predictions left without a labelled event.
+    With one of each — the default, one event per class per trial — the
+    pair is the only one there is, whatever its error.
+    """
+    by_distance = sorted((abs(p - t), i, j) for i, p in enumerate(predicted) for j, t in enumerate(labelled))
+    used_p: set[int] = set()
+    used_t: set[int] = set()
+    pairs: list[tuple[float, int]] = []
+    for _, i, j in by_distance:
+        if i in used_p or j in used_t:
+            continue
+        used_p.add(i)
+        used_t.add(j)
+        pairs.append((predicted[i], labelled[j]))
+    return pairs, len(labelled) - len(used_t), len(predicted) - len(used_p)
 
 
 def format_table(metrics: dict) -> str:

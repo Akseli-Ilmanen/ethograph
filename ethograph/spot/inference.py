@@ -4,8 +4,9 @@ The same shape as :func:`ethograph.segment.inference.inference`: pick a run,
 pick the sessions, and each session gets one folder beside it under
 ``labels/`` — ``predictions_spot_{run}_{timestamp}/`` — holding
 
-* ``{stem}_predictions.tsv`` — one automated point event per class per trial,
-  with the shape-based ``confidence`` (:mod:`ethograph.spot.confidence`);
+* ``{stem}_predictions.tsv`` — one automated point event per class per trial
+  (more with ``infer.max_events_per_trial``), with the shape-based
+  ``confidence`` (:mod:`ethograph.spot.confidence`);
 * ``onset_curves.npz`` — the per-frame curves those events were read off,
   in the format frame-by-frame review already draws.
 
@@ -120,12 +121,14 @@ def _sweep(entries: list[dict], truth: dict[str, dict], config: SpotConfig, clip
         if gt is None:
             continue
         events, _ = spot_entry(entry, config, clip)
-        by_label = {e.label: e for e in events}
+        by_label: dict[int, list[float]] = {}
+        for e in events:
+            by_label.setdefault(e.label, []).append(e.frame)
         for gt_event in gt["events"]:
-            label = config.class_label(gt_event["label"])
-            if label not in by_label:
+            frames = by_label.get(config.class_label(gt_event["label"]))
+            if not frames:
                 misses += 1
-            elif abs(by_label[label].frame - int(gt_event["frame"])) <= EPOCH_HIT_FRAMES:
+            elif min(abs(f - int(gt_event["frame"])) for f in frames) <= EPOCH_HIT_FRAMES:
                 hits += 1
     return misses, hits
 

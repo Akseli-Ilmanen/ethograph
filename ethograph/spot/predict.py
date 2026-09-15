@@ -4,7 +4,8 @@ E2E-Spot writes one file per epoch holding every frame that scored above a low
 threshold — the curve with its zeros left out. This module turns that into the
 two things the GUI already knows how to read:
 
-* a labels TSV (``labeling_method=automated``, one row per class per trial),
+* a labels TSV (``labeling_method=automated``, one row per event — one per
+  class per trial unless ``infer.max_events_per_trial`` says more),
 * an ``onset_curves.npz`` beside the session, so frame-by-frame review draws
   the curve under the label it is on.
 
@@ -30,7 +31,7 @@ import numpy as np
 import pandas as pd
 
 from ethograph.labels.intervals import LABELING_AUTOMATED, NO_RECIPIENT
-from ethograph.spot.confidence import DEFAULT_RULE, CurveStats, confidence_of, curve_stats, densify, window_samples
+from ethograph.spot.confidence import DEFAULT_RULE, CurveStats, confidence_of, curve_events, densify, window_samples
 from ethograph.spot.config import ResolvedClip, SpotConfig
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,9 @@ def spot_entry(
     :meth:`~ethograph.spot.config.ResolvedClip.to_frame`, which lands on the
     **centre** of the bin. *num_frames* is the trial's length on the full-rate
     clock, for entries that do not state their own.
+
+    A class's curve is read as ``infer.max_events_per_trial`` events at most
+    (:func:`~ethograph.labels.curve_confidence.curve_events`), in time order.
     """
     by_class: dict[str, list[tuple[int, float]]] = {}
     for event in entry.get("events", []):
@@ -107,6 +111,7 @@ def spot_entry(
 
     pred_fps = float(entry["fps"])
     window = window_samples(config.infer.focus_window_ms / 1000.0, pred_fps)
+    gap = window_samples(config.infer.min_event_gap_s, pred_fps)
     events: list[SpottedEvent] = []
     curves: dict[int, np.ndarray] = {}
     for name, candidates in by_class.items():
@@ -119,19 +124,19 @@ def spot_entry(
         scores = np.array([c[1] for c in candidates], dtype=np.float64)
         curve = densify(frames, scores, _curve_length(entry, clip, num_frames, frames))
         curves[label] = curve
-        stats = curve_stats(curve, window)
-        full_frame = clip.to_frame(stats.index)
-        events.append(
-            SpottedEvent(
-                video_id=str(entry["video"]),
-                label=label,
-                frame=full_frame,
-                video_s=full_frame / clip.fps,
-                stats=stats,
-                rule=config.infer.confidence,
-                alpha=config.infer.confidence_alpha,
+        for stats in curve_events(curve, window, gap, config.infer.max_events_per_trial):
+            full_frame = clip.to_frame(stats.index)
+            events.append(
+                SpottedEvent(
+                    video_id=str(entry["video"]),
+                    label=label,
+                    frame=full_frame,
+                    video_s=full_frame / clip.fps,
+                    stats=stats,
+                    rule=config.infer.confidence,
+                    alpha=config.infer.confidence_alpha,
+                )
             )
-        )
     return events, curves
 
 

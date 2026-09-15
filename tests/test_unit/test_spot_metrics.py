@@ -126,3 +126,50 @@ class TestCompare:
         assert list(df["run"]) == ["r"]
         assert df.loc[0, "label_31.hit20ms"] == 0.9 and df.loc[0, "label_31.miss"] == 1
         assert (config.runs_dir / "compare.tsv").is_file()
+
+
+class TestSeveralEventsPerTrial:
+    """With the cap raised, predictions and labelled events pair one-to-one:
+    the leftovers are misses and spurious, never a giant error."""
+
+    def _config(self, tmp_path, cap):
+        source = tmp_path / "ses-01.nc"
+        source.touch()
+        data = {
+            "sessions": [str(source)],
+            "labels": {"classes": [31]},
+            "root": str(tmp_path),
+            "infer": {"max_events_per_trial": cap, "confidence": "focus", "min_event_gap_s": 0.1},
+        }
+        return config_from_dict(data, tmp_path)
+
+    def _bumps(self, *centres_heights):
+        return [(31, c + d, h) for c, h in centres_heights for d in (-2, -1, 0, 1, 2)]
+
+    def test_pairs_closest_first_and_counts_the_leftovers(self):
+        from ethograph.spot.metrics import match_events
+
+        pairs, missing, spurious = match_events([100.0, 300.0, 520.0], [305, 110])
+        assert sorted(pairs) == [(100.0, 110), (300.0, 305)]
+        assert (missing, spurious) == (0, 1)
+        # no distance cap: a pair stands however far apart, as in the one-event case
+        assert match_events([100.0], [110, 900]) == ([(100.0, 110)], 1, 0)
+        assert match_events([], [5]) == ([], 1, 0) and match_events([5.0], []) == ([], 0, 1)
+
+    def test_two_labelled_events_of_one_class_are_both_scored(self, tmp_path):
+        config = self._config(tmp_path, cap=3)
+        clip = run_clip(_run(tmp_path, stride=1), 200.0)
+        # two clean bumps on the 100 fps prediction clock, plus a third, stray one
+        events = self._bumps((100, 0.9), (300, 0.8), (450, 0.5))
+        truth = [_truth({"v": [(31, 100), (31, 300)]})[0] | {"fps": 100.0, "num_frames": 500}]
+        scores = score_predictions([_entry("v", events)], truth, config, clip)
+        assert (scores[31].n_truth, scores[31].n_missing, scores[31].n_spurious) == (2, 0, 1)
+        assert scores[31].errors_ms == pytest.approx([0.0, 0.0])
+
+    def test_at_the_default_cap_the_tallest_peak_is_the_one_prediction(self, tmp_path):
+        config = self._config(tmp_path, cap=1)
+        clip = run_clip(_run(tmp_path, stride=1), 200.0)
+        events = self._bumps((100, 0.9), (300, 0.8))
+        truth = [_truth({"v": [(31, 100), (31, 300)]})[0] | {"fps": 100.0, "num_frames": 500}]
+        scores = score_predictions([_entry("v", events)], truth, config, clip)
+        assert (scores[31].n_missing, scores[31].n_spurious) == (1, 0)

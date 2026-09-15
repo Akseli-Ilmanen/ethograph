@@ -148,29 +148,103 @@ def curve_stats(curve: np.ndarray, window: int) -> CurveStats:
         # still climbing at the trial's edge): the event was not found, and
         # no statistic may say otherwise.
         return CurveStats(index=index, peak=peak, focus=0.0, ratio=0.0, found=False)
-    positions = np.arange(curve.size)
-    near = np.abs(positions - index) <= window
-    mass = float(np.clip(curve, 0.0, None).sum())
-    focus = float(np.clip(curve[near], 0.0, None).sum()) / mass if mass > 0 else 0.0
+    return curve_stats_at(curve, index, window)
+
+
+def curve_stats_at(curve: np.ndarray, index: int, window: int, span: tuple[int, int] | None = None) -> CurveStats:
+    """Summarise *curve* around the peak at *index*, reading only *span* ``(lo, hi)``.
+
+    *span* defaults to the whole curve. A curve read as several events
+    (:func:`curve_events`) gives each event its own stretch, so the mass and
+    the peaks of a neighbouring event are that event's, never this one's smear
+    or rival. Only the trial's real ends count as edges; a span boundary
+    inside the trial is a neighbour's business.
+    """
+    curve = np.asarray(curve, dtype=np.float64)
+    lo, hi = (0, curve.size) if span is None else span
+    part = curve[lo:hi]
+    at = index - lo
+    peak = float(np.clip(curve[index], 0.0, 1.0))
+    positions = np.arange(part.size)
+    near = np.abs(positions - at) <= window
+    mass = float(np.clip(part, 0.0, None).sum())
+    focus = float(np.clip(part[near], 0.0, None).sum()) / mass if mass > 0 else 0.0
     # A rival is another *peak*, not the tallest sample outside the window:
     # a broad bump's own flank would otherwise read as a second candidate,
     # and width is ``focus``'s job. The trial's two ends count as candidates
     # too — a curve still climbing at the edge is the model saying "maybe
     # after the end", which a smaller interior bump must not outrank.
-    others = [p for p in find_peaks(curve)[0] if not near[p]]
-    edges = [edge for edge in (0, curve.size - 1) if not near[edge]]
-    if edges and float(curve[edges].max()) > peak:
+    others = [p for p in find_peaks(part)[0] if not near[p]]
+    ends = [(0, lo == 0), (part.size - 1, hi == curve.size)]
+    edges = [edge for edge, real in ends if real and not near[edge]]
+    if edges and float(part[edges].max()) > peak:
         # The curve is higher at the trial's end than at any peak inside it:
         # the event may lie past the end — not found, confidence 0.
         return CurveStats(index=index, peak=peak, focus=0.0, ratio=0.0, found=False)
     others += edges
-    rival = float(curve[others].max()) if others else 0.0
+    rival = float(part[others].max()) if others else 0.0
     return CurveStats(
         index=index,
         peak=peak,
         focus=float(np.clip(focus, 0.0, 1.0)),
         ratio=float(np.clip(1.0 - rival / peak, 0.0, 1.0)),
     )
+
+
+def event_peaks(curve: np.ndarray, gap: int, max_events: int) -> list[int]:
+    """Up to *max_events* interior peaks at least *gap* samples apart, in time order.
+
+    Non-maximum suppression: the tallest peak is taken first, then the
+    tallest of those no closer than *gap* to any taken, until the cap or the
+    candidates run out. Only peaks above :data:`MIN_PEAK` are candidates —
+    a blip is not an event. Empty when the curve has no such peak.
+    """
+    if max_events < 1:
+        raise ValueError(f"max_events must be at least 1, got {max_events!r}")
+    if gap < 1:
+        raise ValueError(f"gap must be at least 1 sample, got {gap!r}")
+    curve = np.asarray(curve, dtype=np.float64)
+    peaks = find_peaks(curve)[0]
+    peaks = peaks[curve[peaks] >= MIN_PEAK]
+    chosen: list[int] = []
+    for p in peaks[np.argsort(-curve[peaks], kind="stable")]:
+        if all(abs(int(p) - c) >= gap for c in chosen):
+            chosen.append(int(p))
+            if len(chosen) == max_events:
+                break
+    return sorted(chosen)
+
+
+def event_spans(peaks: list[int], length: int) -> list[tuple[int, int]]:
+    """Each peak's own stretch of a curve of *length*: from the midpoint to its neighbours."""
+    if sorted(peaks) != list(peaks):
+        raise ValueError("peaks must be in time order")
+    spans = []
+    for i, p in enumerate(peaks):
+        lo = 0 if i == 0 else (peaks[i - 1] + p) // 2 + 1
+        hi = length if i == len(peaks) - 1 else (p + peaks[i + 1]) // 2 + 1
+        spans.append((lo, hi))
+    return spans
+
+
+def curve_events(curve: np.ndarray, window: int, gap: int, max_events: int) -> list[CurveStats]:
+    """*curve* read as up to *max_events* events, in time order.
+
+    With ``max_events == 1`` this is :func:`curve_stats` exactly: the tallest
+    peak, whatever else the curve holds. Above 1 the peaks are the ones
+    :func:`event_peaks` keeps, each summarised over its own span
+    (:func:`event_spans`), so a second event is neither a rival nor a smear
+    of the first. A curve with no peak at all still reads as **one**
+    not-found event: it is written and flagged, because a missing label
+    cannot be reviewed.
+    """
+    if max_events == 1:
+        return [curve_stats(curve, window)]
+    curve = np.asarray(curve, dtype=np.float64)
+    peaks = event_peaks(curve, gap, max_events)
+    if not peaks:
+        return [curve_stats(curve, window)]
+    return [curve_stats_at(curve, p, window, span) for p, span in zip(peaks, event_spans(peaks, curve.size))]
 
 
 def rank_auc(scores: np.ndarray, hits: np.ndarray) -> float:

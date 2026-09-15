@@ -33,6 +33,7 @@ import numpy as np
 
 from ethograph.labels.curve_confidence import (
     CurveStats,
+    curve_events,
     curve_stats,
     focus_window_s,
     tallest_peak,
@@ -44,6 +45,7 @@ __all__ = [
     "DEFAULT_RULE",
     "CurveStats",
     "confidence_of",
+    "curve_events",
     "curve_stats",
     "densify",
     "focus_window_s",

@@ -49,7 +49,7 @@ def _features(config, videos, n=400, fps=200.0, seed=0):
     for i, video in enumerate(videos):
         x = rng.normal(size=(n, len(names))).astype(np.float32) * (i + 1) + i
         x[5, 0] = np.nan
-        write_trial_features(config.features_dir / f"{video}.npz", time, x, {31: 0.5, 32: 1.2})
+        write_trial_features(config.features_dir / f"{video}.npz", time, x, {31: [0.5], 32: [1.2]})
     config.dataset_dir.mkdir(parents=True, exist_ok=True)
     header = "key\tsource\ttrial\tfps\tnum_frames\tnum_events"
     rows = ["\t".join(map(str, (v, config.sessions[0].source, i, fps, n, 2))) for i, v in enumerate(videos)]

@@ -219,3 +219,33 @@ class TestPlanSessionCrop:
         session = _FakeSession(tmp_path, _labels_df())
         with pytest.raises(ValueError, match="reaches outside"):
             plan_session(session, config)
+
+
+class TestSeveralEventsPerTrial:
+    """A trial labelled with one class twice trains on both -- or is refused
+    when inference could never return both."""
+
+    def _config(self, tmp_path, cap):
+        source = tmp_path / "ses.nc"
+        source.touch()
+        infer = {"max_events_per_trial": cap, "confidence": "focus"}
+        return config_from_dict({"sessions": [str(source)], "labels": {"classes": [31]}, "infer": infer}, tmp_path)
+
+    def _twice(self, tmp_path):
+        df = pd.concat([_labels_df(onset_s=2.0), _labels_df(onset_s=1.0)], ignore_index=True)
+        return _FakeSession(tmp_path, df)
+
+    def test_refused_at_the_default_cap_naming_the_fix(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(spot_dataset, "probe_video", lambda video: (200.0, 1000, 640, 480))
+        with pytest.raises(ValueError, match=r"trial 1.*2.*max_events_per_trial=1.*cut the trial"):
+            plan_session(self._twice(tmp_path), self._config(tmp_path, cap=1))
+
+    def test_both_events_are_kept_in_time_order_above_it(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(spot_dataset, "probe_video", lambda video: (200.0, 1000, 640, 480))
+        record = plan_session(self._twice(tmp_path), self._config(tmp_path, cap=2))[0]
+        assert record.events == {"label_31": [200, 400]} and record.n_events == 2
+        assert [e["frame"] for e in record.to_json()["events"]] == [200, 400]
+
+    def test_inference_planning_never_refuses(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(spot_dataset, "probe_video", lambda video: (200.0, 1000, 640, 480))
+        assert len(plan_session(self._twice(tmp_path), self._config(tmp_path, cap=1), require_events=False)) == 1

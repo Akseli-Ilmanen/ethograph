@@ -69,22 +69,28 @@ class TrialRecord:
     fps: float
     width: int
     height: int
-    #: class name -> frame index on the video's own clock.
-    events: dict[str, int]
+    #: class name -> frame indices on the video's own clock, in time order.
+    #: One per class unless ``infer.max_events_per_trial`` allows more.
+    events: dict[str, list[int]]
     #: ``(x0, y0, x1, y1)`` source pixels cut out before the resize; ``None``
     #: = the whole frame.
     crop: tuple[int, int, int, int] | None = None
+
+    @property
+    def n_events(self) -> int:
+        return sum(len(frames) for frames in self.events.values())
 
     def export_spec(self) -> dict:
         """What decides the pixels on disk -- the content of ``export.json``."""
         return {"width": self.width, "height": self.height, "crop": list(self.crop) if self.crop else None}
 
     def to_json(self) -> dict:
+        flat = sorted((frame, name) for name, frames in self.events.items() for frame in frames)
         return {
             "video": self.video_id,
             "num_frames": self.num_frames,
-            "num_events": len(self.events),
-            "events": [{"frame": frame, "label": name, "comment": ""} for name, frame in sorted(self.events.items())],
+            "num_events": self.n_events,
+            "events": [{"frame": frame, "label": name, "comment": ""} for frame, name in flat],
             "fps": self.fps,
             "width": self.width,
             "height": self.height,
@@ -107,8 +113,8 @@ def probe_video(video: Path) -> tuple[float, int, int, int]:
         return float(rate), int(stream.frames), stream.codec_context.width, stream.codec_context.height
 
 
-def point_events(session: Session, trial: int | str, classes: Iterable[int]) -> dict[int, float]:
-    """``{label: onset_s}`` for the target point events of one trial.
+def point_events(session: Session, trial: int | str, classes: Iterable[int]) -> dict[int, list[float]]:
+    """``{label: [onset_s, ...]}`` for the target point events of one trial, in time order.
 
     Only ``manual``/``curated`` rows: an automated label is a model's own
     output and training on it would be training on a prediction. Onsets are
@@ -123,7 +129,10 @@ def point_events(session: Session, trial: int | str, classes: Iterable[int]) -> 
         & (df["labels"].astype(int).isin(wanted))
         & (df["labeling_method"] != LABELING_AUTOMATED)
     ]
-    return {int(row.labels): float(row.onset_s) for row in rows.itertuples()}
+    events: dict[int, list[float]] = {}
+    for row in rows.itertuples():
+        events.setdefault(int(row.labels), []).append(float(row.onset_s))
+    return {label: sorted(onsets) for label, onsets in events.items()}
 
 
 def event_frame(onset_s: float, offset_s: float, fps: float) -> int:
@@ -142,14 +151,24 @@ def plan_session(session: Session, config: SpotConfig, *, require_events: bool =
 
     Training wants only trials that carry a target event; inference wants
     every trial that has video, which is what ``require_events=False`` gives.
+    A training trial labelled with one class more often than
+    ``infer.max_events_per_trial`` is refused: inference could never return
+    what it was trained on.
     """
     alignment = session.result.nwb_alignment
     camera = session.video_device(config.labels.camera)
+    cap = config.infer.max_events_per_trial
     records: list[TrialRecord] = []
     for trial in filter_trials(session, config.trials):
         events = point_events(session, trial, config.labels.classes)
         if not events and require_events:
             continue
+        crowded = {config.class_name(label): len(ts) for label, ts in events.items() if len(ts) > cap}
+        if crowded and require_events:
+            raise ValueError(
+                f"{session.spec.label} trial {trial}: {crowded} labelled events of one class, but "
+                f"infer.max_events_per_trial={cap} — raise it, or cut the trial in the trials table"
+            )
         video = session.media_path(trial, "video", device=camera)
         if video is None:
             logger.warning("%s trial %s: no %s video, skipped", session.spec.label, trial, camera or "default")
@@ -160,8 +179,9 @@ def plan_session(session: Session, config: SpotConfig, *, require_events: bool =
             crop.check_fits(width, height, f"{session.spec.label} trial {trial} ({video.name})")
             width, height = crop.width, crop.height
         offset = float(alignment.stream_offset_for_trial(trial, "video", device=camera))
-        frames = {config.class_name(label): event_frame(t, offset, fps) for label, t in events.items()}
-        outside = {name: f for name, f in frames.items() if not 0 <= f < n_frames}
+        frames = {config.class_name(label): [event_frame(t, offset, fps) for t in ts] for label, ts in events.items()}
+        outside = {name: [f for f in fs if not 0 <= f < n_frames] for name, fs in frames.items()}
+        outside = {name: fs for name, fs in outside.items() if fs}
         if outside:
             logger.warning("%s trial %s: events %s fall outside the video, skipped", session.spec.label, trial, outside)
             continue
@@ -311,7 +331,7 @@ def _index_frame(records: list[TrialRecord]) -> pd.DataFrame:
                 "trial": str(r.trial),
                 "fps": r.fps,
                 "num_frames": r.num_frames,
-                "num_events": len(r.events),
+                "num_events": r.n_events,
             }
             for r in records
         ]
@@ -342,7 +362,7 @@ def write_dataset(splits: dict[str, list[TrialRecord]], config: SpotConfig) -> P
     for split, records in splits.items():
         path = dataset_dir / f"{split}.json"
         path.write_text(json.dumps([r.to_json() for r in records], indent=2), encoding="utf-8")
-        logger.info("%s: %d trials, %d events", path.name, len(records), sum(len(r.events) for r in records))
+        logger.info("%s: %d trials, %d events", path.name, len(records), sum(r.n_events for r in records))
     names = [config.class_name(label) for label in config.labels.classes]
     (dataset_dir / CLASS_FILE).write_text("\n".join(names) + "\n", encoding="utf-8")
     every = [r for records in splits.values() for r in records]

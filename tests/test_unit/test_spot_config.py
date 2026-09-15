@@ -449,3 +449,34 @@ class TestArchitectures:
 
         names = architectures()
         assert {"rny008_gsm", "rny008_msagsm"} <= set(names)
+
+
+class TestSeveralEventsPerTrial:
+    """`infer.max_events_per_trial` changes what a second peak means, so the
+    rules that read it as a rival are refused with the cap raised."""
+
+    def _minimal(self, tmp_path, **infer):
+        source = tmp_path / "ses-01.nc"
+        source.touch()
+        return {"sessions": [str(source)], "labels": {"classes": [31]}, "infer": infer}
+
+    def test_one_per_trial_is_the_default_and_keeps_every_rule(self, tmp_path):
+        cfg = config_from_dict(self._minimal(tmp_path), tmp_path)
+        assert (cfg.infer.max_events_per_trial, cfg.infer.min_event_gap_s) == (1, 0.5)
+
+    def test_a_rival_rule_is_refused_above_one(self, tmp_path):
+        with pytest.raises(ValueError, match="another event.*'focus' or 'peak'"):
+            config_from_dict(self._minimal(tmp_path, max_events_per_trial=3), tmp_path)  # the default rule is product
+        cfg = config_from_dict(self._minimal(tmp_path, max_events_per_trial=3, confidence="focus"), tmp_path)
+        assert cfg.infer.max_events_per_trial == 3
+
+    def test_the_order_flag_is_refused_above_one(self, tmp_path):
+        data = self._minimal(tmp_path, max_events_per_trial=2, confidence="peak", flag_out_of_order=True)
+        with pytest.raises(ValueError, match="flag_out_of_order.*undefined"):
+            config_from_dict(data, tmp_path)
+
+    def test_bounds(self, tmp_path):
+        with pytest.raises(ValueError, match="max_events_per_trial"):
+            config_from_dict(self._minimal(tmp_path, max_events_per_trial=0), tmp_path)
+        with pytest.raises(ValueError, match="min_event_gap_s"):
+            config_from_dict(self._minimal(tmp_path, min_event_gap_s=0.0), tmp_path)

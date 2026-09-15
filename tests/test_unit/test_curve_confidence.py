@@ -112,3 +112,38 @@ class TestRanking:
 
     def test_a_record_with_one_outcome_keeps_the_default(self):
         assert choose_statistic({name: float("nan") for name in STATISTICS}) == "peak"
+
+
+class TestSeveralEvents:
+    """A curve read as several events: the gap suppresses, the cap stops, and
+    a neighbour is neither a rival nor a smear."""
+
+    def test_one_event_is_curve_stats_exactly(self):
+        from ethograph.labels.curve_confidence import curve_events
+
+        curve = _bump(500, 250, 0.9) + _bump(500, 100, 0.85)
+        assert curve_events(curve, window=10, gap=50, max_events=1) == [curve_stats(curve, window=10)]
+
+    def test_peaks_within_the_gap_are_one_event_and_the_cap_holds(self):
+        from ethograph.labels.curve_confidence import event_peaks
+
+        curve = _bump(500, 100, 0.9) + _bump(500, 120, 0.8) + _bump(500, 300, 0.7) + _bump(500, 450, 0.6)
+        assert event_peaks(curve, gap=50, max_events=10) == [100, 300, 450]  # 120 is within 50 of a taller peak
+        assert event_peaks(curve, gap=50, max_events=2) == [100, 300]  # tallest first, reported in time order
+        assert event_peaks(_bump(500, 250, 0.02), gap=50, max_events=3) == []  # a blip is not an event
+
+    def test_a_neighbouring_event_is_not_a_rival_or_a_smear(self):
+        from ethograph.labels.curve_confidence import curve_events
+
+        curve = _bump(500, 100, 0.9) + _bump(500, 350, 0.85)
+        alone = curve_stats(_bump(500, 100, 0.9), window=10)
+        first, second = curve_events(curve, window=10, gap=50, max_events=3)
+        assert (first.index, second.index) == (100, 350)
+        assert first.focus == pytest.approx(alone.focus, abs=0.02) and first.ratio == pytest.approx(1.0)
+        assert second.found and second.focus > 0.8
+
+    def test_a_curve_with_no_peak_still_reads_as_one_not_found_event(self):
+        from ethograph.labels.curve_confidence import curve_events
+
+        events = curve_events(np.linspace(0.0, 0.9, 500), window=10, gap=50, max_events=3)
+        assert len(events) == 1 and not events[0].found
