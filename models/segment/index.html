@@ -1048,27 +1048,6 @@ row’s <code class="docutils literal notranslate"><span class="pre">prediction_
 <p>giving <code class="docutils literal notranslate"><span class="pre">cross_validation/cv_{name}/folds.tsv</span></code> per transform — the same
 folds, so the numbers are paired.</p>
 </section>
-<section id="ablating-the-loss-one-model-per-individual">
-<h3>Ablating the loss, one model per individual<a class="headerlink" href="#ablating-the-loss-one-model-per-individual" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">scripts/bench.py</span></code> is that loop turned on the objective. One config per
-individual sits beside the project’s (<code class="docutils literal notranslate"><span class="pre">data/crow1.yaml</span></code>: <code class="docutils literal notranslate"><span class="pre">base:</span> <span class="pre">project.yaml</span></code>,
-its own four sessions, its own <code class="docutils literal notranslate"><span class="pre">features.name</span></code> — a run draws its split over
-the whole materialised index it reads, so a shared one would train on the
-other individuals), and for each of them and each architecture the bench
-cross-validates the arms of <code class="docutils literal notranslate"><span class="pre">LOSS_TERMS</span></code> × <code class="docutils literal notranslate"><span class="pre">FEATURE_SETS</span></code>: the objective with
-and without smoothing (<code class="docutils literal notranslate"><span class="pre">train.loss.alpha=0</span></code>), crossed with dropping each
-declared feature kind (<code class="docutils literal notranslate"><span class="pre">train.drop_kinds</span></code>), the “with” weight pinned in the
-script. <code class="docutils literal notranslate"><span class="pre">data/bench_loss.pdf</span></code> then shows segmental F1 per individual,
-architecture and arm — one dot per held-out session — and, per individual ×
-architecture, the arms’ IoU distributions, boundary deltas and class-wise F1
-side by side (<code class="xref py py-func docutils literal notranslate"><span class="pre">write_factorial_pdf()</span></code>). Folds that
-finished are read back, never retrained; <code class="docutils literal notranslate"><span class="pre">--report-only</span></code> draws without
-training.</p>
-<p>There is no validation slice by default (<code class="docutils literal notranslate"><span class="pre">val_fraction=0</span></code>): the
-hyperparameters, <code class="docutils literal notranslate"><span class="pre">epochs</span></code> included, came out of stage 1, so every remaining
-trial is worth training on and <code class="docutils literal notranslate"><span class="pre">best.pt</span></code> is the last epoch. Pass
-<code class="docutils literal notranslate"><span class="pre">val_fraction=0.15</span></code> if you want checkpoint selection back.</p>
-</section>
 </section>
 <section id="reviewing-predictions-in-the-gui">
 <h2>Reviewing predictions in the GUI<a class="headerlink" href="#reviewing-predictions-in-the-gui" title="Link to this heading">#</a></h2>
@@ -1151,7 +1130,6 @@ becomes <em>which</em> class, <em>which</em> trials and <em>how far off</em> the
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-2-cross-validate-and-look-at-the-mistakes">Stage 2: cross-validate, and look at the mistakes</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-session-fold-by-trial">One session: fold by trial</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ablating-the-loss-one-model-per-individual">Ablating the loss, one model per individual</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reviewing-predictions-in-the-gui">Reviewing predictions in the GUI</a></li>
