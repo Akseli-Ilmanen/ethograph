@@ -478,7 +478,7 @@ predictions in the GUI’s own labels format.</p>
 <p class="admonition-title">Tip</p>
 <p>New here? <a class="reference internal" href="quickstart.html"><span class="doc">Quickstart</span></a> is this page cut down to one architecture, three
 kinematic features and two sessions — a config you can copy and a model
-trained in four lines. Come back when you want the choices back.</p>
+trained in four lines. This is a good starting point!</p>
 </div>
 <section id="the-two-stages-of-a-workflow">
 <h2>The two stages of a workflow<a class="headerlink" href="#the-two-stages-of-a-workflow" title="Link to this heading">#</a></h2>
@@ -599,19 +599,40 @@ stitch → snap to changepoints → purge). Returns the prediction paths;
 directory; <code class="docutils literal notranslate"><span class="pre">project.sessions()</span></code> opens every session, <code class="docutils literal notranslate"><span class="pre">project.runs()</span></code> names
 the runs already trained, and <code class="docutils literal notranslate"><span class="pre">project.load_run()</span></code> returns a trained run
 ready to predict with.</p>
-<p>The vocabulary — session, trial, sample, feature column, branch, curated
-label, materialised dataset, architecture, run, role, prediction set — is
-pinned in the repository’s <code class="docutils literal notranslate"><span class="pre">CONTEXT.md</span></code>.</p>
 </section>
 </section>
-<section id="features-are-built-with-the-session-not-by-the-pipeline">
-<h2>Features are built with the session, not by the pipeline<a class="headerlink" href="#features-are-built-with-the-session-not-by-the-pipeline" title="Link to this heading">#</a></h2>
-<p>The pipeline never invents features: it <strong>selects</strong> variables that already
-exist in the session file and pins their dims. Anything you want a model to
-see — egocentric coordinates, pairwise distances, headings, changepoint
-proximity, video embeddings — is a data variable you add when you build
-the <code class="docutils literal notranslate"><span class="pre">.nc</span></code> (or pynapple / NWB file), which also makes it plottable in the GUI
-so you can review what the model will read.</p>
+<section id="feature-engineering-is-done-by-user-not-the-pipeline">
+<h2>Feature engineering is done by user, not the pipeline<a class="headerlink" href="#feature-engineering-is-done-by-user-not-the-pipeline" title="Link to this heading">#</a></h2>
+<p>The pipeline only <strong>selects</strong> variables already in the session file, so
+anything a model should see is a variable you add (and can plot in the GUI).
+Three config sections are the exception, derived at session open:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Section</p></th>
+<th class="head"><p>Reads</p></th>
+<th class="head"><p>Generates</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">features.sin_cos</span></code></p></td>
+<td><p>an angle</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(sin,</span> <span class="pre">cos)</span></code>, never z-scored</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code></p></td>
+<td><p>a changepoint mask</p></td>
+<td><p>proximity / offset / segment-length columns</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">features.neural</span></code></p></td>
+<td><p>a pynapple <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code> of spikes</p></td>
+<td><p>a binned <code class="docutils literal notranslate"><span class="pre">TsdFrame</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A changepoint mask is a binary variable with <code class="docutils literal notranslate"><span class="pre">attrs[&quot;changepoint_mask&quot;]</span> <span class="pre">=</span> <span class="pre">1</span></code>,
+as the GUI’s <strong>Detect</strong> button writes. <code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code> is
+currently supported for <code class="docutils literal notranslate"><span class="pre">.nc</span></code> sessions only, not pynapple / NWB.</p>
+<p>Feature engineering may look like:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_changepoint_features</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">egocentric_position</span><span class="p">,</span> <span class="n">heading</span><span class="p">,</span> <span class="n">intra_distances</span>
@@ -626,13 +647,9 @@ so you can review what the model will read.</p>
 xarray (the <code class="docutils literal notranslate"><span class="pre">movement</span></code> convention: <code class="docutils literal notranslate"><span class="pre">position</span> <span class="pre">(time,</span> <span class="pre">space,</span> <span class="pre">keypoint,</span> <span class="pre">individual)</span></code>), works in 2-D and 3-D, and keeps the <code class="docutils literal notranslate"><span class="pre">individual</span></code> dim. Outputs
 that must never be z-scored (unit vectors, angles, binary flags, segment ids)
 carry <code class="docutils literal notranslate"><span class="pre">attrs[&quot;normalise&quot;]</span> <span class="pre">=</span> <span class="pre">0</span></code>; the pipeline honours it.</p>
-<p>Spike trains are the exception in principle: a pynapple session’s units are
-a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code> of event times, which no loader can read as a feature, and how
-they are binned is a modelling choice worth sweeping. <code class="docutils literal notranslate"><span class="pre">features.neural</span></code> spells
-that binning as pynapple expressions and applies it at every session open —
-single-trial neural decoding with the same models and prediction sets. See
-<a class="reference internal" href="config.html"><span class="doc">Config reference</span></a> (<code class="docutils literal notranslate"><span class="pre">features.neural</span></code>).</p>
-<p>Video features are the one exception in mechanics, not in principle — a
+<p>See <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a> for each section’s keys.</p>
+<p>Video features are extracted by the pipeline too, but written into the
+session rather than derived at open — a
 pretrained network (S3D <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id403" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span> by default, a timm <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id405" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> backbone such as DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id404" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> by name) is expensive enough to
 run once per video and cache. See <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>; the short version is</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># a folder of videos, before any session exists</span>
@@ -771,20 +788,32 @@ takes labels to score against.</p>
 </section>
 <section id="what-a-sample-is">
 <h2>What a sample is<a class="headerlink" href="#what-a-sample-is" title="Link to this heading">#</a></h2>
-<p>One <strong>(trial, individual)</strong>. Its columns are the configured features with
-the individual dim pinned to that individual (<code class="docutils literal notranslate"><span class="pre">individual=self</span></code> in the
-layout) and, for pair features, the <code class="docutils literal notranslate"><span class="pre">other</span></code> dim enumerating the remaining
-individuals in dataset order (<code class="docutils literal notranslate"><span class="pre">other1</span></code>, <code class="docutils literal notranslate"><span class="pre">other2</span></code>, …). Its target is that
-individual’s labels <em>as actor</em>. So a trial with two individuals is two
-samples, a dataset with one individual is unaffected, and every session must
-carry the same number of individuals.</p>
-<p>Only <strong><code class="docutils literal notranslate"><span class="pre">manual</span></code> and <code class="docutils literal notranslate"><span class="pre">curated</span></code> labels</strong> ever become training targets; an
-<code class="docutils literal notranslate"><span class="pre">automated</span></code> label — the output of any model — never does. Point events are
-skipped (the lightgbm model owns them). One branch per model is the exclusive
-target; <code class="docutils literal notranslate"><span class="pre">features.labels.branches</span></code> lists several and the target becomes
-multi-label — one binary channel per (subject, class), decoded one <em>track</em>
-(subject, branch) at a time, so labels of different branches overlap and
-labels of one branch never do (see the config reference).</p>
+<p>A sample is one <strong>(trial, individual)</strong> pair: an input <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">(F,</span> <span class="pre">T)</span></code> and a
+target <code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">(T,)</span></code>.</p>
+<p><strong>Input.</strong> Each entry of <code class="docutils literal notranslate"><span class="pre">features.columns</span></code> is an xarray variable with a time
+dim. The sample’s individual is selected (<code class="docutils literal notranslate"><span class="pre">.sel(individual=…)</span></code>), the listed
+dim values are selected, and whatever dims remain are flattened into columns.
+The columns of every feature are stacked into <code class="docutils literal notranslate"><span class="pre">F</span></code>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>position_ego (time, space, keypoint, individual)
+  .sel(individual=ind, space=[x, y, z], keypoint=[beakTip, stickTip])
+  → (T, 6)
+speed        → (T, 1)
+                                     → x: (F=7, T)
+</pre></div>
+</div>
+<p>A pair feature (<code class="docutils literal notranslate"><span class="pre">other:</span> <span class="pre">&quot;*&quot;</span></code>) keeps the remaining individuals as columns in
+dataset order (<code class="docutils literal notranslate"><span class="pre">other1</span></code>, <code class="docutils literal notranslate"><span class="pre">other2</span></code>, …), so every session must have the same
+number of individuals. Column names are written to <code class="docutils literal notranslate"><span class="pre">columns.yaml</span></code>.</p>
+<p>A pynapple or NWB session works the same way: a <code class="docutils literal notranslate"><span class="pre">Tsd</span></code> is one column, and
+a <code class="docutils literal notranslate"><span class="pre">TsdFrame</span></code> (or <code class="docutils literal notranslate"><span class="pre">TsdTensor</span></code>) selects the listed columns over time, giving
+<code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">n_columns)</span></code>.</p>
+<p><strong>Target.</strong> Per frame, the class index of that individual’s labels <em>as
+actor</em>; <code class="docutils literal notranslate"><span class="pre">0</span></code> is background. Only <code class="docutils literal notranslate"><span class="pre">manual</span></code> and <code class="docutils literal notranslate"><span class="pre">curated</span></code> labels count, never
+<code class="docutils literal notranslate"><span class="pre">automated</span></code> ones. Point events are skipped.</p>
+<p>A trial with two individuals therefore gives two samples. With
+<code class="docutils literal notranslate"><span class="pre">features.labels.branches</span></code> listing several branches, <code class="docutils literal notranslate"><span class="pre">y</span></code> becomes multi-label
+<code class="docutils literal notranslate"><span class="pre">(C,</span> <span class="pre">T)</span></code>: one binary channel per class. Labels within one branch never
+overlap; labels in different branches can (see <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>).</p>
 </section>
 <section id="the-materialised-dataset">
 <h2>The materialised dataset<a class="headerlink" href="#the-materialised-dataset" title="Link to this heading">#</a></h2>
@@ -798,13 +827,20 @@ classes.yaml             class index ↔ label id
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">key</span></code> is <code class="docutils literal notranslate"><span class="pre">{session_id}_trial{trial}_{individual}</span></code>; <code class="docutils literal notranslate"><span class="pre">session_id</span></code> is the
-source’s stem plus a path hash, so two <code class="docutils literal notranslate"><span class="pre">Trial_data.nc</span></code> never collide. Roles
-and normalisation statistics are <em>not</em> part of the dataset — they belong to
-a run (<code class="docutils literal notranslate"><span class="pre">runs/{run}/splits/*.bundle</span></code>, <code class="docutils literal notranslate"><span class="pre">stats.npz</span></code>).</p>
+source’s stem plus a path hash, so two <code class="docutils literal notranslate"><span class="pre">Trial_data.nc</span></code> never collide.</p>
+<p>The dataset does not record which samples are for training, validation or
+testing, and it is not z-scored. Both depend on the split, and the split is
+chosen per run. So one materialised dataset can serve many runs (a search, each
+cross-validation fold). Each run writes its own:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">runs/{run}/splits/{train,val,test}.bundle</span></code>: the sample keys in each role.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">runs/{run}/stats.npz</span></code>: the per-column mean and std, computed on that
+run’s training samples only and applied when the run loads its data.</p></li>
+</ul>
 </section>
 <section id="architectures">
 <h2>Architectures<a class="headerlink" href="#architectures" title="Link to this heading">#</a></h2>
-<p>Ten networks are available; <code class="docutils literal notranslate"><span class="pre">eto.segment.architectures()</span></code> lists them.
+<p>Eleven networks are available; <code class="docutils literal notranslate"><span class="pre">eto.segment.architectures()</span></code> lists them.
 Switching between them is a one-line change, and <code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> puts the
 runs side by side, so trying two or three is cheap.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -833,7 +869,7 @@ runs side by side, so trying two or three is cheap.</p>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">edtcn</span></code> <span class="bibtex-citation" id="id8">[<a class="reference internal" href="../../community/references.html#id336" title="Colin Lea, Michael D. Flynn, René Vidal, Austin Reiter, and Gregory D. Hager. Temporal convolutional networks for action segmentation and detection. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR). 2017. URL: https://arxiv.org/abs/1611.05267, arXiv:1611.05267.">Lea <em>et al.</em>, 2017</a>]</span></p></td>
 <td><p>Encoder–decoder, wide kernels</p></td>
-<td><p>Small and quick.</p></td>
+<td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rnn</span></code></p></td>
 <td><p>Bidirectional GRU or LSTM over the trial</p></td>
@@ -847,11 +883,15 @@ runs side by side, so trying two or three is cheap.</p>
 <td><p>Attention across joints, then across time</p></td>
 <td><p>For pose columns that factor into joints: set <code class="docutils literal notranslate"><span class="pre">model.params.num_joints</span></code> (it has no default and must divide the column count). Reads a fixed 128-frame window at a time.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> <span class="bibtex-citation" id="id11">[<a class="reference internal" href="../../community/references.html#id338" title="Haoyu Ji, Bowen Chen, Zhihao Yang, Wenze Huang, Yu Gao, Xueting Liu, Weihong Ren, Zhiyong Wang, and Honghai Liu. Spectral scalpel: amplifying adjacent action discrepancy via frequency-selective filtering for skeleton-based action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/SpecScalpel, arXiv:2603.24134.">Ji <em>et al.</em>, 2026</a>]</span></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mp_transformer</span></code> <span class="bibtex-citation" id="id11">[<a class="reference internal" href="../../community/references.html#id331" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>]</span></p></td>
+<td><p>Max-pool → transformer encoder → upsample</p></td>
+<td><p>DLC2Action’s MP-Transformer: attention over a pooled timeline. Reads a fixed 128-frame window at a time (<code class="docutils literal notranslate"><span class="pre">model.params.len_segment</span></code>); <code class="docutils literal notranslate"><span class="pre">num_pool:</span> <span class="pre">0</span></code> is a plain transformer encoder.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> <span class="bibtex-citation" id="id12">[<a class="reference internal" href="../../community/references.html#id338" title="Haoyu Ji, Bowen Chen, Zhihao Yang, Wenze Huang, Yu Gao, Xueting Liu, Weihong Ren, Zhiyong Wang, and Honghai Liu. Spectral scalpel: amplifying adjacent action discrepancy via frequency-selective filtering for skeleton-based action segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/SpecScalpel, arXiv:2603.24134.">Ji <em>et al.</em>, 2026</a>]</span></p></td>
 <td><p>Skeleton graph + frequency-selective filtering</p></td>
 <td><p><strong>Pose-native.</strong> Reads a skeleton of keypoints and sharpens the boundaries between adjacent behaviours in the frequency domain. Needs <code class="docutils literal notranslate"><span class="pre">model.params.keypoints</span></code> and (optionally) <code class="docutils literal notranslate"><span class="pre">skeleton</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lady</span></code> <span class="bibtex-citation" id="id12">[<a class="reference internal" href="../../community/references.html#id339" title="Haoyu Ji, Xueting Liu, Yu Gao, Wenze Huang, Zhihao Yang, Weihong Ren, Zhiyong Wang, and Honghai Liu. LaDy: lagrangian-dynamic informed network for skeleton-based action segmentation via spatial-temporal modulation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/LaDy, arXiv:2603.24097.">Ji <em>et al.</em>, 2026</a>]</span></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lady</span></code> <span class="bibtex-citation" id="id13">[<a class="reference internal" href="../../community/references.html#id339" title="Haoyu Ji, Xueting Liu, Yu Gao, Wenze Huang, Zhihao Yang, Weihong Ren, Zhiyong Wang, and Honghai Liu. LaDy: lagrangian-dynamic informed network for skeleton-based action segmentation via spatial-temporal modulation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2026. URL: https://github.com/HaoyuJi/LaDy, arXiv:2603.24097.">Ji <em>et al.</em>, 2026</a>]</span></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> + a learned Lagrangian-dynamics stream</p></td>
 <td><p><strong>Pose-native.</strong> Adds a physics-informed stream (torque, power, energy) over the skeleton’s generalised coordinates. Needs <code class="docutils literal notranslate"><span class="pre">keypoints</span></code>, a <code class="docutils literal notranslate"><span class="pre">skeleton</span></code> with edges, and the root-frame landmarks <code class="docutils literal notranslate"><span class="pre">root</span></code>/<code class="docutils literal notranslate"><span class="pre">spine</span></code> (+ <code class="docutils literal notranslate"><span class="pre">left</span></code>/<code class="docutils literal notranslate"><span class="pre">right</span></code> in 3D); reads raw positions only.</p></td>
 </tr>
@@ -862,9 +902,8 @@ runs side by side, so trying two or three is cheap.</p>
 the ones you want to change under <code class="docutils literal notranslate"><span class="pre">model.params</span></code>. For the vendored models they
 come, with a comment on each and its default, from
 <code class="docutils literal notranslate"><span class="pre">ethograph/segment/dlc2action/config/model/{file}.yaml</span></code> (<code class="docutils literal notranslate"><span class="pre">mstcn</span></code> reads
-<code class="docutils literal notranslate"><span class="pre">ms_tcn3.yaml</span></code>); <code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> and <code class="docutils literal notranslate"><span class="pre">lady</span></code> read their skeleton-graph defaults, and
-<code class="docutils literal notranslate"><span class="pre">rnn</span></code> reads <code class="docutils literal notranslate"><span class="pre">ethograph/segment/models/config/rnn.yaml</span></code>. The loss is configured the same
-way under <code class="docutils literal notranslate"><span class="pre">train.loss</span></code>, from <code class="docutils literal notranslate"><span class="pre">config/losses.yaml</span></code>. See <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p>
+<code class="docutils literal notranslate"><span class="pre">ms_tcn3.yaml</span></code>); <code class="docutils literal notranslate"><span class="pre">specscalpel</span></code> and <code class="docutils literal notranslate"><span class="pre">lady</span></code> read their skeleton-graph defaults.
+The loss is configured the same way under <code class="docutils literal notranslate"><span class="pre">train.loss</span></code>, from <code class="docutils literal notranslate"><span class="pre">config/losses.yaml</span></code>. See <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The networks and the loss come from
@@ -1116,7 +1155,7 @@ becomes <em>which</em> class, <em>which</em> trials and <em>how far off</em> the
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-stages-themselves">The stages themselves</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features-are-built-with-the-session-not-by-the-pipeline">Features are built with the session, not by the pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-engineering-is-done-by-user-not-the-pipeline">Feature engineering is done by user, not the pipeline</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-config">A config</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-session-lines">The session lines</a></li>
 </ul>

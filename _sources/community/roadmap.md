@@ -33,6 +33,7 @@ What EthoGraph already does, what is in progress, and what is still open. Groupe
 - [x] Fast changepoint detection (gradient-, RMS-based, …) and changepoint correction of label boundaries
 - [x] Changepoint features ({func}`~ethograph.features.changepoints.more_changepoint_features`), which massively improved fine-grained accuracy for [ASFormer](https://github.com/ChinaYi/ASFormer)
 - [x] Changepoint features available to every segmentation model (`features.changepoint_features` in the segment pipeline)
+- [ ] Changepoint features for pynapple / NWB sessions (currently `.nc` only), e.g. to segment extracellular recordings (sharp-wave ripple detection) or other neural time series
 - [ ] ML-based changepoint detection. It must stay reproducible so it is a reliable feature. Note: post-model changepoint correction sometimes makes things worse, since the transformer learns a better representation than simple gradient-based methods.
 - [ ] 🚧 Audio changepoints (`ethograph.features.audio_changepoints`)
 
