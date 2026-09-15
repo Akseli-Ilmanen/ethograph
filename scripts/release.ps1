@@ -59,6 +59,10 @@ foreach ($prefix in $required) {
     }
 }
 
+# PyPI answers a bare "400 Bad Request" to any Requires-Dist pointing at a URL (git+https, ...).
+$directUrls = uv run --no-project python -c "import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); m = next(n for n in z.namelist() if n.endswith('.dist-info/METADATA')); print('\n'.join(l for l in z.read(m).decode().splitlines() if l.startswith('Requires-Dist:') and ' @ ' in l))" $wheel.FullName
+if ($directUrls) { throw "PyPI rejects direct-URL dependencies:`n$directUrls" }
+
 Invoke-Checked { git push origin main }
 
 $latest = git ls-remote --tags --refs --sort=-v:refname origin "v*" |
