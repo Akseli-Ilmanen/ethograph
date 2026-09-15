@@ -18,12 +18,6 @@ clear description of the problem and steps to reproduce it. Please:
 To install ethograph in editable mode with all optional dependencies and
 development tools:
 
-```bash
-git clone https://github.com/Akseli-Ilmanen/ethograph
-cd ethograph
-uv pip install --torch-backend=auto torch torchvision
-uv pip install -e ".[gui,audio,model,dandi,dev,docs]"
-```
 
 See {doc}`../getting_started/installation` for details on setting up a virtual
 environment and installing uv.

@@ -12,7 +12,7 @@ vendored copies of upstream's own ``config/model/*.yaml``
 defaults together and the two cannot drift. A builder adds a keyword of its
 own only where the YAML cannot carry it — ``exclusive`` for MS-TCN, which
 upstream fills in from the task's single- vs multi-label problem type rather
-than from a config file, and :data:`MOTIONBERT_WINDOW`, which stands in for a
+than from a config file, and :data:`LEN_SEGMENT`, which stands in for the
 window length upstream reads from a config group this project does not
 vendor. ``params`` from the project config override everything, key by key,
 and reach the upstream constructor unchanged, so any upstream keyword is
@@ -37,6 +37,7 @@ from ethograph.segment.dlc2action.model.edtcn import EDTCN
 from ethograph.segment.dlc2action.model.mlp import MLP
 from ethograph.segment.dlc2action.model.motionbert import MotionBERT
 from ethograph.segment.dlc2action.model.ms_tcn import MS_TCN3
+from ethograph.segment.dlc2action.model.transformer import Transformer
 from ethograph.segment.models import register_architecture
 
 FEATURE_KEY = "features"
@@ -48,7 +49,7 @@ DATASET_FEATURES = "dataset_features"
 """Upstream's sentinel for "fill this in from the dataset's feature count"."""
 
 DATASET_LEN_SEGMENT = "dataset_len_segment"
-"""Upstream's sentinel for its fixed window length — see :func:`build_motionbert`."""
+"""Upstream's sentinel for its fixed window length — see :data:`LEN_SEGMENT`."""
 
 UPSTREAM_REQUIRED = "???"
 """OmegaConf's "no default, the user must set this" marker (only ``motionbert.num_joints``)."""
@@ -56,14 +57,13 @@ UPSTREAM_REQUIRED = "???"
 C2F_MIN_FRAMES = 384
 """C2F models pool the time axis six times (T // 64) and then max-pool that with kernel 6."""
 
-MOTIONBERT_WINDOW = 128
-"""Frames MotionBERT sees at once — **ours**, and the only default written here.
+LEN_SEGMENT = 128
+"""Frames a fixed-window model (``motionbert``, ``mp_transformer``) sees at once.
 
-Its temporal position embedding is a parameter of exactly this length, so it
-is an architectural size, not a preference. Upstream fills it in from
-``general.yaml: len_segment``, a config group this project does not vendor
-because a sample here is a whole trial rather than a fixed window;
-:class:`MotionBERTModel` windows the trial instead. Override under
+Upstream's ``general.yaml: len_segment`` value, the one default written here
+because that config group is not vendored: a sample here is a whole trial
+rather than a fixed window, so :class:`WindowedModel` windows the trial
+instead. Both models size a position encoding by it. Override under
 ``model.params.len_segment``.
 """
 
@@ -75,8 +75,9 @@ _STEMS = {
     "edtcn": "edtcn",
     "mlp": "mlp",
     "motionbert": "motionbert",
+    "mp_transformer": "transformer",
 }
-"""Registry name → upstream's file name. They differ only for ``mstcn``."""
+"""Registry name → upstream's file name. They differ for ``mstcn`` and ``mp_transformer``."""
 
 
 def upstream_defaults(stem: str, n_features: int) -> dict[str, Any]:
@@ -131,11 +132,12 @@ class DLC2ActionModel(nn.Module):
         return logits
 
 
-class MotionBERTModel(DLC2ActionModel):
-    """MotionBERT over a whole trial, one fixed-length window at a time.
+class WindowedModel(DLC2ActionModel):
+    """A fixed-window model over a whole trial, one window at a time.
 
-    Its temporal position embedding is a parameter of exactly *window* frames,
-    so the model cannot be shown more than that however long the sample is.
+    MotionBERT's temporal position embedding is a parameter of exactly *window*
+    frames, and the Transformer's positional encoding is a table of that
+    length, so neither can be shown a whole trial.
     Upstream never has to: it cuts fixed windows before the model sees the
     data. A sample here is a whole trial, so the cutting happens here — the
     timeline is zero-padded up to a multiple of *window*, folded into the
@@ -352,12 +354,30 @@ def build_motionbert(params: dict[str, Any], n_features: int, n_classes: int) ->
     leaving a temporal transformer.
 
     ``len_segment`` is upstream's fixed window length, which its config fills
-    in from the dataset; see :data:`MOTIONBERT_WINDOW` and
-    :class:`MotionBERTModel` for what it means when a sample is a whole trial.
+    in from the dataset; see :data:`LEN_SEGMENT` and :class:`WindowedModel`
+    for what it means when a sample is a whole trial.
     """
     kwargs = _kwargs("motionbert", n_features, params)
     kwargs["num_joints"] = _motionbert_joints(kwargs["num_joints"], n_features)
-    if kwargs["len_segment"] == DATASET_LEN_SEGMENT:
-        kwargs["len_segment"] = MOTIONBERT_WINDOW
-    kwargs["len_segment"] = int(kwargs["len_segment"])
-    return MotionBERTModel(MotionBERT(num_classes=n_classes, **kwargs), window=kwargs["len_segment"])
+    kwargs["len_segment"] = _len_segment(kwargs["len_segment"])
+    return WindowedModel(MotionBERT(num_classes=n_classes, **kwargs), window=kwargs["len_segment"])
+
+
+@register_architecture("mp_transformer")
+def build_mp_transformer(params: dict[str, Any], n_features: int, n_classes: int) -> nn.Module:
+    """Mp_transformer: a transformer encoder between ``num_pool`` max-poolings and as many upsamplings.
+
+    Defaults from ``config/transformer.yaml``; ``num_pool: 0`` is a plain
+    transformer encoder. Returns ``S = 1`` stage, any ``T >= 1`` and any batch
+    size; ``num_f_maps`` must be divisible by ``heads``. Its positional
+    encoding is a table of ``len_segment`` positions, so like ``motionbert``
+    it reads the trial in :data:`LEN_SEGMENT`-frame windows
+    (:class:`WindowedModel`), which also bounds the attention's memory.
+    """
+    kwargs = _kwargs("transformer", n_features, params)
+    kwargs["len_segment"] = _len_segment(kwargs["len_segment"])
+    return WindowedModel(Transformer(num_classes=n_classes, **kwargs), window=kwargs["len_segment"])
+
+
+def _len_segment(value: Any) -> int:
+    return LEN_SEGMENT if value == DATASET_LEN_SEGMENT else int(value)

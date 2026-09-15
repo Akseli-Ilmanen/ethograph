@@ -34,11 +34,11 @@ Invoke-Checked {
         --with "setuptools-scm[toml]>=8" python -m check_manifest --no-build-isolation
 }
 
-# Mirrors tox: a fresh env with core + [dev] only. Collection fails (pytest exit 2/4)
+# Mirrors tox: a fresh env with core + [dev,gui]. Collection fails (pytest exit 2/4)
 # when a test or plugin imports something those extras don't install.
-Write-Host "Collecting tests in a CI-like environment (core + dev extras)..."
+Write-Host "Collecting tests in a CI-like environment (core + dev + gui extras)..."
 Invoke-Checked {
-    uv run --isolated --no-project -p 3.11 --with ".[dev]" python -m pytest --collect-only -q -p no:cacheprovider
+    uv run --isolated --no-project -p 3.11 --with ".[dev,gui]" python -m pytest --collect-only -q -p no:cacheprovider
 }
 
 Write-Host "Building sdist + wheel..."
