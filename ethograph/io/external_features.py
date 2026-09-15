@@ -39,10 +39,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: The attr marking a variable that was attached in memory and must never be saved.
 EXTERNAL = "external"
-"""The attr marking a variable that was attached in memory and must never be saved."""
+#: The attr naming the folder the variable's files came from.
 EXTERNAL_DIR = "external_dir"
-"""The attr naming the folder the variable's files came from."""
 EXTERNAL_FILE = "external_file"
 
 __all__ = [

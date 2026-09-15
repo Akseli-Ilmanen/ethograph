@@ -53,8 +53,8 @@ SOURCE_MIME = "application/x-ethograph-source"
 
 #: Sentinel source name for the popup's "Image — browse…" entry.
 IMAGE_BROWSE = "__browse__"
+#: The popup's "Video features — browse…" entry: a folder of ``{video stem}.npy`` becomes a heatmap.
 VIDEO_FEATURES_BROWSE = "__browse_video_features__"
-"""The popup's "Video features — browse…" entry: a folder of ``{video stem}.npy`` becomes a heatmap."""
 
 _ROLE_KIND = Qt.UserRole
 _ROLE_NAME = Qt.UserRole + 1

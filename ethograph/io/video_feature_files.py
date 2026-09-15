@@ -49,9 +49,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: The attr naming where an in-memory video feature came from; its presence
+#: is what keeps the variable out of the session file.
 ATTACHED_FROM = "attached_from"
-"""The attr naming where an in-memory video feature came from; its presence
-is what keeps the variable out of the session file."""
 ARRAY_SUFFIX = ".npy"
 
 __all__ = [
