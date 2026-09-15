@@ -32,6 +32,7 @@ from qtpy.QtWidgets import (
 )
 
 import ethograph as eto
+from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.notify import notify, notify_dialog
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, individual_color_map
 from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec
@@ -39,6 +40,7 @@ from ethograph.io.data_loader import load_features_dataset
 from ethograph.io.derived import DerivedLoader
 from ethograph.io.plot_sources import FileSource
 from ethograph.io.time_model import compute_trial_video_bounds
+from ethograph.io.video_feature_files import VideoFeatureFiles, attach_video_features, feature_name_for
 from ethograph.labels.intervals import get_interval_bounds, select_subject
 from ethograph.utils.qt import (
     ElidedDelegate,
@@ -2169,6 +2171,70 @@ class DataWidget(QWidget):
 
         self._register_feature(feature_name)
         return feature_name
+
+    def browse_video_features(self) -> list[str]:
+        """The popup's "Video features — browse…" entry: pick a folder of ``{video stem}.npy``."""
+        folder = browse_open_dir(
+            self.shell,
+            self.app_state,
+            "Folder of video features (one {video stem}.npy per trial)",
+            preferred_dir=self.app_state.video_folder,
+        )
+        return self.add_video_features([folder]) if folder else []
+
+    def add_video_features(self, paths: list[str]) -> list[str]:
+        """Attach dropped folders / ``.npy`` files as video features and open each as a heatmap.
+
+        Each folder is one feature named after it; loose files together are
+        one feature named after their folder. Files are matched to this
+        session's videos by name (``{video stem}.npy``); the camera is
+        detected, not asked; videos without a file read NaN. Everything lives
+        in memory for this session only. Returns the variable names added.
+        """
+        app_state = self.app_state
+        dt = getattr(app_state, "dt", None)
+        store = app_state.data_loader
+        align = getattr(app_state, "nwb_alignment", None)
+        if dt is None or store is None or not hasattr(store, "update_ds") or getattr(dt, "_is_continuous", False):
+            notify("Video features need an xarray (.nc) dataset with trials.", "warning")
+            return []
+        if align is None:
+            notify("No alignment loaded: nothing names each trial's video.", "warning")
+            return []
+
+        folders = [p for p in paths if Path(p).is_dir()]
+        loose = [p for p in paths if Path(p).is_file()]
+        groups: list[tuple[Path, list[str]]] = [(Path(f), [f]) for f in folders]
+        if loose:
+            groups.append((Path(loose[0]).parent, loose))
+
+        attached: list[str] = []
+        taken = list(dt.trial(app_state.trials[0]).data_vars)
+        for named_after, group in groups:
+            name = feature_name_for(named_after, taken=taken + attached)
+            try:
+                result = attach_video_features(dt, align, VideoFeatureFiles.from_paths(name, group))
+            except (FileNotFoundError, ValueError) as e:
+                notify(str(e), "error")
+                continue
+            attached.append(name)
+            notify(
+                f"Added video features '{name}': {result.matched} of {result.n_trials} videos matched "
+                f"({100 * result.coverage:.0f}%)",
+                "warning" if result.missing else "info",
+            )
+        if not attached:
+            return []
+
+        if app_state.trials_sel is not None:
+            app_state.ds = dt.trial(app_state.trials_sel)
+            store.update_ds(app_state.ds)
+        for name in attached:
+            self._register_feature(name)
+        self.meta_widget.refresh_source_popup()
+        for name in attached:
+            self.meta_widget._create_panel_for_source("feature", name, "Heatmap")
+        return attached
 
     def load_keypoint_dataset(self, ds: xr.Dataset) -> bool:
         """Serve features from *ds* instead of the current dataset.

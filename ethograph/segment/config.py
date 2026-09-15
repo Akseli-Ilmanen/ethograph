@@ -188,6 +188,11 @@ class SessionSpec:
     #: keys, log lines. Defaults to the source's stem, which is fine until
     #: every session's file is called ``Trial_data.nc``.
     name: str | None = None
+    #: Video features from files, ``{variable: folder}``: one ``{video stem}.npy``
+    #: per trial's camera file, attached in memory when the session opens
+    #: (:mod:`ethograph.io.video_feature_files`), so ``features.columns`` can
+    #: select ``feral: {feral_dims: 0..767}`` like any variable of the file.
+    video_feature_folders: dict[str, Path] = field(default_factory=dict)
 
     @property
     def label(self) -> str:
@@ -1103,6 +1108,10 @@ def _convert(
         return [_session(v, f"{where}[{i}]", base_dir) for i, v in enumerate(value)]
     if name in _PATH_FIELDS:
         return _path(value, base_dir)
+    if name == "video_feature_folders":
+        if not isinstance(value, dict):
+            raise ValueError(f"{where}: expected a mapping of variable name -> folder, got {type(value).__name__}")
+        return {str(k): _path(v, base_dir) for k, v in value.items()}
     if name in _PATH_LIST_FIELDS:
         if not isinstance(value, list):
             raise ValueError(f"{where}: expected a list of session paths, got {type(value).__name__}")

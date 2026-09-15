@@ -87,8 +87,30 @@ class EthographMainWindow(QMainWindow):
         self._window_state_restored = False
         self._pending_dock_state_b64: str | None = None
         self._video_dock_enabled = True
+        # Folders / .npy files dropped anywhere on the window become video features.
+        self.setAcceptDrops(True)
 
         self._create_menus()
+
+    # ------------------------------------------------------------------
+    # Drops: video features from files
+    # ------------------------------------------------------------------
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls() and self.meta_widget is not None:
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls() and self.meta_widget is not None:
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        paths = [url.toLocalFile() for url in event.mimeData().urls() if url.toLocalFile()]
+        data_widget = getattr(self.meta_widget, "data_widget", None)
+        if not paths or data_widget is None:
+            return
+        event.acceptProposedAction()
+        data_widget.add_video_features(paths)
 
     # ------------------------------------------------------------------
     # Assembly

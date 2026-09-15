@@ -233,6 +233,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pynwb",
     "ignore::DeprecationWarning:hdmf",
     "ignore:numpy.ndarray size changed:RuntimeWarning",
+    "ignore:Setting the shape on a NumPy array:DeprecationWarning",  # netCDF4 on NumPy 2.5
 ]
 
 [tool.check-manifest]

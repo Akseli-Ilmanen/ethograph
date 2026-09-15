@@ -43,6 +43,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from ethograph.io.video_feature_files import video_feature_sources
+
 from .plots_radial import feature_angular_unit
 
 logger = logging.getLogger(__name__)
@@ -51,6 +53,8 @@ SOURCE_MIME = "application/x-ethograph-source"
 
 #: Sentinel source name for the popup's "Image — browse…" entry.
 IMAGE_BROWSE = "__browse__"
+VIDEO_FEATURES_BROWSE = "__browse_video_features__"
+"""The popup's "Video features — browse…" entry: a folder of ``{video stem}.npy`` becomes a heatmap."""
 
 _ROLE_KIND = Qt.UserRole
 _ROLE_NAME = Qt.UserRole + 1
@@ -95,6 +99,8 @@ def allowed_plot_types(kind: str, name: str, app_state) -> list[str]:
         return ["Camera view"]
     if kind == "image":
         return ["Image"]
+    if kind == "video_features":
+        return ["Heatmap"]
     if kind == "neo":
         return ["Neo Trace"]
     if kind == "console":
@@ -293,12 +299,13 @@ class SourcePopup(QWidget):
         item.setFont(font)
         self._list.addItem(item)
 
-    def _add_source(self, label: str, kind: str, name: str):
+    def _add_source(self, label: str, kind: str, name: str) -> QListWidgetItem:
         item = QListWidgetItem(f"  {label}")
         item.setData(_ROLE_HEADER, False)
         item.setData(_ROLE_KIND, kind)
         item.setData(_ROLE_NAME, name)
         self._list.addItem(item)
+        return item
 
     def refresh(self, catalog=None, neo_streams=None, phy_available=False):
         """Repopulate from the current session (cameras, mics, features).
@@ -352,14 +359,30 @@ class SourcePopup(QWidget):
             for stream in neo_streams or []:
                 self._add_source(f"Neo ({stream})", "neo", str(stream))
 
-        self._add_header("Features")
         features: list[str] = catalog.feature_choices() if catalog is not None else []
-        if not features:
-            ds = getattr(self.app_state, "ds", None)
-            if ds is not None:
-                features = list(ds.data_vars)
+        ds = getattr(self.app_state, "ds", None)
+        if not features and ds is not None:
+            features = list(ds.data_vars)
+        # Video features from files (a folder of {video stem}.npy, e.g. an
+        # embedding export) are listed with where they came from, so two
+        # exports of one model with different settings stay tellable apart;
+        # the browse entry adds another — dropping a folder on the window
+        # does the same.
+        folders = video_feature_sources(ds) if ds is not None else {}
+        self._add_header("Features")
         for feat in features:
-            self._add_source(feat, "feature", str(feat))
+            if feat not in folders:
+                self._add_source(feat, "feature", str(feat))
+        self._add_header("Video features")
+        for feat in features:
+            if feat in folders:
+                item = self._add_source(f"{feat}  ({folders[feat]})", "feature", str(feat))
+                item.setToolTip(folders[feat])
+        item = self._add_source("Video features — browse a folder of .npy…", "video_features", VIDEO_FEATURES_BROWSE)
+        item.setToolTip(
+            "One {video stem}.npy per trial, matched to the session's videos by name. "
+            "Dropping a folder on the window does the same."
+        )
 
         # A dockable Python console over the plotted arrays: click a feature
         # panel to bind what it shows, assign to make new features.

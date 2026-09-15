@@ -527,6 +527,11 @@ class AppStateSpec:
         "heatmap_exclusion_percentile": (float, 98.0, True),
         "heatmap_colormap": (str, "RdBu_r", True),
         "heatmap_normalization": (str, "per_channel", True),
+        # Row order: "none" | "trial" (re-sorted on every trial) | "visible"
+        # (sorted on demand for the visible window, then kept).
+        "heatmap_sort_mode": (str, "none", True),
+        "heatmap_sort_window_s": (float, 0.5, True),
+        "heatmap_sort_overlap": (float, 0.5, True),
         # Firing rate
         "fr_bin_size": (float, 0.01, True),
         "fr_sigma": (float, 2.0, True),

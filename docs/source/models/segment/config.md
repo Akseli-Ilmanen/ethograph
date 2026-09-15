@@ -21,7 +21,7 @@ project.update("train.run_name=mstcn", "train.augment.stretch=[0.8,1.2]")
 | Key | Default | Meaning |
 |---|---|---|
 | `root` | the config's folder | Project directory: `data/` and `runs/` live here. |
-| `sessions` | required | List of sessions: `{source, labels_path, video_dir, alignment, name}`. `alignment` reads the trials from that NWB instead of the source's own sidecar — the same file listed twice, once with its behaviour trials and once with windows tiled over a sleep epoch ({func}`ethograph.segment.windows.write_windows_alignment`), is two sessions of one recording; give the second a `name`. |
+| `sessions` | required | List of sessions: `{source, labels_path, video_dir, alignment, name, video_feature_folders}`. `video_feature_folders` is `{variable: folder}` — one `{video stem}.npy` per trial's camera file, attached in memory at open ({doc}`video_features`). `alignment` reads the trials from that NWB instead of the source's own sidecar — the same file listed twice, once with its behaviour trials and once with windows tiled over a sleep epoch ({func}`ethograph.segment.windows.write_windows_alignment`), is two sessions of one recording; give the second a `name`. |
 | `individual` | `null` | The one individual a single-animal project's samples belong to, stamped into every exported label's `individual`. Equivalent to `features.individuals: [name]`; set only one of them. |
 | `trials.where` | `{}` | Metadata column → allowed values. The one trial filter; applied in every stage. |
 | `trials.limit` | `null` | Keep only the first N trials that pass `where`, in session order — a smoke run before a long one. `null` = all. |
