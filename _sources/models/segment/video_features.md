@@ -336,5 +336,5 @@ da = build_extractor("timm").extract("clip.mp4")             # (time_video, timm
 An extractor is an entry in `ethograph.video_features.EXTRACTORS` — a name
 mapped to a class with `name`, `plan(video_fps)` and `extract(video)` — whose
 `extract` returns `to_dataarray(...)`. Its package is pip-installed, never
-copied into the tree (`notes/adr/0009-extractors-pip-installed-not-vendored.md`); if the package cannot share the GUI
+copied into the tree; if the package cannot share the GUI
 environment, the extractor runs it by subprocess and reads the file back.

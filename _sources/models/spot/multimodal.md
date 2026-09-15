@@ -76,8 +76,8 @@ schema, so `evaluate()` scores the teacher exactly as it scores a pixel run,
 and the sweep-chosen epoch writes its per-clip embeddings under
 `features/embeddings/`.
 
-`distil()` then runs the two distillation steps inside the vendored trainer
-(ADR 0007): the baseline's trunk + GRU learn to reproduce the teacher's
+`distil()` then runs the two distillation steps inside the vendored trainer:
+the baseline's trunk + GRU learn to reproduce the teacher's
 embedding on every clip that has pose (no labels), then the CNN is frozen and
 the head learns the labels. The student reads video only. Runs land under
 `runs/{baseline}_distil_{fingerprint}/`, where the fingerprint names the

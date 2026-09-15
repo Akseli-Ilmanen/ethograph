@@ -793,7 +793,7 @@ dim:</p>
 <p>An extractor is an entry in <code class="docutils literal notranslate"><span class="pre">ethograph.video_features.EXTRACTORS</span></code> — a name
 mapped to a class with <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">plan(video_fps)</span></code> and <code class="docutils literal notranslate"><span class="pre">extract(video)</span></code> — whose
 <code class="docutils literal notranslate"><span class="pre">extract</span></code> returns <code class="docutils literal notranslate"><span class="pre">to_dataarray(...)</span></code>. Its package is pip-installed, never
-copied into the tree (<code class="docutils literal notranslate"><span class="pre">notes/adr/0009-extractors-pip-installed-not-vendored.md</span></code>); if the package cannot share the GUI
+copied into the tree; if the package cannot share the GUI
 environment, the extractor runs it by subprocess and reads the file back.</p>
 </section>
 </section>

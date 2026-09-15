@@ -23,13 +23,8 @@ project.distil()             # option 4: the student, taught by the teacher, vid
 
 The model is **E2E-Spot** {cite:p}`hong2022e2espot`: a RegNetY-008 backbone {cite:p}`radosavovic2020regnet`
 with Gate Shift Modules {cite:p}`sudhakaran2020gsn` for temporal mixing and a bi-GRU head emitting a
-per-frame softmax over `K + 1` classes. It is vendored the way [DLC2Action](https://github.com/amathislab/DLC2Action) is —
-upstream's own layout, unedited beyond what its `NOTICE.md` lists.
-
-```{note}
-There is no command line, for the same reason the segmentation pipeline has
-none: a run is a config file you can diff (`notes/adr/0004-scripted-not-cli.md`).
-```
+per-frame softmax over `K + 1` classes. Upstream's
+code ships inside EthoGraph (`ethograph/spot/e2espot/`), in its own layout.
 
 ## Four ways to spot a point event
 

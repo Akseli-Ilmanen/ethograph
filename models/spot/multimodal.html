@@ -524,8 +524,8 @@ contract. Minutes on a GPU. Every epoch writes val predictions in E2E-Spot’s
 schema, so <code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> scores the teacher exactly as it scores a pixel run,
 and the sweep-chosen epoch writes its per-clip embeddings under
 <code class="docutils literal notranslate"><span class="pre">features/embeddings/</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">distil()</span></code> then runs the two distillation steps inside the vendored trainer
-(ADR 0007): the baseline’s trunk + GRU learn to reproduce the teacher’s
+<p><code class="docutils literal notranslate"><span class="pre">distil()</span></code> then runs the two distillation steps inside the vendored trainer:
+the baseline’s trunk + GRU learn to reproduce the teacher’s
 embedding on every clip that has pose (no labels), then the CNN is frozen and
 the head learns the labels. The student reads video only. Runs land under
 <code class="docutils literal notranslate"><span class="pre">runs/{baseline}_distil_{fingerprint}/</span></code>, where the fingerprint names the

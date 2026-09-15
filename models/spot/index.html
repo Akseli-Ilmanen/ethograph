@@ -475,13 +475,8 @@ pose features you already have.</p>
 </div>
 <p>The model is <strong>E2E-Spot</strong> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>: a RegNetY-008 backbone <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id269" title="Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming He, and Piotr Dollár. Designing network design spaces. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/2003.13678, arXiv:2003.13678.">Radosavovic <em>et al.</em>, 2020</a>]</span>
 with Gate Shift Modules <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id270" title="Swathikiran Sudhakaran, Sergio Escalera, and Oswald Lanz. Gate-shift networks for video action recognition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). 2020. URL: https://arxiv.org/abs/1912.00381, arXiv:1912.00381.">Sudhakaran <em>et al.</em>, 2020</a>]</span> for temporal mixing and a bi-GRU head emitting a
-per-frame softmax over <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">+</span> <span class="pre">1</span></code> classes. It is vendored the way <a class="reference external" href="https://github.com/amathislab/DLC2Action">DLC2Action</a> is —
-upstream’s own layout, unedited beyond what its <code class="docutils literal notranslate"><span class="pre">NOTICE.md</span></code> lists.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>There is no command line, for the same reason the segmentation pipeline has
-none: a run is a config file you can diff (<code class="docutils literal notranslate"><span class="pre">notes/adr/0004-scripted-not-cli.md</span></code>).</p>
-</div>
+per-frame softmax over <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">+</span> <span class="pre">1</span></code> classes. Upstream’s
+code ships inside EthoGraph (<code class="docutils literal notranslate"><span class="pre">ethograph/spot/e2espot/</span></code>), in its own layout.</p>
 <section id="four-ways-to-spot-a-point-event">
 <h2>Four ways to spot a point event<a class="headerlink" href="#four-ways-to-spot-a-point-event" title="Link to this heading">#</a></h2>
 <p>Which one to use is decided by <strong>what is available when the model runs</strong>.</p>
