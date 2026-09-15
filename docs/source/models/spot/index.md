@@ -17,8 +17,6 @@ project.evaluate()           # per class: misses, error in ms, hit rate per tole
 project.compare()            # every scored run side by side -> runs/compare.tsv
 project.inference()          # a run's predictions into each session's labels/ folder
 project.cross_validate()     # one fold per session: train on the rest, predict the held-out one
-project.train_teacher()      # option 4: the pose-only teacher
-project.distil()             # option 4: the student, taught by the teacher, video only at inference
 ```
 
 The model is **E2E-Spot** {cite:p}`hong2022e2espot`: a RegNetY-008 backbone {cite:p}`radosavovic2020regnet`
@@ -26,7 +24,7 @@ with Gate Shift Modules {cite:p}`sudhakaran2020gsn` for temporal mixing and a bi
 per-frame softmax over `K + 1` classes. Upstream's
 code ships inside EthoGraph (`ethograph/spot/e2espot/`), in its own layout.
 
-## Four ways to spot a point event
+## Three ways to spot a point event
 
 Which one to use is decided by **what is available when the model runs**.
 
@@ -40,7 +38,7 @@ Which one to use is decided by **what is available when the model runs**.
   - Reads at inference
   - Where
 * - 1
-  - **LightGBM lightgbm model** {cite:p}`ke2017lightgbm` — a boosted-tree classifier on a window of the
+  - **LightGBM model** {cite:p}`ke2017lightgbm` — a boosted-tree classifier on a window of the
     features you tick
   - pose features
   - pose features
@@ -56,12 +54,6 @@ Which one to use is decided by **what is available when the model runs**.
   - video + pose
   - video + pose
   - `eto.spot`, `features:` listed
-* - 4
-  - **Pose teacher → distilled E2E-Spot** {cite:p}`umegnet2026` — a small pose-only model on the
-    listed features teaches the pixel model, then is set aside
-  - video + pose
-  - video
-  - `eto.spot`, `features:` + `train.features_as_input: false`
 ```
 
 - **Pose exists for every trial** → start with **1**: minutes on a CPU, and
@@ -69,22 +61,14 @@ Which one to use is decided by **what is available when the model runs**.
   the pixels to the same features; `evaluate(zero_features=True)` scores that
   run with the features zeroed, so what the pose contributes is a number
   rather than an assumption.
-- **Video only, no pose anywhere** → **2**.
-- **Video only at inference, but pose can be made for the training
-  sessions** — label a few frames in the GUI, `fill_poses()` → dense pose →
-  **4**. Its gate: `evaluate()` the teacher on the same test split as the
-  video-only baseline first, and distil only from a teacher that beats it. A
-  student cannot learn from a model that knows less.
+- **Video only at inference** → **2**.
 
 ### Which stages to run
 
-`scripts/spot.py` runs the stages you name, in order — it has no default
-list, because the right list depends on the case above, and running a stage
-you do not need is not harmless: distilling when pose is always available
-makes the pixel model *approximate* features it could simply be given.
+`scripts/spot.py` runs the stages you name, in order.
 
 **Pose in every session, now and later** (option 3). The features ride into
-the GRU; no teacher, no distillation:
+the GRU:
 
 ```bash
 python scripts/spot.py materialise baseline evaluate
@@ -94,26 +78,12 @@ python scripts/spot.py inference --run ctx2s_res10ms_features --sessions 2026030
 **Video only, no pose anywhere** (option 2). The same two lines with no
 `features:` listed; the run is named `ctx2s_res10ms`.
 
-**Pose for the labelled sessions, none where you will predict** (option 4).
-Train the teacher and the baseline, and read `compare.tsv` before spending a
-run on distillation — a student cannot learn from a model that knows less:
-
-```bash
-python scripts/spot.py materialise teacher baseline evaluate   # the gate
-python scripts/spot.py distil evaluate                         # once; the student is a run like any other
-python scripts/spot.py inference --run ctx2s_res10ms_distil_64d5ef46 --sessions 20260308_01
-```
-
-Distil once; every later session is plain `inference --run <student>`. The
-only reasons to distil again are a changed `features:`/`teacher:` section or
-new labelled data — the fingerprint in the run name tells those apart.
-
 **Every pose input is a variable in your session file**, spelled the way the
 segmentation pipeline spells feature columns — `velocity: {space: [x, y],
 keypoint: [stickTip]}`, `pellet_stickClosest_dist: {}`. Build it with
 `movement.kinematics` or `features/geometry.py` or your own code,
 plot it in the GUI, list it. The model gets exactly that; there is no graph, no adjacency, no learned
-geometry to reason about. Options 3 and 4 are described in {doc}`multimodal`.
+geometry to reason about. Option 3 is described in {doc}`multimodal`.
 
 ## Why this shares the segmentation pipeline's workflow
 
@@ -201,7 +171,7 @@ train:
   epoch_frames: 250000
   split: {train_fraction: 0.6, val_fraction: 0.2, test_fraction: 0.2}
 
-features:                          # optional — options 3 and 4, see multimodal
+features:                          # optional — option 3, see multimodal
   velocity: {space: [x, y], keypoint: [stickTip, pellet]}
   pellet_stickClosest_dist: {}
 ```
@@ -219,7 +189,7 @@ with {doc}`the segmentation pipeline <../segment/index>`): a session is a
 - **`source`** — the session file. Always.
 - **`labels_path`** — its curated labels TSV. Unset, it is `{stem}_labels.tsv`
   beside `source` (the GUI's own convention; the log says what was assumed).
-  Training, the teacher and `evaluate()` read it. A session you only
+  Training and `evaluate()` read it. A session you only
   **predict into** needs none — a `labels_path` naming a file that does not
   exist simply means the session has no labels, and it contributes nothing to
   a training set.
@@ -325,13 +295,8 @@ look systematically early by half a stride.
     `zero_features=True` scores a features run with them zeroed.
   - Seconds, once predictions exist.
 * - `compare()`
-  - Every scored run — teachers included — as one table, `runs/compare.tsv`.
+  - Every scored run as one table, `runs/compare.tsv`.
   - Seconds.
-* - `train_teacher()` / `distil()`
-  - Option 4: the pose-only teacher on `features/`, then the student — the
-    baseline's weights taught the teacher's per-frame embedding on every
-    clip with pose (no labels), then its head the labels with the CNN frozen.
-  - Teacher: minutes. Student: one more training run.
 * - `inference()`
   - A run's predictions for chosen sessions — every trial with video,
     labelled or not — as the GUI's labels TSV (`labeling_method=automated`)

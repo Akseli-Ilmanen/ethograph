@@ -1,13 +1,9 @@
-"""Distillation plumbing, the VRAM preflight and the order flag — the parts
-that fail silently when wrong: a student trained on the wrong teacher, a run
-that pages instead of failing, a reordered event nobody reviews.
+"""The VRAM preflight and the order flag — the parts that fail silently when
+wrong: a run that pages instead of failing, a reordered event nobody reviews.
 """
 
 from __future__ import annotations
 
-import json
-
-import numpy as np
 import pytest
 
 from ethograph.spot.confidence import CurveStats
@@ -76,40 +72,3 @@ class TestPreflight:
         monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
         monkeypatch.setattr(torch.cuda, "mem_get_info", lambda: (9.0e9, 10.0e9))
         check_vram(200)
-
-
-class TestDistilConfig:
-    def test_defaults_and_overrides(self, tmp_path):
-        cfg = _config(tmp_path, distil={"epochs": 3, "head_epochs": 1, "teacher_run": "ctx2s_res10ms_gcn"})
-        assert (cfg.distil.epochs, cfg.distil.head_epochs, cfg.distil.teacher_run) == (3, 1, "ctx2s_res10ms_gcn")
-        assert cfg.distil.init_run is None
-
-    def test_the_feature_list_is_fingerprinted_into_the_teacher_folder(self, tmp_path):
-        from ethograph.spot.config import features_fingerprint
-        from ethograph.spot.teacher import teacher_run_dir
-
-        features = {"speed": {"keypoint": ["stickTip"]}, "pellet_stickClosest_dist": {}}
-        cfg = _config(tmp_path, features=features)
-        same = _config(tmp_path, features=dict(features))
-        assert features_fingerprint(cfg) == features_fingerprint(same)
-        edited = _config(tmp_path, features={**features, "velocity": {"space": ["x", "y"]}})
-        assert features_fingerprint(edited) != features_fingerprint(cfg)
-        clip = cfg.clip.resolve(200.0)
-        assert teacher_run_dir(cfg, clip).name == f"ctx2s_res10ms_{features_fingerprint(cfg)}"
-        assert teacher_run_dir(edited, clip).parent == teacher_run_dir(cfg, clip).parent
-
-    def test_embeddings_live_beside_the_features(self, tmp_path):
-        cfg = _config(tmp_path)
-        assert cfg.embeddings_dir == cfg.features_dir / "embeddings"
-
-
-class TestTeacherEmbeddingsFile:
-    def test_round_trips_stride_and_dim(self, tmp_path):
-        """What the student's loader reads back must be what the teacher wrote."""
-        path = tmp_path / "v.npz"
-        np.savez(path, embedding=np.zeros((50, 256), np.float32), stride=np.int64(2), fps=np.float64(200.0))
-        with np.load(path) as npz:
-            assert int(npz["stride"]) == 2 and npz["embedding"].shape == (50, 256)
-        info = {"run": "teacher/x", "epoch": 1, "dim": 256, "n_clips": 1}
-        (tmp_path / "teacher.json").write_text(json.dumps(info))
-        assert json.loads((tmp_path / "teacher.json").read_text())["dim"] == 256

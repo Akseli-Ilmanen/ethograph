@@ -84,7 +84,6 @@ def main(model_dir, frame_dir, split, no_overlap, save, save_as, dataset,
         multi_gpu=config['gpu_parallel'],
         shift_dilations=config.get('shift_dilations'),
         attention_groups=config.get('attention_groups', 2),
-        distil_dim=config.get('distil_dim'),
         fuse_dim=config.get('fuse_dim'))
     model.load(torch.load(os.path.join(
         model_dir, 'checkpoint_{:03d}.pt'.format(best_epoch))))

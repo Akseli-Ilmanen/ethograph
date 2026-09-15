@@ -11,7 +11,7 @@
 # Reference: docs/source/models/spot/config.md. Every temporal setting is a
 # duration; frame counts are derived from each video's own rate.
 
-root: ..                                   # dataset/, features/, teacher/, runs/ land in the project folder
+root: ..                                   # dataset/, features/, runs/ land in the project folder
 
 sessions:
   - source: /path/to/session_01/Trial_data.nc

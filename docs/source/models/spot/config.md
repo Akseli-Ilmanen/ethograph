@@ -14,7 +14,7 @@ project = eto.spot.Project("project.yaml", "clip.context_s=4", "train.epochs=12"
 ```{important}
 An unknown key is an error, in the file and in an override alike — a typo
 must not silently become a default. So is a section this pipeline retired:
-`graph:`, `fuse:` and `teacher.features` are refused by name with the
+`graph:` and `fuse:` are refused by name with the
 replacement, and a `columns:` key under `features:` (the segmentation
 pipeline's section shape) with the difference.
 ```
@@ -30,7 +30,7 @@ video's own rate at run time, so a config moved between a 200 fps rig and a
 
 | Key | Default | Meaning |
 |---|---|---|
-| `root` | the config's folder | Project directory: `dataset/`, `features/`, `teacher/`, `runs/` and `cross_validation/` live here. |
+| `root` | the config's folder | Project directory: `dataset/`, `features/`, `runs/` and `cross_validation/` live here. |
 | `sessions` | required | List of sessions — see below. |
 | `frames` | `{root}/frames` | Where decoded frames go, or a folder another project decoded. One folder whatever the crop: each trial's `export.json` records the size and crop it was decoded at, and a trial whose record disagrees with the config is decoded again in place. |
 | `individual` | `null` | Stamped into every predicted row's `individual` column; `null` writes the empty recipient, as before. |
@@ -116,7 +116,6 @@ card uses the run's stride. A strided prediction is read back at the
 | `batch_size`, `acc_grad` | `4`, `4` | Clips per optimiser step and gradient-accumulation steps: `batch_size / acc_grad` clips per loader batch, i.e. `clip_len × batch_size / acc_grad` frames — the number `MAX_FRAMES_PER_BATCH` caps. |
 | `retries` | `2` | Resume-and-retry a training that crashed (a GPU hiccup), from its last checkpoint. |
 | `seed`, `device` | `0`, auto | `device` = `cuda`, `mps`, `cpu`; auto picks the best available. |
-| `features_as_input` | `true` | With `features:` listed: hand them to the pixel model beside the CNN features, before the GRU (option 3). `false` keeps the list for the pose teacher only (option 4). |
 | `features_dropout` | `0.3` | Share of training clips whose feature block is zeroed (modality dropout), so the pixels are trained to carry the event on their own too — which is what keeps `evaluate(zero_features=True)` meaningful. |
 
 ### `train.split`
@@ -152,49 +151,9 @@ features:
 Every entry is a variable in the session file you built and can plot; there
 is no graph, no adjacency, no learned geometry. Listed, the columns are
 written once per trial to `features/{video_id}.npz` at `materialise()` and
-serve two models: fed to the pixel model beside the frames
-(`train.features_as_input`, z-scored on the training split under
-`features/block/`), and read by the pose teacher (`train_teacher()`). Absent,
+fed to the pixel model beside the frames (z-scored on the training split
+under `features/block/`). Absent,
 the model is E2E-Spot on pixels alone. See {doc}`multimodal`.
-
-## `teacher`
-
-The pose-only teacher (`pose_model.PoseSpotter`): the listed features → a
-linear embedding → `depth` blocks of a parameter-free multi-scale temporal
-shift → a bi-GRU → a `K + 1` softmax. Trained by `train_teacher()`, minutes on
-a GPU; distilled into the pixel model by `distil()`.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `shift_scales_ms` | `[40, 80, 160]` | Temporal shift scales of the blocks, in ms, resolved against the features' own rate (UMEG-Net's `{1, 2, 4}` frames at 25 fps {cite:p}`umegnet2026`). |
-| `hidden` | `64` | Width of every block. |
-| `depth` | `4` | Stacked blocks. |
-| `shift_fraction` | `0.125` | Channels shifted forward and backward, as a fraction of `hidden`. |
-| `head_hidden` | `128` | Bi-GRU width. |
-| `epochs` | `30` | Training budget; the epoch is chosen by the same sweep as a pixel run's. |
-| `learning_rate`, `weight_decay` | `1e-3`, `1e-2` | AdamW. |
-| `batch_size` | `8` | Clips per step. |
-| `fg_weight` | `5` | Foreground class weight in the per-frame cross-entropy — E2E-Spot's own. |
-| `seed` | `0` | |
-
-The `features` and `teacher` sections are fingerprinted into the teacher's
-folder (`teacher/{clip}_{fingerprint}`) and the distilled student's, so an
-edited list lands beside the earlier result, never on top of it.
-
-## `distil`
-
-The two distillation steps, inside the vendored trainer: (2) the baseline's
-trunk + GRU learn to reproduce the teacher's per-frame embedding on every
-clip that has pose — no labels; (3) the CNN is frozen and the head learns the
-labels. Both are ordinary runs under `runs/{baseline}_distil_{fingerprint}/`.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `teacher_run` | the one whose embeddings are under `features/embeddings/` | The teacher run under `teacher/` to distil from. A mismatch is refused. |
-| `init_run` | the newest trained run (refused if it is a distilled student) | The baseline the student starts from; must agree about `features_as_input`. |
-| `epochs`, `epoch_frames`, `learning_rate` | `6`, `250000`, `1e-4` | The embedding-matching step. |
-| `head_epochs`, `head_learning_rate` | `4`, `1e-4` | The head step. |
-| `retries` | `2` | As `train.retries`. |
 
 ## `infer`
 
@@ -222,8 +181,6 @@ dataset/
 features/                             with features: listed
   {video_id}.npz, features.json       the listed columns per trial; their names in order
   block/                              the same, z-scored on the training split (stats.npz, block.json)
-  embeddings/                         the teacher's per-clip embeddings (teacher.json names the teacher)
-teacher/{clip}_{fingerprint}/         a teacher run: checkpoints, pred-val.*.recall.json.gz, loss.json, stats.npz
 runs/{run}/
   config.yaml, config.json            the resolved config; upstream's own record (stride, clip_len, …)
   checkpoint_{epoch}.pt, loss.json    weights per epoch; train/val loss and val_mAP per epoch
@@ -232,7 +189,6 @@ runs/{run}/
   test_metrics.yaml                   per class: misses, spurious, error in ms, hit rate per tolerance
   test_metrics_nofeatures.yaml        the same with the feature block zeroed (features runs)
   train.log, evaluate.log             everything logged
-runs/{baseline}_distil_{fingerprint}/stage2/, stage3/    the distilled student, two ordinary runs
 runs/compare.tsv                      written by project.compare(): every scored run side by side
 cross_validation/{session}/           one project per fold, its own dataset/ and runs/fold_{session}
 ```

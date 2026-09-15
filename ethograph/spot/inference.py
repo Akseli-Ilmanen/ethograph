@@ -53,42 +53,22 @@ MODEL_NAME = "spot"
 
 
 def run_label(run_dir: Path) -> str:
-    """How a run is named in what it writes: ``ctx2s_res10ms`` or ``ctx2s_res10ms_distil_ab12cd34``.
-
-    A distilled student lives in ``runs/{baseline}_distil_{fingerprint}/stage3/``;
-    its label is the run's, not the stage folder's.
-    """
-    return run_dir.parent.name if run_dir.name in ("stage2", "stage3") else run_dir.name
+    """How a run is named in what it writes: its folder, ``ctx2s_res10ms``."""
+    return run_dir.name
 
 
 def trained_runs(config: SpotConfig) -> list[Path]:
-    """Every run under ``runs/`` with upstream's ``config.json``: label-only runs and distilled ``stage3`` students."""
+    """Every run under ``runs/`` with upstream's ``config.json``."""
     if not config.runs_dir.is_dir():
         return []
     found = [p for p in config.runs_dir.glob("*") if (p / "config.json").is_file()]
-    found += [p for p in config.runs_dir.glob("*/stage3") if (p / "config.json").is_file()]
-    return sorted(found, key=lambda p: p.stat().st_mtime)
-
-
-def teacher_runs(config: SpotConfig) -> list[Path]:
-    """Every pose teacher under ``teacher/``, oldest first — scored by ``evaluate()`` like any run.
-
-    A folder left behind by an architecture this package no longer builds is
-    not a teacher: it is skipped rather than handed to the pixel model's
-    ``test_e2e.py``, which reads keys its ``config.json`` never carried.
-    """
-    from ethograph.spot.teacher import is_teacher_run
-
-    if not config.teacher_dir.is_dir():
-        return []
-    found = [p for p in config.teacher_dir.glob("*") if is_teacher_run(p)]
     return sorted(found, key=lambda p: p.stat().st_mtime)
 
 
 def resolve_run_dir(config: SpotConfig, run: str | Path | None) -> Path:
-    """A run by name under ``runs/``, by path, or the newest trained one (student or baseline) when *run* is None."""
+    """A run by name under ``runs/``, by path, or the newest trained one when *run* is None."""
     if run is None:
-        candidates = trained_runs(config)  # never a teacher: inference means pixels
+        candidates = trained_runs(config)
         if not candidates:
             raise FileNotFoundError(f"No trained run under {config.runs_dir} — run project.train() first")
         return max(candidates, key=lambda p: p.stat().st_mtime)
@@ -98,25 +78,17 @@ def resolve_run_dir(config: SpotConfig, run: str | Path | None) -> Path:
     named = config.run_dir(str(run))
     if (named / "config.json").is_file():
         return named
-    teacher = config.teacher_dir / str(run)
-    if (teacher / "config.json").is_file():  # a teacher by name, for evaluate()
-        return teacher
-    if (named / "stage3" / "config.json").is_file():  # a distilled student, named by its run folder
-        return named / "stage3"
-    raise FileNotFoundError(f"No run {run!r}: neither {path} nor {named} (or its stage3/) holds a config.json")
+    raise FileNotFoundError(f"No run {run!r}: neither {path} nor {named} holds a config.json")
 
 
 def run_config_file(run_dir: Path) -> Path:
     """The config a run was trained from, to copy beside its predictions.
 
-    Our ``config.yaml`` — a distilled student's sits one level up, beside its
-    ``stage2``/``stage3`` — else upstream's ``config.json``, which every run
+    Our ``config.yaml``, else upstream's ``config.json``, which every run
     has, for one trained before this project wrote configs.
     """
-    for candidate in (run_dir / "config.yaml", run_dir.parent / "config.yaml"):
-        if candidate.is_file():
-            return candidate
-    return run_dir / "config.json"
+    ours = run_dir / "config.yaml"
+    return ours if ours.is_file() else run_dir / "config.json"
 
 
 def run_reads_features(run_dir: Path) -> bool:

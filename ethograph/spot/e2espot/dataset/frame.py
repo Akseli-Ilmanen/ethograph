@@ -298,15 +298,11 @@ class ActionSpotDataset(Dataset):
             pad_len=DEFAULT_PAD_LEN,    # Number of frames to pad the start
                                         # and end of videos
             fg_upsample=-1,             # Sample foreground explicitly
-            teacher_dir=None,           # ethograph: per-video teacher
-                                        # embeddings ({video}.npz) to distil from
             fuse_dir=None,              # ethograph: per-video pose block
                                         # ({video}.npz) fed to the GRU as input
             zero_fuse=False,            # ethograph: hand the model zeros for it
     ):
         self._src_file = label_file
-        self._teacher_dir = teacher_dir
-        self._teacher_cache = {}
         self._fuse_dir = fuse_dir
         self._fuse_cache = {}
         self._zero_fuse = zero_fuse
@@ -424,27 +420,12 @@ class ActionSpotDataset(Dataset):
 
         ret = {'frame': frames, 'contains_event': int(np.sum(labels) > 0),
                'label': labels}
-        if self._teacher_dir is not None:
-            ret['embedding'], ret['embedding_mask'] = self._teacher_clip(
-                video_meta['video'], base_idx)
         if self._fuse_dir is not None:
             ret['fuse'] = load_side_clip(
                 self._fuse_dir, 'features', self._fuse_cache,
                 video_meta['video'], base_idx, self._clip_len, self._stride,
                 zero=self._zero_fuse)[0]
         return ret
-
-    def _teacher_embedding(self, video):
-        # ethograph: the teacher's (T', d) embedding of this video on the
-        # strided clock, loaded once per video
-        return load_side_array(
-            self._teacher_dir, 'embedding', self._teacher_cache, video,
-            self._stride, 'teacher embeddings')
-
-    def _teacher_clip(self, video, base_idx):
-        return load_side_clip(
-            self._teacher_dir, 'embedding', self._teacher_cache, video,
-            base_idx, self._clip_len, self._stride, what='teacher embeddings')
 
     def __getitem__(self, unused):
         ret = self._get_one()
@@ -479,8 +460,8 @@ class ActionSpotDataset(Dataset):
 
 
 def load_side_array(side_dir, key, cache, video, stride, what='side arrays'):
-    # ethograph: a per-video (T', d) array on the strided clock -- a teacher's
-    # embedding or the pose block -- loaded once per video
+    # ethograph: a per-video (T', d) array on the strided clock -- the pose
+    # block -- loaded once per video
     if video not in cache:
         with np.load(os.path.join(side_dir, video + '.npz')) as npz:
             if int(npz['stride']) != stride:

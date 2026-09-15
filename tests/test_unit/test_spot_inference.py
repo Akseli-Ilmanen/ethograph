@@ -46,16 +46,13 @@ def _pred(run_dir, epoch, frame, score=0.9):
 
 
 class TestRunConfigFile:
-    """The config copied beside a run's predictions: ours when the run has one, a student's from its run folder."""
+    """The config copied beside a run's predictions: ours when the run has one, else upstream's."""
 
-    def test_own_then_parents_then_upstreams(self, tmp_path):
+    def test_own_then_upstreams(self, tmp_path):
         run_dir = _run(tmp_path)
         assert run_config_file(run_dir) == run_dir / "config.json"  # a run trained before configs were written
         (run_dir / "config.yaml").write_text("x: 1\n")
         assert run_config_file(run_dir) == run_dir / "config.yaml"
-        student = run_dir / "stage3"
-        student.mkdir()
-        assert run_config_file(student) == run_dir / "config.yaml"
 
 
 class TestToLabelsFrame:
@@ -173,11 +170,3 @@ class TestCurveLength:
         assert {k: v.shape for k, v in curves.items()} == {31: (500,), 32: (500,)}
         _, bare = spot_entry(entry, config, clip)
         assert bare[31].shape == (51,)  # without a length there is nothing better than the last candidate
-
-
-class TestRunLabel:
-    def test_a_stage_folder_is_named_after_its_run(self, tmp_path):
-        from ethograph.spot.inference import run_label
-
-        assert run_label(tmp_path / "runs" / "ctx2s_distil" / "stage3") == "ctx2s_distil"
-        assert run_label(tmp_path / "runs" / "ctx2s") == "ctx2s"

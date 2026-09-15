@@ -115,13 +115,6 @@ def get_args():
     parser.add_argument('--start_val_epoch', type=int)
     parser.add_argument('--criterion', choices=['map', 'loss'], default='map')
 
-    parser.add_argument('--stage', type=int, default=1, choices=[1, 2, 3],
-                        help='ethograph: 1 = labels (upstream), 2 = distil a '
-                             'teacher embedding (no labels), 3 = labels with '
-                             'the CNN frozen')
-    parser.add_argument('--teacher_dir', type=str, default=None,
-                        help='stage 2: folder of per-video teacher '
-                             'embeddings ({video}.npz)')
     parser.add_argument('--fuse_dir', type=str, default=None,
                         help='ethograph: folder of per-video pose blocks '
                              '({video}.npz, features (T\', D)) concatenated to '
@@ -132,11 +125,6 @@ def get_args():
                         help='ethograph: share of training clips whose pose '
                              'block is zeroed, so the pixels carry the event '
                              'on their own too')
-    parser.add_argument('--distil_dim', type=int, default=None,
-                        help='stage 2/3: width of the teacher embedding the '
-                             'student projects onto')
-    parser.add_argument('--init_from', type=str, default=None,
-                        help='checkpoint to start the weights from')
     parser.add_argument('--shift_dilations', type=str, default='1,2,3',
                         help='MSAGSM only: comma-separated reach of each '
                              'gated-shift branch, in (strided) frames')
@@ -163,9 +151,8 @@ class E2EModel(BaseRGBModel):
 
         def __init__(self, num_classes, feature_arch, temporal_arch, clip_len,
                      modality, shift_dilations=None, attention_groups=2,
-                     distil_dim=None, fuse_dim=None):
+                     fuse_dim=None):
             super().__init__()
-            self._distil_dim = distil_dim
             self._fuse_dim = fuse_dim or 0
             is_rgb = modality == 'rgb'
             in_channels = {'flow': 2, 'bw': 1, 'rgb': 3}[modality]
@@ -258,16 +245,7 @@ class E2EModel(BaseRGBModel):
             else:
                 raise NotImplementedError(temporal_arch)
 
-            # ethograph: the student's per-frame embedding (the GRU output)
-            # projected onto the teacher's width, for distillation
-            if distil_dim is not None:
-                if 'gru' not in temporal_arch:
-                    raise NotImplementedError(
-                        'distillation needs a GRU head, got ' + temporal_arch)
-                self._distil_proj = nn.Linear(
-                    2 * self._pred_fine._gru.hidden_size, distil_dim)
-
-        def forward(self, x, fuse=None, return_embedding=False):
+        def forward(self, x, fuse=None):
             batch_size, true_clip_len, channels, height, width = x.shape
 
             clip_len = true_clip_len
@@ -299,12 +277,6 @@ class E2EModel(BaseRGBModel):
                     [im_feat, fuse[:, :true_clip_len, :].to(im_feat.dtype)],
                     dim=-1)
 
-            if return_embedding:
-                # ethograph: GRU output before the classifier, plus its
-                # projection onto the teacher's width
-                y, _ = self._pred_fine._gru(im_feat)
-                pred = self._pred_fine._fc_out(self._pred_fine._dropout(y))
-                return pred, self._distil_proj(y)
             return self._pred_fine(im_feat)
 
         def print_stats(self):
@@ -318,24 +290,16 @@ class E2EModel(BaseRGBModel):
     def __init__(self, num_classes, feature_arch, temporal_arch, clip_len,
                  modality, device='cuda', multi_gpu=False,
                  shift_dilations=None, attention_groups=2,
-                 distil_dim=None, stage=1, fuse_dim=None, fuse_dropout=0.0):
+                 fuse_dim=None, fuse_dropout=0.0):
         self.device = device
         self._multi_gpu = multi_gpu
-        self._stage = stage
         self._fuse_dropout = fuse_dropout
         self._model = E2EModel.Impl(
             num_classes, feature_arch, temporal_arch, clip_len, modality,
             shift_dilations=shift_dilations,
             attention_groups=attention_groups,
-            distil_dim=distil_dim, fuse_dim=fuse_dim)
+            fuse_dim=fuse_dim)
         self._model.print_stats()
-        if stage == 3:
-            # ethograph: the head step trains the GRU + classifier only
-            for param in self._model._features.parameters():
-                param.requires_grad = False
-            print('=> Stage 3: CNN frozen, {} trainable params'.format(
-                sum(p.numel() for p in self._model.parameters()
-                    if p.requires_grad)))
 
         if multi_gpu:
             self._model = nn.DataParallel(self._model)
@@ -378,29 +342,16 @@ class E2EModel(BaseRGBModel):
                     else label.view(-1, label.shape[-1])
 
                 with torch.cuda.amp.autocast():
-                    if self._stage == 2:
-                        # ethograph: match the teacher's embedding, frame by
-                        # frame, on the frames the teacher has (not padding)
-                        _, emb = self._model(
-                            frame, fuse=fuse, return_embedding=True)
-                        target = batch['embedding'].to(self.device)
-                        mask = batch['embedding_mask'].to(self.device)
-                        if mask.any():
-                            loss = F.mse_loss(emb[mask].float(),
-                                              target[mask].float())
-                        else:
-                            loss = emb.sum() * 0.
-                    else:
-                        pred = self._model(frame, fuse=fuse)
+                    pred = self._model(frame, fuse=fuse)
 
-                        loss = 0.
-                        if len(pred.shape) == 3:
-                            pred = pred.unsqueeze(0)
+                    loss = 0.
+                    if len(pred.shape) == 3:
+                        pred = pred.unsqueeze(0)
 
-                        for i in range(pred.shape[0]):
-                            loss += F.cross_entropy(
-                                pred[i].reshape(-1, self._num_classes), label,
-                                **ce_kwargs)
+                    for i in range(pred.shape[0]):
+                        loss += F.cross_entropy(
+                            pred[i].reshape(-1, self._num_classes), label,
+                            **ce_kwargs)
 
                 if optimizer is not None:
                     step(optimizer, scaler, loss / acc_grad_iter,
@@ -553,18 +504,10 @@ def get_datasets(args):
     dataset_kwargs = {
         'crop_dim': args.crop_dim, 'dilate_len': args.dilate_len,
         'mixup': args.mixup, 'stride': args.stride,
-        'teacher_dir': args.teacher_dir if args.stage == 2 else None,
         'fuse_dir': args.fuse_dir
     }
     if (args.fuse_dir is None) != (args.fuse_dim is None):
         raise ValueError('--fuse_dir and --fuse_dim go together')
-    if args.stage == 2 and args.teacher_dir is None:
-        raise ValueError('--stage 2 needs --teacher_dir')
-    if args.stage == 2:
-        # matching embeddings, not labels: mixup would blend two clips'
-        # frames against one clip's targets (and `--mixup False` parses as
-        # True through argparse's bool, so it is forced off here)
-        dataset_kwargs['mixup'] = False
 
     if args.fg_upsample is not None:
         assert args.fg_upsample > 0
@@ -652,10 +595,6 @@ def store_config(file_path, args, num_epochs, classes):
         'fg_upsample': args.fg_upsample,
         'shift_dilations': parse_shift_dilations(args.shift_dilations),
         'attention_groups': args.attention_groups,
-        'stage': args.stage,
-        'distil_dim': args.distil_dim,
-        'teacher_dir': args.teacher_dir,
-        'init_from': args.init_from,
         'fuse_dir': args.fuse_dir,
         'fuse_dim': args.fuse_dim,
         'fuse_dropout': args.fuse_dropout
@@ -727,13 +666,7 @@ def main(args):
         multi_gpu=args.gpu_parallel,
         shift_dilations=parse_shift_dilations(args.shift_dilations),
         attention_groups=args.attention_groups,
-        distil_dim=args.distil_dim, stage=args.stage,
         fuse_dim=args.fuse_dim, fuse_dropout=args.fuse_dropout)
-    if args.init_from is not None and not args.resume:
-        # ethograph: warm start (a baseline has no projection layer yet, a
-        # stage-2 checkpoint has one -- both load)
-        print('=> Initialising weights from', args.init_from)
-        model.load(torch.load(args.init_from), strict=False)
     optimizer, scaler = model.get_optimizer({'lr': args.learning_rate})
 
     # Warmup schedule

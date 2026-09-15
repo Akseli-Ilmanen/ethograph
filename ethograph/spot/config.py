@@ -18,8 +18,6 @@ Docs: ``docs/source/models/spot/index.md``.
 from __future__ import annotations
 
 import copy
-import hashlib
-import json
 import logging
 import math
 from dataclasses import asdict, dataclass, field, is_dataclass, replace
@@ -232,78 +230,6 @@ class ClipConfig:
 
 
 @dataclass
-class TeacherConfig:
-    """The pose-only teacher (:mod:`~ethograph.spot.pose_model`): the listed ``features:``, shifts, a bi-GRU.
-
-    Every temporal setting is a duration, like :class:`ClipConfig`. The
-    shift scales are UMEG-Net's ``{1, 2, 4}`` frames at 25 fps — 40/80/160 ms
-    — and would mean 5/10/20 ms at 200 fps, the same trap the clip length
-    fell into.
-    """
-
-    #: Temporal shift scales of the shift blocks, in milliseconds. Resolved
-    #: against the features' own rate; a scale below one sample rounds up.
-    shift_scales_ms: list[float] = field(default_factory=lambda: [40.0, 80.0, 160.0])
-    #: Hidden width of every shift block.
-    hidden: int = 64
-    #: Number of stacked shift blocks.
-    depth: int = 4
-    #: Channels shifted forward and backward, as a fraction of ``hidden``.
-    shift_fraction: float = 0.125
-    #: Bi-GRU head width.
-    head_hidden: int = 128
-    epochs: int = 30
-    learning_rate: float = 1e-3
-    weight_decay: float = 1e-2
-    batch_size: int = 8
-    #: Foreground class weight in the per-frame cross-entropy. E2E-Spot's own.
-    fg_weight: float = 5.0
-    seed: int = 0
-
-    def validate(self) -> None:
-        if self.depth < 1:
-            raise ValueError(f"teacher.depth must be >= 1, got {self.depth}")
-
-    def shift_samples(self, fs: float) -> list[int]:
-        """The scales as whole samples of a curve at *fs*, deduplicated, ascending."""
-        if fs <= 0:
-            raise ValueError(f"Frame rate must be positive, got {fs!r}")
-        scales = sorted({max(1, int(round(ms / 1000.0 * fs))) for ms in self.shift_scales_ms})
-        if not scales:
-            raise ValueError("teacher.shift_scales_ms is empty — give at least one scale")
-        return scales
-
-
-@dataclass
-class DistilConfig:
-    """Teaching the student the teacher's representation, then its head the labels.
-
-    One act with two steps, as UMEG-Net does it: (2) the student's trunk and
-    GRU learn to reproduce the frozen teacher's per-frame embedding on every
-    clip that has pose and video — no labels; (3) the CNN is frozen and the
-    GRU + head learn the labels. Both steps are the vendored trainer with a
-    stage flag, so they produce ordinary runs.
-    """
-
-    #: The teacher run under ``teacher/`` to distil from; ``None`` = the one
-    #: whose embeddings are under ``features/embeddings``. (Not ``teacher``:
-    #: the config builder resolves nesting by field name, and that one names
-    #: the teacher's own section.)
-    teacher_run: str | None = None
-    #: The run under ``runs/`` the student starts from; ``None`` = newest.
-    #: Warm-starting from the label-only baseline is what makes "student
-    #: beats baseline" a statement about the representation, not the epochs.
-    init_run: str | None = None
-    epochs: int = 6
-    epoch_frames: int = 250_000
-    learning_rate: float = 1e-4
-    #: The head step.
-    head_epochs: int = 4
-    head_learning_rate: float = 1e-4
-    retries: int = 2
-
-
-@dataclass
 class ModelConfig:
     """The backbone and its temporal module."""
 
@@ -339,11 +265,6 @@ class TrainConfig:
     """One training run. Deliberately small — upstream owns the loop."""
 
     run_name: str | None = None
-    #: With ``features:`` listed: hand them to the pixel model beside the CNN
-    #: features, before the GRU (the run is named ``{clip}_features``).
-    #: ``false`` keeps the list for the teacher only — the distillation
-    #: recipe, where inference is video alone.
-    features_as_input: bool = True
     #: Share of training clips whose feature block is zeroed (modality
     #: dropout), so the pixels are trained to carry the event on their own
     #: too — which is what keeps ``evaluate(zero_features=True)`` meaningful.
@@ -435,25 +356,21 @@ class SpotConfig:
     model: ModelConfig = field(default_factory=ModelConfig)
     train: TrainConfig = field(default_factory=TrainConfig)
     infer: InferConfig = field(default_factory=InferConfig)
-    #: The keypoint side, for a graph teacher; ``None`` = pixels only.
     #: The pose side, **optional**: session variables in ``segment``'s
     #: ``features.columns`` spelling (``velocity: {space: [x, y], keypoint:
     #: [stickTip]}``, ``pellet_stickClosest_dist: {}``), on the pose's rate —
     #: position, velocity, the distances you wrote down and can plot. Listed,
-    #: they ride beside the CNN features into the pixel model's GRU
-    #: (``train.features_as_input``) and are what the pose teacher reads.
-    #: Absent, the model is E2E-Spot on pixels alone.
+    #: they ride beside the CNN features into the pixel model's GRU (the run
+    #: is named ``{clip}_features``). Absent, the model is E2E-Spot on pixels alone.
     features: dict[str, dict[str, Any]] = field(default_factory=dict)
-    teacher: TeacherConfig = field(default_factory=TeacherConfig)
-    distil: DistilConfig = field(default_factory=DistilConfig)
     #: Where this config was loaded from (not part of the YAML).
     config_path: Path | None = None
 
     def resolve_clip(self, fps: float) -> ResolvedClip:
         """The clip at *fps* under the frame budget of the card present (:func:`~ethograph.spot.vendored.frame_budget`).
 
-        The one resolver every stage uses, so the student, the teacher, the
-        feature block and the export agree about the stride. A trained run
+        The one resolver every stage uses, so the run, the feature block and
+        the export agree about the stride. A trained run
         records its own in ``config.json`` and is read back from there
         (:func:`~ethograph.spot.inference.run_clip`), so a session predicted on
         another card still uses the run's stride.
@@ -485,18 +402,9 @@ class SpotConfig:
         return self.features_dir / "block"
 
     @property
-    def embeddings_dir(self) -> Path:
-        """The teacher's per-clip embeddings, what the student distils from."""
-        return self.features_dir / "embeddings"
-
-    @property
     def fusing(self) -> bool:
-        """Whether the pixel model reads the features beside the frames: listed, and ``train.features_as_input``."""
-        return bool(self.features) and self.train.features_as_input
-
-    @property
-    def teacher_dir(self) -> Path:
-        return self.root / "teacher"
+        """Whether the pixel model reads the features beside the frames: any are listed."""
+        return bool(self.features)
 
     @property
     def dataset_dir(self) -> Path:
@@ -561,8 +469,6 @@ _NESTED: dict[str, type] = {
     "train": TrainConfig,
     "split": SplitConfig,
     "infer": InferConfig,
-    "teacher": TeacherConfig,
-    "distil": DistilConfig,
     "crop": CropConfig,
 }
 
@@ -577,7 +483,7 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
     if "fuse" in data:
         raise ValueError(
             "fuse: is gone — listed features: ride into the pixel model's GRU by default; "
-            "train.features_as_input and train.features_dropout are the two settings that remain."
+            "train.features_dropout is the setting that remains."
         )
     if isinstance(data.get("features"), dict) and "columns" in data["features"]:
         raise ValueError(
@@ -585,8 +491,6 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
             "spelling, e.g. `velocity: {space: [x, y]}`), not a section with a columns: key — this pipeline "
             "reads pixels plus what you list here, it does not materialise feature columns"
         )
-    if isinstance(data.get("teacher"), dict) and ("features" in data["teacher"] or "extra_features" in data["teacher"]):
-        raise ValueError("the pose features are spelled at the top level — `features:` — one list for every model")
     data.setdefault("root", ".")
     cfg = build_dataclass(SpotConfig, data, "config", base_dir, _NESTED)
     cfg.config_path = config_path
@@ -601,7 +505,6 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
         if spec.labels_path is None:
             spec.labels_path = labels_tsv_path(spec.source)
             logger.info("%s: labels_path not set, assuming %s", spec.source, spec.labels_path)
-    cfg.teacher.validate()
     cfg.infer.validate()
     for name, dims in cfg.features.items():
         if not isinstance(dims, dict):
@@ -640,19 +543,6 @@ def _to_plain(obj: Any) -> Any:
 def config_to_dict(cfg: SpotConfig) -> dict:
     """The fully resolved config as plain YAML-able data (absolute paths)."""
     return _to_plain(cfg)
-
-
-def features_fingerprint(cfg: SpotConfig) -> str:
-    """Eight hex digits naming the ``features`` + ``teacher`` sections, so a changed list is a new teacher.
-
-    The teacher's run folder and the distilled student's carry it, so
-    re-running after editing the list lands beside the earlier result
-    instead of on top of it, and a stage-2 folder can only be skipped for
-    the teacher it was matched against.
-    """
-    data = config_to_dict(cfg)
-    key = json.dumps({"features": data.get("features"), "teacher": data.get("teacher")}, sort_keys=True, default=str)
-    return hashlib.sha1(key.encode("utf-8")).hexdigest()[:8]
 
 
 def save_config(cfg: SpotConfig, path: Path) -> Path:

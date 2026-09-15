@@ -3,23 +3,17 @@
 Which stages you need is decided by what is available when the model runs
 (docs/source/models/spot/index.md, "Which stages to run"):
 
-    # pose in every session, now and later: features ride into the GRU, no teacher, no distil
+    # pose in every session, now and later: features ride into the GRU
     python scripts/spot.py materialise baseline evaluate
     python scripts/spot.py inference --run ctx2s_res10ms_features --sessions 20260308_01
 
     # video only, no pose anywhere
     python scripts/spot.py materialise baseline evaluate           # with no features: listed
 
-    # pose for the labelled sessions only, none where you will predict:
-    # a pose teacher, distilled into the pixel model once, then video-only inference
-    python scripts/spot.py materialise teacher baseline evaluate    # the gate: does the teacher beat the baseline?
-    python scripts/spot.py distil evaluate
-    python scripts/spot.py inference --run ctx2s_res10ms_distil_64d5ef46 --sessions 20260308_01
-
     python scripts/spot.py crossval                                # one fold per session
 
-Stages: materialise | teacher | baseline | distil | evaluate | inference | crossval.
-`evaluate` scores every run (teachers included) and writes runs/compare.tsv;
+Stages: materialise | baseline | evaluate | inference | crossval.
+`evaluate` scores every run and writes runs/compare.tsv;
 `--run` names the run `inference` predicts with (default: the newest under runs/).
 """
 
@@ -33,7 +27,7 @@ import ethograph as eto
 from ethograph.utils.logging import enable_console_logging
 
 CONFIG = "data/spot/project.yaml"
-STAGES = ("materialise", "teacher", "baseline", "evaluate", "distil", "crossval", "inference")
+STAGES = ("materialise", "baseline", "evaluate", "crossval", "inference")
 
 
 def finished_run(run_dir, epochs: int) -> bool:
@@ -73,9 +67,6 @@ def main(argv: list[str]) -> None:
             log.info("materialise: dataset/ exists, features/ refreshed only — pass --force to redo")
         project.materialise(workers=args.workers)
 
-    if "teacher" in stages:
-        project.train_teacher()
-
     if "baseline" in stages:
         name = project.run_name()
         if finished_run(cfg.run_dir(name), cfg.train.epochs) and not args.force:
@@ -83,14 +74,11 @@ def main(argv: list[str]) -> None:
         else:
             project.train()
 
-    if "distil" in stages:
-        project.distil()
-
     if "evaluate" in stages:
-        # Every run — teachers, baselines, distilled students — so compare.tsv is complete.
-        from ethograph.spot.inference import resolve_run_dir, run_reads_features, teacher_runs, trained_runs
+        # Every run, so compare.tsv is complete.
+        from ethograph.spot.inference import resolve_run_dir, run_reads_features, trained_runs
 
-        for run_dir in teacher_runs(cfg) + trained_runs(cfg):
+        for run_dir in trained_runs(cfg):
             project.evaluate(run=run_dir)
             if run_reads_features(resolve_run_dir(cfg, run_dir)):
                 # what the features contribute: the same model, features zeroed

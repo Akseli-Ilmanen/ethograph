@@ -40,28 +40,23 @@ is one); the linter and mypy skip this directory (`pyproject.toml`).
 - **`dataset/frame.py`**: transforms are plain `nn.Sequential` rather than
   `torch.jit.script` (fails on Windows); `ActionSpotDataset` and
   `ActionSpotVideoDataset` take `fuse_dir` / `zero_fuse` (a per-video pose
-  block, `{video}.npz`, fed beside the CNN features) and `ActionSpotDataset`
-  takes `teacher_dir` (per-video teacher embeddings for distillation), read by
-  the new `load_side_array` / `load_side_clip`; mixup blends the pose block
+  block, `{video}.npz`, fed beside the CNN features), read by the new
+  `load_side_array` / `load_side_clip`; mixup blends the pose block
   like the frames; `get_labels` floors `num_frames / stride` (rounding up left
   the truth one strided frame longer than the prediction and crashed every
   stride > 1 run); `np.int` → `int`; a `clip_len` property.
-- **`model/common.py`**: `_get_params` skips frozen parameters; `load` takes
-  `strict`.
 - **`model/shift.py`**: `GatedShift` / `make_temporal_shift` take a
   `shift_module` in place of `_GSM` (for `../msagsm.py`); timm's
   `ConvBnAct` → `timm.layers.ConvNormAct` (timm ≥ 1.0).
 - **`train_e2e.py`**: the dataset argument is a name under `data/` or any
   directory; `--stride`, `--epoch_num_frames`; the `*_msagsm` architectures
-  with `--shift_dilations` / `--attention_groups`; `--stage 1|2|3`
-  (labels / distil a teacher embedding / labels with the CNN frozen) with
-  `--teacher_dir`, `--distil_dim`, `--init_from`; `--fuse_dir`, `--fuse_dim`,
+  with `--shift_dilations` / `--attention_groups`; `--fuse_dir`, `--fuse_dim`,
   `--fuse_dropout` (the pose block concatenated before the temporal head, with
   modality dropout); the inference batch sized by frames
   (`INFERENCE_BATCH_FRAMES`); the config is printed rather than written to
   `/dev/stdout`; a picklable `worker_init_fn` (Windows spawns workers).
 - **`test_e2e.py`**: builds the model with the stored `shift_dilations`,
-  `attention_groups`, `distil_dim`, `fuse_dim`, reads `stride` and `fuse_dir`
+  `attention_groups`, `fuse_dim`, reads `stride` and `fuse_dir`
   from the run config; `--zero_fuse`.
 - **`util/dataset.py`**: `crow_pellet` added to `DATASETS`.
 

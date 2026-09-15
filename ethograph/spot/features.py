@@ -23,13 +23,11 @@ One file per trial, ``features/{video_id}.npz``::
     labels    (E,)      class id per event
     fps       ()        the features' sampling rate
 
-plus ``features/features.json`` — the column names, in order — so the teacher
-and the student's loader cannot disagree about which column is which.
+plus ``features/features.json`` — the column names, in order — so the block
+and the model reading it cannot disagree about which column is which.
 
-The same columns serve two models. The **teacher** (:mod:`~ethograph.spot.teacher`)
-reads them raw and z-scores them itself. The **pixel model** reads them as a
-second input beside the CNN features (``train.features_as_input``); for that
-they are written once more, z-scored on the training split, under
+The **pixel model** reads them as a second input beside the CNN features; for
+that they are written once more, z-scored on the training split, under
 ``features/block/`` (:func:`export_block`), with the statistics saved so a
 session predicted later is put on the training scale rather than its own.
 """

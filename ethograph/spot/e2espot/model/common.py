@@ -38,19 +38,18 @@ class BaseRGBModel(ABCModel):
     """ Assume there is a self._model """
 
     def _get_params(self):
-        # ethograph: a frozen CNN (stage 3) stays out of the optimizer
-        return [p for p in self._model.parameters() if p.requires_grad]
+        return list(self._model.parameters())
 
     def state_dict(self):
         if isinstance(self._model, nn.DataParallel):
             return self._model.module.state_dict()
         return self._model.state_dict()
 
-    def load(self, state_dict, strict=True):
+    def load(self, state_dict):
         if isinstance(self._model, nn.DataParallel):
-            self._model.module.load_state_dict(state_dict, strict=strict)
+            self._model.module.load_state_dict(state_dict)
         else:
-            self._model.load_state_dict(state_dict, strict=strict)
+            self._model.load_state_dict(state_dict)
 
 
 def step(optimizer, scaler, loss, lr_scheduler=None, backward_only=False):

@@ -153,17 +153,6 @@ def split_predictions(config: SpotConfig, run_dir: Path, epoch: int, split: str,
     path = run_dir / f"{stem}.recall.json.gz"
     if path.is_file():
         return path
-    from ethograph.spot.teacher import is_teacher_run
-
-    if is_teacher_run(run_dir):
-        from ethograph.spot.teacher import predict_split as predict_teacher_split
-
-        if zero_features:
-            raise ValueError(
-                f"{run_dir.name} is the pose teacher — there is nothing to zero, the features are all it reads"
-            )
-        logger.info("%s: no %s predictions for epoch %d — predicting with the teacher", run_dir.name, stem, epoch)
-        return predict_teacher_split(config, run_dir, epoch, split)
     logger.info("%s: no %s predictions for epoch %d — running test_e2e.py", run_dir.name, stem, epoch)
     with tempfile.TemporaryDirectory(prefix="spot_eval_") as tmp:
         staged = stage_checkpoint(run_dir, epoch, Path(tmp) / "model")
@@ -185,15 +174,15 @@ def compare_runs(config: SpotConfig) -> pd.DataFrame:
     scored here: :func:`evaluate_run` is the one place that produces a test
     prediction.
     """
-    from ethograph.spot.inference import teacher_runs, trained_runs
+    from ethograph.spot.inference import trained_runs
 
     rows = []
-    for run_dir in teacher_runs(config) + trained_runs(config):
+    for run_dir in trained_runs(config):
         path = run_dir / TEST_METRICS_FILE
         if not path.is_file():
             continue
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        row: dict[str, object] = {"run": data["run"], "input": data.get("input", "pixels"), "epoch": data["epoch"]}
+        row: dict[str, object] = {"run": data["run"], "epoch": data["epoch"]}
         for name, cls in data["classes"].items():
             row[f"{name}.miss"] = cls["n_missing"]
             row[f"{name}.spur"] = cls["n_spurious"]
@@ -221,7 +210,6 @@ def evaluate_run(
     ``test_metrics_nofeatures.yaml``.
     """
     from ethograph.spot.inference import best_epoch, run_clip, run_label, run_reads_features
-    from ethograph.spot.teacher import is_teacher_run
 
     if zero_features and not run_reads_features(run_dir):
         raise ValueError(f"{run_dir.name} reads no features — there is nothing to zero")
@@ -244,7 +232,6 @@ def evaluate_run(
         "epoch": epoch,
         "split": split,
         "features": (None if not run_reads_features(run_dir) else "zeroed" if zero_features else "on"),
-        "input": "pose" if is_teacher_run(run_dir) else "pixels",
         "n_trials": len(truth),
         "n_events": sum(len(t["events"]) for t in truth),
         "fps": fps,

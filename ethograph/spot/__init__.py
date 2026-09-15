@@ -31,7 +31,6 @@ from ethograph.spot.config import (
     ModelConfig,
     ResolvedClip,
     SpotConfig,
-    TeacherConfig,
     TrainConfig,
     config_from_dict,
     load_config,
@@ -40,7 +39,6 @@ from ethograph.spot.config import (
 from ethograph.spot.dataset import TrialRecord, materialise
 from ethograph.spot.features import export_block, export_features
 from ethograph.spot.pose_batch import fill_and_export_video, merge_keypoints
-from ethograph.spot.pose_model import PoseSpotter
 from ethograph.spot.predict import SpottedEvent, read_predictions, spot_entry
 from ethograph.spot.project import Project, RunResult, architectures
 from ethograph.spot.vendored import describe_architecture
@@ -57,13 +55,11 @@ __all__ = [
     "InferConfig",
     "LabelsConfig",
     "ModelConfig",
-    "PoseSpotter",
     "ResolvedClip",
     "RunResult",
     "SpotConfig",
     "Project",
     "SpottedEvent",
-    "TeacherConfig",
     "TrainConfig",
     "TrialRecord",
     "architectures",

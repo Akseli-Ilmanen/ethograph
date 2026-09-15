@@ -12,7 +12,6 @@ pipelines differ in what they read, not in how a run is expressed.
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -26,7 +25,6 @@ from ethograph.spot.config import (
     ResolvedClip,
     SpotConfig,
     config_to_dict,
-    features_fingerprint,
     load_config,
     save_config,
 )
@@ -170,26 +168,6 @@ class Project:
         """The frame counts this config's durations imply for the exported rate."""
         return self._config.resolve_clip(_dataset_fps(self._config))
 
-    def train_teacher(self) -> Path:
-        """Stage 1 of the distillation recipe: the pose-only teacher, on the listed ``features:``.
-
-        Resolves the clip against the **features'** rate, which need not be
-        the video's, so ``clip.context_s`` means the same seconds on both
-        sides. Returns the teacher run directory; every epoch's val predictions
-        are in E2E-Spot's schema, so ``evaluate()`` reads them as-is.
-        """
-        from ethograph.spot.features import load_split, read_trial_features
-        from ethograph.spot.teacher import train_teacher
-
-        cfg = self._config
-        if not cfg.features:
-            raise ValueError("features: is empty — the teacher needs the pose (see docs/.../spot/multimodal.md)")
-        first = load_split(cfg, "train")[0]
-        fps = float(read_trial_features(cfg.features_dir / f"{first}.npz")["fps"])
-        clip = cfg.resolve_clip(fps)
-        check_vram(max(1, clip.frames_per_batch // 8))  # the teacher is small; the card still has to be there
-        return train_teacher(cfg, clip)
-
     def run_name(self) -> str:
         """The run's name: ``train.run_name``, else the clip's durations, ``_features`` when the pose is fed in."""
         cfg = self._config
@@ -202,7 +180,7 @@ class Project:
     def train(self) -> RunResult:
         """Stage 2: upstream's training loop, driven by the resolved config.
 
-        With ``features:`` listed (and ``train.features_as_input``) the block
+        With ``features:`` listed the block
         is exported first (:func:`~ethograph.spot.features.export_block`) and
         handed to the trainer beside the frames.
         """
@@ -258,116 +236,6 @@ class Project:
             str(cfg.train.features_dropout),
         ]
 
-    def distil(self, stage: int | None = None) -> RunResult:
-        """Stage 3: the student — the baseline's weights taught the teacher's representation.
-
-        UMEG-Net's two steps in one call, each an ordinary run of the vendored
-        trainer under ``runs/{baseline}_distil_{fingerprint}/`` (the fingerprint: feature list + teacher settings):
-
-        * ``stage2/`` — trunk + GRU learn to match the frozen teacher's
-          per-frame embedding on every training clip, **no labels**
-          (``distil.epochs``, selected by validation loss);
-        * ``stage3/`` — CNN frozen, GRU + head learn the labels
-          (``distil.head_epochs``, selected by the sweep like any run).
-
-        Resumable: a finished ``stage2`` is not rerun. ``stage=3`` redoes only
-        the head step. Returns the ``stage3`` run, which ``inference()`` reads
-        like any other.
-        """
-        from ethograph.spot.inference import best_epoch, resolve_run_dir
-
-        cfg = self._config
-        if not cfg.features:
-            raise ValueError("features: is empty — distillation needs a teacher, and the teacher needs the pose")
-        clip = self.resolved_clip()
-        check_vram(clip.frames_per_batch)
-        teacher_info = cfg.embeddings_dir / "teacher.json"
-        if not teacher_info.is_file():
-            raise FileNotFoundError(
-                f"No teacher embeddings under {cfg.embeddings_dir} — run project.train_teacher() first"
-            )
-        info = json.loads(teacher_info.read_text(encoding="utf-8"))
-        fingerprint = features_fingerprint(cfg)
-        if not Path(info["run"]).name.endswith(fingerprint):
-            raise ValueError(
-                f"The embeddings under {cfg.embeddings_dir} were written by {Path(info['run']).name!r}, "
-                f"not by a teacher of this config's features ({fingerprint}) — run project.train_teacher() first"
-            )
-        if cfg.distil.teacher_run is not None and Path(info["run"]).name != cfg.distil.teacher_run:
-            raise ValueError(
-                f"distil.teacher_run={cfg.distil.teacher_run!r} but the embeddings under {cfg.embeddings_dir} "
-                f"were written by {Path(info['run']).name!r} — re-run train_teacher() for that teacher, "
-                "or drop distil.teacher_run"
-            )
-        baseline = resolve_run_dir(cfg, cfg.distil.init_run)
-        if baseline.name.endswith(("_distil", "stage2", "stage3")):
-            raise ValueError(f"distil.init_run must name a label-only run, not {baseline}")
-        fuse_flags = self._block_flags(export=True)
-        stored_fuse = json.loads((baseline / "config.json").read_text(encoding="utf-8")).get("fuse_dim")
-        if bool(stored_fuse) != cfg.fusing:
-            raise ValueError(
-                f"{baseline.name} was trained {'with' if stored_fuse else 'without'} the features as input and this "
-                f"config {'feeds them' if cfg.fusing else 'does not'} (train.features_as_input): the student's GRU "
-                "would not fit the baseline's. Train a matching baseline first (project.train())."
-            )
-        run_dir = cfg.runs_dir / f"{baseline.name}_distil_{fingerprint}"
-        stage2, stage3 = run_dir / "stage2", run_dir / "stage3"
-        save_config(cfg, run_dir / CONFIG_FILE)
-
-        if stage in (None, 2):
-            last = stage2 / f"checkpoint_{cfg.distil.epochs - 1:03d}.pt"
-            if last.is_file():
-                logger.info("stage2 already finished (%s) — not rerun", last.name)
-            else:
-                init = baseline / f"checkpoint_{best_epoch(baseline, cfg):03d}.pt"
-                logger.info("stage2: matching %s (%d dims) from %s", Path(info["run"]).name, info["dim"], init.name)
-                stage2.mkdir(parents=True, exist_ok=True)
-                command = (
-                    self._train_command(
-                        clip,
-                        stage2,
-                        epochs=cfg.distil.epochs,
-                        epoch_frames=cfg.distil.epoch_frames,
-                        learning_rate=cfg.distil.learning_rate,
-                        criterion="loss",
-                    )
-                    + [
-                        "--stage",
-                        "2",
-                        "--teacher_dir",
-                        str(cfg.embeddings_dir.resolve()),
-                        "--distil_dim",
-                        str(int(info["dim"])),
-                        "--init_from",
-                        str(init.resolve()),
-                    ]
-                    + fuse_flags
-                )
-                run_with_retries(command, stage2, cfg.distil.retries)
-        if stage in (None, 3):
-            checkpoints = sorted(stage2.glob("checkpoint_*.pt"))
-            if not checkpoints:
-                raise FileNotFoundError(f"{stage2} holds no checkpoint — run distil() without stage=3 first")
-            loss_path = stage2 / "loss.json"
-            history = json.loads(loss_path.read_text(encoding="utf-8")) if loss_path.is_file() else []
-            chosen = (
-                min(history, key=lambda h: h["val"])["epoch"] if history else int(checkpoints[-1].stem.split("_")[1])
-            )
-            init = stage2 / f"checkpoint_{chosen:03d}.pt"
-            logger.info("stage3: head step from %s (val loss %s)", init.name, "best" if history else "last")
-            stage3.mkdir(parents=True, exist_ok=True)
-            command = self._train_command(
-                clip,
-                stage3,
-                epochs=cfg.distil.head_epochs,
-                epoch_frames=cfg.distil.epoch_frames,
-                learning_rate=cfg.distil.head_learning_rate,
-                criterion="map",
-            ) + ["--stage", "3", "--distil_dim", str(int(info["dim"])), "--init_from", str(init.resolve())]
-            command += fuse_flags
-            run_with_retries(command, stage3, cfg.distil.retries)
-        return RunResult(name=f"{run_dir.name}/stage3", run_dir=stage3, clip=clip)
-
     def cross_validate(
         self, sessions: Iterable[str | Path] | None = None, workers: int | None = None
     ) -> list[RunResult]:
@@ -381,8 +249,7 @@ class Project:
         its own ``runs/fold_{session}``. A fold ends by scoring that test split
         (``test_metrics.yaml`` — the trained-on-the-others number) and writing
         its predictions into the held-out session's ``labels/``, so what the
-        GUI opens was never trained on. Label-only: the teacher and
-        distillation are not refitted per fold.
+        GUI opens was never trained on.
         """
         cfg = self._config
         folds: list[RunResult] = []
@@ -468,9 +335,7 @@ class Project:
 
         ``train_e2e.py`` builds its paths as ``os.path.join('data', dataset)``,
         and an absolute second argument wins — so the dataset directory is
-        passed as-is and nothing needs a ``data/`` folder. Every stage — the
-        baseline, the two distillation steps — is this one command plus its
-        stage flags.
+        passed as-is and nothing needs a ``data/`` folder.
         """
         cfg = self._config
         if epochs <= cfg.train.warm_up_epochs:

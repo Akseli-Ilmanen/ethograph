@@ -73,7 +73,6 @@ def load_run_model(run_dir: Path, epoch: int, n_classes: int, device: str):
         multi_gpu=False,
         shift_dilations=stored.get("shift_dilations"),
         attention_groups=stored.get("attention_groups", 2),
-        distil_dim=stored.get("distil_dim"),
         fuse_dim=stored.get("fuse_dim"),
     )
     checkpoint = run_dir / f"checkpoint_{epoch:03d}.pt"

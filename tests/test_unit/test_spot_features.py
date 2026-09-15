@@ -62,18 +62,11 @@ def _features(config, videos, n=400, fps=200.0, seed=0):
 
 
 class TestConfig:
-    def test_listed_features_are_fed_in_unless_kept_for_the_teacher(self, tmp_path):
-        assert _config(tmp_path).fusing
-        assert not _config(tmp_path, train={"features_as_input": False}).fusing
-        assert not _config(tmp_path, features={}).fusing
-
     def test_the_old_spellings_are_refused_by_name(self, tmp_path):
         with pytest.raises(ValueError, match="graph: is gone"):
             _config(tmp_path, graph={"nodes": ["beakTip"]})
         with pytest.raises(ValueError, match="fuse: is gone"):
             _config(tmp_path, fuse={"enabled": True})
-        with pytest.raises(ValueError, match="top level"):
-            _config(tmp_path, teacher={"extra_features": {"speed": {}}})
         with pytest.raises(ValueError, match="lists the pose variables directly"):
             _config(tmp_path, features={"columns": {}})
 
