@@ -33,21 +33,42 @@ is named `{clip}_features`, beside a video-only baseline. Every predicted
 trial then needs its pose — `inference()` exports and scales a session's
 features before predicting it — which is the price of using it.
 
-```yaml
-train:
-  features_dropout: 0.3       # share of training clips that see zeros in place of the features
-```
-
 Nothing makes a network use an input, so the contribution is measured, not
 assumed: `evaluate(run, zero_features=True)` scores the trained model with
 zeros in place of the block (`test_metrics_nofeatures.yaml`), and the
 difference to `test_metrics.yaml` is what the pose adds, per class and
-tolerance. `features_dropout` is what keeps that ablation meaningful — a share
-of training clips see no features, so the pixels are trained to carry the
-event on their own too.
+tolerance.
+
+```yaml
+train:
+  features_dropout: 0.3       # optional: share of training clips that see zeros in place of the features
+```
+
+`features_dropout` is off by default — with pose on every predicted trial,
+zeroing it during training only handicaps the pose. Set it when some trials
+will have no pose (the pixels are then trained to carry the event on their
+own), or to make the ablation fair: a model that never saw zeros is scored on
+an input it never trained on, so `zero_features=True` then overstates what
+the pose contributes.
 
 Adding, removing or renaming a column afterwards means a new run: the block's
 width and column order are part of the trained model.
+
+## Labels of an earlier question
+
+The block can also carry **labels you already have**. When one behaviour was
+labelled in full and the new question is a finer one — the moment inside a
+state, an event that only ever follows another — those labels say a lot
+about *when* the new one can happen, and {ref}`label_inputs
+<spot-config-label-inputs>` feeds them in as columns: a state as its on/off
+indicator, a point event as a Laplacian bump. The one rule is that the
+branch they come from is never the branch being predicted; the config refuses
+the overlap, since a model handed its own targets learns to copy them.
+
+```yaml
+label_inputs:
+  branches: [0]                       # the earlier question's branch
+```
 
 ## Choosing
 

@@ -25,6 +25,7 @@ from typing import Any, ClassVar, Iterable
 
 import yaml
 
+from ethograph.features.label_inputs import check_branches_disjoint
 from ethograph.labels.tsv_store import labels_tsv_path
 from ethograph.utils.paths import defaults_dir, ethograph_home
 from ethograph.video_features.base import CropBox, Extractor, check_extractor_name, extractor_module
@@ -557,6 +558,96 @@ class NeuralFeaturesConfig:
             raise ValueError("features.neural.transform must list at least one step, e.g. 'x.count(0.005)'")
 
 
+#: Bump widths a point-event input is rendered at when none are spelled: a
+#: sharp one for timing, a wide one for reach (seconds — a duration, not a rate).
+DEFAULT_POINT_SIGMAS_S: tuple[float, ...] = (0.1, 1.0)
+
+
+@dataclass
+class LabelInputsConfig:
+    """Existing labels of *other* branches fed to the model as input columns.
+
+    Applied once per session at ``open_session`` time, like
+    :class:`ChangepointFeaturesConfig`: every class of ``branches`` becomes a
+    column of the variable ``label_inputs`` (:mod:`ethograph.features.label_inputs`)
+    on the clock of ``clock``, and the generated ``features.columns`` entry is
+    merged in at config-load time, so nothing downstream needs to know this
+    section exists. A state class is its on/off indicator; a point class is a
+    Laplacian bump per width in ``point_sigmas_s``. Declared
+    ``kind: label_input`` (``train.drop_kinds: [label_input]`` is its
+    ablation) and never z-scored.
+
+    **An input branch is never a target branch** — refused at config load.
+    A model fed the labels it predicts learns to copy them, and
+    cross-validation cannot see it. What a session has not labelled renders
+    as zeros, so a session predicted later without these labels is read as
+    "none here", never refused.
+    """
+
+    #: Branches of ``mapping.txt`` whose classes become inputs. Required.
+    branches: list[int] = field(default_factory=list)
+    #: ``mapping.txt`` path; ``None`` = the target's mapping (segment) or
+    #: ``~/.ethograph/defaults/mapping.txt`` (spot).
+    mapping: Path | None = None
+    #: Label ids to feed; ``None`` = every class of the branches.
+    classes: list[int] | None = None
+    #: Bump widths of a point-event input, in seconds — one column each.
+    point_sigmas_s: list[float] = field(default_factory=lambda: list(DEFAULT_POINT_SIGMAS_S))
+    #: The feature whose time coordinate the columns are rendered onto;
+    #: ``None`` = the first feature the config selects.
+    clock: str | None = None
+    #: Read ``automated`` rows too — another model's predictions as input.
+    #: Off by default: only ``manual``/``curated`` labels are evidence.
+    include_automated: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.branches:
+            raise ValueError("label_inputs.branches must name at least one branch of the mapping")
+        self.branches = [int(b) for b in self.branches]
+        if self.classes is not None:
+            self.classes = [int(c) for c in self.classes]
+        self.point_sigmas_s = [float(s) for s in self.point_sigmas_s]
+        if not self.point_sigmas_s or any(not s > 0 for s in self.point_sigmas_s):
+            raise ValueError(f"label_inputs.point_sigmas_s must be positive seconds, got {self.point_sigmas_s}")
+
+    def resolved_classes(self) -> list:
+        """The :class:`~ethograph.features.label_inputs.LabelInputClass` list, read off the mapping."""
+        from ethograph.features.label_inputs import classes_of_branches
+
+        if self.mapping is None:
+            raise ValueError("label_inputs.mapping is unresolved — build the config through config_from_dict")
+        return classes_of_branches(self.mapping, self.branches, self.classes)
+
+    def expanded_columns(self) -> dict[str, dict[str, Any]]:
+        """The one ``features.columns`` entry this section generates."""
+        from ethograph.features.label_inputs import DIM, VARIABLE, column_values
+
+        return {VARIABLE: {DIM: column_values(self.resolved_classes(), self.point_sigmas_s)}}
+
+    def with_clock(self, columns: Iterable[str], where: str) -> LabelInputsConfig:
+        """This config with ``clock`` defaulted to the first of *columns*."""
+        if self.clock is not None:
+            return self
+        first = next(iter(columns), None)
+        if first is None:
+            raise ValueError(
+                f"{where}.clock is unset and there is no other feature to take the clock from — "
+                "name the variable whose time coordinate the label columns should be rendered on"
+            )
+        return replace(self, clock=first)
+
+
+def merge_label_input_columns(cfg: LabelInputsConfig, columns: dict[str, dict[str, Any]], where: str) -> None:
+    """Add *cfg*'s generated entry to *columns* in place, refusing a spelled duplicate."""
+    generated = cfg.expanded_columns()
+    collisions = set(generated) & set(columns)
+    if collisions:
+        raise ValueError(
+            f"{where} already names {sorted(collisions)}, which label_inputs generates — remove the explicit entry"
+        )
+    columns.update(generated)
+
+
 @dataclass
 class FeaturesConfig:
     """What a sample is made of."""
@@ -579,6 +670,9 @@ class FeaturesConfig:
     #: Set to bin the session's spike trains into a dense feature at
     #: session-open time (pynapple sessions only); ``None`` = no spikes.
     neural: NeuralFeaturesConfig | None = None
+    #: Set to feed the curated labels of other branches to the model as input
+    #: columns, rendered at session-open time; ``None`` = labels are targets only.
+    label_inputs: LabelInputsConfig | None = None
     #: Features in ``columns`` that are **angles**: each is replaced by the
     #: two components of its ``(sin, cos)`` encoding, in radians or degrees
     #: as the variable's ``units`` attr says (or as its values imply). A
@@ -1080,6 +1174,7 @@ _NESTED: dict[str, type] = {
     "labels": LabelsConfig,
     "changepoint_features": ChangepointFeaturesConfig,
     "neural": NeuralFeaturesConfig,
+    "label_inputs": LabelInputsConfig,
     "features": FeaturesConfig,
     "model": ModelConfig,
     "augment": AugmentConfig,
@@ -1320,6 +1415,14 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
                 "entries, or drop them from changepoint_features.inputs/transforms"
             )
         cfg.features.columns.update(generated)
+    if cfg.features.label_inputs is not None:
+        inputs = cfg.features.label_inputs
+        if inputs.mapping is None:
+            inputs.mapping = cfg.features.labels.mapping
+        check_branches_disjoint(inputs.branches, cfg.features.labels.branch_list, "config.features.labels")
+        inputs = inputs.with_clock(cfg.features.columns, "config.features.label_inputs")
+        cfg.features.label_inputs = inputs
+        merge_label_input_columns(inputs, cfg.features.columns, "config.features.columns")
     if not cfg.features.columns and cfg.features.neural is None:
         raise ValueError("config.features.columns is empty — name at least one feature")
     known_sources = {str(s.source) for s in cfg.sessions}
@@ -1365,8 +1468,12 @@ def config_to_dict(cfg: SegmentConfig) -> dict:
     otherwise read them as explicit entries colliding with its own expansion.
     """
     data = _to_plain(cfg)
+    generated: set[str] = set()
     if cfg.features.changepoint_features is not None:
-        generated = cfg.features.changepoint_features.expanded_columns()
+        generated |= set(cfg.features.changepoint_features.expanded_columns())
+    if cfg.features.label_inputs is not None:
+        generated |= set(cfg.features.label_inputs.expanded_columns())
+    if generated:
         columns = data["features"]["columns"]
         data["features"]["columns"] = {k: v for k, v in columns.items() if k not in generated}
     return data

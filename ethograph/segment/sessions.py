@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 
 from ethograph.features.columns import FS_RTOL, sampling_rate
+from ethograph.features.label_inputs import VARIABLE as LABEL_INPUTS_VARIABLE
+from ethograph.features.label_inputs import add_label_inputs
 from ethograph.features.neural import transform_units
 from ethograph.io import schema
 from ethograph.io.catalog import (
@@ -33,6 +35,7 @@ from ethograph.labels.intervals import LABELING_AUTOMATED
 from ethograph.labels.tsv_store import get_trial_from_tsv
 from ethograph.segment.config import (
     MERGED_CHANGEPOINTS,
+    LabelInputsConfig,
     NeuralFeaturesConfig,
     SegmentConfig,
     SessionSpec,
@@ -204,13 +207,21 @@ class Session:
 
 
 def open_session(
-    spec: SessionSpec, config: SegmentConfig | None = None, *, expand_changepoints: bool = True
+    spec: SessionSpec,
+    config: SegmentConfig | None = None,
+    *,
+    expand_changepoints: bool = True,
+    label_inputs: LabelInputsConfig | None = None,
+    actor: str | None = None,
 ) -> Session:
     """Open one session with the GUI's loaders (no Qt involved).
 
-    *config* is only consulted for ``features.changepoint_features``; a
-    pipeline with no feature engineering at all (``ethograph.spot``) passes
-    ``None``. ``materialise`` opens with ``expand_changepoints=False``, reads
+    *config* is only consulted for the session-open expansions
+    (``features.changepoint_features``, ``features.neural``,
+    ``features.label_inputs``); a pipeline with its own config
+    (``ethograph.spot``) passes ``None`` and hands its ``label_inputs``
+    section — plus the one *actor* its single event stream belongs to —
+    directly. ``materialise`` opens with ``expand_changepoints=False``, reads
     the labels, and expands afterwards through
     :func:`expand_changepoint_features` — that is where a config whose
     scales are still to be derived gets them.
@@ -228,6 +239,13 @@ def open_session(
     session = Session(spec=spec, id=sid, result=result)
     attach_video_feature_folders(session)
     expand_neural_features(session, config)
+    if config is not None:
+        if label_inputs is not None:
+            raise ValueError("open_session takes label_inputs from config.features when a config is given")
+        label_inputs = config.features.label_inputs
+        expand_label_inputs(session, label_inputs, individuals=session.individuals(config))
+    else:
+        expand_label_inputs(session, label_inputs, actor=actor)
     if expand_changepoints:
         expand_changepoint_features(session, config)
     return session
@@ -325,6 +343,63 @@ def neural_columns(session: Session, cfg: NeuralFeaturesConfig) -> dict[str, lis
     if not dims:
         raise ValueError(f"{session.source}: the neural feature {cfg.name!r} has no column dim to pin")
     return {dim: [str(v) for v in values] for dim, values in dims.items()}
+
+
+def expand_label_inputs(
+    session: Session,
+    cfg: LabelInputsConfig | None,
+    *,
+    individuals: list[str] | None = None,
+    actor: str | None = None,
+) -> None:
+    """Apply a ``label_inputs`` section to every trial, once (xarray sessions only).
+
+    Each trial's ``label_inputs`` variable is rendered from that trial's own
+    labels — ``manual``/``curated`` rows, plus ``automated`` when the section
+    says so — on the clock of ``cfg.clock``
+    (:func:`~ethograph.features.label_inputs.add_label_inputs`). With
+    *individuals* the variable carries the individual dim, one slice per
+    animal, for a pipeline that pins the individual per sample; with *actor*
+    it is flat and reads that one animal's rows. A trial with no such labels
+    renders zeros, and the log says how many did.
+    """
+    if cfg is None:
+        return
+    if session.result.dt is None:
+        raise ValueError(
+            f"{session.source}: label_inputs is set but this session has no xr.Dataset backend — "
+            "rendering labels as inputs is only implemented for xarray sessions."
+        )
+    classes = cfg.resolved_classes()
+    clock = cfg.clock
+    if clock is None:
+        raise ValueError("label_inputs.clock is unresolved — build the config through config_from_dict")
+    ids = {c.label for c in classes}
+    counts = {"with": 0, "without": 0}
+
+    def _trial_labels(trial: int | str) -> pd.DataFrame:
+        if cfg.include_automated:
+            return get_trial_from_tsv(session.result.all_labels_df, trial)
+        return session.curated_labels(trial)
+
+    def _expand(ds):
+        if LABEL_INPUTS_VARIABLE in ds.data_vars:
+            return ds
+        trial = ds.attrs["trial"]
+        labels = _trial_labels(trial)
+        carried = not labels.empty and bool(labels["labels"].astype(int).isin(ids).any())
+        counts["with" if carried else "without"] += 1
+        return add_label_inputs(ds, labels, classes, cfg.point_sigmas_s, clock, individuals=individuals, actor=actor)
+
+    session.result.dt = session.result.dt.map_trials(_expand)
+    logger.info(
+        "%s: label_inputs %s on %r's clock — %d trial(s) carry them, %d render as zeros",
+        session.id,
+        [c.name for c in classes],
+        clock,
+        counts["with"],
+        counts["without"],
+    )
 
 
 def expand_changepoint_features(session: Session, config: SegmentConfig | None) -> None:

@@ -34,7 +34,7 @@ import numpy as np
 
 from ethograph.labels import onset_curves
 from ethograph.labels.tsv_store import save_labels_tsv
-from ethograph.segment.sessions import Session, open_session
+from ethograph.segment.sessions import Session
 from ethograph.spot import dataset as dataset_stage
 from ethograph.spot.config import ResolvedClip, SpotConfig, config_to_dict
 from ethograph.spot.predict import SpottedEvent, flagged, read_predictions, spot_entry, to_labels_frame
@@ -393,7 +393,7 @@ def inference(
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     written: list[Path] = []
     for spec in config.select_sessions(sessions):
-        session = open_session(spec)
+        session = dataset_stage.open_spot_session(config, spec)
         out_dir = onset_curves.run_dir(session.source, timestamp, model=f"{MODEL_NAME}_{run_label(run_dir)}")
         written.append(infer_session(config, run_dir, epoch, session, out_dir, workers=workers, loaded=loaded))
     return written

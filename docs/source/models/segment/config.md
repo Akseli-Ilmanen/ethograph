@@ -203,6 +203,62 @@ and `train.drop_kinds: [neural_feature]` is its ablation. The predictions
 land in the session's own `labels/predictions_{run}_{timestamp}/` like any
 other run's, so they open in the GUI against the curated labels.
 
+(segment-config-label-inputs)=
+### `features.label_inputs`
+
+Optional. Feeds the **labels of other branches** to the model as input
+columns. Labelling is expensive, and the labels of an earlier question often
+say a great deal about *when* the answer to a new one can happen — a peck
+rarely comes before the head has turned. Every class of the named branches
+becomes one column of a variable `label_inputs`, rendered per trial at
+session-open time on the clock of `clock` and **merged straight into
+`features.columns`** like `changepoint_features` — you never spell the entry
+yourself.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `branches` | required | Branches of the mapping whose classes become inputs. Never a branch `features.labels` predicts. |
+| `mapping` | `features.labels.mapping` | The `mapping.txt` the branches are read from. |
+| `classes` | every class of the branches | Label ids to feed; an id outside the branches is refused. |
+| `point_sigmas_s` | `[0.1, 1.0]` | Widths (seconds) of the Laplacian bump a **point** event is rendered at, one column each — a sharp one for timing, a wide one for reach. |
+| `clock` | the first of `features.columns` | The feature whose time coordinate the columns are rendered onto, so they share its rate exactly. |
+| `include_automated` | `false` | Read `automated` rows too — another model's predictions as input. Off, only `manual`/`curated` labels count, exactly as for targets. |
+
+A **state** class is its on/off indicator: `1` inside every interval, `0`
+outside. A **point** class is `max_i exp(−|t − t_i| / σ)` per width in
+`point_sigmas_s` — the kernel `changepoint_features` draws around a
+changepoint, for the same reason: the narrow peak points at the moment, the
+long tails stay readable from far away. The columns are named by class:
+`label_inputs|label_input=walk,individual=self`,
+`label_inputs|label_input=peck@0.1s,individual=self`. They live in `[0, 1]` and are never z-scored
+(`normalise: 0`); they are declared `kind: label_input`, so
+`train.drop_kinds: [label_input]` trains the same model without them — the
+ablation that says what the old labels are worth.
+
+```yaml
+features:
+  columns:
+    speed: {keypoint: [beakTip]}
+  labels: {branch: 1}                 # the new question: branch 1's classes
+  label_inputs:
+    branches: [0]                     # the old answers: branch 0's classes, as inputs
+    point_sigmas_s: [0.1, 1.0]
+```
+
+**An input branch is never a target branch.** A config whose `label_inputs.branches`
+overlaps `features.labels.branch`/`branches` is refused at load: a model fed
+the labels it is asked to predict learns to copy them, scores perfectly under
+cross-validation, and has learned nothing about its other inputs. Putting the
+two questions on two branches of the mapping is what makes the rule
+checkable.
+
+Each sample reads its **own animal's** labels: the variable carries the
+individual dim (the dataset's, or one made from the config's individuals) and
+is pinned per sample like every other feature. A trial with none of these
+labels renders zeros — which is also what a session predicted later, before
+anyone has labelled its old branch, reads as. The log says how many trials
+carried them. Xarray sessions only.
+
 ### `features.preprocess`
 
 All five keys live under `features.preprocess` in the YAML, but they run at

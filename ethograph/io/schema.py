@@ -72,11 +72,13 @@ KINEMATIC_FEATURE = "kinematic_feature"
 VIDEO_FEATURE = "video_feature"
 CHANGEPOINT_FEATURE = "changepoint_feature"
 NEURAL_FEATURE = "neural_feature"
+#: Existing labels rendered as input columns (:mod:`ethograph.features.label_inputs`).
+LABEL_INPUT = "label_input"
 
 #: The kinds this project writes. Any other string is allowed — a third
 #: party's kind must not be an error — but these are the ones our own code
 #: groups and offers.
-KNOWN_KINDS: tuple[str, ...] = (KINEMATIC_FEATURE, VIDEO_FEATURE, CHANGEPOINT_FEATURE, NEURAL_FEATURE)
+KNOWN_KINDS: tuple[str, ...] = (KINEMATIC_FEATURE, VIDEO_FEATURE, CHANGEPOINT_FEATURE, NEURAL_FEATURE, LABEL_INPUT)
 
 
 def describe(

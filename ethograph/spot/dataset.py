@@ -350,6 +350,15 @@ def write_dataset(splits: dict[str, list[TrialRecord]], config: SpotConfig) -> P
     return dataset_dir
 
 
+def open_spot_session(config: SpotConfig, spec: SessionSpec) -> Session:
+    """Open *spec* the way this pipeline reads it: its ``label_inputs`` rendered for ``config.individual``.
+
+    The one opener ``materialise`` and ``inference`` share, so the columns a
+    run trained on are rendered identically for a session predicted later.
+    """
+    return open_session(spec, label_inputs=config.label_inputs, actor=config.individual)
+
+
 @dataclass
 class MaterialiseResult:
     """What the export produced: the index the model reads, and what fed it."""
@@ -372,7 +381,7 @@ def materialise(
     opened: list[Session] = []
     records: list[TrialRecord] = []
     for spec in specs:
-        session = open_session(spec)
+        session = open_spot_session(config, spec)
         opened.append(session)
         planned = plan_session(session, config)
         logger.info("%s: %d trials with a target event and video", session.spec.label, len(planned))

@@ -128,17 +128,28 @@ ready to predict with.
 
 The pipeline only **selects** variables already in the session file, so
 anything a model should see is a variable you add (and can plot in the GUI).
-Three config sections are the exception, derived at session open:
+Four config sections are the exception, derived at session open:
 
 | Section | Reads | Generates |
 |---|---|---|
 | `features.sin_cos` | an angle | `(sin, cos)`, never z-scored |
 | `features.changepoint_features` | a changepoint mask | proximity / offset / segment-length columns |
 | `features.neural` | a pynapple `TsGroup` of spikes | a binned `TsdFrame` |
+| `features.label_inputs` | curated labels of *another* branch | an indicator per state class, a Laplacian bump per point class |
 
 A changepoint mask is a binary variable with `attrs["changepoint_mask"] = 1`,
-as the GUI's **Detect** button writes. `features.changepoint_features` is
-currently supported for `.nc` sessions only, not pynapple / NWB.
+as the GUI's **Detect** button writes. `features.changepoint_features` and
+`features.label_inputs` are currently supported for `.nc` sessions only, not
+pynapple / NWB.
+
+**Reuse the labels you already have.** If one question is answered — a
+behaviour labelled and curated across every session — and the next one is
+finer (a moment inside a state, an event that only follows another), put the
+new labels on a new {ref}`branch <target-label-branches>` and list the old
+branch under `features.label_inputs`: its labels become input columns, so the
+new model learns *when* the new event can happen from work already done. The
+input branch is never the target branch; the config refuses the overlap. See
+{ref}`features.label_inputs <segment-config-label-inputs>`.
 
 Feature engineering may look like:
 

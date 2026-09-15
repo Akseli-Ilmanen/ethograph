@@ -26,16 +26,20 @@ from typing import Any
 
 import yaml
 
+from ethograph.features.label_inputs import branches_of, check_branches_disjoint
 from ethograph.labels.tsv_store import labels_tsv_path
 from ethograph.segment.config import (
+    LabelInputsConfig,
     SessionSpec,
     SplitConfig,
     TrialsConfig,
     apply_overrides,
     build_dataclass,
+    merge_label_input_columns,
     name_colliding_sessions,
     read_yaml_chain,
 )
+from ethograph.utils.paths import defaults_dir
 
 logger = logging.getLogger(__name__)
 
@@ -266,9 +270,11 @@ class TrainConfig:
 
     run_name: str | None = None
     #: Share of training clips whose feature block is zeroed (modality
-    #: dropout), so the pixels are trained to carry the event on their own
-    #: too — which is what keeps ``evaluate(zero_features=True)`` meaningful.
-    features_dropout: float = 0.3
+    #: dropout). Off by default: with pose on every predicted trial it only
+    #: handicaps the pose. Set it (e.g. 0.3) when some trials will have no
+    #: pose, or to make ``evaluate(zero_features=True)`` a fair ablation — a
+    #: model that never saw zeros overstates what the features contribute.
+    features_dropout: float = 0.0
     epochs: int = 8
     #: Frames pushed per epoch, independent of dataset size. Upstream ties an
     #: epoch to a fixed frame budget rather than to a pass over the data, so
@@ -363,6 +369,11 @@ class SpotConfig:
     #: they ride beside the CNN features into the pixel model's GRU (the run
     #: is named ``{clip}_features``). Absent, the model is E2E-Spot on pixels alone.
     features: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: Curated labels of *other* branches as input columns, rendered at
+    #: session-open time and appended to ``features:`` (so they ride into the
+    #: GRU like the pose). A branch holding any of ``labels.classes`` is
+    #: refused. ``None`` = pixels and the listed pose only.
+    label_inputs: LabelInputsConfig | None = None
     #: Where this config was loaded from (not part of the YAML).
     config_path: Path | None = None
 
@@ -470,6 +481,7 @@ _NESTED: dict[str, type] = {
     "split": SplitConfig,
     "infer": InferConfig,
     "crop": CropConfig,
+    "label_inputs": LabelInputsConfig,
 }
 
 
@@ -509,6 +521,15 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
     for name, dims in cfg.features.items():
         if not isinstance(dims, dict):
             raise ValueError(f"features.{name}: expected a mapping of dim -> values, got {dims!r}")
+    if cfg.label_inputs is not None:
+        inputs = cfg.label_inputs
+        if inputs.mapping is None:
+            inputs.mapping = defaults_dir("mapping.txt")
+        targets = sorted(set(branches_of(inputs.mapping, cfg.labels.classes).values()))
+        check_branches_disjoint(inputs.branches, targets, "config.labels.classes")
+        inputs = inputs.with_clock(cfg.features, "config.label_inputs")
+        cfg.label_inputs = inputs
+        merge_label_input_columns(inputs, cfg.features, "config.features")
     if not 0.0 <= cfg.train.features_dropout < 1.0:
         raise ValueError(f"train.features_dropout must be in [0, 1), got {cfg.train.features_dropout!r}")
     if cfg.labels.crop is not None:
@@ -541,8 +562,16 @@ def _to_plain(obj: Any) -> Any:
 
 
 def config_to_dict(cfg: SpotConfig) -> dict:
-    """The fully resolved config as plain YAML-able data (absolute paths)."""
-    return _to_plain(cfg)
+    """The fully resolved config as plain YAML-able data (absolute paths).
+
+    Round-trips: the ``features:`` entry ``label_inputs`` generated is left
+    out, because :func:`config_from_dict` merges it back in.
+    """
+    data = _to_plain(cfg)
+    if cfg.label_inputs is not None:
+        generated = cfg.label_inputs.expanded_columns()
+        data["features"] = {k: v for k, v in data["features"].items() if k not in generated}
+    return data
 
 
 def save_config(cfg: SpotConfig, path: Path) -> Path:
