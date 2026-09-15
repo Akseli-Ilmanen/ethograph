@@ -561,28 +561,6 @@ for name, steps in {
 giving `cross_validation/cv_{name}/folds.tsv` per transform — the same
 folds, so the numbers are paired.
 
-### Ablating the loss, one model per individual
-
-`scripts/bench.py` is that loop turned on the objective. One config per
-individual sits beside the project's (`data/crow1.yaml`: `base: project.yaml`,
-its own four sessions, its own `features.name` — a run draws its split over
-the whole materialised index it reads, so a shared one would train on the
-other individuals), and for each of them and each architecture the bench
-cross-validates the arms of `LOSS_TERMS` × `FEATURE_SETS`: the objective with
-and without smoothing (`train.loss.alpha=0`), crossed with dropping each
-declared feature kind (`train.drop_kinds`), the "with" weight pinned in the
-script. `data/bench_loss.pdf` then shows segmental F1 per individual,
-architecture and arm — one dot per held-out session — and, per individual ×
-architecture, the arms' IoU distributions, boundary deltas and class-wise F1
-side by side ({func}`~ethograph.segment.plotting.write_factorial_pdf`). Folds that
-finished are read back, never retrained; `--report-only` draws without
-training.
-
-There is no validation slice by default (`val_fraction=0`): the
-hyperparameters, `epochs` included, came out of stage 1, so every remaining
-trial is worth training on and `best.pt` is the last epoch. Pass
-`val_fraction=0.15` if you want checkpoint selection back.
-
 ## Reviewing predictions in the GUI
 
 A prediction set is a labels TSV in the GUI's own format, every row
