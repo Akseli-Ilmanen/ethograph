@@ -459,7 +459,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-segment-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
-<p>Here is a minimalistic setup for training an action segmentation model: Three curated sessions, three kinematic
+<p>Here is a minimalistic setup for training an action segmentation model: Three curated sessions, a few kinematic
 features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id335" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.</p>
 <p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a> is the same pipeline with the
@@ -473,15 +473,31 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 <section id="put-the-features-in-the-session-file">
 <h2>1. Put the features in the session file<a class="headerlink" href="#put-the-features-in-the-session-file" title="Link to this heading">#</a></h2>
 <p>The pipeline never computes features; it selects variables that are already in
-your <code class="docutils literal notranslate"><span class="pre">.nc</span></code>. Velocity, speed and acceleration come from
-<a class="reference external" href="https://movement.neuroinformatics.dev">movement</a>, one call each:</p>
+your <code class="docutils literal notranslate"><span class="pre">.nc</span></code>. Which basic kinematic features to add depends on the animal:</p>
+<ul class="simple">
+<li><p><strong>Orientation relatively fixed</strong> (head-fixed, perched, a fixed camera
+view of a limb): <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity</span></code> and <code class="docutils literal notranslate"><span class="pre">speed</span></code>. Arena coordinates
+already mean the same thing in every trial.</p></li>
+<li><p><strong>Freely moving</strong>: <code class="docutils literal notranslate"><span class="pre">position_ego</span></code> and <code class="docutils literal notranslate"><span class="pre">speed</span></code>. Egocentric position is
+centred on one keypoint and rotated so the animal faces +x, so a behaviour
+reads the same whichever way the animal is turned.</p></li>
+</ul>
+<p>Either way, add <code class="docutils literal notranslate"><span class="pre">intra</span></code>: the distance between each pair of keypoints, which
+describes body posture (stretched, curled) regardless of position or heading.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">movement.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_poses</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">movement.kinematics</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_acceleration</span><span class="p">,</span> <span class="n">compute_speed</span><span class="p">,</span> <span class="n">compute_velocity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">movement.kinematics</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_speed</span><span class="p">,</span> <span class="n">compute_velocity</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">egocentric_position</span><span class="p">,</span> <span class="n">intra_distances</span>
 
 <span class="n">ds</span> <span class="o">=</span> <span class="n">load_poses</span><span class="o">.</span><span class="n">from_dlc_file</span><span class="p">(</span><span class="s2">"ses-01_pose.csv"</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
-<span class="n">ds</span><span class="p">[</span><span class="s2">"velocity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_velocity</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>          <span class="c1"># (time, space, keypoint, individual)</span>
 <span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_speed</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>                <span class="c1"># (time, keypoint, individual)</span>
-<span class="n">ds</span><span class="p">[</span><span class="s2">"acceleration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_acceleration</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"intra"</span><span class="p">]</span> <span class="o">=</span> <span class="n">intra_distances</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>              <span class="c1"># (time, pair, individual), pair = "snout-tailBase", …</span>
+
+<span class="c1"># orientation fixed</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"velocity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_velocity</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>          <span class="c1"># (time, space, keypoint, individual)</span>
+
+<span class="c1"># freely moving: centre on tailBase, heading tailBase → snout</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"position_ego"</span><span class="p">]</span> <span class="o">=</span> <span class="n">egocentric_position</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="s2">"tailBase"</span><span class="p">,</span> <span class="n">heading_keypoint</span><span class="o">=</span><span class="s2">"snout"</span><span class="p">)</span>
 
 <span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"ses-01.nc"</span><span class="p">)</span>
 </pre></div>
@@ -507,9 +523,15 @@ here has a default that is fine for a first run.</p>
 <span class="nt">features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kinematics</span><span class="w">                     </span><span class="c1"># → data/kinematics/</span>
 <span class="w">  </span><span class="nt">columns</span><span class="p">:</span><span class="w">                             </span><span class="c1"># feature → dim → values; the individual dim is never listed</span>
+<span class="w">    </span><span class="c1"># orientation fixed</span>
+<span class="w">    </span><span class="nt">position</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">snout</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tailBase</span><span class="p p-Indicator">]}</span>
 <span class="w">    </span><span class="nt">velocity</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">snout</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tailBase</span><span class="p p-Indicator">]}</span>
-<span class="w">    </span><span class="nt">acceleration</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">x</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">y</span><span class="p p-Indicator">],</span><span class="nt"> keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">snout</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tailBase</span><span class="p p-Indicator">]}</span>
 <span class="w">    </span><span class="nt">speed</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">snout</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tailBase</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">intra</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt">pair</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">snout-tailBase</span><span class="p p-Indicator">]}</span><span class="w">   </span><span class="c1"># list the pairs, named "a-b"</span>
+<span class="w">    </span><span class="c1"># freely moving: replace the four above with</span>
+<span class="w">    </span><span class="c1"># position_ego: {space: [x, y], keypoint: [snout]}   # tailBase is the origin, always 0</span>
+<span class="w">    </span><span class="c1"># speed:        {keypoint: [snout, tailBase]}</span>
+<span class="w">    </span><span class="c1"># intra:        {pair: [snout-tailBase]}</span>
 <span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">branch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">                          </span><span class="c1"># one model per branch of your mapping.txt</span>
 
@@ -593,8 +615,8 @@ puts the runs side by side:</p>
 <p><code class="docutils literal notranslate"><span class="pre">mlp</span></code> sees one frame at a time — it is the floor that tells you how much
 temporal context is actually buying you.</p>
 </li>
-<li><p><strong>Better features</strong>: egocentric coordinates, pairwise distances, headings
-and changepoint proximity, all built with the session — see
+<li><p><strong>Better features</strong>: distances between individuals, headings and changepoint
+proximity, all built with the session — see
 <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a> and <code class="xref py py-mod docutils literal notranslate"><span class="pre">ethograph.features.geometry</span></code>.</p></li>
 <li><p><strong>The real workflow</strong>: <code class="docutils literal notranslate"><span class="pre">project.search()</span></code> to find hyperparameters on a
 validation split, then <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code> to hold out each session

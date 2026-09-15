@@ -1,7 +1,7 @@
 (target-segment-quickstart)=
 # Quickstart
 
-Here is a minimalistic setup for training an action segmentation model: Three curated sessions, three kinematic
+Here is a minimalistic setup for training an action segmentation model: Three curated sessions, a few kinematic
 features, one `c2f_tcn` {cite:p}`singhania2021c2ftcn` trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.
 
@@ -19,17 +19,33 @@ uv pip install "ethograph[model]"
 ## 1. Put the features in the session file
 
 The pipeline never computes features; it selects variables that are already in
-your `.nc`. Velocity, speed and acceleration come from
-[movement](https://movement.neuroinformatics.dev), one call each:
+your `.nc`. Which basic kinematic features to add depends on the animal:
+
+- **Orientation relatively fixed** (head-fixed, perched, a fixed camera
+  view of a limb): `position`, `velocity` and `speed`. Arena coordinates
+  already mean the same thing in every trial.
+- **Freely moving**: `position_ego` and `speed`. Egocentric position is
+  centred on one keypoint and rotated so the animal faces +x, so a behaviour
+  reads the same whichever way the animal is turned.
+
+Either way, add `intra`: the distance between each pair of keypoints, which
+describes body posture (stretched, curled) regardless of position or heading.
 
 ```python
 from movement.io import load_poses
-from movement.kinematics import compute_acceleration, compute_speed, compute_velocity
+from movement.kinematics import compute_speed, compute_velocity
+
+from ethograph.features.geometry import egocentric_position, intra_distances
 
 ds = load_poses.from_dlc_file("ses-01_pose.csv", fps=60)
-ds["velocity"] = compute_velocity(ds.position)          # (time, space, keypoint, individual)
 ds["speed"] = compute_speed(ds.position)                # (time, keypoint, individual)
-ds["acceleration"] = compute_acceleration(ds.position)
+ds["intra"] = intra_distances(ds.position)              # (time, pair, individual), pair = "snout-tailBase", …
+
+# orientation fixed
+ds["velocity"] = compute_velocity(ds.position)          # (time, space, keypoint, individual)
+
+# freely moving: centre on tailBase, heading tailBase → snout
+ds["position_ego"] = egocentric_position(ds.position, "tailBase", heading_keypoint="snout")
 
 ds.to_netcdf("ses-01.nc")
 ```
@@ -58,9 +74,15 @@ sessions:
 features:
   name: kinematics                     # → data/kinematics/
   columns:                             # feature → dim → values; the individual dim is never listed
+    # orientation fixed
+    position:     {space: [x, y], keypoint: [snout, tailBase]}
     velocity:     {space: [x, y], keypoint: [snout, tailBase]}
-    acceleration: {space: [x, y], keypoint: [snout, tailBase]}
     speed:        {keypoint: [snout, tailBase]}
+    intra:        {pair: [snout-tailBase]}   # list the pairs, named "a-b"
+    # freely moving: replace the four above with
+    # position_ego: {space: [x, y], keypoint: [snout]}   # tailBase is the origin, always 0
+    # speed:        {keypoint: [snout, tailBase]}
+    # intra:        {pair: [snout-tailBase]}
   labels:
     branch: 0                          # one model per branch of your mapping.txt
 
@@ -146,8 +168,8 @@ next to your curated labels, and confirming one makes it `curated`. See
 
   `mlp` sees one frame at a time — it is the floor that tells you how much
   temporal context is actually buying you.
-- **Better features**: egocentric coordinates, pairwise distances, headings
-  and changepoint proximity, all built with the session — see
+- **Better features**: distances between individuals, headings and changepoint
+  proximity, all built with the session — see
   {doc}`index` and {mod}`ethograph.features.geometry`.
 - **The real workflow**: `project.search()` to find hyperparameters on a
   validation split, then `project.cross_validate()` to hold out each session
