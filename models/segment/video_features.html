@@ -663,6 +663,52 @@ merge: the time dim is found by name.</p>
 </pre></div>
 </div>
 </section>
+<section id="video-features-from-files-a-folder-of-npy">
+<h2>Video features from files: a folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code><a class="headerlink" href="#video-features-from-files-a-folder-of-npy" title="Link to this heading">#</a></h2>
+<p>A network run outside ethograph — FERAL, DINO, anything that writes one
+<code class="docutils literal notranslate"><span class="pre">(frames,</span> <span class="pre">D)</span></code> array per video — leaves a folder of <code class="docutils literal notranslate"><span class="pre">{video</span> <span class="pre">stem}.npy</span></code>.
+Those are video features like any other, and they need no merging.</p>
+<p><strong>In the GUI</strong>, open the add-panel popup (➕ or Shift+N) and pick
+<strong>Video features — browse a folder of .npy…</strong>, or drop the folder (or a
+selection of <code class="docutils literal notranslate"><span class="pre">.npy</span></code> files) anywhere on the window. Each folder becomes one
+feature named after it and opens as a heatmap; loose files together become
+one feature named after their folder. Files are matched to the session’s
+videos by name, the camera whose names they follow is detected, and the log
+says how many videos matched:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Added</span> <span class="n">video</span> <span class="n">features</span> <span class="s1">'feral_cfgA'</span> <span class="p">(</span><span class="mi">768</span> <span class="n">columns</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">D</span><span class="p">:</span>\<span class="n">emb</span>\<span class="n">cfgA</span><span class="p">:</span> <span class="mi">120</span> <span class="n">of</span> <span class="mi">136</span> <span class="n">videos</span> <span class="n">matched</span> <span class="p">(</span><span class="mi">88</span><span class="o">%</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A video without a file is fine — features computed on a subset are still
+features; its trial reads NaN. Files matching <em>no</em> video are an error. Two
+exports of one model with different settings live side by side: the
+add-panel popup lists them under <strong>Video features</strong>, each with the path it
+came from, so <code class="docutils literal notranslate"><span class="pre">feral_cfgA</span> <span class="pre">(D:\emb\cfgA)</span></code> and <code class="docutils literal notranslate"><span class="pre">feral_cfgB</span> <span class="pre">(D:\emb\cfgB)</span></code> are
+never confused.</p>
+<p><strong>In a config</strong>, a session names its folders, and <code class="docutils literal notranslate"><span class="pre">open_session</span></code> attaches
+them the same way, so <code class="docutils literal notranslate"><span class="pre">materialise</span></code> and <code class="docutils literal notranslate"><span class="pre">inference</span></code> see the variable:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01ehav\Trial_data.nc</span>
+<span class="w">    </span><span class="nt">video_feature_folders</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\emb\ses-01</span><span class="w">          </span><span class="c1"># one {video stem}.npy per trial's camera file</span>
+<span class="nt">features</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">feral_dims</span><span class="p">:</span><span class="w"> </span><span class="nv">0..767</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<p>Either way the arrays are memory-mapped and sampled onto the trial clock
+exactly as a merged sidecar is (trial = video + offset, nearest frame, the
+video’s own rate). Nothing is copied or declared beside the session: the
+file stays as it was, and <a class="reference internal" href="../../api/trialtree.html#ethograph.io.trialtree.TrialTree.save" title="ethograph.io.trialtree.TrialTree.save"><code class="xref py py-meth docutils literal notranslate"><span class="pre">save()</span></code></a>
+never writes the variable back (it carries <code class="docutils literal notranslate"><span class="pre">attrs[&quot;attached_from&quot;]</span></code>).</p>
+<p>A script attaches the same way, on the tree the GUI would open:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.video_feature_files</span><span class="w"> </span><span class="kn">import</span> <span class="n">VideoFeatureFiles</span><span class="p">,</span> <span class="n">attach_video_features</span>
+
+<span class="n">attach_video_features</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">alignment</span><span class="p">,</span> <span class="n">VideoFeatureFiles</span><span class="o">.</span><span class="n">from_paths</span><span class="p">(</span><span class="s2">"feral_cfgA"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"D:/emb/cfgA"</span><span class="p">]))</span>
+</pre></div>
+</div>
+<p>Merging stays the path for the extractors ethograph runs itself, whose
+sidecars carry the plan and model in their attrs.</p>
+</section>
 <section id="choosing-which-dimensions-to-keep">
 <h2>Choosing which dimensions to keep<a class="headerlink" href="#choosing-which-dimensions-to-keep" title="Link to this heading">#</a></h2>
 <p>1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of
@@ -806,6 +852,7 @@ environment, the extractor runs it by subprocess and reads the file back.</p>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-from-a-config">Starting from a config</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#merging-into-a-session">Merging into a session</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#video-features-from-files-a-folder-of-npy">Video features from files: a folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-which-dimensions-to-keep">Choosing which dimensions to keep</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-video-no-ethograph-at-all">One video, no ethograph at all</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-an-extractor">Adding an extractor</a></li>

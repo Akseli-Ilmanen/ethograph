@@ -185,6 +185,61 @@ features:
     speed: {keypoint: [beakTip]}
 ```
 
+## Video features from files: a folder of `.npy`
+
+A network run outside ethograph — FERAL, DINO, anything that writes one
+`(frames, D)` array per video — leaves a folder of `{video stem}.npy`.
+Those are video features like any other, and they need no merging.
+
+**In the GUI**, open the add-panel popup (➕ or Shift+N) and pick
+**Video features — browse a folder of .npy…**, or drop the folder (or a
+selection of `.npy` files) anywhere on the window. Each folder becomes one
+feature named after it and opens as a heatmap; loose files together become
+one feature named after their folder. Files are matched to the session's
+videos by name, the camera whose names they follow is detected, and the log
+says how many videos matched:
+
+```
+Added video features 'feral_cfgA' (768 columns) from D:\emb\cfgA: 120 of 136 videos matched (88%)
+```
+
+A video without a file is fine — features computed on a subset are still
+features; its trial reads NaN. Files matching *no* video are an error. Two
+exports of one model with different settings live side by side: the
+add-panel popup lists them under **Video features**, each with the path it
+came from, so `feral_cfgA (D:\emb\cfgA)` and `feral_cfgB (D:\emb\cfgB)` are
+never confused.
+
+**In a config**, a session names its folders, and `open_session` attaches
+them the same way, so `materialise` and `inference` see the variable:
+
+```yaml
+sessions:
+  - source: D:\data\ses-01ehav\Trial_data.nc
+    video_feature_folders:
+      feral: D:\emb\ses-01          # one {video stem}.npy per trial's camera file
+features:
+  columns:
+    feral: {feral_dims: 0..767}
+```
+
+Either way the arrays are memory-mapped and sampled onto the trial clock
+exactly as a merged sidecar is (trial = video + offset, nearest frame, the
+video's own rate). Nothing is copied or declared beside the session: the
+file stays as it was, and {meth}`~ethograph.io.trialtree.TrialTree.save`
+never writes the variable back (it carries `attrs["attached_from"]`).
+
+A script attaches the same way, on the tree the GUI would open:
+
+```python
+from ethograph.io.video_feature_files import VideoFeatureFiles, attach_video_features
+
+attach_video_features(dt, alignment, VideoFeatureFiles.from_paths("feral_cfgA", ["D:/emb/cfgA"]))
+```
+
+Merging stays the path for the extractors ethograph runs itself, whose
+sidecars carry the plan and model in their attrs.
+
 ## Choosing which dimensions to keep
 
 1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of
