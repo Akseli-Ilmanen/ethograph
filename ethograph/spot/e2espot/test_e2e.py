@@ -33,7 +33,7 @@ def get_args():
                              'its pose block -- the ablation that measures '
                              'what the pose contributes')
     parser.add_argument('-d', '--dataset',
-                        help='Dataset name if not inferrable from the config')
+                        help='Dataset name if not inferable from the config')
     return parser.parse_args()
 
 

@@ -218,16 +218,20 @@ def predict_split(
     *zero_features* hands a model that reads the feature block zeros for it
     — the ablation behind ``evaluate(zero_features=True)``.
     """
-    command = script_command("test_e2e") + [
-        str(model_dir.resolve()),
-        str(config.frames_dir.resolve()),
-        "-s",
-        split,
-        "--save_as",
-        str(out_prefix.resolve()),
-        "-d",
-        str(config.dataset_dir.resolve()),
-    ] + (["--zero_fuse"] if zero_features else [])
+    command = (
+        script_command("test_e2e")
+        + [
+            str(model_dir.resolve()),
+            str(config.frames_dir.resolve()),
+            "-s",
+            split,
+            "--save_as",
+            str(out_prefix.resolve()),
+            "-d",
+            str(config.dataset_dir.resolve()),
+        ]
+        + (["--zero_fuse"] if zero_features else [])
+    )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     code = run_logged(command, log_path, cwd=log_path.parent)
     if code != 0:
