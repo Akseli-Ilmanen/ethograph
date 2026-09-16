@@ -1,0 +1,24 @@
+# FERAL's named recipes ("modes"), transcribed from feral/presets.py (see
+# NOTICE.md). Each is a sparse overlay deep-merged onto default_config.yaml,
+# exactly as `feral train --mode` does.
+lite:
+  backbone: vjepa2_1_vitb_384
+  model:
+    freeze_encoder_layers: 0
+  ema_decay: null
+max:
+  data:
+    chunk_shift: 21
+    eval_chunk_shift: 12
+    eval_smoothing_window: 9
+  ema_decay: 0.999
+rare:
+  backbone: vjepa2_1_vitb_384
+  model:
+    freeze_encoder_layers: 0
+    max_class_weight: 20
+  training:
+    label_smoothing: 0.0
+    grad_clip_norm: 1.0
+  mixup_alpha: null
+  ema_decay: null

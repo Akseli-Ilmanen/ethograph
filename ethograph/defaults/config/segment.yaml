@@ -36,6 +36,12 @@ features:
     mapping: ../mapping.txt                # the project's label vocabulary
     branch: 0                              # one model per branch
 
+# video_features:                          # a pretrained video network as feature columns (docs: video_features)
+#   extractor: s3d                         # s3d | timm | feral — feral trains in its own env from an export
+#   camera: cam-1
+#   context_s: 0.64                        # feral only: seconds one chunk spans (docs: feral)
+#   preset: lite                           # feral only: lite | max | rare
+
 model:
   architecture: c2f_tcn                    # eto.segment.architectures() lists them
   params: {}                               # upstream defaults; see model.params in the reference

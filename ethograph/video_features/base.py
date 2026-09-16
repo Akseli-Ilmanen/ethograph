@@ -44,6 +44,18 @@ EXTRACTORS: dict[str, tuple[str, str]] = {
 #: The pip extra that provides each extractor's package, for the error message.
 _EXTRA: dict[str, str] = {"timm": "timm"}
 
+#: Extractors that run **outside** this environment: a registered name, so a
+#: config can select them and their variable is spelled like any other
+#: (``feral``, ``feral_dims``), but nothing here can build them. The value
+#: says where the features come from instead.
+EXTERNAL: dict[str, str] = {
+    "feral": (
+        "FERAL runs in its own environment. Export for it with project.video_features() "
+        "(labels.json + config.yaml under {root}/feral/), train and infer there, and its "
+        "embeddings attach from {root}/feral/embeddings/ — see docs/models/segment/feral."
+    ),
+}
+
 
 def feature_dim(name: str) -> str:
     """The feature dim of extractor *name*'s sidecar: ``{name}_dims``."""
@@ -164,8 +176,8 @@ class Extractor(Protocol):
 
 
 def check_extractor_name(name: str) -> None:
-    if name not in EXTRACTORS:
-        raise ValueError(f"Unknown video-feature extractor {name!r}; choose from {sorted(EXTRACTORS)}")
+    if name not in EXTRACTORS and name not in EXTERNAL:
+        raise ValueError(f"Unknown video-feature extractor {name!r}; choose from {sorted({*EXTRACTORS, *EXTERNAL})}")
 
 
 def extractor_module(name: str) -> ModuleType:
@@ -176,6 +188,8 @@ def extractor_module(name: str) -> ModuleType:
     ``ImportError`` naming the extra.
     """
     check_extractor_name(name)
+    if name in EXTERNAL:
+        raise ImportError(f"The {name!r} extractor cannot be built here: {EXTERNAL[name]}")
     module_name, _ = EXTRACTORS[name]
     try:
         return importlib.import_module(module_name)

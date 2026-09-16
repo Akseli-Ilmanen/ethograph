@@ -90,6 +90,7 @@ ethograph/video_features/     # S3D video features, configured in seconds, resol
 
 ethograph/segment/            # Segmentation pipeline (docs: docs/source/models/segment/)
     config.py, sessions.py, samples.py, materialise.py, train.py, inference.py, search.py, crossval.py, windows.py, project.py
+    feral.py                  # FERAL's inputs from the sessions; its embeddings come back as the `feral` variable
     preprocess.py, augment.py, dataset.py, losses.py, metrics.py, postprocess.py, plotting.py, video_features.py
     models/                   # Architecture registry + contract; vendored.py adapts DLC2Action; rnn.py is ours
     dlc2action/, specscalpel/, lady/   # Vendored — see each NOTICE.md; excluded from ruff/mypy

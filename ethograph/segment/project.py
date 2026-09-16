@@ -34,11 +34,12 @@ from typing import TYPE_CHECKING, Any, Iterable
 
 import yaml
 
-from ethograph.segment.config import SegmentConfig, load_config
+from ethograph.segment.config import FERAL, FERAL_EMBEDDINGS_DIR, SegmentConfig, load_config
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import pandas as pd
 
+    from ethograph.segment.feral import FeralExport
     from ethograph.segment.samples import ColumnLayout
     from ethograph.segment.search import SearchResult
     from ethograph.segment.sessions import Session
@@ -125,11 +126,33 @@ class Project:
 
         if in_place and not merge:
             raise ValueError("in_place only means something with merge=True — it says where the merge is written.")
+        if self._config.video_features.extractor == FERAL:
+            if merge:
+                raise ValueError(
+                    "FERAL's embeddings are never merged into the session file: they attach from "
+                    f"{self._config.feral_dir / FERAL_EMBEDDINGS_DIR} whenever a session opens under this config."
+                )
+            return self.export_feral().files
         written = extract_video_features(self._config, overwrite=overwrite)
         if merge:
             for session in self.sessions():
                 merge_video_features(session, self._config, in_place=in_place)
         return written
+
+    def export_feral(self) -> FeralExport:
+        """Write FERAL's inputs for this project's sessions → ``{root}/feral/``.
+
+        ``labels.json`` and a complete ``config.yaml`` for ``feral
+        train-config``, with every trial's curated labels rasterised on its
+        video's frames and the roles ``train()`` would draw —
+        ``train.split.holdout_sessions`` are FERAL's ``test`` and
+        ``inference`` only, so their embeddings come from a model that never
+        saw their labels. FERAL then runs in its own environment; the log
+        names the commands. See :mod:`ethograph.segment.feral`.
+        """
+        from ethograph.segment.feral import export_feral
+
+        return export_feral(self._config)
 
     def materialise(self) -> Path:
         """Feature engineering: write the materialised dataset, and return its path."""

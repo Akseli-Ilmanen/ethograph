@@ -33,6 +33,12 @@ from ethograph.video_features.base import CropBox, Extractor, check_extractor_na
 logger = logging.getLogger(__name__)
 
 DLC2ACTION_CONFIG = Path(__file__).parent / "dlc2action" / "config"
+
+#: The external extractor whose features arrive as files: its registry name,
+#: the variable its embeddings become, and where under ``feral_dir`` they are
+#: read from (``ethograph.segment.feral`` writes for it, ``sessions`` reads).
+FERAL = "feral"
+FERAL_EMBEDDINGS_DIR = "embeddings"
 """The vendored DLC2Action config tree (see ``dlc2action/NOTICE.md``).
 
 Reached by path, not by import: importing the package here would re-enter
@@ -984,10 +990,13 @@ class VideoFeaturesConfig:
     ``extractor`` names an entry of :data:`ethograph.video_features.EXTRACTORS`:
     ``s3d`` (clip-wise, a ``stack_s`` window of motion per frame — the
     default) or ``timm`` (frame-wise, any timm image backbone, DINOv2 unless
-    ``model_name`` says otherwise). A setting
-    that belongs to the other extractor is refused by name rather than
+    ``model_name`` says otherwise) — or ``feral``, which is not run here at
+    all: the project exports FERAL's inputs (:mod:`ethograph.segment.feral`),
+    FERAL trains in its own environment, and its per-frame embeddings attach
+    from ``{root}/feral/embeddings/`` as the variable ``feral``. A setting
+    that belongs to another extractor is refused by name rather than
     ignored — ``stack_s`` means nothing to a frame-wise model, ``model_name``
-    nothing to S3D.
+    nothing to S3D, ``context_s`` nothing to either.
 
     Everything else about the extraction (batch size, decode chunk, fp16,
     device, S3D's ``dense`` ablation mode) is a performance detail with one
@@ -1011,9 +1020,24 @@ class VideoFeaturesConfig:
     #: One pixel box cut from every frame before the network sees it — the
     #: individual's part of the frame, in the GUI crop tool's numbers.
     crop: CropBox | None = None
+    #: ``feral`` only: seconds one FERAL chunk spans, resolved against the
+    #: video's rate into upstream's ``chunk_step`` (its 64 frames are spread
+    #: over this long). ``None`` = every frame, upstream's own chunk.
+    context_s: float | None = None
+    #: ``feral`` only: one of FERAL's named recipes (``lite``, ``max``,
+    #: ``rare``) laid over its default config; ``None`` = the default recipe.
+    preset: str | None = None
 
     def __post_init__(self) -> None:
         check_extractor_name(self.extractor)
+        for key in ("context_s", "preset"):
+            if getattr(self, key) is not None and self.extractor != "feral":
+                raise ValueError(
+                    f"video_features.{key} is a FERAL setting; it means nothing to {self.extractor!r} — "
+                    "remove it or set extractor: feral"
+                )
+        if self.context_s is not None and self.context_s <= 0:
+            raise ValueError(f"video_features.context_s must be positive, got {self.context_s}")
         if isinstance(self.crop, dict):
             # The YAML loader builds nested dataclasses; the Python helper
             # (`extract_videos(crop={...})`) hands the mapping straight here.
@@ -1072,6 +1096,11 @@ class SegmentConfig:
     @property
     def video_features_dir(self) -> Path:
         return self.root / "video_features"
+
+    @property
+    def feral_dir(self) -> Path:
+        """FERAL's side of the project: its inputs, checkpoints and the embeddings it wrote."""
+        return self.root / "feral"
 
     @property
     def runs_dir(self) -> Path:

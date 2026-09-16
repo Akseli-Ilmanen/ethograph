@@ -200,6 +200,8 @@ ethograph = ["assets/*", "defaults/*", "defaults/**/*"]
 "ethograph._vendor.vocalseg" = ["LICENSE", "NOTICE.md"]
 # The architectures read their defaults from these at build time — see NOTICE.md.
 "ethograph.segment.models" = ["config/*.yaml"]
+# FERAL's default config + presets, copied for the config ethograph writes for it — see NOTICE.md.
+"ethograph.segment.feral_defaults" = ["*.yaml", "NOTICE.md"]
 "ethograph.segment.dlc2action" = ["config/**/*.yaml", "NOTICE.md", "LICENSE.APGPL", "colors.txt"]
 "ethograph.segment.specscalpel" = ["config/*.yaml", "NOTICE.md", "LICENSE"]
 "ethograph.segment.lady" = ["config/*.yaml", "NOTICE.md", "LICENSE"]

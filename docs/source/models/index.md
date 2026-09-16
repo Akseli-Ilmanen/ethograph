@@ -12,22 +12,31 @@ flowchart TD
     gpu -->|No| lgbm[LightGBM model<br/><i>point events only</i><br/><i>CPU, GUI native</i><br/><i>Model ▸ LightGBM: Train… / Predict…</i>]
     gpu -->|Yes| shape{What kind of label?}
 
-    shape -->|"State event<br/>(an interval: onset + offset)"| segment[Action segmentation<br/><code>eto.segment</code><br/><i>DLC2Action models + added architectures</i>]
     shape -->|"Point event<br/>(one moment per trial)"| input{What does the model see?}
+    shape -->|"State event<br/>(an interval: onset + offset)"| big{A large GPU or<br/>a GPU cluster?}
 
     input -->|Video only| spot[Event spotting: E2E-Spot<br/><code>eto.spot</code>]
     input -->|Video + pose| spotfeat[E2E-Spot + features]
+
+    big -->|No| segment[Action segmentation<br/><code>eto.segment</code><br/><i>DLC2Action models + added architectures</i>]
+    big -->|Yes| sees{What does FERAL see?}
+    sees -->|Video only| feral[FERAL alone<br/><i>export labels.json, FERAL-native</i><br/><code>eto.segment.export_feral</code>]
+    sees -->|"Video + other features<br/>(pose, changepoints, sensors)"| feralseg[FERAL embeddings<br/>as a video feature]
+    feralseg --> segment
 
     segment --> curate
     lgbm --> curate
     spot --> curate
     spotfeat --> curate
+    feral --> curate
     curate([Curate the predictions in the GUI]) --> conf[Read and threshold confidence]
 
     click segment "segment/index.html"
     click lgbm "onset_model.html"
     click spot "spot/index.html"
     click spotfeat "spot/multimodal.html"
+    click feral "segment/feral.html"
+    click feralseg "segment/feral.html"
     click curate "curation.html"
     click conf "confidence.html"
 ```
@@ -42,6 +51,9 @@ flowchart TD
   - Original architectures, as adapted in DLC2Action: `asformer` {cite:p}`yi2021asformer`, `c2f_tcn` {cite:p}`singhania2021c2ftcn`, `edtcn` {cite:p}`lea2017edtcn`, `motionbert` {cite:p}`zhu2023motionbert`, and `mlp`, a per-frame baseline.
   - Added in EthoGraph: `rnn` (a bidirectional GRU/LSTM baseline), `specscalpel` {cite:p}`ji2026specscalpel` and `lady` {cite:p}`ji2026lady`.
 - **Precise event spotting** — E2E-Spot {cite:p}`hong2022e2espot`.
+- **FERAL** {cite:p}`skovorodnikov2025feral` — a video foundation model (V-JEPA 2) fine-tuned on the pixels alone, in its own
+  environment on a large GPU. Either on its own, with the GUI's labels exported to its `labels.json`, or as a video feature
+  whose per-frame embedding `eto.segment` reads next to changepoint and pose columns ({doc}`segment/feral`).
 
 ```{toctree}
 :maxdepth: 1

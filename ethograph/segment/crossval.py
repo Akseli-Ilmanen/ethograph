@@ -45,6 +45,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from ethograph.segment.config import (
+    FERAL,
     SegmentConfig,
     SessionSpec,
     apply_overrides,
@@ -179,6 +180,14 @@ def cross_validate(
         raise ValueError(
             "train.split.holdout_sessions / holdout_trials is already set — that is one fold, pinned by hand. "
             "Cross-validation writes it per fold; leave it out of the config."
+        )
+    if config.video_features.extractor == FERAL and FERAL in config.features.columns:
+        logger.warning(
+            "Cross-validating over FERAL embeddings: FERAL was fine-tuned on the labels of every session it "
+            "trained on, so a fold that holds out one of those sessions scores a model whose input already knows "
+            "the answer. These fold scores are inflated. For a number you can report, name the true test "
+            "sessions in train.split.holdout_sessions before project.video_features() (they stay out of FERAL's "
+            "training) and read train()'s test score."
         )
     if n_folds is not None and folds is not None:
         raise ValueError("Pass either folds (sessions to hold out) or n_folds (trial folds), not both.")

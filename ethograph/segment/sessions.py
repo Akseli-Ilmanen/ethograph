@@ -31,9 +31,12 @@ from ethograph.io.catalog import (
 )
 from ethograph.io.data_loader import LoadResult, load_features_dataset
 from ethograph.io.video_feature_files import AttachResult, VideoFeatureFiles, attach_video_features
+from ethograph.io.video_probe import probe_video
 from ethograph.labels.intervals import LABELING_AUTOMATED
 from ethograph.labels.tsv_store import get_trial_from_tsv
 from ethograph.segment.config import (
+    FERAL,
+    FERAL_EMBEDDINGS_DIR,
     MERGED_CHANGEPOINTS,
     LabelInputsConfig,
     NeuralFeaturesConfig,
@@ -238,6 +241,8 @@ def open_session(
     logger.info("Opened session %s (%s backend, %d trials)", sid, result.data_loader.backend, len(result.trial_ids))
     session = Session(spec=spec, id=sid, result=result)
     attach_video_feature_folders(session)
+    if config is not None and config.video_features.extractor == FERAL:
+        attach_feral_embeddings(session, config)
     expand_neural_features(session, config)
     if config is not None:
         if label_inputs is not None:
@@ -274,6 +279,59 @@ def attach_video_feature_folders(session: Session) -> list[AttachResult]:
     session.result.catalog = catalog
     session.result.data_loader = XarrayLoader(dt.itrial(0), catalog)
     return results
+
+
+def attach_feral_embeddings(session: Session, config: SegmentConfig) -> AttachResult | None:
+    """Attach the embeddings FERAL wrote for this session's videos as the variable ``feral``.
+
+    ``extractor: feral`` names features made outside: ``feral infer
+    --save_embeddings`` leaves one ``{video stem}.npy`` per video under
+    ``{root}/feral/embeddings/``, for every session at once. This session's
+    files are the ones named after its own camera files
+    (``video_features.camera``), attached exactly as ``video_feature_folders``
+    are. The video's rate is the alignment's, else read off the first video
+    itself — a bare trials table names no rate.
+
+    Nothing there yet is fine while the config does not select the
+    variable (the export opens sessions before FERAL has run); once
+    ``features.columns`` names ``feral``, a missing folder is an error
+    naming the command that fills it.
+    """
+    folder = config.feral_dir / FERAL_EMBEDDINGS_DIR
+    selected = FERAL in config.features.columns
+    dt = session.result.dt
+    if dt is None:
+        if selected:
+            raise ValueError(f"{session.source}: FERAL embeddings attach to an xarray (.nc) session only")
+        return None
+    alignment = session.result.nwb_alignment
+    device = session.video_device(config.video_features.camera)
+    stems: dict[str, Path] = {}
+    for trial in session.trial_ids:
+        name = alignment.media_filename(trial, "video", device)
+        if name:
+            stems.setdefault(Path(name).stem, folder / f"{Path(name).stem}.npy")
+    files = [path for path in stems.values() if path.is_file()]
+    if not files:
+        if selected:
+            raise FileNotFoundError(
+                f"{session.spec.label}: no FERAL embeddings for its videos under {folder} — run "
+                "`feral infer <checkpoint> <video folder> --save_embeddings "
+                f"{folder}` in the FERAL environment first (project.video_features() logs the exact command)"
+            )
+        logger.info("%s: no FERAL embeddings under %s yet", session.spec.label, folder)
+        return None
+    if alignment.get_stream_rate("video", device) is None:
+        first = next(session.media_path(t, "video", device) for t in session.trial_ids)
+        if first is None or not first.is_file():
+            raise FileNotFoundError(f"{session.spec.label}: no video to read the frame rate from")
+        alignment.set_stream_rate(probe_video(str(first)).fps, "video", device)
+    spec = VideoFeatureFiles.from_paths(FERAL, files, device=device)
+    result = attach_video_features(dt, alignment, spec)
+    catalog = catalog_from_xarray(dt.itrial(0), dt, nwb_alignment=alignment)
+    session.result.catalog = catalog
+    session.result.data_loader = XarrayLoader(dt.itrial(0), catalog)
+    return result
 
 
 def expand_neural_features(session: Session, config: SegmentConfig | None) -> None:

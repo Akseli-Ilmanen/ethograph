@@ -41,6 +41,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.notify import notify
+from ethograph.gui.project import project_dir_of
 from ethograph.utils.paths import ethograph_home
 
 logger = logging.getLogger(__name__)
@@ -403,6 +404,10 @@ class TopBarBuilder:
         io = getattr(self.meta, "io_widget", None)
 
         menu.addAction("Open settings folder (.ethograph)…", self._open_ethograph_home)
+        self.open_project_action = menu.addAction("Open project folder…", self._open_project_folder)
+        self._sync_open_project_action()
+        if self.app_state is not None:
+            self.app_state.project_path_changed.connect(lambda _value: self._sync_open_project_action())
         menu.addSeparator()
 
         # Each I/O sub-panel pops up on its own (no unrelated sections):
@@ -440,16 +445,36 @@ class TopBarBuilder:
         """Open the global ``.ethograph`` settings/cache folder in the OS file browser."""
         home = ethograph_home()
         home.mkdir(parents=True, exist_ok=True)
+        self._open_folder(home)
+
+    def _sync_open_project_action(self):
+        """The project entry is live only while a project folder is set and exists."""
+        project = project_dir_of(self.app_state)
+        self.open_project_action.setEnabled(project is not None)
+        self.open_project_action.setToolTip(
+            str(project) if project is not None else "No project folder — choose one on the start page"
+        )
+
+    def _open_project_folder(self):
+        """Open the chosen project folder in the OS file browser."""
+        project = project_dir_of(self.app_state)
+        if project is None:
+            self._sync_open_project_action()
+            return
+        self._open_folder(project)
+
+    @staticmethod
+    def _open_folder(folder):
         try:
             if sys.platform == "win32":
-                os.startfile(str(home))
+                os.startfile(str(folder))
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(home)])
+                subprocess.Popen(["open", str(folder)])
             else:
-                subprocess.Popen(["xdg-open", str(home)])
+                subprocess.Popen(["xdg-open", str(folder)])
         except OSError:
-            logger.warning("Could not open %s in the file browser", home)
-            notify(f"Could not open {home} in the file browser.", severity="warning")
+            logger.warning("Could not open %s in the file browser", folder)
+            notify(f"Could not open {folder} in the file browser.", severity="warning")
 
     # ------------------------------------------------------------------
     # Changepoints menu

@@ -27,6 +27,7 @@ architecture, run, role, prediction set) is defined in the repository's
 """
 
 from ethograph.segment.config import SegmentConfig, as_overrides, load_config
+from ethograph.segment.feral import export_feral
 from ethograph.segment.project import Project, architectures, extract_videos, tunable_params
 from ethograph.segment.sessions import (
     discover_columns,
@@ -45,6 +46,7 @@ __all__ = [
     "as_overrides",
     "discover_columns",
     "discover_columns_from_source",
+    "export_feral",
     "extract_videos",
     "feature_sampling_rates",
     "feature_sampling_rates_from_source",

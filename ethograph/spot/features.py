@@ -72,11 +72,11 @@ def trial_features(session: Session, trial: int | str, features: dict[str, dict]
     return time, np.asarray(data, dtype=np.float32)
 
 
-def write_trial_features(path: Path, time: np.ndarray, x: np.ndarray, events: dict[int, float]) -> Path:
-    """Write one trial's features plus its events as indices on this clock."""
+def write_trial_features(path: Path, time: np.ndarray, x: np.ndarray, events: dict[int, list[float]]) -> Path:
+    """Write one trial's features plus its events as indices on this clock (``labels`` and ``events`` run parallel)."""
     fs = sampling_rate(time)
-    labels = sorted(events)
-    frames = [int(np.searchsorted(time, events[label])) for label in labels]
+    labels = [label for label in sorted(events) for _ in events[label]]
+    frames = [int(np.searchsorted(time, t)) for label in sorted(events) for t in events[label]]
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         path,
@@ -98,7 +98,7 @@ def read_names(features_dir: Path) -> list[str]:
     return list(json.loads((features_dir / NAMES_FILE).read_text(encoding="utf-8"))["names"])
 
 
-def _events_on_trial_clock(session: Session, record: TrialRecord, config: SpotConfig) -> dict[int, float]:
+def _events_on_trial_clock(session: Session, record: TrialRecord, config: SpotConfig) -> dict[int, list[float]]:
     """The record's events back as trial-relative seconds.
 
     The record holds video frames; ``trial = video + offset`` (the
@@ -107,7 +107,9 @@ def _events_on_trial_clock(session: Session, record: TrialRecord, config: SpotCo
     alignment = session.result.nwb_alignment
     camera = session.video_device(config.labels.camera)
     offset = float(alignment.stream_offset_for_trial(record.trial, "video", device=camera))
-    return {config.class_label(name): frame / record.fps + offset for name, frame in record.events.items()}
+    return {
+        config.class_label(name): [f / record.fps + offset for f in frames] for name, frames in record.events.items()
+    }
 
 
 def export_features(config: SpotConfig, sessions: list[Session], records: list[TrialRecord]) -> Path:

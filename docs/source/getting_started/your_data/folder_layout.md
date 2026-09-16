@@ -26,6 +26,7 @@ my_project/                            # chosen on the start page
     │   └── space/                     # reference geometries for the Space plot
     ├── runs/
     │   └── lightgbm/                  # lightgbm models trained from the Model menu
+    ├── feral/                         # FERAL's inputs, checkpoints and embeddings (models/segment/feral)
     ├── workflows/                     # curation workflows
     ├── wizard/                        # Data wizard notebooks, one per rig
     └── sessions/                      # drag & drops made with this project set
