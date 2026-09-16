@@ -249,9 +249,12 @@ per session — {doc}`feral`.
 
 1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of
 kinematic ones, and they dominate the input — in practice a small, well-chosen
-subset does *better* than all of them. Two tools, both leaning on
-`kind="video_feature"`, which every extractor
-stamps for you.
+subset does *better* than all of them. That holds for a network trained on
+Kinetics or ImageNet, whose channels mostly describe things your animal never
+does. An embedding fine-tuned on your own labels ({doc}`feral`) is the
+exception: every channel was shaped for the task, so feed it whole and
+z-scored. Two tools, both leaning on `kind="video_feature"`, which every
+extractor stamps for you.
 
 **Is the whole group pulling its weight?** That is a question about the
 trained model, so it takes two runs — the same materialised dataset, one

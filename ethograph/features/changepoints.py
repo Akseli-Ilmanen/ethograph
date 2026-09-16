@@ -379,6 +379,61 @@ HORIZON_FRACTION = 0.5
 #: The derived kernel ladder, ``horizon / k`` — the widest fades at the horizon (``e^-4``).
 SIGMA_DIVISORS: tuple[float, ...] = (16.0, 8.0, 4.0)
 
+#: The attr naming the signal a raw mask was detected on (what ``merge_changepoints`` requires to agree).
+TARGET_FEATURE = "target_feature"
+
+#: The windows of the shape columns, in horizons: ``prominence`` and
+#: ``asymmetry`` look ``horizon * k`` samples to each side of a candidate.
+WINDOW_MULTIPLIERS: tuple[float, ...] = (1.0, 2.0, 4.0)
+
+
+def default_windows(horizon: float) -> list[float]:
+    """The shape windows, ``horizon * k`` for :data:`WINDOW_MULTIPLIERS`, in samples."""
+    return [round(float(horizon) * k, 4) for k in WINDOW_MULTIPLIERS]
+
+
+def _shape_at_candidates(
+    changepoint_indices: np.ndarray, source: np.ndarray, window: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """``(prominence, asymmetry)`` of *source* at every candidate, over *window* samples each side.
+
+    Prominence is how far the candidate sits below the lower of the two
+    hills beside it: ``min(max before, max after) - source[i]``. A trough
+    between two movements scores high; a dip beside one movement and a
+    flat stretch scores low, because only what both sides share counts.
+    Asymmetry is ``mean after - mean before``: positive where a movement
+    starts, negative where one ends, near zero inside jitter. A window
+    that is all NaN, or a NaN candidate, reads 0.
+    """
+    w = max(1, int(round(window)))
+    n = len(source)
+    prominence = np.zeros(len(changepoint_indices))
+    asymmetry = np.zeros(len(changepoint_indices))
+    with np.errstate(all="ignore"):
+        for k, i in enumerate(changepoint_indices):
+            before = source[max(0, i - w) : i + 1]
+            after = source[i : min(n, i + w + 1)]
+            here = source[i]
+            if np.isnan(here) or np.all(np.isnan(before)) or np.all(np.isnan(after)):
+                continue
+            prominence[k] = min(np.nanmax(before), np.nanmax(after)) - here
+            asymmetry[k] = np.nanmean(after) - np.nanmean(before)
+    return prominence, asymmetry
+
+
+def _hold_nearest(changepoint_indices: np.ndarray, values: np.ndarray, seq_length: int) -> np.ndarray:
+    """Every frame reads the value of its nearest candidate; no candidate, all zeros."""
+    if len(changepoint_indices) == 0:
+        return np.zeros(seq_length)
+    frames = np.arange(seq_length)
+    right = np.searchsorted(changepoint_indices, frames)
+    left = np.clip(right - 1, 0, len(changepoint_indices) - 1)
+    right = np.clip(right, 0, len(changepoint_indices) - 1)
+    nearest = np.where(
+        np.abs(changepoint_indices[right] - frames) < np.abs(frames - changepoint_indices[left]), right, left
+    )
+    return values[nearest]
+
 
 @dataclass(frozen=True)
 class ChangepointScales:
@@ -436,10 +491,13 @@ def more_changepoint_features(
     horizon: float | None = None,
     scale: np.ndarray | None = None,
     max_length: float | None = None,
+    source: np.ndarray | None = None,
+    windows: Sequence[float] | None = None,
 ) -> np.ndarray:
     """Create changepoint-based features from a binary changepoint array.
 
-    Four column groups, in this order (see :data:`CP_TRANSFORMS`):
+    Four column groups always, two more when *source* is given, in this
+    order (see :data:`CP_TRANSFORMS`):
 
     - **Binary** — the exact changepoint positions (0/1 mask).
       Example: ``0 0 0 0 1 0 0 0 1 0 0 0 0 0``
@@ -461,6 +519,13 @@ def more_changepoint_features(
       already resolve anything shorter than two horizons; this is the long
       range, where a fragment-prone short segment and a whole bout of rest
       should not read alike.
+    - **Prominence** and **asymmetry** — with *source*, the signal the mask
+      was detected on: one column per window of :func:`_shape_at_candidates`,
+      how deep the candidate sits below the lower of its two neighbouring
+      hills, and how much more the signal moves after it than before. Every
+      frame reads its nearest candidate's value, so between candidates the
+      columns are steps, and a trial with no candidate reads 0. In the
+      signal's own units, so unlike the four above they are normalised.
 
     Proximity uses a Laplacian kernel by default:
 
@@ -490,10 +555,16 @@ def more_changepoint_features(
             proximity columns.
         max_length: Where the length column saturates, in samples; ``None``
             is :data:`LENGTH_HORIZONS` horizons.
+        source: The signal the mask marks candidates on, on the same time
+            axis; enables the prominence and asymmetry columns.
+        windows: Half-widths of the shape columns, in samples; ``None`` is
+            :func:`default_windows` of the horizon. Ignored without *source*.
 
     Returns:
-        2D array of shape ``(T, 1 + len(sigmas) + 3)``: the binary mask, one
-        proximity column per sigma, ``since``, ``until``, then ``length``.
+        2D array of shape ``(T, 1 + len(sigmas) + 3)`` — the binary mask, one
+        proximity column per sigma, ``since``, ``until``, then ``length`` —
+        plus ``2 * len(windows)`` columns (all prominences, then all
+        asymmetries) when *source* is given.
     """
     changepoint_binary = np.asarray(changepoint_binary)
     seq_length = len(changepoint_binary)
@@ -518,7 +589,16 @@ def more_changepoint_features(
 
     since, until = _offsets(changepoint_indices, seq_length, horizon)
     length = _segment_lengths(changepoint_indices, seq_length, max_length)
-    return np.column_stack([changepoint_binary.astype(float), *proximity, since, until, length])
+    columns = [changepoint_binary.astype(float), *proximity, since, until, length]
+    if source is not None:
+        source = np.asarray(source, dtype=float)
+        if source.shape != (seq_length,):
+            raise ValueError(f"source must have shape ({seq_length},), got {source.shape}")
+        windows = default_windows(horizon) if windows is None else list(windows)
+        shapes = [_shape_at_candidates(changepoint_indices, source, w) for w in windows]
+        columns += [_hold_nearest(changepoint_indices, prom, seq_length) for prom, _ in shapes]
+        columns += [_hold_nearest(changepoint_indices, asym, seq_length) for _, asym in shapes]
+    return np.column_stack(columns)
 
 
 #: The four column groups ``more_changepoint_features`` produces — the
@@ -535,38 +615,57 @@ CP_BINARY_SUFFIX = "_cp_binary"
 CP_PROXIMITY = "proximity"
 CP_OFFSET = "offset"
 CP_LENGTH = "length"
-CP_TRANSFORMS: tuple[str, ...] = (CP_BINARY, CP_PROXIMITY, CP_OFFSET, CP_LENGTH)
+#: The two shape groups read the mask's *source signal* (its ``target_feature``)
+#: at each candidate, over :data:`WINDOW_MULTIPLIERS` horizons; named by rank
+#: (``_cp_prom0`` / ``_cp_asym0`` is the narrowest window) like ``proximity``.
+CP_PROMINENCE = "prominence"
+CP_ASYMMETRY = "asymmetry"
+CP_TRANSFORMS: tuple[str, ...] = (CP_BINARY, CP_PROXIMITY, CP_OFFSET, CP_LENGTH, CP_PROMINENCE, CP_ASYMMETRY)
+#: The groups that need the mask's source signal.
+CP_SHAPE_TRANSFORMS: frozenset[str] = frozenset({CP_PROMINENCE, CP_ASYMMETRY})
 
 
-def _n_sigmas(sigmas: int | Sequence[float]) -> int:
-    return int(sigmas) if isinstance(sigmas, int) else len(sigmas)
+def _n_of(values: int | Sequence[float]) -> int:
+    return int(values) if isinstance(values, int) else len(values)
 
 
-def _cp_feature_groups(var: str, sigmas: int | Sequence[float]) -> list[tuple[str, str]]:
+def _cp_feature_groups(
+    var: str, sigmas: int | Sequence[float], windows: int | Sequence[float] | None = None
+) -> list[tuple[str, str]]:
     """``(name, transform_group)`` pairs, in ``more_changepoint_features``'s column order.
 
-    *sigmas* is the list or just its length — the names depend on nothing else.
+    *sigmas* and *windows* are the lists or just their lengths — the names
+    depend on nothing else. *windows* ``None`` leaves the shape groups out,
+    as ``more_changepoint_features`` does without a source.
     """
     pairs = [(f"{var}{CP_BINARY_SUFFIX}", CP_BINARY)]
-    pairs += [(f"{var}_cp_prox{i}", CP_PROXIMITY) for i in range(_n_sigmas(sigmas))]
+    pairs += [(f"{var}_cp_prox{i}", CP_PROXIMITY) for i in range(_n_of(sigmas))]
     pairs += [(f"{var}_cp_since", CP_OFFSET), (f"{var}_cp_until", CP_OFFSET)]
     pairs.append((f"{var}_cp_length", CP_LENGTH))
+    if windows is not None:
+        pairs += [(f"{var}_cp_prom{i}", CP_PROMINENCE) for i in range(_n_of(windows))]
+        pairs += [(f"{var}_cp_asym{i}", CP_ASYMMETRY) for i in range(_n_of(windows))]
     return pairs
 
 
-def cp_feature_names(var: str, sigmas: int | Sequence[float], transforms: Sequence[str] = CP_TRANSFORMS) -> list[str]:
+def cp_feature_names(
+    var: str,
+    sigmas: int | Sequence[float],
+    transforms: Sequence[str] = CP_TRANSFORMS,
+    windows: int | Sequence[float] = len(WINDOW_MULTIPLIERS),
+) -> list[str]:
     """Column names ``add_changepoint_features(..., transforms=transforms)`` writes for *var*.
 
     Use this to name the exact columns a ``changepoint_features`` config will
     produce without materialising anything — e.g. to paste into
     ``features.columns`` by hand, or to check a config's generated layout.
-    *sigmas* may be the list or just how many there are.
+    *sigmas* and *windows* may be the lists or just how many there are.
     """
     unknown = set(transforms) - set(CP_TRANSFORMS)
     if unknown:
         raise ValueError(f"transforms must be a subset of {CP_TRANSFORMS}, got {sorted(unknown)}")
     wanted = set(transforms)
-    return [name for name, group in _cp_feature_groups(var, sigmas) if group in wanted]
+    return [name for name, group in _cp_feature_groups(var, sigmas, windows) if group in wanted]
 
 
 def add_changepoint_features(
@@ -578,6 +677,7 @@ def add_changepoint_features(
     horizon: float | None = None,
     scale_by: str | None = None,
     max_length: float | None = None,
+    windows: Sequence[float] | None = None,
 ) -> xr.Dataset:
     """Expand changepoint variables into the ML features of ``more_changepoint_features``.
 
@@ -595,11 +695,17 @@ def add_changepoint_features(
       previous / until the next changepoint, clipped at *horizon*
     - ``length`` → ``{var}_cp_length`` — log length of the candidate segment
       the frame sits in, saturating at *max_length*
+    - ``prominence`` → ``{var}_cp_prom{i}`` and ``asymmetry`` →
+      ``{var}_cp_asym{i}`` — one column per window: the shape of the mask's
+      source signal (its ``target_feature`` attr) at the nearest candidate.
+      A mask without that attr cannot have them; the error names it.
 
-    All of them carry ``attrs["normalise"] = 0`` (already on a fixed scale)
-    and none is marked as a changepoint variable — neither the ``kind`` nor
-    the legacy ``type`` — so only the raw binary masks remain changepoints:
-    they are the only ones that can be OR-merged, snapped to or drawn as lines.
+    The first four carry ``attrs["normalise"] = 0`` (already on a fixed
+    scale); the shape columns are in the source's units and are normalised
+    like any feature. None is marked as a changepoint variable — neither the
+    ``kind`` nor the legacy ``type`` — so only the raw binary masks remain
+    changepoints: they are the only ones that can be OR-merged, snapped to
+    or drawn as lines.
 
     Parameters
     ----------
@@ -626,6 +732,9 @@ def add_changepoint_features(
     max_length : float, optional
         Where the length column saturates, in samples; default
         :data:`LENGTH_HORIZONS` × *horizon*.
+    windows : sequence of float, optional
+        Half-widths of the shape columns, in samples; default
+        :func:`default_windows` of the horizon.
 
     Returns
     -------
@@ -646,44 +755,54 @@ def add_changepoint_features(
     if unknown:
         raise ValueError(f"transforms must be a subset of {CP_TRANSFORMS}, got {sorted(unknown)}")
 
+    wanted = set(transforms)
+    want_shape = bool(wanted & CP_SHAPE_TRANSFORMS)
     for var in cp_vars:
         cp = ds[var]
         time = get_time_coord(cp).name
-        if scale_by is None:
-            stacked = xr.apply_ufunc(
-                lambda mask: more_changepoint_features(mask, sigmas, distribution, horizon, max_length=max_length),
-                cp,
-                input_core_dims=[[time]],
-                output_core_dims=[[time, "cp_feature"]],
-                vectorize=True,
-                output_dtypes=[np.float64],
-            )
-        else:
-            scale = ds[scale_by]
-            extra = [d for d in scale.dims if d not in cp.dims]
-            if extra:
+        scale = _aligned_signal(ds, cp, var, "scale_by", scale_by, time) if scale_by is not None else None
+        source = None
+        if want_shape:
+            source_name = cp.attrs.get(TARGET_FEATURE)
+            if source_name is None:
                 raise ValueError(
-                    f"scale_by feature {scale_by!r} has dims {extra} that changepoint var {var!r} "
-                    f"({cp.dims}) lacks; pin them first"
+                    f"{var!r} has no {TARGET_FEATURE!r} attr, so {sorted(wanted & CP_SHAPE_TRANSFORMS)} cannot "
+                    "read the signal it was detected on; describe the mask (schema.changepoint_attrs) or "
+                    "drop those transforms"
                 )
-            if time not in scale.dims:
-                raise ValueError(f"scale_by feature {scale_by!r} is not on the {time!r} axis of {var!r}")
-            stacked = xr.apply_ufunc(
-                lambda mask, vals: more_changepoint_features(mask, sigmas, distribution, horizon, vals, max_length),
-                cp,
-                scale,
-                input_core_dims=[[time], [time]],
-                output_core_dims=[[time, "cp_feature"]],
-                vectorize=True,
-                output_dtypes=[np.float64],
+            source = _aligned_signal(ds, cp, var, "source", str(source_name), time)
+        shape_windows = None
+        if want_shape:
+            reach = default_horizon(sigmas) if horizon is None else float(horizon)
+            shape_windows = default_windows(reach) if windows is None else list(windows)
+        signals = [a for a in (scale, source) if a is not None]
+
+        def _expand(mask, *arrays, _scaled=scale is not None):
+            arrays = list(arrays)
+            vals = arrays.pop(0) if _scaled else None
+            src = arrays.pop(0) if arrays else None
+            return more_changepoint_features(
+                mask, sigmas, distribution, horizon, vals, max_length, source=src, windows=shape_windows
             )
-        all_pairs = _cp_feature_groups(var, sigmas)
+
+        stacked = xr.apply_ufunc(
+            _expand,
+            cp,
+            *signals,
+            input_core_dims=[[time]] * (1 + len(signals)),
+            output_core_dims=[[time, "cp_feature"]],
+            vectorize=True,
+            output_dtypes=[np.float64],
+        )
+        all_pairs = _cp_feature_groups(var, sigmas, shape_windows)
         assert stacked.sizes["cp_feature"] == len(all_pairs)
-        wanted = set(transforms)
         scaled = f", scaled by {scale_by}" if scale_by is not None else ""
         details = {
             f"{var}_cp_prox{i}": f": proximity, sigma {sigma:g} samples{scaled}" for i, sigma in enumerate(sigmas)
         }
+        for i, w in enumerate(shape_windows or []):
+            details[f"{var}_cp_prom{i}"] = f": prominence of {cp.attrs[TARGET_FEATURE]}, window {w:g} samples"
+            details[f"{var}_cp_asym{i}"] = f": asymmetry of {cp.attrs[TARGET_FEATURE]}, window {w:g} samples"
         for i, (name, group) in enumerate(all_pairs):
             if group not in wanted:
                 continue
@@ -691,8 +810,24 @@ def add_changepoint_features(
             feature.attrs = {
                 "description": f"Changepoint feature of {var}{details.get(name, '')}",
                 schema.KIND: schema.CHANGEPOINT_FEATURE,
-                "normalise": 0,
             }
+            if group not in CP_SHAPE_TRANSFORMS:
+                feature.attrs["normalise"] = 0
             ds[name] = feature
 
     return ds
+
+
+def _aligned_signal(ds: xr.Dataset, cp: xr.DataArray, var: str, role: str, name: str, time: str) -> xr.DataArray:
+    """*name*'s variable, checked to live on *cp*'s axes (no dim the mask lacks, and on its time)."""
+    if name not in ds.data_vars:
+        raise ValueError(f"{role} feature {name!r} of {var!r} is not in this dataset")
+    signal = ds[name]
+    extra = [d for d in signal.dims if d not in cp.dims]
+    if extra:
+        raise ValueError(
+            f"{role} feature {name!r} has dims {extra} that changepoint var {var!r} ({cp.dims}) lacks; pin them first"
+        )
+    if time not in signal.dims:
+        raise ValueError(f"{role} feature {name!r} is not on the {time!r} axis of {var!r}")
+    return signal

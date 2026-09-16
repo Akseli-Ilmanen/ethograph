@@ -1187,7 +1187,6 @@ class DataWidget(QWidget):
         self.app_state.prediction_sets = []
         self.app_state.pred_labels_df = None
         self.app_state.pred_store = None
-        self.app_state.labels_confidence_ds = None
         self.catalog = None
         self.app_state.ready = False
 
@@ -1678,33 +1677,27 @@ class DataWidget(QWidget):
         self.update_main_plot(t0=xmin, t1=xmax)
 
     def _update_confidence_overlay(self):
+        """Each prediction panel draws its own file's confidence curve for the current trial.
+
+        Only a run folder has one (its ``.npz``); a plain ``.tsv`` panel has
+        nothing to draw. The curve lives in the panel, never on a feature
+        plot, so a comparison of several runs reads panel by panel.
+        """
         if not self.app_state.ready or self.plot_container is None:
             return
-        if not self.show_confidence_checkbox.isChecked():
-            self.plot_container.hide_confidence_plot()
-            return
+        show = self.show_confidence_checkbox.isChecked()
         trial = self.app_state.trials_sel
-        store = getattr(self.app_state, "pred_store", None)
-        if store is not None:
-            trial_confidence = store.get_confidence(
-                trial, self.app_state.dt, individual=self.app_state.selected_individual()
-            )
-            if trial_confidence is not None:
-                time_coord = self.app_state.time_coord.values
-                n = min(len(trial_confidence), len(time_coord))
-                self.plot_container.show_confidence_plot(trial_confidence[:n], time_coord[:n])
-                return
-        label_ds = getattr(self.app_state, "labels_confidence_ds", None)
-        if label_ds is not None and "labels_confidence" in getattr(label_ds, "data_vars", {}):
-            ds_kwargs = self.app_state.get_ds_kwargs()
-            try:
-                label_confidence, _ = eto.sel_valid(label_ds.labels_confidence, ds_kwargs)
-            except (KeyError, AttributeError, ValueError):
-                label_confidence = None
-            if label_confidence is not None and len(label_confidence) > 0:
-                self.plot_container.show_confidence_plot(label_confidence)
-                return
-        self.plot_container.hide_confidence_plot()
+        individual = self.app_state.selected_individual()
+        sets = {s.path: s for s in self.app_state.prediction_sets}
+        for panel in self.plot_container.prediction_panels():
+            prediction_set = sets.get(panel.prediction_path)
+            store = prediction_set.store if prediction_set is not None else None
+            curve = store.get_confidence_curve(trial, self.app_state.dt, individual) if show and store else None
+            if curve is None:
+                panel.clear_confidence()
+                continue
+            time, confidence = curve
+            panel.set_confidence(time + self.app_state.to_display(trial, 0.0), confidence)
 
     def cycle_neural_view(self):
         if not hasattr(self, "neural_view_combo") or not self.neural_view_combo.isVisible():

@@ -423,15 +423,8 @@ class MetaWidget(GridSectionContainer):
 
         kind = reg.kind
         if kind in PanelKind.FEATURE and reg.plot is not None:
-            plot_changed = self.plot_container.active_feature_plot is not reg.plot
             self.plot_container.active_feature_plot = reg.plot
             self._track_subject_panel(reg.plot)
-            # The dotted prediction-confidence curve is hosted on the current
-            # plot — re-render so it follows (or hides on) the new active plot.
-            # A re-click of the same panel re-announces (sidebar sync) but the
-            # overlay host didn't move, so skip the re-render.
-            if plot_changed and self.app_state.ready:
-                self.data_widget._update_confidence_overlay()
         if kind == PanelKind.SPACE:
             self.data_widget.set_active_space_plot(reg.widget)
         if kind == PanelKind.RADIAL:

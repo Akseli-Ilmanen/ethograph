@@ -185,7 +185,6 @@ class AppStateSpec:
         "ds": (xr.Dataset | None, None, False),
         "ds_temp": (xr.Dataset | None, None, False),
         "dt": (xr.DataTree | None, None, False),
-        "labels_confidence_ds": (xr.Dataset | None, None, False),
         # Every imported prediction file, each shown in its own panel;
         # pred_labels_df / pred_store are the most recent one (confidence curve, PDF).
         "prediction_sets": (list, [], False),
