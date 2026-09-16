@@ -877,7 +877,15 @@ window.runMermaid = runMermaid;</script>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span>
+<span class="w">        </span><span class="sd">"""What the GUI calls this set — panel title, ➕ popup, Predictions list.</span>
+
+<span class="sd">        Every run folder writes the same ``{stem}_predictions.tsv``, so a</span>
+<span class="sd">        run's file is named with its folder in front; a plain ``.tsv`` picked</span>
+<span class="sd">        by hand is its own name.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">add_prediction_set</span><span class="p">(</span><span class="n">sets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PredictionSet</span><span class="p">],</span> <span class="n">new</span><span class="p">:</span> <span class="n">PredictionSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">PredictionSet</span><span class="p">]:</span>
@@ -889,6 +897,11 @@ window.runMermaid = runMermaid;</script>
             <span class="k">return</span> <span class="n">out</span>
     <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_prediction_set</span><span class="p">(</span><span class="n">sets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PredictionSet</span><span class="p">],</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">PredictionSet</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""*sets* without the file at *path* — a path not in the list is a no-op."""</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sets</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">path</span> <span class="o">!=</span> <span class="n">path</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="PredictionsStore">
@@ -935,6 +948,19 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        folder) or no key matches — an aid to review, never something a</span>
 <span class="sd">        caller depends on.</span>
 <span class="sd">        """</span>
+        <span class="n">curve</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_confidence_curve</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">individual</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">curve</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">curve</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="PredictionsStore.get_confidence_curve">
+<a class="viewcode-back" href="../../../api/labels.html#ethograph.labels.predictions.PredictionsStore.get_confidence_curve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_confidence_curve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">individual</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""``(time, confidence)`` for one (trial, individual), on the run's own clock.</span>
+
+<span class="sd">        The run may have been trained subsampled, so its curve is sparser</span>
+<span class="sd">        than the session's time coordinate: the ``{key}_time`` array written</span>
+<span class="sd">        beside the probabilities is the only clock the curve can be drawn on.</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">npz_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">marker</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"_trial</span><span class="si">{</span><span class="n">trial</span><span class="si">}</span><span class="s2">_"</span>
@@ -946,9 +972,14 @@ window.runMermaid = runMermaid;</script>
             <span class="k">if</span> <span class="n">individual</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">safe</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^A-Za-z0-9_.-]+"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">individual</span><span class="p">))</span>
                 <span class="n">match</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">"_</span><span class="si">{</span><span class="n">safe</span><span class="si">}</span><span class="s2">"</span><span class="p">)),</span> <span class="n">match</span><span class="p">)</span>
+            <span class="k">if</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">match</span><span class="si">}</span><span class="s2">_time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">npz</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">npz_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no '</span><span class="si">{</span><span class="n">match</span><span class="si">}</span><span class="s2">_time' array: written by an older run"</span><span class="p">)</span>
             <span class="n">probs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">npz</span><span class="p">[</span><span class="n">match</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">npz</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">match</span><span class="si">}</span><span class="s2">_time"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">confidence</span> <span class="o">=</span> <span class="n">prediction_to_labels_and_confidence</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">confidence</span></div>
+        <span class="k">if</span> <span class="n">confidence</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">time</span><span class="p">,</span> <span class="n">confidence</span></div>
 </div>
 
 </pre></div>

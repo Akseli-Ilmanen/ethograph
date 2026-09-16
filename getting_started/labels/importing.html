@@ -502,9 +502,18 @@ format</strong> combo offers:</p>
 or a plain <code class="docutils literal notranslate"><span class="pre">.tsv</span></code>). With <strong>Load as: overlay</strong>, each file opens in its own
 <strong>Predictions — <code class="docutils literal notranslate"><span class="pre">&lt;file&gt;.tsv</span></code></strong> panel: a thin strip above the time-series
 panels, below the video. Import several files to stack them and compare
-models against each other and against your labels.</p>
+models against each other and against your labels. Every run folder writes
+the same <code class="docutils literal notranslate"><span class="pre">&lt;stem&gt;_predictions.tsv</span></code>, so a run’s panel is named with its folder
+in front (<code class="docutils literal notranslate"><span class="pre">predictions_mstcn_20260101/&lt;stem&gt;_predictions.tsv</span></code>); a plain
+<code class="docutils literal notranslate"><span class="pre">.tsv</span></code> keeps its own name.</p>
+<p>The Predictions group lists every set currently loaded. Select one to make
+it the source of <strong>Update confidence (+ PDF)</strong>; <strong>Remove</strong> unloads it and
+closes its panel. A run folder’s frame-by-frame confidence curve is drawn
+dashed inside that run’s own panel, on its 0–1 axis, and nowhere else —
+the <strong>Confidence</strong> checkbox shows or hides it on every panel at once. A
+plain <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> has no curve.</p>
 <p>Each file gets at most one panel. Closed one? Add it back from the ➕ <strong>Add
-panel</strong> popup, which lists every imported file. Click a prediction on its
+panel</strong> popup, which lists every loaded file. Click a prediction on its
 panel to select it and press <code class="docutils literal notranslate"><span class="pre">V</span></code> to play it back. Predictions are read-only.
 If you want to load predictions and accept/curate them, use <strong>File → Import predictions → Import as Labels…</strong></p>
 </section>

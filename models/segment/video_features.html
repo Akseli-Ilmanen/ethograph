@@ -718,9 +718,12 @@ per session — <a class="reference internal" href="feral.html"><span class="doc
 <h2>Choosing which dimensions to keep<a class="headerlink" href="#choosing-which-dimensions-to-keep" title="Link to this heading">#</a></h2>
 <p>1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of
 kinematic ones, and they dominate the input — in practice a small, well-chosen
-subset does <em>better</em> than all of them. Two tools, both leaning on
-<code class="docutils literal notranslate"><span class="pre">kind=&quot;video_feature&quot;</span></code>, which every extractor
-stamps for you.</p>
+subset does <em>better</em> than all of them. That holds for a network trained on
+Kinetics or ImageNet, whose channels mostly describe things your animal never
+does. An embedding fine-tuned on your own labels (<a class="reference internal" href="feral.html"><span class="doc">FERAL as a video feature</span></a>) is the
+exception: every channel was shaped for the task, so feed it whole and
+z-scored. Two tools, both leaning on <code class="docutils literal notranslate"><span class="pre">kind=&quot;video_feature&quot;</span></code>, which every
+extractor stamps for you.</p>
 <p><strong>Is the whole group pulling its weight?</strong> That is a question about the
 trained model, so it takes two runs — the same materialised dataset, one
 extra fit:</p>

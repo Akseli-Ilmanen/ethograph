@@ -472,6 +472,20 @@ caller depends on.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="ethograph.labels.predictions.PredictionsStore.get_confidence_curve">
+<span class="sig-name descname"><span class="pre">get_confidence_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trial</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">individual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/labels/predictions.html#PredictionsStore.get_confidence_curve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.labels.predictions.PredictionsStore.get_confidence_curve" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">confidence)</span></code> for one (trial, individual), on the run’s own clock.</p>
+<p>The run may have been trained subsampled, so its curve is sparser
+than the session’s time coordinate: the <code class="docutils literal notranslate"><span class="pre">{key}_time</span></code> array written
+beside the probabilities is the only clock the curve can be drawn on.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="ethograph.labels.predictions.PredictionsStore.load_all">
 <span class="sig-name descname"><span class="pre">load_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">individual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">_ignored</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/labels/predictions.html#PredictionsStore.load_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.labels.predictions.PredictionsStore.load_all" title="Link to this definition">#</a></dt>
 <dd><p>Every trial’s predictions, already postprocessed by the run itself.</p>
@@ -517,6 +531,7 @@ caller depends on.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.labels.predictions.PredictionsStore"><code class="docutils literal notranslate"><span class="pre">PredictionsStore</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.labels.predictions.PredictionsStore.get_confidence"><code class="docutils literal notranslate"><span class="pre">PredictionsStore.get_confidence()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.labels.predictions.PredictionsStore.get_confidence_curve"><code class="docutils literal notranslate"><span class="pre">PredictionsStore.get_confidence_curve()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.labels.predictions.PredictionsStore.load_all"><code class="docutils literal notranslate"><span class="pre">PredictionsStore.load_all()</span></code></a></li>
 </ul>
 </li>

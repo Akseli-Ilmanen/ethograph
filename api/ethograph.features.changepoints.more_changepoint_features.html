@@ -438,9 +438,10 @@
 <h1>more_changepoint_features<a class="headerlink" href="#more-changepoint-features" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.features.changepoints.more_changepoint_features">
-<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">more_changepoint_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">changepoint_binary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigmas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'laplacian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#more_changepoint_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.more_changepoint_features" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">more_changepoint_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">changepoint_binary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigmas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'laplacian'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">windows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#more_changepoint_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.more_changepoint_features" title="Link to this definition">#</a></dt>
 <dd><p>Create changepoint-based features from a binary changepoint array.</p>
-<p>Four column groups, in this order (see <code class="xref py py-data docutils literal notranslate"><span class="pre">CP_TRANSFORMS</span></code>):</p>
+<p>Four column groups always, two more when <em>source</em> is given, in this
+order (see <code class="xref py py-data docutils literal notranslate"><span class="pre">CP_TRANSFORMS</span></code>):</p>
 <ul class="simple">
 <li><p><strong>Binary</strong> — the exact changepoint positions (0/1 mask).
 Example: <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">1</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span> <span class="pre">0</span></code></p></li>
@@ -462,6 +463,13 @@ sits in (cut at every changepoint and at the trial’s ends), as
 already resolve anything shorter than two horizons; this is the long
 range, where a fragment-prone short segment and a whole bout of rest
 should not read alike.</p></li>
+<li><p><strong>Prominence</strong> and <strong>asymmetry</strong> — with <em>source</em>, the signal the mask
+was detected on: one column per window of <code class="xref py py-func docutils literal notranslate"><span class="pre">_shape_at_candidates()</span></code>,
+how deep the candidate sits below the lower of its two neighbouring
+hills, and how much more the signal moves after it than before. Every
+frame reads its nearest candidate’s value, so between candidates the
+columns are steps, and a trial with no candidate reads 0. In the
+signal’s own units, so unlike the four above they are normalised.</p></li>
 </ul>
 <p>Proximity uses a Laplacian kernel by default:</p>
 <div class="math notranslate nohighlight">
@@ -488,14 +496,20 @@ with an amplitude envelope, the silences between calls. Frames where
 proximity columns.</p></li>
 <li><p><strong>max_length</strong> (<span class="sphinx_autodoc_typehints-type">float | None</span>) – Where the length column saturates, in samples; <code class="docutils literal notranslate"><span class="pre">None</span></code>
 is <code class="xref py py-data docutils literal notranslate"><span class="pre">LENGTH_HORIZONS</span></code> horizons.</p></li>
+<li><p><strong>source</strong> (<span class="sphinx_autodoc_typehints-type">np.ndarray | None</span>) – The signal the mask marks candidates on, on the same time
+axis; enables the prominence and asymmetry columns.</p></li>
+<li><p><strong>windows</strong> (<span class="sphinx_autodoc_typehints-type">Sequence[float] | None</span>) – Half-widths of the shape columns, in samples; <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+<code class="xref py py-func docutils literal notranslate"><span class="pre">default_windows()</span></code> of the horizon. Ignored without <em>source</em>.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>the binary mask, one
-proximity column per sigma, <code class="docutils literal notranslate"><span class="pre">since</span></code>, <code class="docutils literal notranslate"><span class="pre">until</span></code>, then <code class="docutils literal notranslate"><span class="pre">length</span></code>.</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type">np.ndarray</span></p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>2D array of shape <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">len(sigmas)</span> <span class="pre">+</span> <span class="pre">3)</span></code></p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>2D array of shape <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">len(sigmas)</span> <span class="pre">+</span> <span class="pre">3)</span></code> — the binary mask, one
+proximity column per sigma, <code class="docutils literal notranslate"><span class="pre">since</span></code>, <code class="docutils literal notranslate"><span class="pre">until</span></code>, then <code class="docutils literal notranslate"><span class="pre">length</span></code> —
+plus <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">len(windows)</span></code> columns (all prominences, then all
+asymmetries) when <em>source</em> is given.</p>
 </dd>
 </dl>
 </dd></dl>
