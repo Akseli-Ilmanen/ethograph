@@ -240,6 +240,11 @@ attach_video_features(dt, alignment, VideoFeatureFiles.from_paths("feral_cfgA", 
 Merging stays the path for the extractors ethograph runs itself, whose
 sidecars carry the plan and model in their attrs.
 
+FERAL is the one such network the project handles end to end: `extractor:
+feral` writes its inputs from the sessions' curated labels, and its
+embeddings attach from `{root}/feral/embeddings/` without listing a folder
+per session — {doc}`feral`.
+
 ## Choosing which dimensions to keep
 
 1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of

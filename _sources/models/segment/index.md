@@ -188,6 +188,14 @@ project.video_features(merge=True)
 which leaves an ordinary `s3d (time, s3d_dims)` variable on each trial —
 plottable in the GUI, and named in `features.columns` like anything else.
 
+A network that cannot run in this environment is a video feature too:
+`extractor: feral` exports the sessions' videos and curated labels for
+FERAL {cite:p}`skovorodnikov2025feral`, which fine-tunes in its own
+environment, and its per-frame embeddings attach as the variable `feral`
+when they come back. Its sessions the model may not have seen are named
+in `train.split.holdout_sessions`, which is what keeps the test score
+honest — see {doc}`feral`.
+
 ## A config
 
 ```yaml
@@ -618,5 +626,6 @@ becomes *which* class, *which* trials and *how far off* the boundaries are.
 quickstart
 config
 video_features
+feral
 later
 ```

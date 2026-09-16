@@ -461,15 +461,17 @@ seconds — frame counts come from each video's own rate. See {doc}`video_featur
 
 | Key | Default | Meaning |
 |---|---|---|
-| `extractor` | `s3d` | The network, by registry name: `s3d` (clip-wise; Kinetics-400 {cite:p}`kay2017kinetics` S3D {cite:p}`xie2018s3d`) or `timm` (frame-wise; any timm {cite:p}`wightman2019timm` image backbone; `pip install 'ethograph[timm]'`). Names the sidecar suffix and the merged variable. |
+| `extractor` | `s3d` | The network, by registry name: `s3d` (clip-wise; Kinetics-400 {cite:p}`kay2017kinetics` S3D {cite:p}`xie2018s3d`), `timm` (frame-wise; any timm {cite:p}`wightman2019timm` image backbone; `pip install 'ethograph[timm]'`) or `feral` (FERAL {cite:p}`skovorodnikov2025feral`, fine-tuned in its own environment from an export the project writes; {doc}`feral`). Names the sidecar suffix and the merged variable. |
 | `model_name` | `null` | `timm` only: the backbone. `null` = `vit_base_patch14_reg4_dinov2.lvd142m` (DINOv2 ViT-B/14). |
 | `stack_s` | `null` | `s3d` only: temporal extent of one window — how much motion context each frame's feature sees. `null` = 0.5 s. |
+| `context_s` | `null` | `feral` only: seconds one FERAL chunk (64 frames) spans, resolved against each video's rate into FERAL's `chunk_step`; its chunk shifts scale with it. `null` = every frame, FERAL's own chunk. |
+| `preset` | `null` | `feral` only: FERAL's `--mode` recipe laid over its default config — `lite`, `max` or `rare`. `null` = the default recipe. |
 | `analysis_fps` | `null` | Rate the network sees; frames are skipped to reach it, never interpolated up, so halving this roughly halves the cost. `null` = every frame. |
 | `camera` | `null` | Which camera's video to take, when the alignment holds several. |
 | `crop` | `null` | `{x0, y0, x1, y1}`: one pixel box cut from every frame before the network sees it, in the GUI crop tool's numbers. |
 
-A key that belongs to the other extractor (`stack_s` with `timm`, `model_name`
-with `s3d`) is an error naming the mismatch, never ignored. `stack_s` must be
+A key that belongs to another extractor (`stack_s` with `timm`, `model_name`
+with `s3d`, `context_s` with either) is an error naming the mismatch, never ignored. `stack_s` must be
 at least 13 frames at the effective rate: the 0.5 s default works down to
 26 fps; if it does not, the error names the shortest window that does.
 
@@ -483,7 +485,8 @@ error. Build the extractor's own config
 rare case you need one.
 ```
 
-Sidecars go to `{root}/video_features/`.
+Sidecars go to `{root}/video_features/`; FERAL's export, checkpoints and
+embeddings to `{root}/feral/`.
 
 ## `infer`
 
