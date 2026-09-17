@@ -18,6 +18,8 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -503,13 +505,22 @@ class IOWidget(QWidget):
         pred_group_layout.addWidget(self.pred_labels_warning_label)
         self.pred_labels_warning_label.setVisible(False)
 
-        # Row 1: path + import (two ways in: a run's folder, or a plain .tsv)
+        # Row 1: every loaded set (one panel each) + import (two ways in: a
+        # run's folder, or a plain .tsv) + remove. A run's file is listed
+        # with its folder in front — every run writes the same file name.
         folder_row = QHBoxLayout()
         folder_row.setContentsMargins(0, 0, 0, 0)
-        self.pred_file_path_edit = QLineEdit()
-        self.pred_file_path_edit.setReadOnly(True)
-        self.pred_file_path_edit.setPlaceholderText("No predictions loaded")
-        folder_row.addWidget(self.pred_file_path_edit)
+        self.pred_sets_list = QListWidget()
+        self.pred_sets_list.setToolTip(
+            "Prediction sets loaded as overlays, one panel each. The selected one is the "
+            "source for the confidence PDF; Remove closes its panel."
+        )
+        self.pred_sets_list.setMaximumHeight(72)
+        folder_row.addWidget(self.pred_sets_list, stretch=1)
+        buttons_col = QVBoxLayout()
+        buttons_col.setContentsMargins(0, 0, 0, 0)
+        buttons_col.setSpacing(2)
+        folder_row.addLayout(buttons_col)
         self.import_predictions_btn = QPushButton("Import…")
         self.import_predictions_btn.setToolTip("Import a prediction set — from a run's folder, or a plain .tsv")
         self.import_predictions_menu = QMenu(self.import_predictions_btn)
@@ -526,7 +537,12 @@ class IOWidget(QWidget):
         )
         self.import_predictions_menu.addAction(self.import_predictions_from_tsv_action)
         self.import_predictions_btn.setMenu(self.import_predictions_menu)
-        folder_row.addWidget(self.import_predictions_btn)
+        buttons_col.addWidget(self.import_predictions_btn)
+        self.remove_predictions_btn = QPushButton("Remove")
+        self.remove_predictions_btn.setToolTip("Unload the selected prediction set and close its panel")
+        self.remove_predictions_btn.setEnabled(False)
+        buttons_col.addWidget(self.remove_predictions_btn)
+        buttons_col.addStretch()
         pred_group_layout.addLayout(folder_row)
 
         # Row 2: show checkbox + threshold + PDF button
@@ -577,6 +593,24 @@ class IOWidget(QWidget):
         if watched is self.pred_group and event.type() == QEvent.Type.Show:
             self._update_pred_merge_visibility()
         return super().eventFilter(watched, event)
+
+    def set_prediction_sets(self, sets: list, current: Path | None) -> None:
+        """Rebuild the loaded-sets list from *sets*, selecting *current*."""
+        self.pred_sets_list.blockSignals(True)
+        self.pred_sets_list.clear()
+        for prediction_set in sets:
+            item = QListWidgetItem(prediction_set.name)
+            item.setToolTip(str(prediction_set.path))
+            item.setData(Qt.ItemDataRole.UserRole, str(prediction_set.path))
+            self.pred_sets_list.addItem(item)
+            if prediction_set.path == current:
+                self.pred_sets_list.setCurrentItem(item)
+        self.pred_sets_list.blockSignals(False)
+        self.remove_predictions_btn.setEnabled(self.pred_sets_list.currentItem() is not None)
+
+    def selected_prediction_path(self) -> Path | None:
+        item = self.pred_sets_list.currentItem()
+        return Path(item.data(Qt.ItemDataRole.UserRole)) if item is not None else None
 
     def pred_load_mode(self) -> str:
         """``"overlay"`` or ``"labels"`` — the Predictions panel's Load-as combo."""
@@ -1142,7 +1176,6 @@ class IOWidget(QWidget):
             "ephys_path_edit",
             "neurons_path_edit",
             "label_file_path_edit",
-            "pred_file_path_edit",
         ):
             widget = getattr(self, attr, None)
             if widget:
@@ -1150,6 +1183,7 @@ class IOWidget(QWidget):
             state_key = attr.removesuffix("_edit")
             if hasattr(self.app_state, state_key):
                 setattr(self.app_state, state_key, None)
+        self.set_prediction_sets([], None)
         self.app_state.ephys_offset = 0.0
         self.downsample_checkbox.setChecked(False)
 
@@ -1705,6 +1739,8 @@ class IOWidget(QWidget):
         self.import_predictions_from_folder_action.triggered.connect(self.labels_widget._import_predictions_from_folder)
         self.import_predictions_from_tsv_action.triggered.connect(self.labels_widget._import_predictions_from_tsv)
         self.pred_confidence_pdf_btn.clicked.connect(self.labels_widget._plot_confidence_pdf)
+        self.remove_predictions_btn.clicked.connect(self.labels_widget._remove_selected_prediction_set)
+        self.pred_sets_list.currentItemChanged.connect(self.labels_widget._on_prediction_set_selected)
         self.pred_confidence_threshold_spin.valueChanged.connect(self.labels_widget._on_confidence_threshold_changed)
         self.pred_segment_confidence_threshold_spin.valueChanged.connect(
             self.labels_widget._on_confidence_threshold_changed

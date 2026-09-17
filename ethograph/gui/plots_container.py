@@ -122,6 +122,8 @@ _DYNAMIC_PANEL_SPECS = {
 
 #: Share of the dock host a label timeline takes by default — a ribbon, not a plot.
 _LABEL_RIBBON_RATIO = 0.08
+#: A prediction panel is taller: it carries a confidence curve under its labels.
+_PREDICTION_PANEL_RATIO = 0.15
 
 
 class CurrentLabelIndicator(QLabel):
@@ -483,6 +485,11 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         """The panel showing the prediction file *path*, or ``None``."""
         return next((p for p in self.prediction_panels() if p.prediction_path == path), None)
 
+    def _prediction_set_name(self, path: Path) -> str:
+        """The loaded set's own name (a run's file carries its folder); the bare file name if not loaded."""
+        sets = getattr(self.app_state, "prediction_sets", None) or []
+        return next((s.name for s in sets if s.path == path), path.name)
+
     def has_open_plots(self) -> bool:
         """Whether any time-axis panel is on screen (the console is not one)."""
         return any(True for _ in self._visible_plots())
@@ -658,7 +665,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             if prediction_path is None:
                 raise ValueError("A predictions panel needs the prediction file it shows")
             plot.prediction_path = prediction_path
-            title = f"Predictions — {prediction_path.name}"
+            title = f"Predictions — {self._prediction_set_name(prediction_path)}"
         else:
             plot.mic_name = mic_name
             title = f"{panel_type} — {mic_name}" if mic_name else panel_type
@@ -1226,10 +1233,8 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         # Every audio / neo instance gets its group's ratio share.
         audio_raw = [(self._dyn_docks[plot], ratios.get(plot.panel_type, 0.2) * total) for plot in self._audio_plots()]
         neo_raw = [(self._dyn_docks[plot], ratios.get("neo", 0.15) * total) for plot in self._neo_plots()]
-        ribbon_raw = [
-            (self._dyn_docks[plot], _LABEL_RIBBON_RATIO * total)
-            for plot in self.prediction_panels() + self._label_ribbons()
-        ]
+        ribbon_raw = [(self._dyn_docks[plot], _PREDICTION_PANEL_RATIO * total) for plot in self.prediction_panels()]
+        ribbon_raw += [(self._dyn_docks[plot], _LABEL_RIBBON_RATIO * total) for plot in self._label_ribbons()]
 
         raw = {}
         for name in visible_names:
@@ -1576,30 +1581,6 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         for plot in self._visible_plots():
             return plot.time_marker.value()
         return 0.0
-
-    # --- Confidence overlay ---
-
-    def show_confidence_plot(self, confidence_data, time_coord=None):
-        self.overlay_manager.remove_overlay("confidence")
-
-        if confidence_data is None or len(confidence_data) == 0:
-            return
-
-        if time_coord is None:
-            time_coord = self.app_state.time_coord.values
-
-        item = pg.PlotCurveItem(pen=pg.mkPen(color="k", width=2, style=Qt.PenStyle.DashLine))
-        self.overlay_manager.add_scaled_overlay(
-            "confidence",
-            self.current_plot,
-            item,
-            time_coord,
-            np.asarray(confidence_data, dtype=np.float64),
-            tick_format="{:.2f}",
-        )
-
-    def hide_confidence_plot(self):
-        self.overlay_manager.remove_overlay("confidence")
 
     # --- Onset-model probability curves ---
 

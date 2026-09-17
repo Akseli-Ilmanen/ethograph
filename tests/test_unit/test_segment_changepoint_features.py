@@ -47,11 +47,12 @@ def _empty_labels() -> pd.DataFrame:
     )
 
 
-def _session_with_changepoints(folder: Path, *, legacy: bool = False) -> Path:
+def _session_with_changepoints(folder: Path, *, legacy: bool = False, target_feature: bool = True) -> Path:
     """One trial with ``speed`` + its ``speed_troughs`` mask.
 
     ``legacy=True`` writes the pre-schema ``attrs["type"] = "changepoints"``
-    spelling most real session files still carry.
+    spelling most real session files still carry; ``target_feature=False``
+    leaves the mask without the attr naming the signal it was detected on.
     """
     folder.mkdir(parents=True, exist_ok=True)
     t = np.arange(0.0, DURATION, 1.0 / FS)
@@ -63,11 +64,8 @@ def _session_with_changepoints(folder: Path, *, legacy: bool = False) -> Path:
         coords={"time": t, "individual": ["A"]},
         attrs={"trial": 1, "fps": FS},
     )
-    ds["speed_troughs"].attrs = (
-        {"type": "changepoints", "target_feature": "speed"}
-        if legacy
-        else schema.changepoint_attrs(target_feature="speed")
-    )
+    extra = {"target_feature": "speed"} if target_feature else {}
+    ds["speed_troughs"].attrs = {"type": "changepoints", **extra} if legacy else schema.changepoint_attrs(**extra)
     dt = eto.from_datasets([ds])
     nc_path = folder / "cp.nc"
     dt.save(str(nc_path))
@@ -385,7 +383,13 @@ def test_spelled_scales_are_kept_and_carry_no_note(tmp_path: Path):
     cfg = load_config(config_path)
     assert not cfg.features.changepoint_features.unresolved
     recorded = read_layout(materialise(cfg)).changepoint_features
-    assert recorded == {"sigmas": [2.0, 4.0], "horizon": 6.0, "max_length": 30.0, "note": None}
+    assert recorded == {
+        "sigmas": [2.0, 4.0],
+        "horizon": 6.0,
+        "max_length": 30.0,
+        "windows": [6.0, 12.0, 24.0],  # horizon x (1, 2, 4), even when spelled scales leave it out
+        "note": None,
+    }
 
 
 def test_a_trained_run_records_the_derived_scales(tmp_path: Path):
@@ -532,6 +536,30 @@ def test_pynapple_session_refuses_changepoint_expansion(tmp_path: Path):
         open_session(cfg.sessions[0], cfg)
 
 
+def test_changepoint_source_feature_counts_as_a_changepoint_feature(tmp_path: Path):
+    """A mask's ``target_feature`` belongs to ``changepoint_feature`` too: dropped only with both of its kinds."""
+    from ethograph.io.schema import CHANGEPOINT_FEATURE, KINEMATIC_FEATURE
+    from ethograph.segment.samples import ColumnLayout
+
+    nc_path = _session_with_changepoints(tmp_path / "session")
+    dt = eto.open(str(nc_path))
+    dt.update_trial(1, lambda ds: ds.assign(speed=schema.describe(ds["speed"], KINEMATIC_FEATURE)))
+    dt.save(str(nc_path))
+    config_path = _write_config(tmp_path, nc_path, columns={"speed": {}})
+    layout = read_layout(materialise(load_config(config_path)))
+    assert layout.changepoint_targets == ["speed"]
+    assert layout.kinds[layout.features.index("speed")] == KINEMATIC_FEATURE
+    speed = layout.features.index("speed")
+    assert layout.keep_mask([KINEMATIC_FEATURE])[speed]
+    assert layout.keep_mask([CHANGEPOINT_FEATURE])[speed]
+    assert not layout.keep_mask([KINEMATIC_FEATURE, CHANGEPOINT_FEATURE]).any()
+    # Dropping only the changepoints leaves the expansions out and the source in.
+    kept = [f for f, on in zip(layout.features, layout.keep_mask([CHANGEPOINT_FEATURE])) if on]
+    assert kept == ["speed"]
+    assert ColumnLayout.from_dict(layout.to_dict()).changepoint_targets == ["speed"]
+    assert layout.subset(layout.keep_mask([CHANGEPOINT_FEATURE])).changepoint_targets == ["speed"]
+
+
 def test_samples_carry_their_candidate_frames_even_when_ablated(tmp_path: Path):
     """The loss is told where the masks fire off the full sample; ``drop_kinds`` only changes what the model sees."""
     from ethograph.io.schema import CHANGEPOINT_FEATURE
@@ -552,3 +580,68 @@ def test_samples_carry_their_candidate_frames_even_when_ablated(tmp_path: Path):
     assert candidates.dtype == torch.bool and list(np.flatnonzero(candidates.numpy())) == [40, 120, 160]
     xb, yb, mask, cb, keys = collate([ds[0]])
     assert cb.shape == (1, x.shape[1]) and bool(cb[0, 120]) and not bool(cb[0, 121])
+
+
+def test_shape_transforms_read_the_signal_the_mask_was_detected_on(tmp_path: Path):
+    """``prominence`` / ``asymmetry`` come from the mask's ``target_feature`` at the nearest candidate."""
+    nc_path = _session_with_changepoints(tmp_path / "session")
+    config_path = _write_config(
+        tmp_path,
+        nc_path,
+        columns={},
+        changepoint_features={
+            "sigmas": [2.0],
+            "inputs": {"speed_troughs": {}},
+            "transforms": ["prominence", "asymmetry"],
+            "windows": [10],
+        },
+    )
+    cfg = load_config(config_path)
+    assert cfg.features.columns == {"speed_troughs_cp_prom0": {}, "speed_troughs_cp_asym0": {}}
+    session = open_session(cfg.sessions[0], cfg)
+    trial_ds = session.trial_dataset(1)
+    speed = trial_ds["speed"].values[:, 0]
+    prom = trial_ds["speed_troughs_cp_prom0"].values[:, 0]
+    asym = trial_ds["speed_troughs_cp_asym0"].values[:, 0]
+    i = 120  # a candidate of the fixture
+    before, after = speed[i - 10 : i + 1], speed[i : i + 11]
+    assert prom[i] == pytest.approx(min(before.max(), after.max()) - speed[i])
+    assert asym[i] == pytest.approx(after.mean() - before.mean())
+    # a frame between candidates holds its nearest candidate's value
+    assert prom[i - 3] == prom[i] and prom[i + 3] == prom[i]
+    # in the signal's units, so normalised like any feature (no normalise=0)
+    assert "normalise" not in trial_ds["speed_troughs_cp_prom0"].attrs
+    assert trial_ds["speed_troughs_cp_prom0"].attrs[schema.KIND] == schema.CHANGEPOINT_FEATURE
+
+
+def test_shape_transforms_need_the_masks_target_feature(tmp_path: Path):
+    nc_path = _session_with_changepoints(tmp_path / "session", target_feature=False)
+    config_path = _write_config(
+        tmp_path,
+        nc_path,
+        columns={},
+        changepoint_features={"sigmas": [2.0], "inputs": {"speed_troughs": {}}, "transforms": ["prominence"]},
+    )
+    cfg = load_config(config_path)
+    with pytest.raises(ValueError, match="target_feature"):
+        open_session(cfg.sessions[0], cfg)
+
+
+def test_windows_are_derived_from_the_horizon_and_recorded(tmp_path: Path):
+    nc_path = _session_with_changepoints(tmp_path / "session")
+    save_labels_tsv(nc_path.with_name("cp_labels.tsv"), _labels(10))
+    config_path = _write_config(
+        tmp_path,
+        nc_path,
+        changepoint_features={
+            "horizon": None,
+            "max_length": None,
+            "inputs": {"speed_troughs": {}},
+            "transforms": ["proximity", "asymmetry"],
+        },
+    )
+    cfg = load_config(config_path)
+    recorded = read_layout(materialise(cfg)).changepoint_features
+    h = recorded["horizon"]
+    assert recorded["windows"] == [h, 2 * h, 4 * h]
+    assert "windows = horizon x (1, 2, 4)" in recorded["note"]

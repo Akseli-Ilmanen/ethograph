@@ -54,7 +54,13 @@ from ethograph.labels.intervals import (
     subject_mask,
 )
 from ethograph.labels.plots import plot_confidence_pdf
-from ethograph.labels.predictions import PredictionSet, PredictionsStore, add_prediction_set, merge_as_labels
+from ethograph.labels.predictions import (
+    PredictionSet,
+    PredictionsStore,
+    add_prediction_set,
+    merge_as_labels,
+    remove_prediction_set,
+)
 from ethograph.labels.tsv_store import get_trial_from_tsv, load_labels_tsv
 
 # Glyphs used to indicate the kind of a label in the table.
@@ -916,17 +922,42 @@ class LabelsWidget(QWidget):
         self.app_state.prediction_sets = add_prediction_set(
             self.app_state.prediction_sets, PredictionSet(path, labels_df, store)
         )
-        self.app_state.pred_labels_df = labels_df
-        self.app_state.pred_store = store
         self.app_state.pred_confidence_threshold = threshold
+        self._set_current_prediction_set(path)
 
         if self.plot_container is not None and self.plot_container.prediction_panel_for(path) is None:
             self.plot_container.add_panel("predictions", prediction_path=path)
         if self.data_widget:
             self.data_widget.refresh_trials_confidence()
-        self.io_widget.pred_confidence_pdf_btn.setEnabled(store is not None)
-        self.io_widget.pred_file_path_edit.setText(str(path))
+        self._redraw_prediction_panels()
 
+    def _set_current_prediction_set(self, path: Path | None) -> None:
+        """The set the confidence PDF reads — the one selected in the Predictions list."""
+        sets = self.app_state.prediction_sets
+        current = next((s for s in sets if s.path == path), None)
+        self.app_state.pred_labels_df = current.labels_df if current is not None else None
+        self.app_state.pred_store = current.store if current is not None else None
+        self.io_widget.pred_confidence_pdf_btn.setEnabled(current is not None and current.store is not None)
+        self.io_widget.set_prediction_sets(sets, current.path if current is not None else None)
+
+    def _on_prediction_set_selected(self, *_args) -> None:
+        self._set_current_prediction_set(self.io_widget.selected_prediction_path())
+
+    def _remove_selected_prediction_set(self) -> None:
+        """Unload the selected set: its panel closes and the ➕ popup forgets it."""
+        path = self.io_widget.selected_prediction_path()
+        if path is None:
+            return
+        self.app_state.prediction_sets = remove_prediction_set(self.app_state.prediction_sets, path)
+        if self.plot_container is not None:
+            panel = self.plot_container.prediction_panel_for(path)
+            if panel is not None:
+                self.plot_container.remove_panel(panel)
+        remaining = self.app_state.prediction_sets
+        self._set_current_prediction_set(remaining[-1].path if remaining else None)
+        self._redraw_prediction_panels()
+
+    def _redraw_prediction_panels(self) -> None:
         if self.data_widget:
             self.data_widget.update_main_plot(preserve_x_range=True)
             self.data_widget._update_confidence_overlay()
@@ -965,9 +996,8 @@ class LabelsWidget(QWidget):
                 self.data_widget.plot_container.labels_redraw_needed.emit()
         self.refresh_labels_shapes_layer()
         self.curation_panel.note_labels_edited()
-        self.io_widget.pred_file_path_edit.setText(source_text)
         verb = "Merged" if merge else "Imported"
-        notify(f"{verb} {len(predicted_df)} prediction row(s) as labels. Save with Ctrl+S.")
+        notify(f"{verb} {len(predicted_df)} prediction row(s) from {Path(source_text).name} as labels. Save with Ctrl+S.")
 
     def _on_confidence_threshold_changed(self, _value):
         self.app_state.pred_confidence_threshold = self.io_widget.pred_confidence_threshold_spin.value()

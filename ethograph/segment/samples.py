@@ -29,7 +29,7 @@ from ethograph.features.columns import (
     sampling_rate,
 )
 from ethograph.io.catalog import INDIVIDUAL_DIMS, SPACE_DIM
-from ethograph.io.schema import is_normalise, kind_of
+from ethograph.io.schema import CHANGEPOINT_FEATURE, is_normalise, kind_of
 from ethograph.labels.intervals import load_label_mapping, states_only
 from ethograph.segment.config import SegmentConfig
 from ethograph.segment.preprocess import preprocess_session_level
@@ -306,6 +306,12 @@ class ColumnLayout:
     #: Recorded so an ablation can drop a whole category at train time,
     #: without re-materialising the dataset.
     kinds: list[str | None] = field(default_factory=list)
+    #: The features the layout's changepoint masks were computed from (their
+    #: ``target_feature``). A column of one of these counts as a
+    #: ``changepoint_feature`` too — a changepoint is only meaningful next to
+    #: the signal it was found in — so ``drop_kinds`` removes it only when
+    #: both its own kind and ``changepoint_feature`` are dropped.
+    changepoint_targets: list[str] = field(default_factory=list)
     #: The changepoint expansion's resolved scales (``sigmas``, ``horizon``,
     #: ``max_length``, ``note``), when the config has one — part of the
     #: layout because two datasets with the same names but different
@@ -334,16 +340,30 @@ class ColumnLayout:
         """
         return np.array([i for i, f in enumerate(self.features) if f.endswith(CP_BINARY_SUFFIX)], dtype=int)
 
+    def column_kinds(self, i: int) -> set[str]:
+        """Every kind column *i* belongs to: its own, plus ``changepoint_feature``
+        when its feature is what one of the layout's changepoint masks was computed from."""
+        kinds = {self.kinds[i]} if self.kinds[i] is not None else set()
+        if self.features[i] in self.changepoint_targets:
+            kinds.add(CHANGEPOINT_FEATURE)
+        return kinds
+
     def keep_mask(self, drop_kinds: Iterable[str]) -> np.ndarray:
-        """Boolean mask over columns, ``False`` for every column of a dropped kind.
+        """Boolean mask over columns, ``False`` for every column all of whose kinds are dropped.
 
         Columns whose kind is unknown are always kept: dropping happens only
         on a positive declaration, so an undeclared dataset ablates to itself.
+        A changepoint mask's source feature (:attr:`changepoint_targets`)
+        survives as long as either its own kind or ``changepoint_feature``
+        is kept.
         """
         unwanted = set(drop_kinds)
         if not unwanted:
             return np.ones(len(self.names), dtype=bool)
-        return np.array([k not in unwanted for k in self.kinds], dtype=bool)
+        return np.array(
+            [not kinds or not kinds <= unwanted for kinds in (self.column_kinds(i) for i in range(len(self.names)))],
+            dtype=bool,
+        )
 
     def subset(self, mask: np.ndarray) -> ColumnLayout:
         """This layout restricted to the columns *mask* keeps (indices renumbered)."""
@@ -356,6 +376,7 @@ class ColumnLayout:
             vector_groups=[[remap[i] for i in group] for group in self.vector_groups if all(i in remap for i in group)],
             fs=self.fs,
             kinds=[self.kinds[i] for i in keep],
+            changepoint_targets=list(self.changepoint_targets),
             changepoint_features=self.changepoint_features,
             neural_columns=self.neural_columns,
         )
@@ -369,6 +390,8 @@ class ColumnLayout:
             "vector_groups": [list(map(int, g)) for g in self.vector_groups],
             "kinds": [None if k is None else str(k) for k in self.kinds],
         }
+        if self.changepoint_targets:
+            out["changepoint_targets"] = list(self.changepoint_targets)
         if self.changepoint_features is not None:
             out["changepoint_features"] = dict(self.changepoint_features)
         if self.neural_columns is not None:
@@ -387,6 +410,7 @@ class ColumnLayout:
             vector_groups=[list(g) for g in data.get("vector_groups", [])],
             fs=float(data["fs"]),
             kinds=list(data.get("kinds") or []),
+            changepoint_targets=list(data.get("changepoint_targets") or []),
             changepoint_features=data.get("changepoint_features"),
             neural_columns=data.get("neural_columns"),
         )
@@ -401,7 +425,7 @@ class ColumnLayout:
             )
         mine, theirs = self.changepoint_features, other.changepoint_features
         if mine is not None and theirs is not None:
-            keys = ("sigmas", "horizon", "max_length")
+            keys = ("sigmas", "horizon", "max_length", "windows")
             if any(mine.get(k) != theirs.get(k) for k in keys):
                 got = {k: theirs.get(k) for k in keys}
                 want = {k: mine.get(k) for k in keys}
@@ -510,6 +534,24 @@ def _column_kinds(columns: list[FeatureColumn], session: Session, trial: int | s
     return [kind_of(session.variable_attrs(col.feature, trial)) for col in columns]
 
 
+def _changepoint_targets(
+    columns: list[FeatureColumn], session: Session, trial: int | str, config: SegmentConfig
+) -> list[str]:
+    """The features the sample's changepoint masks were computed from.
+
+    Read off the masks ``features.changepoint_features`` expands and off any
+    column that names a ``target_feature`` itself (a mask fed in directly).
+    """
+    cp_cfg = config.features.changepoint_features
+    masks = list(cp_cfg.inputs) if cp_cfg is not None else []
+    targets: list[str] = []
+    for name in masks + [col.feature for col in columns]:
+        target = session.variable_attrs(name, trial).get("target_feature")
+        if target is not None and target not in targets:
+            targets.append(str(target))
+    return targets
+
+
 # ---------------------------------------------------------------------------
 # Building
 # ---------------------------------------------------------------------------
@@ -568,6 +610,7 @@ def build_sample_features(
         vector_groups=_vector_groups(columns),
         fs=sampling_rate(time),
         kinds=_column_kinds(columns, session, window.trial),
+        changepoint_targets=_changepoint_targets(columns, session, window.trial, config),
     )
     return time, data.T.astype(np.float32), layout
 

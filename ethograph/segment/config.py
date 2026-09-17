@@ -349,7 +349,7 @@ class ChangepointFeaturesConfig:
     Applied once per session, at ``open_session`` time (materialise and
     infer both go through it): each ``inputs`` entry names a raw changepoint
     mask and pins its dims exactly like a ``features.columns`` entry, and
-    ``transforms`` picks which of the four column groups
+    ``transforms`` picks which of the six column groups
     (:data:`~ethograph.features.changepoints.CP_TRANSFORMS`) to keep. The
     generated columns are merged straight into ``features.columns`` at
     config-load time (see :func:`config_from_dict`), so nothing downstream
@@ -389,10 +389,11 @@ class ChangepointFeaturesConfig:
     #: raw changepoint masks to expand, and which dims to pin (typically
     #: ``keypoint``; the individual dim is still pinned per sample).
     inputs: dict[str, dict[str, Any]] = field(default_factory=dict)
-    #: Which of the four ``more_changepoint_features`` column groups become
-    #: real columns; default is all four. ``binary`` duplicates the raw mask
+    #: Which of the six ``more_changepoint_features`` column groups become
+    #: real columns; default is all six. ``binary`` duplicates the raw mask
     #: (just marked ``normalise=0``), so drop it if you already select the
-    #: mask itself.
+    #: mask itself. ``prominence`` and ``asymmetry`` read the mask's source
+    #: signal (its ``target_feature``) around each candidate.
     transforms: list[str] | None = None
     #: Reach of the ``offset`` columns, in samples: the distance to the
     #: previous / next candidate saturates here. ``None`` derives it from the
@@ -407,6 +408,9 @@ class ChangepointFeaturesConfig:
     #: Where the ``length`` column saturates, in samples. ``None`` derives it
     #: from the longest labelled behaviours (the 95th-percentile duration).
     max_length: float | None = None
+    #: Half-widths of the ``prominence`` / ``asymmetry`` columns, in samples;
+    #: one column each per window. ``None`` derives ``horizon * (1, 2, 4)``.
+    windows: list[float] | None = None
     #: Written by ``materialise`` when it derived any of the three: what was
     #: read off which labels. Carried into the run's ``config.yaml`` so a
     #: run says where its numbers came from. Never set it by hand.
@@ -449,6 +453,12 @@ class ChangepointFeaturesConfig:
                 raise ValueError(
                     f"features.changepoint_features.max_length must be positive (samples), got {self.max_length}"
                 )
+        if self.windows is not None:
+            self.windows = [float(w) for w in self.windows]
+            if not self.windows or any(not w > 0 for w in self.windows):
+                raise ValueError(
+                    f"features.changepoint_features.windows must be positive (samples), got {self.windows}"
+                )
 
     @property
     def unresolved(self) -> bool:
@@ -462,7 +472,24 @@ class ChangepointFeaturesConfig:
 
         return len(self.sigmas) if self.sigmas is not None else len(SIGMA_DIVISORS)
 
-    SCALE_KEYS: ClassVar[tuple[str, ...]] = ("sigmas", "horizon", "max_length", "note")
+    @property
+    def n_windows(self) -> int:
+        """How many prominence / asymmetry columns each mask expands to — fixed before the values are."""
+        from ethograph.features.changepoints import WINDOW_MULTIPLIERS
+
+        return len(self.windows) if self.windows is not None else len(WINDOW_MULTIPLIERS)
+
+    def resolved_windows(self) -> list[float]:
+        """The shape windows in samples: spelled, else ``default_windows`` of the resolved horizon."""
+        from ethograph.features.changepoints import default_windows
+
+        if self.windows is not None:
+            return list(self.windows)
+        if self.horizon is None:
+            raise ValueError("features.changepoint_features is unresolved — materialise first")
+        return default_windows(self.horizon)
+
+    SCALE_KEYS: ClassVar[tuple[str, ...]] = ("sigmas", "horizon", "max_length", "windows", "note")
 
     def scales(self) -> dict[str, Any]:
         """The resolved scales as the plain block ``columns.yaml`` records."""
@@ -472,6 +499,7 @@ class ChangepointFeaturesConfig:
             "sigmas": [float(s) for s in self.sigmas or []],
             "horizon": float(self.horizon),  # type: ignore[arg-type]
             "max_length": float(self.max_length),  # type: ignore[arg-type]
+            "windows": self.resolved_windows(),
             "note": self.note,
         }
 
@@ -482,6 +510,8 @@ class ChangepointFeaturesConfig:
             sigmas=[float(s) for s in scales["sigmas"]],
             horizon=float(scales["horizon"]),
             max_length=float(scales["max_length"]),
+            # A dataset materialised before the shape columns existed recorded no windows.
+            windows=[float(w) for w in scales["windows"]] if scales.get("windows") is not None else self.windows,
             note=scales.get("note"),
         )
 
@@ -492,10 +522,13 @@ class ChangepointFeaturesConfig:
         is already resolved comes back unchanged.
         """
         from ethograph.features.changepoints import (
+            CP_SHAPE_TRANSFORMS,
             HORIZON_FRACTION,
             LONG_PERCENTILE,
             SHORT_PERCENTILE,
             SIGMA_DIVISORS,
+            WINDOW_MULTIPLIERS,
+            default_windows,
             scales_from_durations,
         )
 
@@ -518,6 +551,10 @@ class ChangepointFeaturesConfig:
         if self.sigmas is None:
             divisors = ", ".join(f"{k:g}" for k in SIGMA_DIVISORS)
             parts.append(f"sigmas = horizon / ({divisors}) = [{', '.join(f'{s:g}' for s in sigmas)}] samples")
+        if self.windows is None and set(self.transforms or ()) & CP_SHAPE_TRANSFORMS:
+            windows = default_windows(horizon)
+            multipliers = ", ".join(f"{k:g}" for k in WINDOW_MULTIPLIERS)
+            parts.append(f"windows = horizon x ({multipliers}) = [{', '.join(f'{w:g}' for w in windows)}] samples")
         note = (
             f"Derived at materialise from {context} at {fs:g} Hz: " + "; ".join(parts) + ". "
             "Spell sigmas, horizon or max_length (samples) under features.changepoint_features to pin one."
@@ -532,11 +569,11 @@ class ChangepointFeaturesConfig:
         if self.merge:
             # The merge ORs across every non-time dim, so the one surviving
             # mask has no dim left to pin.
-            for name in cp_feature_names(MERGED_CHANGEPOINTS, self.n_sigmas, self.transforms):
+            for name in cp_feature_names(MERGED_CHANGEPOINTS, self.n_sigmas, self.transforms, self.n_windows):
                 out[name] = {}
             return out
         for var, dims in self.inputs.items():
-            for name in cp_feature_names(var, self.n_sigmas, self.transforms):
+            for name in cp_feature_names(var, self.n_sigmas, self.transforms, self.n_windows):
                 out[name] = dict(dims or {})
         return out
 

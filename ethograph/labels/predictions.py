@@ -95,7 +95,15 @@ class PredictionSet:
 
     @property
     def name(self) -> str:
-        return self.path.name
+        """What the GUI calls this set — panel title, ➕ popup, Predictions list.
+
+        Every run folder writes the same ``{stem}_predictions.tsv``, so a
+        run's file is named with its folder in front; a plain ``.tsv`` picked
+        by hand is its own name.
+        """
+        if self.store is None:
+            return self.path.name
+        return f"{self.path.parent.name}/{self.path.name}"
 
 
 def add_prediction_set(sets: list[PredictionSet], new: PredictionSet) -> list[PredictionSet]:
@@ -107,6 +115,11 @@ def add_prediction_set(sets: list[PredictionSet], new: PredictionSet) -> list[Pr
             return out
     out.append(new)
     return out
+
+
+def remove_prediction_set(sets: list[PredictionSet], path: Path) -> list[PredictionSet]:
+    """*sets* without the file at *path* — a path not in the list is a no-op."""
+    return [s for s in sets if s.path != path]
 
 
 class PredictionsStore:
@@ -146,6 +159,16 @@ class PredictionsStore:
         folder) or no key matches — an aid to review, never something a
         caller depends on.
         """
+        curve = self.get_confidence_curve(trial, dt, individual)
+        return None if curve is None else curve[1]
+
+    def get_confidence_curve(self, trial, dt, individual: str | None = None) -> tuple[np.ndarray, np.ndarray] | None:
+        """``(time, confidence)`` for one (trial, individual), on the run's own clock.
+
+        The run may have been trained subsampled, so its curve is sparser
+        than the session's time coordinate: the ``{key}_time`` array written
+        beside the probabilities is the only clock the curve can be drawn on.
+        """
         if self.npz_path is None:
             return None
         marker = f"_trial{trial}_"
@@ -157,6 +180,11 @@ class PredictionsStore:
             if individual is not None and len(keys) > 1:
                 safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(individual))
                 match = next((k for k in keys if k.endswith(f"_{safe}")), match)
+            if f"{match}_time" not in npz.files:
+                raise ValueError(f"{self.npz_path.name} has no '{match}_time' array: written by an older run")
             probs = np.asarray(npz[match], dtype=np.float64)
+            time = np.asarray(npz[f"{match}_time"], dtype=np.float64)
         _, confidence = prediction_to_labels_and_confidence(probs)
-        return confidence
+        if confidence is None:
+            return None
+        return time, confidence

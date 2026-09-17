@@ -513,6 +513,7 @@ def expand_changepoint_features(session: Session, config: SegmentConfig | None) 
             horizon=cfg.horizon,
             scale_by=cfg.scale_by,
             max_length=cfg.max_length,
+            windows=cfg.windows,
         )
 
     session.result.dt = session.result.dt.map_trials(_expand)
