@@ -93,9 +93,9 @@ Point the GUI at a Kilosort output folder via the **Kilosort folder** picker in 
 `params.py` is a plain Python file written by Kilosort:
 
 ```python
-dat_path = r'C:\data\recording.dat'
+dat_path = r"C:\data\recording.dat"
 n_channels_dat = 385
-dtype = 'int16'
+dtype = "int16"
 sample_rate = 30000.0
 hp_filtered = False
 ```

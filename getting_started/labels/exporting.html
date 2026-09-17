@@ -471,11 +471,11 @@ file is read-only after creation — it holds features, trial structure, media
 references and non-label metadata. Labels live exclusively in the TSV.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>session_20260903/
 ├── data.nc                          # features, ephys, trial structure (read-only)
-├── data_labels.tsv                  # recommended file location for most-up-to-date labels
+├── labels.tsv                       # the session's labels: one file per session folder
 ├── labels/
 │   ├── backups/
 │       ├── data_labels_20240315_101230.tsv  # timestamped backups
-│       └── data_labels_20240314_111420.tsv
+│       └── labels_20240314_111420.tsv
 </pre></div>
 </div>
 <p>The TSV uses integer label IDs in the <code class="docutils literal notranslate"><span class="pre">labels</span></code> column. Label names are
@@ -485,7 +485,7 @@ applies everywhere. See <a class="reference internal" href="mapping.html"><span 
 <hr class="docutils" />
 <section id="saving-labels-ctrl-s">
 <h2>Saving labels (Ctrl+S)<a class="headerlink" href="#saving-labels-ctrl-s" title="Link to this heading">#</a></h2>
-<p>Each save writes the canonical <code class="docutils literal notranslate"><span class="pre">data_labels.tsv</span></code> alongside the <code class="docutils literal notranslate"><span class="pre">.nc</span></code>, plus a
+<p>Each save writes the canonical <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> in the session folder, plus a
 timestamped backup in <code class="docutils literal notranslate"><span class="pre">labels/backups/</span></code>. An optional remote backup can be
 configured (see <a class="reference internal" href="#target-labels-advanced"><span class="std std-ref">Advanced</span></a>).</p>
 </section>

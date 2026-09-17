@@ -5,8 +5,8 @@ you:
 
 | Folder | Who writes it | What lives there |
 |---|---|---|
-| **Session folder** — one per recording | You: the session file and the media. The GUI: labels, alignment, layout. | The data. Any location — inside the project folder or anywhere else; media folders are selected in the GUI and can live elsewhere too. |
-| **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, kept drag & drops. Your session folders can live here too, but don't have to — EthoGraph never copies data into it. |
+| **Session folder** — one per recording | You: the session file. The GUI: labels, alignment, layout. | Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session's videos is itself a fine session folder, but nothing requires it. |
+| **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag & drop. Your session folders can live here too, but don't have to — EthoGraph never copies data into it. |
 | `~/.ethograph/` | The GUI. | Your settings, caches, and a starter project used while no project folder is chosen. |
 
 ## The project folder
@@ -20,6 +20,7 @@ folder holds what you build on top of them:
 my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
+    ├── project.yaml                   # study defaults: individuals, cameras, mics, rig, pose software, skeleton
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config
@@ -29,8 +30,41 @@ my_project/                            # chosen on the start page
     ├── feral/                         # FERAL's inputs, checkpoints and embeddings (models/segment/feral)
     ├── workflows/                     # curation workflows
     ├── wizard/                        # Data wizard notebooks, one per rig
-    └── sessions/                      # drag & drops made with this project set
-        └── 2026-09-06_21-47-12/       # one timestamped folder per drop, reopenable
+    └── sessions.txt                   # session folders made by drag & drop with this project set, reopenable
+```
+
+```{important}
+**One session folder, one `.nc`.** A second `.nc` at the root is an old version,
+and EthoGraph refuses to guess which one is current — in the GUI and in a
+`segment` or `spot` run alike. Tell the project which files to skip, once, in
+`project.yaml`:
+
+```yaml
+ignore: [Trial_data.nc, "*_old.nc"]   # file names or globs, matched in every session folder
+```
+
+The GUI offers this as a button when it hits the case. A file named explicitly
+(`source: .../Trial_data3.nc`) is always loaded, whatever the list says.
+```
+
+`project.yaml` holds what recurs across the study's sessions. Every key is
+optional and every key is a default: a session's own record (the individuals the
+wizard wrote) or its dataset overrides it. Machine paths never go in it, so it can
+be committed and shared.
+
+```yaml
+individuals: [crow1, crow2]
+ignore: [Trial_data.nc]        # old dataset versions to skip in every session folder
+cameras: [cam-1, cam-2]
+mics: [mic-1]
+rig: CrowBench                 # the wizard notebook under wizard/ to start from
+pose:
+  source_software: DeepLabCut
+  skeleton:                    # the skeleton itself, same shape as the skeleton editor saves
+    keypoints: [beak, head, tail]
+    connections:
+      - {start: beak, end: head}
+      - {start: head, end: tail}
 ```
 
 Without a project folder, `~/.ethograph/defaults/` stands in — it has the same
@@ -40,7 +74,11 @@ session, the project and that backup.
 
 ## The session folder
 
-One per recording, per backend:
+One per recording. A folder is a session when it holds `.ethograph/alignment.nwb`
+(written by the wizard, a notebook or a drag & drop) or an `.nwb` of its own; the
+`.nc` files in it are feature layers, and there may be none. Session files are named
+by the folder, never by a data file: `labels.tsv`, `metadata.tsv`, `labels/`. On the
+start page, open the folder (or any data file in it). Per backend:
 
 ::::{tab-set}
 
@@ -48,9 +86,9 @@ One per recording, per backend:
 
 ```
 session_01/
-    ├── session.nc                     # Behavioural dataset (TrialTree or plain Dataset)
-    ├── session_labels.tsv             # Session labels
-    ├── session_metadata.tsv           # Trial-level metadata
+    ├── session.nc                     # The dataset (TrialTree or plain Dataset); optional, and only one
+    ├── labels.tsv                     # Session labels
+    ├── metadata.tsv                   # Trial-level metadata
     ├── .ethograph/
     │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
     │   ├── local_settings.yaml        # Session-specific GUI state
@@ -58,7 +96,7 @@ session_01/
     │
     ├── labels/
     │   ├── backups/
-    │   │  └── session_labels_20240315_101230.tsv
+    │   │  └── labels_20240315_101230.tsv
     │   └── predictions_asformer_20240215_101230/
     │       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
     │       └── session_probs.npz           # per-sample class probabilities
@@ -93,8 +131,8 @@ session_01/
     │                                  # pose (PoseEstimationSeries), video
     │                                  # refs (ImageSeries.external_file)
     │
-    ├── session_labels.tsv             # Session labels
-    ├── session_metadata.tsv           # Trial-level metadata
+    ├── labels.tsv                     # Session labels
+    ├── metadata.tsv                   # Trial-level metadata
     │
     ├── .ethograph/
     │   ├── alignment.nwb              # inherit/overwrite alignment in session.nwb
@@ -103,7 +141,7 @@ session_01/
     │
     ├── labels/
     │   ├── backups/
-    │   │   └── session_labels_20240315_101230.tsv
+    │   │   └── labels_20240315_101230.tsv
     │   └── predictions_asformer_20240215_101230/
     │       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
     │       └── session_probs.npz           # per-sample class probabilities

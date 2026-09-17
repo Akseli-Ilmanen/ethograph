@@ -63,7 +63,7 @@ ethograph check                  # Linux/WSL only: lists missing system librarie
 
 ::::{tab-item} conda
 ```bash
-conda create -y -n ethograph -c conda-forge python=3.12
+conda create -y -n ethograph -c conda-forge python=3.12 -y
 conda activate ethograph
 uv pip install "ethograph[gui,audio]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
@@ -97,7 +97,7 @@ ethograph check                  # Linux/WSL only: lists missing system librarie
 
 ::::{tab-item} conda
 ```bash
-conda create -y -n ethograph -c conda-forge python=3.12
+conda create -y -n ethograph -c conda-forge python=3.12 -y
 conda activate ethograph
 uv pip install --torch-backend=auto torch torchvision
 uv pip install "ethograph[gui,audio,model]"

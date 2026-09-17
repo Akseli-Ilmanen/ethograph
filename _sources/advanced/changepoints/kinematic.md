@@ -86,7 +86,7 @@ same time dimension as their target feature. They require:
 from ethograph.io import schema
 
 ds["speed_troughs"] = xr.DataArray(
-    cp_binary,                           # shape: (time, keypoint, individual), values 0 or 1
+    cp_binary,  # shape: (time, keypoint, individual), values 0 or 1
     dims=["time", "keypoint", "individual"],
     attrs=schema.changepoint_attrs(target_feature="speed"),
 )
@@ -127,7 +127,7 @@ from ethograph.features.changepoints import find_troughs_binary
 
 speed = nap.TsdFrame(
     t=time_s,
-    d=speed_array,                       # shape: (n_time, n_keypoints)
+    d=speed_array,  # shape: (n_time, n_keypoints)
     columns=["nose", "left_ear", "right_ear", "tail"],
 )
 

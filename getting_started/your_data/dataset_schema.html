@@ -608,7 +608,7 @@ automatically. Column names become selectable dimensions.</p>
 
 <span class="n">position</span> <span class="o">=</span> <span class="n">nap</span><span class="o">.</span><span class="n">TsdFrame</span><span class="p">(</span>
     <span class="n">t</span><span class="o">=</span><span class="n">time_s</span><span class="p">,</span>
-    <span class="n">d</span><span class="o">=</span><span class="n">pos_array</span><span class="p">,</span>                        <span class="c1"># shape: (n_time, 3)</span>
+    <span class="n">d</span><span class="o">=</span><span class="n">pos_array</span><span class="p">,</span>  <span class="c1"># shape: (n_time, 3)</span>
     <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
@@ -635,7 +635,7 @@ different individuals.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
     <span class="n">data_vars</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">"speed"</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-            <span class="n">speed_array</span><span class="p">,</span>                <span class="c1"># shape: (time, individual)</span>
+            <span class="n">speed_array</span><span class="p">,</span>  <span class="c1"># shape: (time, individual)</span>
             <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">],</span>
         <span class="p">),</span>
     <span class="p">},</span>
@@ -685,7 +685,7 @@ variable is automatically discovered and gets a selection
 <label class="sd-tab-label" for="sd-tab-item-12">
 Xarray</label><div class="sd-tab-content docutils">
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s2">"emg"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-    <span class="n">emg_data</span><span class="p">,</span>                            <span class="c1"># shape: (time, channels)</span>
+    <span class="n">emg_data</span><span class="p">,</span>  <span class="c1"># shape: (time, channels)</span>
     <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"channels"</span><span class="p">],</span>
     <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"channels"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"biceps"</span><span class="p">,</span> <span class="s2">"triceps"</span><span class="p">]},</span>
 <span class="p">)</span>
@@ -730,7 +730,7 @@ Values should lie in <code class="docutils literal notranslate"><span class="pre
 Xarray</label><div class="sd-tab-content docutils">
 <p>The variable should have an <code class="docutils literal notranslate"><span class="pre">RGB</span></code> dimension of size 3:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s2">"angle_rgb"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-    <span class="n">rgb_values</span><span class="p">,</span>                          <span class="c1"># shape: (time, keypoint, individual, 3)</span>
+    <span class="n">rgb_values</span><span class="p">,</span>  <span class="c1"># shape: (time, keypoint, individual, 3)</span>
     <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"keypoint"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">,</span> <span class="s2">"RGB"</span><span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
@@ -752,7 +752,7 @@ any 3-column frame whose name contains <code class="docutils literal notranslate
 
 <span class="n">angle_rgb</span> <span class="o">=</span> <span class="n">nap</span><span class="o">.</span><span class="n">TsdFrame</span><span class="p">(</span>
     <span class="n">t</span><span class="o">=</span><span class="n">time_s</span><span class="p">,</span>
-    <span class="n">d</span><span class="o">=</span><span class="n">rgb_values</span><span class="p">,</span>                        <span class="c1"># shape: (n_time, 3)</span>
+    <span class="n">d</span><span class="o">=</span><span class="n">rgb_values</span><span class="p">,</span>  <span class="c1"># shape: (n_time, 3)</span>
     <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"R"</span><span class="p">,</span> <span class="s2">"G"</span><span class="p">,</span> <span class="s2">"B"</span><span class="p">],</span>
 <span class="p">)</span>
 <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"angle_rgb"</span><span class="p">:</span> <span class="n">angle_rgb</span><span class="p">}</span>

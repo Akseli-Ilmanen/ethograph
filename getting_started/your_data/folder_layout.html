@@ -473,12 +473,12 @@ you:</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>Session folder</strong> — one per recording</p></td>
-<td><p>You: the session file and the media. The GUI: labels, alignment, layout.</p></td>
-<td><p>The data. Any location — inside the project folder or anywhere else; media folders are selected in the GUI and can live elsewhere too.</p></td>
+<td><p>You: the session file. The GUI: labels, alignment, layout.</p></td>
+<td><p>Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session’s videos is itself a fine session folder, but nothing requires it.</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Project folder</strong> — one per research project</p></td>
 <td><p>You, on the start page.</p></td>
-<td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, kept drag &amp; drops. Your session folders can live here too, but don’t have to — EthoGraph never copies data into it.</p></td>
+<td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag &amp; drop. Your session folders can live here too, but don’t have to — EthoGraph never copies data into it.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">~/.ethograph/</span></code></p></td>
 <td><p>The GUI.</p></td>
@@ -496,6 +496,7 @@ folder holds what you build on top of them:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
+    ├── project.yaml                   # study defaults: individuals, cameras, mics, rig, pose software, skeleton
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config
@@ -505,8 +506,40 @@ folder holds what you build on top of them:</p>
     ├── feral/                         # FERAL's inputs, checkpoints and embeddings (models/segment/feral)
     ├── workflows/                     # curation workflows
     ├── wizard/                        # Data wizard notebooks, one per rig
-    └── sessions/                      # drag &amp; drops made with this project set
-        └── 2026-09-06_21-47-12/       # one timestamped folder per drop, reopenable
+    └── sessions.txt                   # session folders made by drag &amp; drop with this project set, reopenable
+</pre></div>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>One session folder, one <code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</strong> A second <code class="docutils literal notranslate"><span class="pre">.nc</span></code> at the root is an old version,
+and EthoGraph refuses to guess which one is current — in the GUI and in a
+<code class="docutils literal notranslate"><span class="pre">segment</span></code> or <code class="docutils literal notranslate"><span class="pre">spot</span></code> run alike. Tell the project which files to skip, once, in
+<code class="docutils literal notranslate"><span class="pre">project.yaml</span></code>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">ignore</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Trial_data.nc</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"*_old.nc"</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># file names or globs, matched in every session folder</span>
+</pre></div>
+</div>
+</div>
+<p>The GUI offers this as a button when it hits the case. A file named explicitly
+(<code class="docutils literal notranslate"><span class="pre">source:</span> <span class="pre">.../Trial_data3.nc</span></code>) is always loaded, whatever the list says.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+`project.yaml` holds what recurs across the study's sessions. Every key is
+optional and every key is a default: a session's own record (the individuals the
+wizard wrote) or its dataset overrides it. Machine paths never go in it, so it can
+be committed and shared.
+
+```yaml
+individuals: [crow1, crow2]
+ignore: [Trial_data.nc]        # old dataset versions to skip in every session folder
+cameras: [cam-1, cam-2]
+mics: [mic-1]
+rig: CrowBench                 # the wizard notebook under wizard/ to start from
+pose:
+  source_software: DeepLabCut
+  skeleton:                    # the skeleton itself, same shape as the skeleton editor saves
+    keypoints: [beak, head, tail]
+    connections:
+      - {start: beak, end: head}
+      - {start: head, end: tail}
 </pre></div>
 </div>
 <p>Without a project folder, <code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/</span></code> stands in — it has the same
@@ -516,15 +549,19 @@ session, the project and that backup.</p>
 </section>
 <section id="the-session-folder">
 <h2>The session folder<a class="headerlink" href="#the-session-folder" title="Link to this heading">#</a></h2>
-<p>One per recording, per backend:</p>
+<p>One per recording. A folder is a session when it holds <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>
+(written by the wizard, a notebook or a drag &amp; drop) or an <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> of its own; the
+<code class="docutils literal notranslate"><span class="pre">.nc</span></code> files in it are feature layers, and there may be none. Session files are named
+by the folder, never by a data file: <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">labels/</span></code>. On the
+start page, open the folder (or any data file in it). Per backend:</p>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-0">
 xarray (.nc)</label><div class="sd-tab-content docutils">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>session_01/
-    ├── session.nc                     # Behavioural dataset (TrialTree or plain Dataset)
-    ├── session_labels.tsv             # Session labels
-    ├── session_metadata.tsv           # Trial-level metadata
+    ├── session.nc                     # The dataset (TrialTree or plain Dataset); optional, and only one
+    ├── labels.tsv                     # Session labels
+    ├── metadata.tsv                   # Trial-level metadata
     ├── .ethograph/
     │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
     │   ├── local_settings.yaml        # Session-specific GUI state
@@ -532,7 +569,7 @@ xarray (.nc)</label><div class="sd-tab-content docutils">
     │
     ├── labels/
     │   ├── backups/
-    │   │  └── session_labels_20240315_101230.tsv
+    │   │  └── labels_20240315_101230.tsv
     │   └── predictions_asformer_20240215_101230/
     │       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
     │       └── session_probs.npz           # per-sample class probabilities
@@ -567,8 +604,8 @@ NWB (.nwb)</label><div class="sd-tab-content docutils">
     │                                  # pose (PoseEstimationSeries), video
     │                                  # refs (ImageSeries.external_file)
     │
-    ├── session_labels.tsv             # Session labels
-    ├── session_metadata.tsv           # Trial-level metadata
+    ├── labels.tsv                     # Session labels
+    ├── metadata.tsv                   # Trial-level metadata
     │
     ├── .ethograph/
     │   ├── alignment.nwb              # inherit/overwrite alignment in session.nwb
@@ -577,7 +614,7 @@ NWB (.nwb)</label><div class="sd-tab-content docutils">
     │
     ├── labels/
     │   ├── backups/
-    │   │   └── session_labels_20240315_101230.tsv
+    │   │   └── labels_20240315_101230.tsv
     │   └── predictions_asformer_20240215_101230/
     │       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
     │       └── session_probs.npz           # per-sample class probabilities

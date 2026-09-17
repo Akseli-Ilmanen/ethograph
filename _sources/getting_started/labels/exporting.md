@@ -13,11 +13,11 @@ references and non-label metadata. Labels live exclusively in the TSV.
 ```
 session_20260903/
 ├── data.nc                          # features, ephys, trial structure (read-only)
-├── data_labels.tsv                  # recommended file location for most-up-to-date labels
+├── labels.tsv                       # the session's labels: one file per session folder
 ├── labels/
 │   ├── backups/
 │       ├── data_labels_20240315_101230.tsv  # timestamped backups
-│       └── data_labels_20240314_111420.tsv
+│       └── labels_20240314_111420.tsv
 ```
 
 The TSV uses integer label IDs in the `labels` column. Label names are
@@ -28,7 +28,7 @@ applies everywhere. See {doc}`mapping` for the format and where it lives.
 
 ## Saving labels (Ctrl+S)
 
-Each save writes the canonical `data_labels.tsv` alongside the `.nc`, plus a
+Each save writes the canonical `labels.tsv` in the session folder, plus a
 timestamped backup in `labels/backups/`. An optional remote backup can be
 configured (see {ref}`Advanced <target-labels-advanced>`).
 

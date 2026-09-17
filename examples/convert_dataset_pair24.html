@@ -446,10 +446,10 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="social-rats-pair-r24m">
 <h1>Social rats - PAIR-R24M<a class="headerlink" href="#social-rats-pair-r24m" title="Link to this heading">#</a></h1>
-<p>Data from <span class="bibtex-citation" id="id1">Marshall <em>et al.</em> [<a class="reference internal" href="../community/references.html#id75" title="Jesse Marshall, Ugne Klibaite, Amanda Gellis, Diego Aldarondo, Bence Olveczky, and Timothy W. Dunn. The PAIR-R24M dataset for multi-animal 3D pose estimation. In Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks, volume 1. 2021. URL: https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/1ff8a7b5dc7a7d1f0ed65aaa29c04b1e-Abstract-round1.html.">2021</a>]</span> (<a class="reference external" href="https://figshare.com/articles/dataset/pairs_dataset/14754374">figshare</a>), a multi-animal 3D pose dataset about the dyadic interactions in laboratory rats.</p>
+<p>Data from <span class="bibtex-citation" id="id1">Marshall <em>et al.</em> [<a class="reference internal" href="../community/references.html#id76" title="Jesse Marshall, Ugne Klibaite, Amanda Gellis, Diego Aldarondo, Bence Olveczky, and Timothy W. Dunn. The PAIR-R24M dataset for multi-animal 3D pose estimation. In Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks, volume 1. 2021. URL: https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/1ff8a7b5dc7a7d1f0ed65aaa29c04b1e-Abstract-round1.html.">2021</a>]</span> (<a class="reference external" href="https://figshare.com/articles/dataset/pairs_dataset/14754374">figshare</a>), a multi-animal 3D pose dataset about the dyadic interactions in laboratory rats.</p>
 <a class="reference internal image-reference" href="../_images/pair24.png"><img alt="../_images/pair24.png" src="../_images/pair24.png" style="width: 800px;" />
 </a>
-<p>Figure taken from Fig. 1 of <span class="bibtex-citation" id="id2">Marshall <em>et al.</em> [<a class="reference internal" href="../community/references.html#id75" title="Jesse Marshall, Ugne Klibaite, Amanda Gellis, Diego Aldarondo, Bence Olveczky, and Timothy W. Dunn. The PAIR-R24M dataset for multi-animal 3D pose estimation. In Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks, volume 1. 2021. URL: https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/1ff8a7b5dc7a7d1f0ed65aaa29c04b1e-Abstract-round1.html.">2021</a>]</span></p>
+<p>Figure taken from Fig. 1 of <span class="bibtex-citation" id="id2">Marshall <em>et al.</em> [<a class="reference internal" href="../community/references.html#id76" title="Jesse Marshall, Ugne Klibaite, Amanda Gellis, Diego Aldarondo, Bence Olveczky, and Timothy W. Dunn. The PAIR-R24M dataset for multi-animal 3D pose estimation. In Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks, volume 1. 2021. URL: https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/1ff8a7b5dc7a7d1f0ed65aaa29c04b1e-Abstract-round1.html.">2021</a>]</span></p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -567,6 +567,7 @@
     <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">cameras</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">video_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
     <span class="n">n_frames</span> <span class="o">=</span> <span class="n">ds_full</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
     <span class="n">n_chunks</span> <span class="o">=</span> <span class="n">n_frames</span> <span class="o">//</span> <span class="n">chunk_size</span>
@@ -600,9 +601,8 @@
 
         <span class="n">row</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"trial"</span><span class="p">:</span> <span class="n">i</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">cam</span> <span class="ow">in</span> <span class="n">cameras</span><span class="p">:</span>
-            <span class="c1"># Relative to VIDEO_DIR (passed as media_root below) — never bake</span>
-            <span class="c1"># this machine's absolute path into the alignment NWB.</span>
-            <span class="n">row</span><span class="p">[</span><span class="sa">f</span><span class="s2">"video_</span><span class="si">{</span><span class="n">cam</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">cam</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start_frame</span><span class="si">}</span><span class="s2">.mp4"</span><span class="p">)</span>
+            <span class="c1"># Full path: pair_media stores the basename per trial and the path per stream.</span>
+            <span class="n">row</span><span class="p">[</span><span class="sa">f</span><span class="s2">"video_</span><span class="si">{</span><span class="n">cam</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">video_dir</span> <span class="o">/</span> <span class="n">cam</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start_frame</span><span class="si">}</span><span class="s2">.mp4"</span><span class="p">)</span>
         <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
 
     <span class="n">remaining</span> <span class="o">=</span> <span class="n">n_frames</span> <span class="o">%</span> <span class="n">chunk_size</span>
@@ -625,7 +625,7 @@
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">datasets</span><span class="p">,</span> <span class="n">session_table</span> <span class="o">=</span> <span class="n">split_into_chunks</span><span class="p">(</span><span class="n">ds_full</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="n">CHUNK_SIZE</span><span class="p">,</span> <span class="n">cameras</span><span class="o">=</span><span class="n">CAMERAS</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">FPS</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">datasets</span><span class="p">,</span> <span class="n">session_table</span> <span class="o">=</span> <span class="n">split_into_chunks</span><span class="p">(</span><span class="n">ds_full</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="n">CHUNK_SIZE</span><span class="p">,</span> <span class="n">cameras</span><span class="o">=</span><span class="n">CAMERAS</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">FPS</span><span class="p">,</span> <span class="n">video_dir</span><span class="o">=</span><span class="n">VIDEO_DIR</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -641,7 +641,6 @@
     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">FPS</span><span class="p">)},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
-    <span class="n">media_root</span><span class="o">=</span><span class="n">VIDEO_DIR</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1"># Build and save TrialTree</span>

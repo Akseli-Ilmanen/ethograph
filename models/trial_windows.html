@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>EmpytAlignment &#8212; ethograph</title>
+    <title>Trial windows &#8212; ethograph</title>
   
   
   
@@ -45,11 +45,13 @@
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'api/ethograph.io.nwb_alignment.EmpytAlignment';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'models/trial_windows';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/api/ethograph.io.nwb_alignment.EmpytAlignment.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/trial_windows.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="LightGBM for point events" href="onset_model.html" />
+    <link rel="prev" title="Models" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -156,8 +158,8 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../models/index.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
     Models
   </a>
 </li>
@@ -292,8 +294,8 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../models/index.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
     Models
   </a>
 </li>
@@ -376,7 +378,27 @@
 <nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
-  <div class="bd-toc-item navbar-nav"></div>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Trial windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, CPU-only)</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/feral.html">FERAL as a video feature</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="confidence.html">Model confidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="curation.html">Curating labels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
+</ul>
+</div>
 </nav></div>
     </div>
   
@@ -415,7 +437,10 @@
         <i class="fa-solid fa-home"></i>
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">EmpytAlignment</span></li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Models</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Trial windows</span></li>
   </ul>
 </nav>
 </div>
@@ -432,98 +457,88 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="empytalignment">
-<h1>EmpytAlignment<a class="headerlink" href="#empytalignment" title="Link to this heading">#</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="ethograph.io.nwb_alignment.EmpytAlignment">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ethograph.io.nwb_alignment.</span></span><span class="sig-name descname"><span class="pre">EmpytAlignment</span></span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#EmpytAlignment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.EmpytAlignment" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>Base session metadata interface with null-object defaults.</p>
-<p><code class="docutils literal notranslate"><span class="pre">NWBAlignment</span></code> overrides these with real NWB-backed implementations.
-When no NWB file is available, the base class is used directly.</p>
-<p class="rubric">Methods</p>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">close</span></code>()</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">devices</span></code>(stream)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#ethograph.io.nwb_alignment.EmpytAlignment.electrical_series" title="ethograph.io.nwb_alignment.EmpytAlignment.electrical_series"><code class="xref py py-obj docutils literal notranslate"><span class="pre">electrical_series</span></code></a>()</p></td>
-<td><p>Discover ElectricalSeries in acquisition.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_media</span></code>(trial, stream[, device])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_stream_rate</span></code>(stream[, device])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_session</span></code>()</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_media_path</span></code>(trial, stream[, device, ...])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">restrict</span></code>(obj, trial)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_stream_rate</span></code>(rate, stream[, device])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_time</span></code>(trial)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">stop_time</span></code>(trial)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">stream_offset_for_trial</span></code>(trial, stream[, device])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">trial_epoch</span></code>(trial)</p></td>
-<td><p></p></td>
-</tr>
-</tbody>
-</table>
+  <section class="tex2jax_ignore mathjax_ignore" id="trial-windows">
+<span id="target-trial-windows"></span><h1>Trial windows<a class="headerlink" href="#trial-windows" title="Link to this heading">#</a></h1>
+<p>Every model in EthoGraph learns from and predicts over <strong>trials</strong>. A trial is
+one window of the session: the stretch of time you navigate to, curate, and
+that a model reads as one input. How to store and align trials is covered in
+<a class="reference internal" href="../getting_started/your_data/trials.html"><span class="doc">Trials</span></a> and
+<a class="reference internal" href="../getting_started/your_data/media_alignment.html"><span class="doc">Media alignment (w. neuroconv)</span></a>; this page is about
+<strong>where to draw the windows</strong> so they suit a model.</p>
+<section id="natural-trials">
+<h2>Natural trials<a class="headerlink" href="#natural-trials" title="Link to this heading">#</a></h2>
+<p>If your behaviour already comes in trials — a pellet is dispensed, a stimulus
+plays, an animal enters an arena — or your recording system is <strong>triggered</strong>,
+writing one file per trial, the trial is already there. Carve your trials out
+this way in <code class="docutils literal notranslate"><span class="pre">alignment.nwb</span></code> (<a class="reference internal" href="../getting_started/your_data/media_alignment.html#target-nwb-alignment"><span class="std std-ref">Media alignment (w. neuroconv)</span></a>).</p>
+<div class="sd-container-fluid sd-sphinx-override sd-mb-4 docutils">
+<div class="sd-row sd-row-cols-2 sd-row-cols-xs-2 sd-row-cols-sm-2 sd-row-cols-md-2 sd-row-cols-lg-2 sd-g-2 sd-g-xs-2 sd-g-sm-2 sd-g-md-2 sd-g-lg-2 docutils">
+<div class="sd-col sd-d-flex-column docutils">
+<figure class="align-default" id="id3">
+<img alt="A free-running camera, as one file or split into several" src="../_images/video_setup_free_running.png" />
+<figcaption>
+<p><span class="caption-text">Free-running camera. Figure from neuroconv’s how-to (BSD-3-Clause).</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 </div>
-<dl class="py method">
-<dt class="sig sig-object py" id="ethograph.io.nwb_alignment.EmpytAlignment.electrical_series">
-<span class="sig-name descname"><span class="pre">electrical_series</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#EmpytAlignment.electrical_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.EmpytAlignment.electrical_series" title="Link to this definition">#</a></dt>
-<dd><p>Discover ElectricalSeries in acquisition. Returns list of {name, path, n_channels, rate}.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>]</span></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="ethograph.io.nwb_alignment.EmpytAlignment.individuals">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">individuals</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ethograph.io.nwb_alignment.EmpytAlignment.individuals" title="Link to this definition">#</a></dt>
-<dd><p>The individuals this session labels, in the order they were declared; <code class="docutils literal notranslate"><span class="pre">[]</span></code> when unknown.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="ethograph.io.nwb_alignment.EmpytAlignment.media_folders">
-<span class="sig-name descname"><span class="pre">media_folders</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#EmpytAlignment.media_folders"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.EmpytAlignment.media_folders" title="Link to this definition">#</a></dt>
-<dd><p>Per stream, the folder its files were paired from, when that folder exists here.</p>
-<p>Read off the full paths each stream’s <code class="docutils literal notranslate"><span class="pre">ImageSeries</span></code> records, so the GUI
-can seed its folder settings on first open instead of asking.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="ethograph.io.nwb_alignment.EmpytAlignment.trials_ep">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">trials_ep</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></em><a class="headerlink" href="#ethograph.io.nwb_alignment.EmpytAlignment.trials_ep" title="Link to this definition">#</a></dt>
-<dd><p>Pynapple IntervalSet built from trials_df start/stop times.</p>
-</dd></dl>
-
-</dd></dl>
-
+<div class="sd-col sd-d-flex-column docutils">
+<figure class="align-default" id="id4">
+<img alt="A triggered camera, one file per trial" src="../_images/video_setup_triggered.png" />
+<figcaption>
+<p><span class="caption-text">Triggered camera. Figure from neuroconv’s how-to (BSD-3-Clause).</span><a class="headerlink" href="#id4" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Passing these trials to a model as its samples is a natural fit, both for
+<a class="reference internal" href="segment/index.html"><span class="doc">action segmentation</span></a>, where a sample is one
+(trial, individual) pair, and for <a class="reference internal" href="spot/index.html"><span class="doc">event spotting</span></a>, which
+shares the same sessions, trial filter and train/val/test split drawn by
+whole trial. (E2E-Spot then draws its clips of <code class="docutils literal notranslate"><span class="pre">context_s</span></code> inside each trial;
+see <a class="reference internal" href="spot/index.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.)</p>
+<p>Both read a trial as <strong>its window of the video</strong>, not the video file: a trial
+carved out of a longer video gives the model only the frames between its start
+and stop, and a video file that already matches its trial is read whole.</p>
+<p>A free-running system that writes <strong>several files at fixed intervals</strong> (the
+third row of the free-running figure, <code class="docutils literal notranslate"><span class="pre">part_01.mp4,</span> <span class="pre">part_02.mp4,</span> <span class="pre">…</span></code>) but has
+no defined trials may also already give you a natural split: one file, one
+trial.</p>
+</section>
+<section id="one-long-recording">
+<h2>One long recording<a class="headerlink" href="#one-long-recording" title="Link to this heading">#</a></h2>
+<p>A single recording lasting an hour, or a whole day, is not a good sample. It
+may not fit in memory for the model, and with one sample per recording the
+gradient updates come rarely. Divide the recording into trial windows instead,
+and each window is passed to the model on its own.</p>
+<p>The right length depends on the model, but we recommend windows of around
+<strong>1024, 2048 or 4096 frames</strong>. In seconds this differs a lot between datasets:
+4096 frames is over two minutes of a slow behaviour filmed at 30 fps, but only
+about 20 s of a crow’s tool use filmed at 200 fps. Build the windows with
+<a class="reference internal" href="../getting_started/your_data/trials.html#target-from-continuous"><span class="std std-ref">from_continuous()</span></a> or as the trials table of
+the alignment.</p>
+</section>
+<section id="why-non-overlapping-windows">
+<h2>Why non-overlapping windows<a class="headerlink" href="#why-non-overlapping-windows" title="Link to this heading">#</a></h2>
+<p>Tools such as DLC2Action split a recording into much shorter segments (e.g.
+256 frames; <span class="bibtex-citation" id="id1"><a class="reference internal" href="../community/references.html#id335" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a></span>, Figure S5) that <strong>overlap</strong>. The clear
+advantage is that a behaviour cut at the edge of one segment is seen whole in
+the next.</p>
+<p>We take a simpler approach: <strong>larger windows with no overlap</strong>, following the
+convention of the temporal action segmentation literature
+<span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id354" title="Guodong Ding, Fadime Sener, and Angela Yao. Temporal action segmentation: an analytic review. IEEE Transactions on Pattern Analysis and Machine Intelligence, 46(2):1043–1062, 2024. URL: https://ieeexplore.ieee.org/abstract/document/10294187, doi:10.1109/TPAMI.2023.3327284.">Ding <em>et al.</em>, 2024</a>]</span> (see also
+<a class="reference external" href="https://github.com/nus-cvml/awesome-temporal-action-segmentation">awesome-temporal-action-segmentation</a>).
+This</p>
+<ul class="simple">
+<li><p>keeps new architectures easy to plug in, since they expect exactly this
+input;</p></li>
+<li><p>avoids majority voting or averaging over overlapping frames;</p></li>
+<li><p>makes the context a model sees the same as the trial a user curates.</p></li>
+</ul>
+<p>The cost is that an action can be bisected by a window boundary. Don’t make
+trial windows too small (e.g. 256 frames): the shorter the window, the more
+often an action is cut in two.</p>
+</section>
 </section>
 
 
@@ -536,6 +551,24 @@ can seed its folder settings on first open instead of asking.</p>
                 <footer class="prev-next-footer d-print-none">
                   
 <div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Models</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="onset_model.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">LightGBM for point events</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
 </div>
                 </footer>
               
@@ -555,13 +588,9 @@ can seed its folder settings on first open instead of asking.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.io.nwb_alignment.EmpytAlignment"><code class="docutils literal notranslate"><span class="pre">EmpytAlignment</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.io.nwb_alignment.EmpytAlignment.electrical_series"><code class="docutils literal notranslate"><span class="pre">EmpytAlignment.electrical_series()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.io.nwb_alignment.EmpytAlignment.individuals"><code class="docutils literal notranslate"><span class="pre">EmpytAlignment.individuals</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.io.nwb_alignment.EmpytAlignment.media_folders"><code class="docutils literal notranslate"><span class="pre">EmpytAlignment.media_folders()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.io.nwb_alignment.EmpytAlignment.trials_ep"><code class="docutils literal notranslate"><span class="pre">EmpytAlignment.trials_ep</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#natural-trials">Natural trials</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-long-recording">One long recording</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-non-overlapping-windows">Why non-overlapping windows</a></li>
 </ul>
   </nav></div>
 
@@ -569,7 +598,7 @@ can seed its folder settings on first open instead of asking.</p>
 
   
   <div class="tocsection sourcelink">
-    <a href="../_sources/api/ethograph.io.nwb_alignment.EmpytAlignment.rst">
+    <a href="../_sources/models/trial_windows.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

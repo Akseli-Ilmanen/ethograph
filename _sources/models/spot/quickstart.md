@@ -25,8 +25,9 @@ is nothing else to clone.
 - **Point labels.** Label the events in the GUI as usual. You get
   `{name}_labels.tsv` beside the session file, with the label ids in
   `mapping.txt`. Only `manual` and `curated` labels are training targets.
-- **A video per trial.** The alignment already knows the video path, frame
-  rate and offset for each trial. If the paths it holds are not valid on this
+- **Video for every trial.** The alignment already knows the video path, frame
+  rate and offset for each trial. One file per trial, or trials carved out of a
+  longer video: the model reads only the frames inside each trial. If the paths it holds are not valid on this
   machine, add `video_dir` to the session line.
 
 No features, and no preprocessing. The model reads the frames.
@@ -37,9 +38,9 @@ Put this beside your data. It is the whole config:
 
 ```yaml
 sessions:
-  - source: ses-01.nc
-  - source: ses-02.nc
-  - source: ses-03.nc                # the held-out session, named below
+  - source: /data/sessions/ses-01    # a session folder: .ethograph/alignment.nwb names the videos
+  - source: /data/sessions/ses-02    # absolute, or relative to this file's folder
+  - source: /data/sessions/ses-03    # the held-out session, named below by its folder name
 
 labels:
   classes: [31, 32]                  # the point-event label ids to spot, in the order they happen
@@ -50,7 +51,7 @@ train:
     train_fraction: 0.8
     val_fraction: 0.2
     test_fraction: 0.0
-    holdout_sessions: [ses-03.nc]    # every trial of this session is `test`
+    holdout_sessions: [ses-03]       # every trial of this session is `test`
 ```
 
 Three things worth knowing about it:
@@ -71,12 +72,12 @@ Three things worth knowing about it:
 import ethograph as eto
 
 project = eto.spot.Project("spot.yaml")
-project.materialise()               # every trial's video -> frames/ + E2E-Spot's index; resumable
-result = project.train()            # runs/ctx2s_res…ms/
-metrics = project.evaluate()        # ses-03, never trained on -> test_metrics.yaml
+project.materialise()  # every trial's video -> frames/ + E2E-Spot's index; resumable
+result = project.train()  # runs/ctx2s_res…ms/
+metrics = project.evaluate()  # ses-03, never trained on -> test_metrics.yaml
 
 print(result.run_dir)
-print(metrics)                      # per class: misses, spurious, error in ms, hit rate at 10/20/50/100 ms
+print(metrics)  # per class: misses, spurious, error in ms, hit rate at 10/20/50/100 ms
 ```
 
 `materialise()` decodes every trial to JPEGs once; later runs and folds reuse
@@ -92,12 +93,12 @@ error if it does not, naming the duration to shorten. On a small card, try
 ## 4. Look at the mistakes in the GUI
 
 ```python
-paths = project.inference(sessions=["ses-03.nc"])
+paths = project.inference(sessions=["ses-03"])
 print(paths[0])
 # labels/predictions_spot_ctx2s_res…ms_20260914_151203/ses-03_predictions.tsv
 ```
 
-That folder sits beside `ses-03.nc`. Each call writes a new one, so an earlier
+That folder sits in the `ses-03` session folder. Each call writes a new one, so an earlier
 run is never overwritten. Inference reads the video directly; it does not
 export frames for this session. Open ses-03 in the GUI and load the TSV with
 **File ▸ Import labels…**. Every predicted event arrives as `automated`, drawn

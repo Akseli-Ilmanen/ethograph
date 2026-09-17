@@ -894,18 +894,20 @@ individual are resolved by last-write-wins.</p>
 <h2>TSV storage<a class="headerlink" href="#tsv-storage" title="Link to this heading">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.labels.tsv_store.labels_tsv_path">
-<span class="sig-prename descclassname"><span class="pre">ethograph.labels.tsv_store.</span></span><span class="sig-name descname"><span class="pre">labels_tsv_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nc_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/labels/tsv_store.html#labels_tsv_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.labels.tsv_store.labels_tsv_path" title="Link to this definition">#</a></dt>
-<dd><p>Derive the labels TSV path from the .nc file path.</p>
+<span class="sig-prename descclassname"><span class="pre">ethograph.labels.tsv_store.</span></span><span class="sig-name descname"><span class="pre">labels_tsv_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/labels/tsv_store.html#labels_tsv_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.labels.tsv_store.labels_tsv_path" title="Link to this definition">#</a></dt>
+<dd><p>The session’s labels file: <code class="docutils literal notranslate"><span class="pre">labels{suffix}.tsv</span></code> in the session folder.</p>
+<p><em>source</em> is the session folder or any file in it (<code class="docutils literal notranslate"><span class="pre">session.nc</span></code>, an <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>);
+one folder is one session, so the name never depends on the file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">labels_tsv_path</span><span class="p">(</span><span class="s2">"experiment/data.nc"</span><span class="p">)</span>
-<span class="go">PosixPath('experiment/data_labels.tsv')</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">labels_tsv_path</span><span class="p">(</span><span class="s2">"experiment/data.nc"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">"_downsampled_100x"</span><span class="p">)</span>
-<span class="go">PosixPath('experiment/data_downsampled_100x_labels.tsv')</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">labels_tsv_path</span><span class="p">(</span><span class="s2">"experiment/data.nc"</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+<span class="go">'labels.tsv'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">labels_tsv_path</span><span class="p">(</span><span class="s2">"experiment"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">"_downsampled_100x"</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+<span class="go">'labels_downsampled_100x.tsv'</span>
 </pre></div>
 </div>
 </dd></dl>

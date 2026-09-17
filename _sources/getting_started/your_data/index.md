@@ -82,7 +82,7 @@ import ethograph as eto
 # 1) One Dataset per trial
 datasets = []
 for trial_id in range(1, 11):
-    n_time = 9000                                   # 5 minutes at 30 fps
+    n_time = 9000  # 5 minutes at 30 fps
     ds = xr.Dataset(
         data_vars={
             "position": xr.DataArray(
@@ -109,13 +109,13 @@ dt = eto.from_datasets(datasets)
 dt.save("session.nc")
 
 # 2) Pairing: media files + trial timing
-sources = [
-    eto.SourceSpec("video", device="cam-1", folder="video/cam1"),
-    eto.SourceSpec("video", device="cam-2", folder="video/cam2"),
-    eto.SourceSpec("pose", device="cam-1", folder="pose/cam1"),
-    eto.SourceSpec("pose", device="cam-2", folder="pose/cam2"),
+sources = [  # media folders are absolute; they need not be near the session folder
+    eto.SourceSpec("video", device="cam-1", folder="/data/rig/video/cam1"),
+    eto.SourceSpec("video", device="cam-2", folder="/data/rig/video/cam2"),
+    eto.SourceSpec("pose", device="cam-1", folder="/data/rig/pose/cam1"),
+    eto.SourceSpec("pose", device="cam-2", folder="/data/rig/pose/cam2", extension=".h5"),  # DLC also writes .csv twins
 ]
-trial_table = eto.discover_media(".", sources)       # 10 rows, natural sort order
+trial_table = eto.discover_media(sources)  # 10 rows, natural sort order, full paths
 trial_table["start_time"] = [i * 300.0 for i in range(10)]
 trial_table["stop_time"] = [(i + 1) * 300.0 - 0.5 for i in range(10)]
 

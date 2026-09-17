@@ -11,12 +11,12 @@ pose features you already have.
 import ethograph as eto
 
 project = eto.spot.Project("spot.yaml")
-project.materialise()        # sessions -> frames (+ the listed features), and the model's own index
-project.train()              # one run under runs/
-project.evaluate()           # per class: misses, error in ms, hit rate per tolerance -> test_metrics.yaml
-project.compare()            # every scored run side by side -> runs/compare.tsv
-project.inference()          # a run's predictions into each session's labels/ folder
-project.cross_validate()     # one fold per session: train on the rest, predict the held-out one
+project.materialise()  # sessions -> frames (+ the listed features), and the model's own index
+project.train()  # one run under runs/
+project.evaluate()  # per class: misses, error in ms, hit rate per tolerance -> test_metrics.yaml
+project.compare()  # every scored run side by side -> runs/compare.tsv
+project.inference()  # a run's predictions into each session's labels/ folder
+project.cross_validate()  # one fold per session: train on the rest, predict the held-out one
 ```
 
 The model is **E2E-Spot** {cite:p}`hong2022e2espot`: a RegNetY-008 backbone {cite:p}`radosavovic2020regnet`
@@ -143,15 +143,15 @@ path per trial, its frame rate, its offset — so a session is one line:
 
 ```yaml
 sessions:
-  - source: /data/derivatives/ses-01/behav/Trial_data.nc
+  - source: /data/derivatives/ses-01/behav        # the session folder
     name: '20260307_01'             # optional — see "The session lines" below
-  - source: /data/derivatives/ses-02/behav/Trial_data.nc
+  - source: /data/derivatives/ses-02/behav
     name: '20260309_01'
 
 frames: ../shared_frames            # optional: reuse frames another project decoded
 
 trials:
-  where: {condition: [stick]}      # the trials-table filter, by column name
+  where: {num_pellets: [1, 2]}      # the trials-table filter, by column name
 
 labels:
   classes: [31, 32]                # the point classes to spot
@@ -217,10 +217,10 @@ So a session to train on and one to predict into sit side by side:
 
 ```yaml
 sessions:
-  - source: C:/data/derivatives/sub-01/ses-000_date-20250503_02/behav/Trial_data3.nc
+  - source: C:/data/derivatives/sub-01/ses-000_date-20250503_02/behav
     labels_path: C:/data/derivatives/sub-01/ses-000_date-20250503_02/behav/Trial_data_labels.tsv
     video_dir: C:/VidData/20250503_02_Ivy
-  - source: C:/data/derivatives/sub-01/ses-000_date-20250506_02/behav/Trial_data3.nc   # no labels: predict into it
+  - source: C:/data/derivatives/sub-01/ses-000_date-20250506_02/behav   # no labels: predict into it
     video_dir: C:/VidData/20250506_02_Ivy
 ```
 
@@ -297,7 +297,8 @@ look systematically early by half a stride.
   - What it does
   - Cost
 * - `materialise()`
-  - Every trial's video to `{video_id}/%06d.jpg` at the model's input height,
+  - Every trial's frames — only those between its start and stop when the
+    video is longer than the trial — to `{video_id}/%06d.jpg` at the model's input height,
     plus `{split}.json` and `class.txt` in E2E-Spot's own schema; with
     `features:`, the listed columns per trial under `features/`. Resumable.
   - Minutes per session, once.

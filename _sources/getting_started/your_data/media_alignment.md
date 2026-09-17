@@ -21,9 +21,21 @@ An `.nwb` source is read and edited directly and needs no sidecar.
 
 On the start page, click **Data wizard, prepare my data** and choose
 **1 Pair my media files**. Tell it how many cameras and microphones you have
-and where the files are. It builds the pairing table, writes
-`.ethograph/alignment.nwb`, and saves a notebook with the same calls under
-`wizard/` in the project folder.
+and where the files are. It shows the pairing table, then writes a notebook
+with the same calls under `wizard/` in the project folder and stops. Run the
+notebook: it writes `.ethograph/alignment.nwb` into the session folder named in
+its first cell, and any `session.nc` you add there. The wizard itself writes
+nothing but the notebook, so the notebook stays the one record of how a
+session was built; next session, change its first cell and run all.
+
+Two folders are involved and they need not be the same. The **session folder**
+is where EthoGraph writes: `.ethograph/alignment.nwb`, labels, settings and, if
+you have features, `session.nc`. The **media folders** are where your videos,
+pose files and audio already are, one per source, given as absolute paths. They
+can sit anywhere: on another drive, one folder per camera, or one folder for
+every session with a filename pattern telling the trials apart. When each
+session's videos have a folder of their own, that folder is a perfectly good
+session folder, and the wizard proposes it.
 
 The same thing in Python is two calls. {func}`~ethograph.discover_media` builds
 the pairing table from folders (files in natural sort order) or from a filename
@@ -33,20 +45,20 @@ pattern with named groups `trial`, `camera` and `mic`.
 ```python
 import ethograph as eto
 
-session_dir = "session_01"
+session_dir = "D:/sessions/2026-09-11"  # receives .ethograph/, labels, session.nc
 
 sources = [
-    eto.SourceSpec("video", device="cam-1", folder="video/cam1"),
-    eto.SourceSpec("video", device="cam-2", folder="video/cam2"),
-    eto.SourceSpec("pose", device="cam-1", folder="pose/cam1"),
-    eto.SourceSpec("pose", device="cam-2", folder="pose/cam2"),
-    eto.SourceSpec("audio", device="mic-1", folder="audio"),
+    eto.SourceSpec("video", device="cam-1", folder="E:/cameras/cam1/2026-09-11"),
+    eto.SourceSpec("video", device="cam-2", folder="E:/cameras/cam2/2026-09-11"),
+    eto.SourceSpec("pose", device="cam-1", folder="D:/dlc/2026-09-11/cam1"),
+    eto.SourceSpec("pose", device="cam-2", folder="D:/dlc/2026-09-11/cam2"),
+    eto.SourceSpec("audio", device="mic-1", folder="D:/sessions/2026-09-11/audio"),
 ]
-trial_table = eto.discover_media(session_dir, sources)
+trial_table = eto.discover_media(sources)
 print(trial_table)
-#    trial  video_cam-1  video_cam-2      pose_cam-1  ...  audio_mic-1
-# 0      1  cam1_t1.mp4  cam2_t1.mp4  dlc_cam1_t1.h5  ...  mic1_t1.wav
-# 1      2  cam1_t2.mp4  cam2_t2.mp4  dlc_cam1_t2.h5  ...  mic1_t2.wav
+#    trial                       video_cam-1  ...                              audio_mic-1
+# 0      1  E:/cameras/cam1/2026-09-11/t1.mp4  ...  D:/sessions/2026-09-11/audio/mic1_t1.wav
+# 1      2  E:/cameras/cam1/2026-09-11/t2.mp4  ...  D:/sessions/2026-09-11/audio/mic1_t2.wav
 
 trial_table["stimulus"] = ["tone_A", "tone_B"]
 
@@ -54,7 +66,6 @@ eto.pair_media(
     trial_table,
     stream_rates={"video": 30.0, "pose": 30.0, "audio": 48000.0},
     output_path=f"{session_dir}/.ethograph/alignment.nwb",
-    media_root=session_dir,
 )
 ```
 
@@ -68,9 +79,10 @@ and one `{stream}_{device}` column per source. You can build it by hand or edit
 it before writing.
 
 - **Files are paired by row, not by name.** Row order is trial order and each
-  `{stream}_{device}` column is that stream's file for that trial. Only the
-  basename is stored; it is resolved against the media folder you select in the
-  GUI at load time.
+  `{stream}_{device}` column is that stream's file for that trial. The table
+  holds full paths, so it says where every file is. The alignment file stores
+  the basename per trial and the full path per stream; on another machine, the
+  media folder you select in the GUI takes over.
 - **Camera index pairs video with pose**: device `cam-1` overlays `pose_cam-1`.
 - **Extra columns** (`stimulus`, `condition`, ...) become trial attributes and
   flow through to label TSV exports.
@@ -84,8 +96,8 @@ it before writing.
 duration is probed from its own media (video first, then audio, then pose) and
 the trials are laid **end to end** from `0.0`. Three things follow:
 
-- **The files must be openable at build time.** Pass `media_root` or absolute
-  paths; a name that does not resolve raises `ValueError`.
+- **The files must be openable at build time.** The table's paths are probed
+  as they are; a path that does not exist raises `ValueError`.
 - **Inferred trials are contiguous.** The inter-trial gaps of the real
   recording are erased. Trial-relative time (labels, features, per-trial video)
   is unaffected, but session time is fiction. Pass real times whenever you have
@@ -107,8 +119,8 @@ eto.pair_media(
     trial_table,
     stream_rates={"video": 30.0},
     session_wide={
-        "audio_mic-1": ("session_ch1.wav", 48000.0, 0.0),
-        "ephys_probe-1": ("session.dat", 30000.0, 0.5),
+        "audio_mic-1": ("D:/sessions/2026-09-11/audio/session_ch1.wav", 48000.0, 0.0),
+        "ephys_probe-1": ("D:/sessions/2026-09-11/ephys/session.dat", 30000.0, 0.5),
     },
     output_path=f"{session_dir}/.ethograph/alignment.nwb",
 )
@@ -163,8 +175,9 @@ Triggered camera. Figure from neuroconv's how-to (BSD-3-Clause).
 
 Choose **2** or **3** in the Data wizard. It asks how the camera is wired (a
 known offset, a pulse per frame, or a pulse per trial), writes
-`wizard/{rig_name}.ipynb` in the project folder and stops. Run the notebook; it
-writes `session.nwb`, which you then open on the start page. The recipes are
+`wizard/{rig_name}.ipynb` in the project folder and stops, exactly as in mode
+1. Run the notebook; it writes `session.nwb`, and you open its folder on the
+start page. The recipes are
 neuroconv's own, from its
 [how-to on aligning external video](https://neuroconv--2037.org.readthedocs.build/en/2037/how_to/align_external_video.html);
 the walkthrough below follows one rig in the shape of the notebook the wizard
@@ -184,12 +197,14 @@ Intan clock and drift is corrected for free.
 
 #### 1. Parameters
 
-The first cell of the notebook is tagged `parameters`. `session_dir` is the one
-thing to change for the next session on the same rig.
+The first cell of the notebook is tagged `parameters`. It names the session
+folder, which receives `session.nwb`, and every media folder and recorder file
+as absolute paths. For the next session on the same rig, change those paths and
+run all.
 
 ```python
 session_dir = "D:/data/rig_A/2026-09-11"
-rhd_file = f"{session_dir}/ephys/session.rhd"
+rhd_file = "D:/data/rig_A/2026-09-11/ephys/session.rhd"
 nwbfile_path = f"{session_dir}/session.nwb"
 ```
 
@@ -204,12 +219,12 @@ file.
 import ethograph as eto
 
 sources = [
-    eto.SourceSpec("video", device="cam-1", folder="video"),
-    eto.SourceSpec("pose", device="cam-1", folder="pose"),
-    eto.SourceSpec("audio", device="mic-1", folder="audio"),
+    eto.SourceSpec("video", device="cam-1", folder="D:/data/rig_A/2026-09-11/video"),
+    eto.SourceSpec("pose", device="cam-1", folder="D:/data/rig_A/2026-09-11/pose"),
+    eto.SourceSpec("audio", device="mic-1", folder="D:/data/rig_A/2026-09-11/audio"),
 ]
-trial_table = eto.discover_media(session_dir, sources)
-video_files = [f"{session_dir}/video/{name}" for name in trial_table["video_cam-1"]]
+trial_table = eto.discover_media(sources)
+video_files = trial_table["video_cam-1"].tolist()  # full paths
 ```
 
 #### 3. Read the pulses off the recorder
@@ -250,9 +265,7 @@ from neuroconv.datainterfaces import ExternalVideoInterface
 video_interface = ExternalVideoInterface(file_paths=video_files, video_name="video_cam-1")
 
 n_frames = sum(video_interface.get_header_frame_counts())
-assert len(frame_pulse_times) == n_frames, (
-    f"{len(frame_pulse_times)} pulses for {n_frames} frames"
-)
+assert len(frame_pulse_times) == n_frames, f"{len(frame_pulse_times)} pulses for {n_frames} frames"
 video_interface.alignment["session"].set_times(frame_pulse_times)
 ```
 
@@ -299,7 +312,6 @@ eto.pair_media(
     trial_table,
     stream_rates={"pose": 30.0, "audio": 48000.0},
     output_path=nwbfile_path,
-    media_root=session_dir,
 )
 ```
 
@@ -328,8 +340,9 @@ or the `session.nwb` itself.
 | **Cameras / mics** | device names parsed from the ImageSeries names | `alignment.cameras`, `alignment.mics` |
 
 Streams are named `{stream}_{device}` throughout: `video_cam-1`, `audio_mic-1`,
-`pose_cam-1`, `ephys_probe-1`. Only basenames are stored, so media can move
-without re-exporting features.
+`pose_cam-1`, `ephys_probe-1`. The trials table stores basenames and each
+stream's `ImageSeries` the full paths, so media can move without re-exporting
+features: point the GUI at the new folder and the names still match.
 
 Two time conventions meet here. **Trial-relative** time (`onset_s`, `offset_s`,
 feature time) starts at `0.0` in every trial, like pose trackers and per-trial
@@ -344,9 +357,9 @@ from ethograph.io.nwb_alignment import NWBAlignment
 
 alignment = NWBAlignment("session_01/.ethograph/alignment.nwb")
 print(alignment.trials_df)
-print(alignment.cameras)          # ["cam-1", "cam-2"]
-print(alignment.mics)             # ["mic-1"]
-print(alignment.start_time(1))    # 0.0
+print(alignment.cameras)  # ["cam-1", "cam-2"]
+print(alignment.mics)  # ["mic-1"]
+print(alignment.start_time(1))  # 0.0
 alignment.close()
 ```
 

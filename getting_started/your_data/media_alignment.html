@@ -490,29 +490,40 @@ notebook tailored to your setup.</p>
 <span id="target-pair-media"></span><h2>Pair media files<a class="headerlink" href="#pair-media-files" title="Link to this heading">#</a></h2>
 <p>On the start page, click <strong>Data wizard, prepare my data</strong> and choose
 <strong>1 Pair my media files</strong>. Tell it how many cameras and microphones you have
-and where the files are. It builds the pairing table, writes
-<code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>, and saves a notebook with the same calls under
-<code class="docutils literal notranslate"><span class="pre">wizard/</span></code> in the project folder.</p>
+and where the files are. It shows the pairing table, then writes a notebook
+with the same calls under <code class="docutils literal notranslate"><span class="pre">wizard/</span></code> in the project folder and stops. Run the
+notebook: it writes <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> into the session folder named in
+its first cell, and any <code class="docutils literal notranslate"><span class="pre">session.nc</span></code> you add there. The wizard itself writes
+nothing but the notebook, so the notebook stays the one record of how a
+session was built; next session, change its first cell and run all.</p>
+<p>Two folders are involved and they need not be the same. The <strong>session folder</strong>
+is where EthoGraph writes: <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>, labels, settings and, if
+you have features, <code class="docutils literal notranslate"><span class="pre">session.nc</span></code>. The <strong>media folders</strong> are where your videos,
+pose files and audio already are, one per source, given as absolute paths. They
+can sit anywhere: on another drive, one folder per camera, or one folder for
+every session with a filename pattern telling the trials apart. When each
+session’s videos have a folder of their own, that folder is a perfectly good
+session folder, and the wizard proposes it.</p>
 <p>The same thing in Python is two calls. <code class="xref py py-func docutils literal notranslate"><span class="pre">discover_media()</span></code> builds
 the pairing table from folders (files in natural sort order) or from a filename
 pattern with named groups <code class="docutils literal notranslate"><span class="pre">trial</span></code>, <code class="docutils literal notranslate"><span class="pre">camera</span></code> and <code class="docutils literal notranslate"><span class="pre">mic</span></code>.
 <code class="xref py py-func docutils literal notranslate"><span class="pre">pair_media()</span></code> writes the alignment file:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
-<span class="n">session_dir</span> <span class="o">=</span> <span class="s2">"session_01"</span>
+<span class="n">session_dir</span> <span class="o">=</span> <span class="s2">"D:/sessions/2026-09-11"</span>  <span class="c1"># receives .ethograph/, labels, session.nc</span>
 
 <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"video"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"video/cam1"</span><span class="p">),</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"video"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-2"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"video/cam2"</span><span class="p">),</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"pose"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"pose/cam1"</span><span class="p">),</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"pose"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-2"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"pose/cam2"</span><span class="p">),</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"audio"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"mic-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"audio"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"video"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"E:/cameras/cam1/2026-09-11"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"video"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-2"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"E:/cameras/cam2/2026-09-11"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"pose"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"D:/dlc/2026-09-11/cam1"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"pose"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-2"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"D:/dlc/2026-09-11/cam2"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"audio"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"mic-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"D:/sessions/2026-09-11/audio"</span><span class="p">),</span>
 <span class="p">]</span>
-<span class="n">trial_table</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">discover_media</span><span class="p">(</span><span class="n">session_dir</span><span class="p">,</span> <span class="n">sources</span><span class="p">)</span>
+<span class="n">trial_table</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">discover_media</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">trial_table</span><span class="p">)</span>
-<span class="c1">#    trial  video_cam-1  video_cam-2      pose_cam-1  ...  audio_mic-1</span>
-<span class="c1"># 0      1  cam1_t1.mp4  cam2_t1.mp4  dlc_cam1_t1.h5  ...  mic1_t1.wav</span>
-<span class="c1"># 1      2  cam1_t2.mp4  cam2_t2.mp4  dlc_cam1_t2.h5  ...  mic1_t2.wav</span>
+<span class="c1">#    trial                       video_cam-1  ...                              audio_mic-1</span>
+<span class="c1"># 0      1  E:/cameras/cam1/2026-09-11/t1.mp4  ...  D:/sessions/2026-09-11/audio/mic1_t1.wav</span>
+<span class="c1"># 1      2  E:/cameras/cam1/2026-09-11/t2.mp4  ...  D:/sessions/2026-09-11/audio/mic1_t2.wav</span>
 
 <span class="n">trial_table</span><span class="p">[</span><span class="s2">"stimulus"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"tone_A"</span><span class="p">,</span> <span class="s2">"tone_B"</span><span class="p">]</span>
 
@@ -520,7 +531,6 @@ pattern with named groups <code class="docutils literal notranslate"><span class
     <span class="n">trial_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span> <span class="s2">"pose"</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="mf">48000.0</span><span class="p">},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_dir</span><span class="si">}</span><span class="s2">/.ethograph/alignment.nwb"</span><span class="p">,</span>
-    <span class="n">media_root</span><span class="o">=</span><span class="n">session_dir</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -533,9 +543,10 @@ and one <code class="docutils literal notranslate"><span class="pre">{stream}_{d
 it before writing.</p>
 <ul class="simple">
 <li><p><strong>Files are paired by row, not by name.</strong> Row order is trial order and each
-<code class="docutils literal notranslate"><span class="pre">{stream}_{device}</span></code> column is that stream’s file for that trial. Only the
-basename is stored; it is resolved against the media folder you select in the
-GUI at load time.</p></li>
+<code class="docutils literal notranslate"><span class="pre">{stream}_{device}</span></code> column is that stream’s file for that trial. The table
+holds full paths, so it says where every file is. The alignment file stores
+the basename per trial and the full path per stream; on another machine, the
+media folder you select in the GUI takes over.</p></li>
 <li><p><strong>Camera index pairs video with pose</strong>: device <code class="docutils literal notranslate"><span class="pre">cam-1</span></code> overlays <code class="docutils literal notranslate"><span class="pre">pose_cam-1</span></code>.</p></li>
 <li><p><strong>Extra columns</strong> (<code class="docutils literal notranslate"><span class="pre">stimulus</span></code>, <code class="docutils literal notranslate"><span class="pre">condition</span></code>, …) become trial attributes and
 flow through to label TSV exports.</p></li>
@@ -548,8 +559,8 @@ flow through to label TSV exports.</p></li>
 duration is probed from its own media (video first, then audio, then pose) and
 the trials are laid <strong>end to end</strong> from <code class="docutils literal notranslate"><span class="pre">0.0</span></code>. Three things follow:</p>
 <ul class="simple">
-<li><p><strong>The files must be openable at build time.</strong> Pass <code class="docutils literal notranslate"><span class="pre">media_root</span></code> or absolute
-paths; a name that does not resolve raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p></li>
+<li><p><strong>The files must be openable at build time.</strong> The table’s paths are probed
+as they are; a path that does not exist raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p></li>
 <li><p><strong>Inferred trials are contiguous.</strong> The inter-trial gaps of the real
 recording are erased. Trial-relative time (labels, features, per-trial video)
 is unaffected, but session time is fiction. Pass real times whenever you have
@@ -568,8 +579,8 @@ session time at which its first sample was taken:</p>
     <span class="n">trial_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">},</span>
     <span class="n">session_wide</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">"audio_mic-1"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"session_ch1.wav"</span><span class="p">,</span> <span class="mf">48000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-        <span class="s2">"ephys_probe-1"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"session.dat"</span><span class="p">,</span> <span class="mf">30000.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+        <span class="s2">"audio_mic-1"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"D:/sessions/2026-09-11/audio/session_ch1.wav"</span><span class="p">,</span> <span class="mf">48000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="s2">"ephys_probe-1"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"D:/sessions/2026-09-11/ephys/session.dat"</span><span class="p">,</span> <span class="mf">30000.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
     <span class="p">},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_dir</span><span class="si">}</span><span class="s2">/.ethograph/alignment.nwb"</span><span class="p">,</span>
 <span class="p">)</span>
@@ -617,12 +628,15 @@ trial, with gaps between them:</p>
 </figure>
 <p>Choose <strong>2</strong> or <strong>3</strong> in the Data wizard. It asks how the camera is wired (a
 known offset, a pulse per frame, or a pulse per trial), writes
-<code class="docutils literal notranslate"><span class="pre">wizard/{rig_name}.ipynb</span></code> in the project folder and stops. Run the notebook; it
-writes <code class="docutils literal notranslate"><span class="pre">session.nwb</span></code>, which you then open on the start page. The recipes are
+<code class="docutils literal notranslate"><span class="pre">wizard/{rig_name}.ipynb</span></code> in the project folder and stops, exactly as in mode</p>
+<ol class="arabic simple">
+<li><p>Run the notebook; it writes <code class="docutils literal notranslate"><span class="pre">session.nwb</span></code>, and you open its folder on the
+start page. The recipes are
 neuroconv’s own, from its
 <a class="reference external" href="https://neuroconv--2037.org.readthedocs.build/en/2037/how_to/align_external_video.html">how-to on aligning external video</a>;
 the walkthrough below follows one rig in the shape of the notebook the wizard
-writes, and only shows how the recipes meet EthoGraph.</p>
+writes, and only shows how the recipes meet EthoGraph.</p></li>
+</ol>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>neuroconv is not part of the <code class="docutils literal notranslate"><span class="pre">ethograph</span></code> environment. Install it with
@@ -636,10 +650,12 @@ frame-out pin is wired to <code class="docutils literal notranslate"><span class
 Intan clock and drift is corrected for free.</p>
 <section id="parameters">
 <h4>1. Parameters<a class="headerlink" href="#parameters" title="Link to this heading">#</a></h4>
-<p>The first cell of the notebook is tagged <code class="docutils literal notranslate"><span class="pre">parameters</span></code>. <code class="docutils literal notranslate"><span class="pre">session_dir</span></code> is the one
-thing to change for the next session on the same rig.</p>
+<p>The first cell of the notebook is tagged <code class="docutils literal notranslate"><span class="pre">parameters</span></code>. It names the session
+folder, which receives <code class="docutils literal notranslate"><span class="pre">session.nwb</span></code>, and every media folder and recorder file
+as absolute paths. For the next session on the same rig, change those paths and
+run all.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">session_dir</span> <span class="o">=</span> <span class="s2">"D:/data/rig_A/2026-09-11"</span>
-<span class="n">rhd_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_dir</span><span class="si">}</span><span class="s2">/ephys/session.rhd"</span>
+<span class="n">rhd_file</span> <span class="o">=</span> <span class="s2">"D:/data/rig_A/2026-09-11/ephys/session.rhd"</span>
 <span class="n">nwbfile_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_dir</span><span class="si">}</span><span class="s2">/session.nwb"</span>
 </pre></div>
 </div>
@@ -653,12 +669,12 @@ file.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
 <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"video"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"video"</span><span class="p">),</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"pose"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"pose"</span><span class="p">),</span>
-    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"audio"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"mic-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"audio"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"video"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"D:/data/rig_A/2026-09-11/video"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"pose"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cam-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"D:/data/rig_A/2026-09-11/pose"</span><span class="p">),</span>
+    <span class="n">eto</span><span class="o">.</span><span class="n">SourceSpec</span><span class="p">(</span><span class="s2">"audio"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"mic-1"</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="s2">"D:/data/rig_A/2026-09-11/audio"</span><span class="p">),</span>
 <span class="p">]</span>
-<span class="n">trial_table</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">discover_media</span><span class="p">(</span><span class="n">session_dir</span><span class="p">,</span> <span class="n">sources</span><span class="p">)</span>
-<span class="n">video_files</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_dir</span><span class="si">}</span><span class="s2">/video/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">trial_table</span><span class="p">[</span><span class="s2">"video_cam-1"</span><span class="p">]]</span>
+<span class="n">trial_table</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">discover_media</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+<span class="n">video_files</span> <span class="o">=</span> <span class="n">trial_table</span><span class="p">[</span><span class="s2">"video_cam-1"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>  <span class="c1"># full paths</span>
 </pre></div>
 </div>
 </section>
@@ -699,9 +715,7 @@ file.</p>
 <span class="n">video_interface</span> <span class="o">=</span> <span class="n">ExternalVideoInterface</span><span class="p">(</span><span class="n">file_paths</span><span class="o">=</span><span class="n">video_files</span><span class="p">,</span> <span class="n">video_name</span><span class="o">=</span><span class="s2">"video_cam-1"</span><span class="p">)</span>
 
 <span class="n">n_frames</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">video_interface</span><span class="o">.</span><span class="n">get_header_frame_counts</span><span class="p">())</span>
-<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame_pulse_times</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_frames</span><span class="p">,</span> <span class="p">(</span>
-    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">frame_pulse_times</span><span class="p">)</span><span class="si">}</span><span class="s2"> pulses for </span><span class="si">{</span><span class="n">n_frames</span><span class="si">}</span><span class="s2"> frames"</span>
-<span class="p">)</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame_pulse_times</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_frames</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">frame_pulse_times</span><span class="p">)</span><span class="si">}</span><span class="s2"> pulses for </span><span class="si">{</span><span class="n">n_frames</span><span class="si">}</span><span class="s2"> frames"</span>
 <span class="n">video_interface</span><span class="o">.</span><span class="n">alignment</span><span class="p">[</span><span class="s2">"session"</span><span class="p">]</span><span class="o">.</span><span class="n">set_times</span><span class="p">(</span><span class="n">frame_pulse_times</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -744,7 +758,6 @@ streams to it in place, next to the trials it already holds:</p>
     <span class="n">trial_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"pose"</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="mf">48000.0</span><span class="p">},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwbfile_path</span><span class="p">,</span>
-    <span class="n">media_root</span><span class="o">=</span><span class="n">session_dir</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -796,8 +809,9 @@ or the <code class="docutils literal notranslate"><span class="pre">session.nwb<
 </table>
 </div>
 <p>Streams are named <code class="docutils literal notranslate"><span class="pre">{stream}_{device}</span></code> throughout: <code class="docutils literal notranslate"><span class="pre">video_cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">audio_mic-1</span></code>,
-<code class="docutils literal notranslate"><span class="pre">pose_cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">ephys_probe-1</span></code>. Only basenames are stored, so media can move
-without re-exporting features.</p>
+<code class="docutils literal notranslate"><span class="pre">pose_cam-1</span></code>, <code class="docutils literal notranslate"><span class="pre">ephys_probe-1</span></code>. The trials table stores basenames and each
+stream’s <code class="docutils literal notranslate"><span class="pre">ImageSeries</span></code> the full paths, so media can move without re-exporting
+features: point the GUI at the new folder and the names still match.</p>
 <p>Two time conventions meet here. <strong>Trial-relative</strong> time (<code class="docutils literal notranslate"><span class="pre">onset_s</span></code>, <code class="docutils literal notranslate"><span class="pre">offset_s</span></code>,
 feature time) starts at <code class="docutils literal notranslate"><span class="pre">0.0</span></code> in every trial, like pose trackers and per-trial
 video. <strong>Session</strong> time (<code class="docutils literal notranslate"><span class="pre">onset_global</span></code>, ephys timestamps) is measured from the
@@ -810,9 +824,9 @@ start of the recording. The trials table converts between them:
 
 <span class="n">alignment</span> <span class="o">=</span> <span class="n">NWBAlignment</span><span class="p">(</span><span class="s2">"session_01/.ethograph/alignment.nwb"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">trials_df</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">cameras</span><span class="p">)</span>          <span class="c1"># ["cam-1", "cam-2"]</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">mics</span><span class="p">)</span>             <span class="c1"># ["mic-1"]</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>    <span class="c1"># 0.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">cameras</span><span class="p">)</span>  <span class="c1"># ["cam-1", "cam-2"]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">mics</span><span class="p">)</span>  <span class="c1"># ["mic-1"]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>  <span class="c1"># 0.0</span>
 <span class="n">alignment</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>

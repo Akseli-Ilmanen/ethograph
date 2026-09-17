@@ -379,6 +379,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="trial_windows.html">Trial windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
@@ -506,7 +507,7 @@ area or curate anything, and only then does the verdict start being saved
 EthoGraph’s own bookkeeping, so it is never written into a recording or into
 <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>: that write happens in place, and for a non-NWB
 dataset the alignment NWB is the only holder of your trial timing. Instead the
-metadata table you have loaded is copied to a sidecar <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code>
+metadata table you have loaded is copied to a sidecar <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code>
 next to the data, and that file is the metadata table from then on — it is
 what the next load reads, and where later edits to trial metadata go. An
 existing metadata file is used as it stands, never overwritten.</p>
@@ -578,7 +579,7 @@ deleting moves straight on to the next boundary:</p>
 <p>Navigating trials the normal way (trial combo, <code class="docutils literal notranslate"><span class="pre">Up</span></code>/<code class="docutils literal notranslate"><span class="pre">Down</span></code>) pulls the review
 along to that trial’s first boundary. Nothing reaches disk until you save with
 <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code>.</p>
-<p>Reviewing what an lightgbm model (LightGBM <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id267" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>) predicted, you also get the
+<p>Reviewing what an lightgbm model (LightGBM <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>) predicted, you also get the
 <strong>curve it predicted from</strong>: a dashed line per label class, in the class’s own
 colour, on a 0–1 right-hand axis. Only the classes <strong>in scope</strong> are drawn, so
 dragging in one class shows that class’s belief and nothing else. A low
@@ -588,7 +589,7 @@ by hand have no curve and none is drawn.</p>
 <p>Seeds don’t have to be hand-placed. Because the queue is built from the labels
 TSV, you can generate first-guess labels <strong>programmatically from a time-series
 criterion</strong> — say, the first frame where beak opening exceeds a threshold
-width — write them into the <code class="docutils literal notranslate"><span class="pre">{name}_labels.tsv</span></code> file with
+width — write them into the session’s <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> with
 <code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code> (see <a class="reference internal" href="../getting_started/labels/exporting.html#target-exporting-labels"><span class="std std-ref">the column reference</span></a>), load it into the GUI, and walk the guesses here.
 A rough automatic pass plus a fast frame-accurate review is often far quicker
 than either alone.</p>

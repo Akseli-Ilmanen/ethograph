@@ -38,38 +38,35 @@ from movement.kinematics import compute_speed, compute_velocity
 from ethograph.features.geometry import egocentric_position, intra_distances
 
 ds = load_poses.from_dlc_file("ses-01_pose.csv", fps=60)
-ds["speed"] = compute_speed(ds.position)                # (time, keypoint, individual)
-ds["intra"] = intra_distances(ds.position)              # (time, pair, individual), pair = "snout-tailBase", …
+ds["speed"] = compute_speed(ds.position)  # (time, keypoint, individual)
+ds["intra"] = intra_distances(ds.position)  # (time, pair, individual), pair = "snout-tailBase", …
 
 # orientation fixed
-ds["velocity"] = compute_velocity(ds.position)          # (time, space, keypoint, individual)
+ds["velocity"] = compute_velocity(ds.position)  # (time, space, keypoint, individual)
 
 # freely moving: centre on tailBase, heading tailBase → snout
 ds["position_ego"] = egocentric_position(ds.position, "tailBase", heading_keypoint="snout")
 
-ds.to_netcdf("ses-01.nc")
+ds.to_netcdf("/data/sessions/ses-01/session.nc")  # one folder per session; the wizard or a drop adds .ethograph/
 ```
 
 Do that for each session. The same variables are then plottable in the GUI, so
 you can look at exactly what the model will read (`examples/create_dataset_cricket.ipynb`
 is this, end to end, with video and audio alignment).
 
-Labels come out of the GUI as they always do: `{name}_labels.tsv` beside the
+Labels come out of the GUI as they always do: `labels.tsv` in the session folder beside the
 `.nc`, with the label ids described in a `mapping.txt`.
 
-## 2. `project.yaml`
+## 2. `segment.yaml`
 
 Put this beside your data. It is the whole config — every key not written
 here has a default that is fine for a first run.
 
 ```yaml
 sessions:
-  - source: ses-01.nc
-    labels_path: ses-01_labels.tsv
-  - source: ses-02.nc
-    labels_path: ses-02_labels.tsv
-  - source: ses-03.nc                  # the held-out session, named below
-    labels_path: ses-03_labels.tsv
+  - source: /data/sessions/ses-01      # a session folder: its .nc, .ethograph/, labels.tsv
+  - source: /data/sessions/ses-02      # absolute, or relative to this file's folder
+  - source: /data/sessions/ses-03      # the held-out session, named below by its folder name
 
 features:
   name: kinematics                     # → data/kinematics/
@@ -96,7 +93,7 @@ train:
     train_fraction: 0.8
     val_fraction: 0.2
     test_fraction: 0.0
-    holdout_sessions: [ses-03.nc]      # every trial of this session is `test`
+    holdout_sessions: [ses-03]         # every trial of this session is `test`
 ```
 
 Three things worth knowing about it:
@@ -117,10 +114,10 @@ Three things worth knowing about it:
 import ethograph as eto
 
 project = eto.segment.Project("project.yaml")
-result = project.train()                 # materialises the dataset first, if needed
+result = project.train()  # materialises the dataset first, if needed
 
-print(result.run_dir)                    # runs/quickstart_20260827-1412/
-print(result.test_metrics["postprocessed"]["f1@50"])   # ses-03, never trained on
+print(result.run_dir)  # runs/quickstart_20260827-1412/
+print(result.test_metrics["postprocessed"]["f1@50"])  # ses-03, never trained on
 ```
 
 Progress prints as it goes, and the run directory keeps the config it ran, the
@@ -138,12 +135,12 @@ The number tells you how well it did; the predictions tell you *where* it went
 wrong. Write them out for the held-out session:
 
 ```python
-paths = project.inference(sessions=["ses-03.nc"])
+paths = project.inference(sessions=["ses-03"])
 print(paths[0])
 # labels/predictions_quickstart_20260827-1412_20260827_151203/ses-03_predictions.tsv
 ```
 
-That is a `labels/` folder beside `ses-03.nc` — one folder per call, so a
+That is a `labels/` folder in the `ses-03` session folder — one per call, so a
 re-run never overwrites an earlier one — and the TSV in it is the GUI's own
 labels format. Open ses-03 in the GUI and load it
 with **File ▸ Import labels…**: every row arrives as `automated`, drawn dotted

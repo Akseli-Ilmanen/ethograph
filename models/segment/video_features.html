@@ -379,6 +379,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../trial_windows.html">Trial windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Action segmentation (state events)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
@@ -476,19 +477,19 @@ same kind of file, and downstream nothing cares which one made it.</p>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> (default)</p></td>
 <td><p>clip-wise</p></td>
-<td><p>the <code class="docutils literal notranslate"><span class="pre">stack_s</span></code> window of frames centred on it, embedded by S3D <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id402" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span> (Kinetics-400 <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id401" title="Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: https://arxiv.org/abs/1705.06950, arXiv:1705.06950.">Kay <em>et al.</em>, 2017</a>]</span>) — motion is in the feature</p></td>
+<td><p>the <code class="docutils literal notranslate"><span class="pre">stack_s</span></code> window of frames centred on it, embedded by S3D <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id408" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span> (Kinetics-400 <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id407" title="Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: https://arxiv.org/abs/1705.06950, arXiv:1705.06950.">Kay <em>et al.</em>, 2017</a>]</span>) — motion is in the feature</p></td>
 <td><p><a class="reference external" href="https://v-iashin.github.io/video_features/models/s3d/">video_features › S3D</a></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code></p></td>
 <td><p>frame-wise</p></td>
-<td><p>the frame on its own, embedded by an image backbone — DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id403" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> ViT-B/14 (<code class="docutils literal notranslate"><span class="pre">vit_base_patch14_reg4_dinov2.lvd142m</span></code>) unless <code class="docutils literal notranslate"><span class="pre">model_name</span></code> says otherwise; needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code></p></td>
+<td><p>the frame on its own, embedded by an image backbone — DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id409" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> ViT-B/14 (<code class="docutils literal notranslate"><span class="pre">vit_base_patch14_reg4_dinov2.lvd142m</span></code>) unless <code class="docutils literal notranslate"><span class="pre">model_name</span></code> says otherwise; needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code></p></td>
 <td><p><a class="reference external" href="https://v-iashin.github.io/video_features/models/timm/">video_features › timm</a></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <p>Both follow the recipes of
-<a class="reference external" href="https://v-iashin.github.io/video_features/">v-iashin/video_features</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id405" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span>, which
+<a class="reference external" href="https://v-iashin.github.io/video_features/">v-iashin/video_features</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id411" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span>, which
 documents each network and links on to its weights; our config exposes only
 what changes the <em>features</em>, so read there for the rest.</p>
 <p>A frame-wise feature carries no motion; the temporal model downstream reads
@@ -512,7 +513,7 @@ names the shortest window that works.</p>
 <p>No config, no session, no alignment — just videos in, sidecars out:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
-<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>                       <span class="c1"># S3D (default)</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>  <span class="c1"># S3D (default)</span>
 <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">extractor</span><span class="o">=</span><span class="s2">"timm"</span><span class="p">,</span> <span class="n">analysis_fps</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>  <span class="c1"># timm / DINOv2</span>
 </pre></div>
 </div>
@@ -533,7 +534,7 @@ unless you pass <code class="docutils literal notranslate"><span class="pre">ove
 <td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">timm</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model_name</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code> only: any timm model with pretrained weights <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id404" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> — valid names are the <a class="reference external" href="https://huggingface.co/docs/timm/models">timm model list</a> (or <code class="docutils literal notranslate"><span class="pre">timm.list_models(pretrained=True)</span></code>). <code class="docutils literal notranslate"><span class="pre">None</span></code> = DINOv2 ViT-B/14.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code> only: any timm model with pretrained weights <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id410" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> — valid names are the <a class="reference external" href="https://huggingface.co/docs/timm/models">timm model list</a> (or <code class="docutils literal notranslate"><span class="pre">timm.list_models(pretrained=True)</span></code>). <code class="docutils literal notranslate"><span class="pre">None</span></code> = DINOv2 ViT-B/14.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stack_s</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> only: window length in seconds. Must be ≥ 13 frames at the effective rate.</p></td>
@@ -617,7 +618,7 @@ already knows which stream is which, so there is nothing to pattern-match.</p>
 <p>If your sessions already have an alignment naming each trial’s video, name
 each session’s <code class="docutils literal notranslate"><span class="pre">video_dir</span></code> and let the alignment resolve the file within it:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav/Trial_data.nc</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav</span>
 <span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav/Trial_data_labels.tsv</span>
 <span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/videos</span>
 
@@ -629,8 +630,8 @@ each session’s <code class="docutils literal notranslate"><span class="pre">vi
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span>
 
-<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">()</span>              <span class="c1"># extract only</span>
-<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">(</span><span class="n">merge</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>    <span class="c1"># extract, then merge into the sessions</span>
+<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">()</span>  <span class="c1"># extract only</span>
+<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">(</span><span class="n">merge</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># extract, then merge into the sessions</span>
 </pre></div>
 </div>
 <p>Sidecars go to <code class="docutils literal notranslate"><span class="pre">{root}/video_features/</span></code>; the paths written are returned, and
@@ -689,7 +690,7 @@ never confused.</p>
 <p><strong>In a config</strong>, a session names its folders, and <code class="docutils literal notranslate"><span class="pre">open_session</span></code> attaches
 them the same way, so <code class="docutils literal notranslate"><span class="pre">materialise</span></code> and <code class="docutils literal notranslate"><span class="pre">inference</span></code> see the variable:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01ehav\Trial_data.nc</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01ehav</span>
 <span class="w">    </span><span class="nt">video_feature_folders</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\emb\ses-01</span><span class="w">          </span><span class="c1"># one {video stem}.npy per trial's camera file</span>
 <span class="nt">features</span><span class="p">:</span>
@@ -755,7 +756,7 @@ on; a feature with a small d everywhere is noise the model has to learn to
 ignore.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ranking</span><span class="p">,</span> <span class="n">names</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">rank_video_features</span><span class="p">()</span>
 <span class="c1"># the 20 most discriminating dims</span>
-<span class="nb">print</span><span class="p">([</span><span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ranking</span><span class="o">.</span><span class="n">top</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span> <span class="p">)</span>
+<span class="nb">print</span><span class="p">([</span><span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ranking</span><span class="o">.</span><span class="n">top</span><span class="p">(</span><span class="mi">20</span><span class="p">)])</span>
 </pre></div>
 </div>
 <p>This reads the <strong>materialised dataset</strong>, so it ranks exactly the columns a
@@ -768,7 +769,7 @@ trial.</p>
 in a project yet:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.video_features</span><span class="w"> </span><span class="kn">import</span> <span class="n">rank_features</span>
 
-<span class="n">ranking</span> <span class="o">=</span> <span class="n">rank_features</span><span class="p">(</span><span class="n">trials</span><span class="p">)</span>         <span class="c1"># [(values (T, F), labels (T,)), ...]</span>
+<span class="n">ranking</span> <span class="o">=</span> <span class="n">rank_features</span><span class="p">(</span><span class="n">trials</span><span class="p">)</span>  <span class="c1"># [(values (T, F), labels (T,)), ...]</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">labels</span></code> are dense per-frame class ids with 0 = background; background is
@@ -789,10 +790,10 @@ dim:</p>
 <h2>One video, no ethograph at all<a class="headerlink" href="#one-video-no-ethograph-at-all" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.video_features</span><span class="w"> </span><span class="kn">import</span> <span class="n">S3DConfig</span><span class="p">,</span> <span class="n">build_extractor</span><span class="p">,</span> <span class="n">extract_s3d</span>
 
-<span class="n">da</span> <span class="o">=</span> <span class="n">extract_s3d</span><span class="p">(</span><span class="s2">"clip.mp4"</span><span class="p">,</span> <span class="n">S3DConfig</span><span class="p">(</span><span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">))</span>         <span class="c1"># (time_video, s3d_dims)</span>
+<span class="n">da</span> <span class="o">=</span> <span class="n">extract_s3d</span><span class="p">(</span><span class="s2">"clip.mp4"</span><span class="p">,</span> <span class="n">S3DConfig</span><span class="p">(</span><span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">))</span>  <span class="c1"># (time_video, s3d_dims)</span>
 <span class="n">da</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"clip_s3d.nc"</span><span class="p">)</span>
 
-<span class="n">da</span> <span class="o">=</span> <span class="n">build_extractor</span><span class="p">(</span><span class="s2">"timm"</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="s2">"clip.mp4"</span><span class="p">)</span>             <span class="c1"># (time_video, timm_dims)</span>
+<span class="n">da</span> <span class="o">=</span> <span class="n">build_extractor</span><span class="p">(</span><span class="s2">"timm"</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="s2">"clip.mp4"</span><span class="p">)</span>  <span class="c1"># (time_video, timm_dims)</span>
 </pre></div>
 </div>
 </section>

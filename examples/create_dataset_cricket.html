@@ -517,15 +517,14 @@ data_folder: d:\Akseli\Code\ethograph\data\philodoptera
     <span class="n">audio_sr</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">rate</span>
 
 <span class="c1"># Single-session dataset: one row in the session table</span>
-<span class="c1"># NWB alignment stores bare filenames (resolved against video_folder /</span>
-<span class="c1"># audio_folder / pose_folder at GUI-load time) — never the absolute paths on</span>
-<span class="c1"># this machine.</span>
+<span class="c1"># Each cell is the file's full path; pair_media stores the basename per trial</span>
+<span class="c1"># and the path per stream, so the GUI finds the media without a folder setting.</span>
 <span class="n">session_table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
     <span class="p">{</span>
         <span class="s2">"trial"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"session"</span><span class="p">],</span>
-        <span class="s2">"video_0"</span><span class="p">:</span> <span class="p">[</span><span class="n">video_path</span><span class="o">.</span><span class="n">name</span><span class="p">],</span>
-        <span class="s2">"audio_0"</span><span class="p">:</span> <span class="p">[</span><span class="n">audio_path</span><span class="o">.</span><span class="n">name</span><span class="p">],</span>
-        <span class="s2">"pose_0"</span><span class="p">:</span> <span class="p">[</span><span class="n">poses_csv_path</span><span class="o">.</span><span class="n">name</span><span class="p">],</span>
+        <span class="s2">"video_0"</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">video_path</span><span class="p">)],</span>
+        <span class="s2">"audio_0"</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">audio_path</span><span class="p">)],</span>
+        <span class="s2">"pose_0"</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">poses_csv_path</span><span class="p">)],</span>
     <span class="p">}</span>
 <span class="p">)</span>
 
@@ -534,7 +533,6 @@ data_folder: d:\Akseli\Code\ethograph\data\philodoptera
     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">audio_sr</span><span class="p">),</span> <span class="s2">"pose"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">)},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
-    <span class="n">media_root</span><span class="o">=</span><span class="n">data_folder</span><span class="p">,</span>
     <span class="n">pose_fps</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>

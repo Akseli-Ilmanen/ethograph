@@ -48,11 +48,11 @@ and are refused with any other extractor:
 
 ```yaml
 sessions:
-  - source: D:\data\ses-01\behav\Trial_data.nc
+  - source: D:\data\ses-01\behav
     video_dir: D:\data\ses-01\videos          # if the alignment names the files without a folder
-  - source: D:\data\ses-02\behav\Trial_data.nc
+  - source: D:\data\ses-02\behav
     video_dir: D:\data\ses-02\videos
-  - source: D:\data\ses-03\behav\Trial_data.nc
+  - source: D:\data\ses-03\behav
     video_dir: D:\data\ses-03\videos
 
 individual: Freddy                               # one animal per video — see below
@@ -72,7 +72,7 @@ features:
 train:
   run_name: feral_c2f
   split:
-    holdout_sessions: [D:\data\ses-03\behav\Trial_data.nc]   # the true test set — see Leakage
+    holdout_sessions: [D:\data\ses-03\behav]   # the true test set — see Leakage
 ```
 
 `context_s` is the one temporal setting, in seconds. FERAL's chunk is 64
@@ -99,7 +99,7 @@ file, and FERAL reads it verbatim.
 import ethograph as eto
 
 project = eto.segment.Project("config/segment.yaml")
-project.video_features()        # for extractor: feral, this is the export
+project.video_features()  # for extractor: feral, this is the export
 ```
 
 writes `{root}/feral/`:
@@ -146,8 +146,8 @@ onto the trial clock the way every video feature is). Then the pipeline is
 the usual one:
 
 ```python
-project.materialise()           # feral + changepoint columns → the materialised dataset
-result = project.train()        # holdout_sessions is the test set
+project.materialise()  # feral + changepoint columns → the materialised dataset
+result = project.train()  # holdout_sessions is the test set
 project.compare()
 ```
 
@@ -190,9 +190,9 @@ chunking, class-name and split bookkeeping being done by hand.
 
 ```yaml
 sessions:
-  - source: D:\data\ses-01\behav\Trial_data.nc
+  - source: D:\data\ses-01\behav
     video_dir: D:\data\ses-01\videos
-  - source: D:\data\ses-02\behav\Trial_data.nc
+  - source: D:\data\ses-02\behav
     video_dir: D:\data\ses-02\videos
 individual: Freddy
 features:

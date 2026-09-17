@@ -786,7 +786,7 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pynwb</span><span class="w"> </span><span class="kn">import</span> <span class="n">NWBFile</span>
@@ -905,15 +905,16 @@ window.runMermaid = runMermaid;</script>
 
 <div class="viewcode-block" id="discover_nwb">
 <a class="viewcode-back" href="../../../api/nwb_alignment.html#ethograph.discover_nwb">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">discover_nwb</span><span class="p">(</span><span class="n">nc_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Find an NWB session file near a data file.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">discover_nwb</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Find the session's alignment record from the session folder or any file in it.</span>
 
 <span class="sd">    Search order:</span>
-<span class="sd">    1. ``&lt;dir&gt;/.ethograph/alignment.nwb``</span>
-<span class="sd">    2. Any ``.nwb`` file in ``&lt;dir&gt;/.ethograph/``</span>
+<span class="sd">    1. ``&lt;session&gt;/.ethograph/alignment.nwb``</span>
+<span class="sd">    2. Any ``.nwb`` file in ``&lt;session&gt;/.ethograph/``</span>
 <span class="sd">    """</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">nc_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span>
-    <span class="n">ethograph_dir</span> <span class="o">=</span> <span class="n">d</span> <span class="o">/</span> <span class="n">_SETTINGS_DIR</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.session_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">session_dir_of</span>
+
+    <span class="n">ethograph_dir</span> <span class="o">=</span> <span class="n">session_dir_of</span><span class="p">(</span><span class="n">source</span><span class="p">)</span> <span class="o">/</span> <span class="n">_SETTINGS_DIR</span>
     <span class="k">if</span> <span class="n">ethograph_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
         <span class="n">candidate</span> <span class="o">=</span> <span class="n">ethograph_dir</span> <span class="o">/</span> <span class="n">_NWB_FILENAME</span>
         <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -958,6 +959,22 @@ window.runMermaid = runMermaid;</script>
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">trials_df</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">individuals</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""The individuals this session labels, in the order they were declared; ``[]`` when unknown."""</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="EmpytAlignment.media_folders">
+<a class="viewcode-back" href="../../../api/ethograph.io.nwb_alignment.EmpytAlignment.html#ethograph.EmpytAlignment.media_folders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">media_folders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Per stream, the folder its files were paired from, when that folder exists here.</span>
+
+<span class="sd">        Read off the full paths each stream's ``ImageSeries`` records, so the GUI</span>
+<span class="sd">        can seed its folder settings on first open instead of asking.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">{}</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_media</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">stream</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -1162,6 +1179,23 @@ window.runMermaid = runMermaid;</script>
         <span class="n">df</span> <span class="o">=</span> <span class="n">nwb</span><span class="o">.</span><span class="n">trials</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_trials_df_cache</span> <span class="o">=</span> <span class="n">df</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trials_df_cache</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">individuals</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">read_individuals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nwb</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">media_folders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+        <span class="n">folders</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">acq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nwb</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">folders</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="s2">"external_file"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]:</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                    <span class="n">folders</span><span class="p">[</span><span class="n">stream</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">folders</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_trial_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trials_df</span>
@@ -1933,6 +1967,7 @@ window.runMermaid = runMermaid;</script>
 <span class="k">def</span><span class="w"> </span><span class="nf">sync_acquisition_for_streams</span><span class="p">(</span>
     <span class="n">nwbfile</span><span class="p">:</span> <span class="n">NWBFile</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">media_paths</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Create ImageSeries acquisition items for ALL external media streams.</span>
 
@@ -1949,8 +1984,15 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        Mapping of stream name to sampling rate, e.g.</span>
 <span class="sd">        ``{"video": 30.0, "audio": 44100.0, "pose": 30.0}``. A</span>
 <span class="sd">        ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.</span>
+<span class="sd">    media_paths</span>
+<span class="sd">        The pairing table the trials came from, one row per trial in the same</span>
+<span class="sd">        order, whose media cells hold full paths. When given, ``external_file``</span>
+<span class="sd">        records those paths, so a reader finds the media without being told the</span>
+<span class="sd">        folder; the trials table keeps the basenames either way.</span>
 <span class="sd">    """</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">trials</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">media_paths</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">media_paths</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"media_paths has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">media_paths</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows but the trials table has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">stream_devices</span> <span class="o">=</span> <span class="n">_parse_stream_devices</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
 
     <span class="k">for</span> <span class="n">stream</span><span class="p">,</span> <span class="n">devices</span> <span class="ow">in</span> <span class="n">stream_devices</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1966,7 +2008,11 @@ window.runMermaid = runMermaid;</script>
             <span class="k">if</span> <span class="n">valid</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
                 <span class="k">continue</span>
 
-            <span class="n">external_files</span> <span class="o">=</span> <span class="n">valid</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">media_paths</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">media_paths</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">positions</span> <span class="o">=</span> <span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">valid</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+                <span class="n">external_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">media_paths</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">positions</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">external_files</span> <span class="o">=</span> <span class="n">valid</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
             <span class="n">start_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">_start"</span>
             <span class="k">if</span> <span class="n">start_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
@@ -1992,7 +2038,6 @@ window.runMermaid = runMermaid;</script>
     <span class="n">trial_table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">video_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">audio_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-    <span class="n">media_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pose_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pose_fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -2007,7 +2052,6 @@ window.runMermaid = runMermaid;</script>
             <span class="n">row</span><span class="p">,</span>
             <span class="n">video_cols</span><span class="p">,</span>
             <span class="n">audio_cols</span><span class="p">,</span>
-            <span class="n">media_root</span><span class="p">,</span>
             <span class="n">pose_cols</span><span class="o">=</span><span class="n">pose_cols</span><span class="p">,</span>
             <span class="n">pose_fps</span><span class="o">=</span><span class="n">pose_fps</span><span class="p">,</span>
         <span class="p">)</span>
@@ -2024,21 +2068,20 @@ window.runMermaid = runMermaid;</script>
     <span class="n">row</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
     <span class="n">video_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">audio_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-    <span class="n">media_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pose_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pose_fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.utils.stream_durations</span><span class="w"> </span><span class="kn">import</span> <span class="n">probe_duration</span>
 
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">video_cols</span><span class="p">:</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_media_path</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">),</span> <span class="n">media_root</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_existing_media_path</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dur</span> <span class="o">=</span> <span class="n">probe_duration</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="s2">"video"</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">dur</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">dur</span>
 
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">audio_cols</span><span class="p">:</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_media_path</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">),</span> <span class="n">media_root</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_existing_media_path</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dur</span> <span class="o">=</span> <span class="n">probe_duration</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="s2">"audio"</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">dur</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -2046,7 +2089,7 @@ window.runMermaid = runMermaid;</script>
 
     <span class="k">if</span> <span class="n">pose_cols</span> <span class="ow">and</span> <span class="n">pose_fps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">pose_cols</span><span class="p">:</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_media_path</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">),</span> <span class="n">media_root</span><span class="p">)</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">_existing_media_path</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">dur</span> <span class="o">=</span> <span class="n">probe_duration</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="s2">"pose"</span><span class="p">,</span> <span class="n">pose_fps</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">dur</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -2055,12 +2098,11 @@ window.runMermaid = runMermaid;</script>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not probe duration for trial row: </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_media_path</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">media_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_existing_media_path</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The path a pairing-table cell names, when it exists on this machine."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">media_root</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">media_root</span> <span class="o">/</span> <span class="n">path</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
 
 
@@ -2084,6 +2126,79 @@ window.runMermaid = runMermaid;</script>
             <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
                 <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">df</span>
+
+
+<span class="n">INDIVIDUALS_TABLE</span> <span class="o">=</span> <span class="s2">"individuals"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">write_individuals</span><span class="p">(</span><span class="n">nwbfile</span><span class="p">,</span> <span class="n">individuals</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Record the session's individuals in the NWB's scratch space, replacing any earlier list.</span>
+
+<span class="sd">    The session record is the one home for who is labelled: a ``.nc`` individual</span>
+<span class="sd">    dim is checked against this list, never the other way round.</span>
+<span class="sd">    """</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">individuals</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">names</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"individuals must be unique: </span><span class="si">{</span><span class="n">names</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">INDIVIDUALS_TABLE</span> <span class="ow">in</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">scratch</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">scratch</span><span class="p">[</span><span class="n">INDIVIDUALS_TABLE</span><span class="p">]</span>
+    <span class="n">nwbfile</span><span class="o">.</span><span class="n">add_scratch</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"individual"</span><span class="p">:</span> <span class="n">names</span><span class="p">}),</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">INDIVIDUALS_TABLE</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Individuals labelled in this session (ethograph)"</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">read_individuals</span><span class="p">(</span><span class="n">nwbfile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The individuals recorded by :func:`write_individuals`, ``[]`` when none were."""</span>
+    <span class="k">if</span> <span class="n">INDIVIDUALS_TABLE</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">scratch</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">scratch</span><span class="p">[</span><span class="n">INDIVIDUALS_TABLE</span><span class="p">]</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()[</span><span class="s2">"individual"</span><span class="p">]]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">set_individuals</span><span class="p">(</span><span class="n">nwb_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">individuals</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Edit the individuals list of an existing session record in place."""</span>
+    <span class="k">with</span> <span class="n">edit_nwb</span><span class="p">(</span><span class="n">nwb_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">nwbfile</span><span class="p">:</span>
+        <span class="n">write_individuals</span><span class="p">(</span><span class="n">nwbfile</span><span class="p">,</span> <span class="n">individuals</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">alignment_from_trialtree</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Write a bare ``alignment.nwb`` holding only a trials table read off a TrialTree.</span>
+
+<span class="sd">    The one sanctioned way a ``.nc`` with no alignment becomes a session (on the</span>
+<span class="sd">    user's explicit yes, from the cover page): each trial's duration is the extent</span>
+<span class="sd">    of its time coordinate plus one sample, and the trials are laid end to end</span>
+<span class="sd">    from ``0.0`` — trial-relative time is exact, session time is a convention.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.pairing</span><span class="w"> </span><span class="kn">import</span> <span class="n">pair_media</span>
+
+    <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">dt</span><span class="o">.</span><span class="n">trial_items</span><span class="p">():</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">_trial_duration_from_time_coords</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"trial"</span><span class="p">:</span> <span class="n">trial_id</span><span class="p">,</span> <span class="s2">"start_time"</span><span class="p">:</span> <span class="n">cursor</span><span class="p">,</span> <span class="s2">"stop_time"</span><span class="p">:</span> <span class="n">cursor</span> <span class="o">+</span> <span class="n">duration</span><span class="p">})</span>
+        <span class="n">cursor</span> <span class="o">+=</span> <span class="n">duration</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The dataset has no trials to write an alignment from"</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">pair_media</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="n">output_path</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_trial_duration_from_time_coords</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The longest time axis of *ds* in seconds, plus one sample so the last sample is inside."""</span>
+    <span class="n">best</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="n">coord</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coord</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coord</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">values</span><span class="p">)))</span> <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">values</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">+</span> <span class="n">step</span>
+        <span class="n">best</span> <span class="o">=</span> <span class="n">duration</span> <span class="k">if</span> <span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="n">best</span><span class="p">,</span> <span class="n">duration</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Trial </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'trial'</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> has no time coordinate to read a duration from"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">best</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">alignment_from_trials_ep</span><span class="p">(</span><span class="n">ep</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>

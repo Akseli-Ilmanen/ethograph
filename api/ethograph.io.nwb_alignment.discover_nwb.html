@@ -436,11 +436,11 @@
 <h1>discover_nwb<a class="headerlink" href="#discover-nwb" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.io.nwb_alignment.discover_nwb">
-<span class="sig-prename descclassname"><span class="pre">ethograph.io.nwb_alignment.</span></span><span class="sig-name descname"><span class="pre">discover_nwb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nc_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#discover_nwb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.discover_nwb" title="Link to this definition">#</a></dt>
-<dd><p>Find an NWB session file near a data file.</p>
+<span class="sig-prename descclassname"><span class="pre">ethograph.io.nwb_alignment.</span></span><span class="sig-name descname"><span class="pre">discover_nwb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#discover_nwb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.discover_nwb" title="Link to this definition">#</a></dt>
+<dd><p>Find the session’s alignment record from the session folder or any file in it.</p>
 <p>Search order:
-1. <code class="docutils literal notranslate"><span class="pre">&lt;dir&gt;/.ethograph/alignment.nwb</span></code>
-2. Any <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> file in <code class="docutils literal notranslate"><span class="pre">&lt;dir&gt;/.ethograph/</span></code></p>
+1. <code class="docutils literal notranslate"><span class="pre">&lt;session&gt;/.ethograph/alignment.nwb</span></code>
+2. Any <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> file in <code class="docutils literal notranslate"><span class="pre">&lt;session&gt;/.ethograph/</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>

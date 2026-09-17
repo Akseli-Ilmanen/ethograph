@@ -436,7 +436,7 @@
 <h1>sync_acquisition_for_streams<a class="headerlink" href="#sync-acquisition-for-streams" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.io.nwb_alignment.sync_acquisition_for_streams">
-<span class="sig-prename descclassname"><span class="pre">ethograph.io.nwb_alignment.</span></span><span class="sig-name descname"><span class="pre">sync_acquisition_for_streams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nwbfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stream_rates</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#sync_acquisition_for_streams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.sync_acquisition_for_streams" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ethograph.io.nwb_alignment.</span></span><span class="sig-name descname"><span class="pre">sync_acquisition_for_streams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nwbfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stream_rates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_paths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#sync_acquisition_for_streams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.nwb_alignment.sync_acquisition_for_streams" title="Link to this definition">#</a></dt>
 <dd><p>Create ImageSeries acquisition items for ALL external media streams.</p>
 <p>Reads the trials table to discover <code class="docutils literal notranslate"><span class="pre">{stream}_{device}</span></code> columns.
 For each stream+device pair, creates an <code class="docutils literal notranslate"><span class="pre">ImageSeries</span></code> in
@@ -445,14 +445,18 @@ and <code class="docutils literal notranslate"><span class="pre">rate</span></co
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>nwbfile</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">NWBFile</span></code></span>) – NWB file with a populated trials table.</p></li>
-<li><p><strong>stream_rates</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span>) – Mapping of stream name to sampling rate, e.g.
+<li><p><strong>nwbfile</strong> (<span class="sphinx_autodoc_typehints-type">NWBFile</span>) – NWB file with a populated trials table.</p></li>
+<li><p><strong>stream_rates</strong> (<span class="sphinx_autodoc_typehints-type">dict[str, float]</span>) – Mapping of stream name to sampling rate, e.g.
 <code class="docutils literal notranslate"><span class="pre">{&quot;video&quot;:</span> <span class="pre">30.0,</span> <span class="pre">&quot;audio&quot;:</span> <span class="pre">44100.0,</span> <span class="pre">&quot;pose&quot;:</span> <span class="pre">30.0}</span></code>. A
 <code class="docutils literal notranslate"><span class="pre">{stream}_{device}</span></code> key (<code class="docutils literal notranslate"><span class="pre">&quot;video_cam-2&quot;:</span> <span class="pre">60.0</span></code>) overrides its stream’s rate.</p></li>
+<li><p><strong>media_paths</strong> (<span class="sphinx_autodoc_typehints-type">pd.DataFrame | None</span>) – The pairing table the trials came from, one row per trial in the same
+order, whose media cells hold full paths. When given, <code class="docutils literal notranslate"><span class="pre">external_file</span></code>
+records those paths, so a reader finds the media without being told the
+folder; the trials table keeps the basenames either way.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type">None</span></p>
 </dd>
 </dl>
 </dd></dl>

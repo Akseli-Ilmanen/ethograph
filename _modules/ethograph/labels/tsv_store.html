@@ -811,6 +811,7 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.session_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">labels_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">INTERVAL_COLUMNS</span><span class="p">,</span>
     <span class="n">INTERVAL_DTYPES</span><span class="p">,</span>
@@ -868,18 +869,20 @@ window.runMermaid = runMermaid;</script>
 
 <div class="viewcode-block" id="labels_tsv_path">
 <a class="viewcode-back" href="../../../api/labels.html#ethograph.labels.tsv_store.labels_tsv_path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">labels_tsv_path</span><span class="p">(</span><span class="n">nc_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Derive the labels TSV path from the .nc file path.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">labels_tsv_path</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The session's labels file: ``labels{suffix}.tsv`` in the session folder.</span>
+
+<span class="sd">    *source* is the session folder or any file in it (``session.nc``, an ``.nwb``);</span>
+<span class="sd">    one folder is one session, so the name never depends on the file.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; labels_tsv_path("experiment/data.nc")</span>
-<span class="sd">    PosixPath('experiment/data_labels.tsv')</span>
-<span class="sd">    &gt;&gt;&gt; labels_tsv_path("experiment/data.nc", suffix="_downsampled_100x")</span>
-<span class="sd">    PosixPath('experiment/data_downsampled_100x_labels.tsv')</span>
+<span class="sd">    &gt;&gt;&gt; labels_tsv_path("experiment/data.nc").name</span>
+<span class="sd">    'labels.tsv'</span>
+<span class="sd">    &gt;&gt;&gt; labels_tsv_path("experiment", suffix="_downsampled_100x").name</span>
+<span class="sd">    'labels_downsampled_100x.tsv'</span>
 <span class="sd">    """</span>
-    <span class="n">nc_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">nc_path</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">nc_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">nc_path</span><span class="o">.</span><span class="n">stem</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">_labels.tsv"</span></div>
+    <span class="k">return</span> <span class="n">labels_path</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span></div>
 
 
 

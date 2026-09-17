@@ -491,13 +491,13 @@ only its condition columns, joined on <code class="docutils literal notranslate"
 <hr class="docutils" />
 <section id="loading-metadata">
 <h2>Loading metadata<a class="headerlink" href="#loading-metadata" title="Link to this heading">#</a></h2>
-<p>Loading a dataset auto-detects a sidecar <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> beside it — e.g.
-<code class="docutils literal notranslate"><span class="pre">session.nc</span></code> picks up <code class="docutils literal notranslate"><span class="pre">session_metadata.tsv</span></code>.</p>
+<p>Loading a session auto-detects <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> in the session folder (a lone
+<code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> from older sessions is renamed to it once).</p>
 <p>To use a different file, set the <strong>Metadata:</strong> field in the loader form on the
 start page (<em>Custom set-up</em> card) before clicking <strong>Load</strong>. It accepts a
 tabular file (<code class="docutils literal notranslate"><span class="pre">.tsv</span></code> / <code class="docutils literal notranslate"><span class="pre">.csv</span></code> / <code class="docutils literal notranslate"><span class="pre">.xlsx</span></code>) with a <code class="docutils literal notranslate"><span class="pre">trial</span></code> column; other file
 types are ignored. The path is saved with the project. The <strong>Template</strong> button
-next to it writes a <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> pre-filled with all trial IDs, ready
+next to it writes a <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> pre-filled with all trial IDs, ready
 to edit in a spreadsheet.</p>
 <p>For pynapple folders whose trial timing lives in a <code class="docutils literal notranslate"><span class="pre">trials.npz</span></code> IntervalSet:
 the loader never reads timing from it. When no alignment NWB exists, the start
@@ -509,7 +509,7 @@ table); after that, the alignment file is the single per-trial record.</p>
 <li><p>The <strong>Metadata:</strong> field (or <code class="docutils literal notranslate"><span class="pre">metadata_path</span></code> in the API) — a <code class="docutils literal notranslate"><span class="pre">.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>,
 <code class="docutils literal notranslate"><span class="pre">.npz</span></code> or pynapple folder.</p></li>
 <li><p>The <strong>data source itself</strong>, when it is a <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>, <code class="docutils literal notranslate"><span class="pre">.npz</span></code> or pynapple folder.</p></li>
-<li><p>The <strong>sidecar TSV</strong> <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> next to the data file.</p></li>
+<li><p>The <strong>sidecar TSV</strong> <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> in the session folder.</p></li>
 <li><p>Metadata embedded in the loaded <strong>alignment NWB</strong>.</p></li>
 <li><p><strong>Pynapple <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> metadata</strong>.</p></li>
 </ol>
@@ -608,7 +608,7 @@ labelling never waits on a file write, and it flips back to <code class="docutil
 predictions land in a trial. Nothing is written until curation is active
 (label classes dropped into the curation scope, or something curated); a
 session that curates nothing leaves the metadata untouched. For an NWB source,
-arming curation creates a sidecar <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code>, seeded from the
+arming curation creates a sidecar <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code>, seeded from the
 loaded table, and the column lives there — the NWB is left alone. Filter on it like any other column to walk only the trials
 that still need a look.</p>
 </section>
@@ -633,7 +633,7 @@ copy of your metadata before you start editing.</p>
 <h3>Where the edits go<a class="headerlink" href="#where-the-edits-go" title="Link to this heading">#</a></h3>
 <p>Straight back into the source the metadata was read from — the tabular file, or
 the NWB trials table (edited columns only). Anything else (pynapple
-<code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code>, no metadata yet) gets a sidecar <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code>, which
+<code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code>, no metadata yet) gets a sidecar <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code>, which
 outranks it on the next load. There is no undo.</p>
 <p><strong>One limit:</strong> an NWB column keeps the dtype it was written with, so text
 cannot go into a numeric NWB column. Use a new column (or a TSV metadata file)

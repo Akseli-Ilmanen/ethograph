@@ -379,6 +379,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../trial_windows.html">Trial windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
@@ -462,7 +463,7 @@
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-spot-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimal setup for spotting point events from video: three sessions
-with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id268" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
+with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
 on pixels only. It trains on two sessions, is scored on the third, and writes
 predictions you then open in the GUI next to the labels you drew.</p>
 <p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a> is the same pipeline with the
@@ -481,8 +482,9 @@ is nothing else to clone.</p>
 <li><p><strong>Point labels.</strong> Label the events in the GUI as usual. You get
 <code class="docutils literal notranslate"><span class="pre">{name}_labels.tsv</span></code> beside the session file, with the label ids in
 <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>. Only <code class="docutils literal notranslate"><span class="pre">manual</span></code> and <code class="docutils literal notranslate"><span class="pre">curated</span></code> labels are training targets.</p></li>
-<li><p><strong>A video per trial.</strong> The alignment already knows the video path, frame
-rate and offset for each trial. If the paths it holds are not valid on this
+<li><p><strong>Video for every trial.</strong> The alignment already knows the video path, frame
+rate and offset for each trial. One file per trial, or trials carved out of a
+longer video: the model reads only the frames inside each trial. If the paths it holds are not valid on this
 machine, add <code class="docutils literal notranslate"><span class="pre">video_dir</span></code> to the session line.</p></li>
 </ul>
 <p>No features, and no preprocessing. The model reads the frames.</p>
@@ -491,9 +493,9 @@ machine, add <code class="docutils literal notranslate"><span class="pre">video_
 <h2>2. <code class="docutils literal notranslate"><span class="pre">spot.yaml</span></code><a class="headerlink" href="#spot-yaml" title="Link to this heading">#</a></h2>
 <p>Put this beside your data. It is the whole config:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-01.nc</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-02.nc</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-03.nc</span><span class="w">                </span><span class="c1"># the held-out session, named below</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-01</span><span class="w">    </span><span class="c1"># a session folder: .ethograph/alignment.nwb names the videos</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-02</span><span class="w">    </span><span class="c1"># absolute, or relative to this file's folder</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-03</span><span class="w">    </span><span class="c1"># the held-out session, named below by its folder name</span>
 
 <span class="nt">labels</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">classes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">31</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">]</span><span class="w">                  </span><span class="c1"># the point-event label ids to spot, in the order they happen</span>
@@ -504,7 +506,7 @@ machine, add <code class="docutils literal notranslate"><span class="pre">video_
 <span class="w">    </span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
 <span class="w">    </span><span class="nt">val_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
 <span class="w">    </span><span class="nt">test_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span>
-<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ses-03.nc</span><span class="p p-Indicator">]</span><span class="w">    </span><span class="c1"># every trial of this session is `test`</span>
+<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ses-03</span><span class="p p-Indicator">]</span><span class="w">       </span><span class="c1"># every trial of this session is `test`</span>
 </pre></div>
 </div>
 <p>Three things worth knowing about it:</p>
@@ -525,12 +527,12 @@ See <a class="reference internal" href="index.html#target-spot-seconds"><span cl
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"spot.yaml"</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>               <span class="c1"># every trial's video -&gt; frames/ + E2E-Spot's index; resumable</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>            <span class="c1"># runs/ctx2s_res…ms/</span>
-<span class="n">metrics</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">evaluate</span><span class="p">()</span>        <span class="c1"># ses-03, never trained on -&gt; test_metrics.yaml</span>
+<span class="n">project</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>  <span class="c1"># every trial's video -&gt; frames/ + E2E-Spot's index; resumable</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># runs/ctx2s_res…ms/</span>
+<span class="n">metrics</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">evaluate</span><span class="p">()</span>  <span class="c1"># ses-03, never trained on -&gt; test_metrics.yaml</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">run_dir</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>                      <span class="c1"># per class: misses, spurious, error in ms, hit rate at 10/20/50/100 ms</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>  <span class="c1"># per class: misses, spurious, error in ms, hit rate at 10/20/50/100 ms</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code> decodes every trial to JPEGs once; later runs and folds reuse
@@ -545,12 +547,12 @@ error if it does not, naming the duration to shorten. On a small card, try
 </section>
 <section id="look-at-the-mistakes-in-the-gui">
 <h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03.nc"</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03"</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="c1"># labels/predictions_spot_ctx2s_res…ms_20260914_151203/ses-03_predictions.tsv</span>
 </pre></div>
 </div>
-<p>That folder sits beside <code class="docutils literal notranslate"><span class="pre">ses-03.nc</span></code>. Each call writes a new one, so an earlier
+<p>That folder sits in the <code class="docutils literal notranslate"><span class="pre">ses-03</span></code> session folder. Each call writes a new one, so an earlier
 run is never overwritten. Inference reads the video directly; it does not
 export frames for this session. Open ses-03 in the GUI and load the TSV with
 <strong>File ▸ Import labels…</strong>. Every predicted event arrives as <code class="docutils literal notranslate"><span class="pre">automated</span></code>, drawn

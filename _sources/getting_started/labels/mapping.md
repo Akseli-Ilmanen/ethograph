@@ -52,7 +52,7 @@ from ethograph.labels.converters import write_mapping_file
 
 class_to_idx, idx_to_class = load_mapping("mapping.txt")
 class_to_idx["pullOutStick"]  # 1
-idx_to_class[1]               # "pullOutStick"
+idx_to_class[1]  # "pullOutStick"
 
 write_mapping_file("mapping.txt", {"background": 0, "walk": 1, "run": 2})
 ```

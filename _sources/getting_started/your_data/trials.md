@@ -12,13 +12,15 @@ import ethograph as eto
 
 datasets = []
 for trial_id in range(1, 6):
-    n_time = 9000                                   # 5 min at 30 fps
+    n_time = 9000  # 5 min at 30 fps
     ds = xr.Dataset(
-        {"speed": xr.DataArray(
-            np.random.randn(n_time),
-            dims=["time"],
-            coords={"time": np.arange(n_time) / 30.0},
-        )},
+        {
+            "speed": xr.DataArray(
+                np.random.randn(n_time),
+                dims=["time"],
+                coords={"time": np.arange(n_time) / 30.0},
+            )
+        },
     )
     ds.attrs["trial"] = trial_id
     ds.attrs["fps"] = 30.0
@@ -60,17 +62,20 @@ import ethograph as eto
 n_samples = 18000
 time = np.arange(n_samples) / 30.0
 
-ds = xr.Dataset({
-    "speed": xr.DataArray(np.random.randn(n_samples), dims=["time"],
-                          coords={"time": time}),
-})
+ds = xr.Dataset(
+    {
+        "speed": xr.DataArray(np.random.randn(n_samples), dims=["time"], coords={"time": time}),
+    }
+)
 
 # Define trial boundaries (seconds)
-trials = pd.DataFrame({
-    "trial": [1, 2, 3],
-    "start_time": [0.0, 120.0, 300.0],
-    "stop_time": [100.0, 250.0, 500.0],
-})
+trials = pd.DataFrame(
+    {
+        "trial": [1, 2, 3],
+        "start_time": [0.0, 120.0, 300.0],
+        "stop_time": [100.0, 250.0, 500.0],
+    }
+)
 
 dt = eto.from_continuous(ds, trials)
 dt.save("session.nc")
@@ -82,3 +87,6 @@ dt.trial(2)  # returns the 120–250 s slice, time shifted to start at 0
 for each trial.
 
 See {doc}`../../api/trialtree` for the full TrialTree API.
+
+Training a model on your trials? See {doc}`../../models/trial_windows` for how
+long to make them and why they don't overlap.

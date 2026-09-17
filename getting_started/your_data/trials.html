@@ -472,13 +472,15 @@
 
 <span class="n">datasets</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">trial_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">):</span>
-    <span class="n">n_time</span> <span class="o">=</span> <span class="mi">9000</span>                                   <span class="c1"># 5 min at 30 fps</span>
+    <span class="n">n_time</span> <span class="o">=</span> <span class="mi">9000</span>  <span class="c1"># 5 min at 30 fps</span>
     <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
-        <span class="p">{</span><span class="s2">"speed"</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_time</span><span class="p">),</span>
-            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span>
-            <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_time</span><span class="p">)</span> <span class="o">/</span> <span class="mf">30.0</span><span class="p">},</span>
-        <span class="p">)},</span>
+        <span class="p">{</span>
+            <span class="s2">"speed"</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_time</span><span class="p">),</span>
+                <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span>
+                <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_time</span><span class="p">)</span> <span class="o">/</span> <span class="mf">30.0</span><span class="p">},</span>
+            <span class="p">)</span>
+        <span class="p">},</span>
     <span class="p">)</span>
     <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">=</span> <span class="n">trial_id</span>
     <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"fps"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">30.0</span>
@@ -515,17 +517,20 @@ trial structure, use <code class="xref py py-func docutils literal notranslate">
 <span class="n">n_samples</span> <span class="o">=</span> <span class="mi">18000</span>
 <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="o">/</span> <span class="mf">30.0</span>
 
-<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">({</span>
-    <span class="s2">"speed"</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span>
-                          <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">time</span><span class="p">}),</span>
-<span class="p">})</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">"speed"</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">time</span><span class="p">}),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
 
 <span class="c1"># Define trial boundaries (seconds)</span>
-<span class="n">trials</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
-    <span class="s2">"trial"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
-    <span class="s2">"start_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">120.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">],</span>
-    <span class="s2">"stop_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">100.0</span><span class="p">,</span> <span class="mf">250.0</span><span class="p">,</span> <span class="mf">500.0</span><span class="p">],</span>
-<span class="p">})</span>
+<span class="n">trials</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">"trial"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+        <span class="s2">"start_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">120.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">],</span>
+        <span class="s2">"stop_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">100.0</span><span class="p">,</span> <span class="mf">250.0</span><span class="p">,</span> <span class="mf">500.0</span><span class="p">],</span>
+    <span class="p">}</span>
+<span class="p">)</span>
 
 <span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">from_continuous</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">trials</span><span class="p">)</span>
 <span class="n">dt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"session.nc"</span><span class="p">)</span>
@@ -536,6 +541,8 @@ trial structure, use <code class="xref py py-func docutils literal notranslate">
 <p><code class="docutils literal notranslate"><span class="pre">from_continuous</span></code> slices the dataset on demand and shifts time coordinates to 0
 for each trial.</p>
 <p>See <a class="reference internal" href="../../api/trialtree.html"><span class="doc">TrialTree</span></a> for the full TrialTree API.</p>
+<p>Training a model on your trials? See <a class="reference internal" href="../../models/trial_windows.html"><span class="doc">Trial windows</span></a> for how
+long to make them and why they don’t overlap.</p>
 </section>
 </section>
 

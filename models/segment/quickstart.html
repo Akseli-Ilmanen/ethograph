@@ -379,6 +379,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../trial_windows.html">Trial windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Action segmentation (state events)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Quickstart</a></li>
@@ -462,7 +463,7 @@
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-segment-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimalistic setup for training an action segmentation model: Three curated sessions, a few kinematic
-features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id334" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
+features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id339" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.</p>
 <p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a> is the same pipeline with the
 choices put back in.</p>
@@ -492,35 +493,32 @@ describes body posture (stretched, curled) regardless of position or heading.</p
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">egocentric_position</span><span class="p">,</span> <span class="n">intra_distances</span>
 
 <span class="n">ds</span> <span class="o">=</span> <span class="n">load_poses</span><span class="o">.</span><span class="n">from_dlc_file</span><span class="p">(</span><span class="s2">"ses-01_pose.csv"</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
-<span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_speed</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>                <span class="c1"># (time, keypoint, individual)</span>
-<span class="n">ds</span><span class="p">[</span><span class="s2">"intra"</span><span class="p">]</span> <span class="o">=</span> <span class="n">intra_distances</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>              <span class="c1"># (time, pair, individual), pair = "snout-tailBase", …</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_speed</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>  <span class="c1"># (time, keypoint, individual)</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"intra"</span><span class="p">]</span> <span class="o">=</span> <span class="n">intra_distances</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>  <span class="c1"># (time, pair, individual), pair = "snout-tailBase", …</span>
 
 <span class="c1"># orientation fixed</span>
-<span class="n">ds</span><span class="p">[</span><span class="s2">"velocity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_velocity</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>          <span class="c1"># (time, space, keypoint, individual)</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"velocity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_velocity</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>  <span class="c1"># (time, space, keypoint, individual)</span>
 
 <span class="c1"># freely moving: centre on tailBase, heading tailBase → snout</span>
 <span class="n">ds</span><span class="p">[</span><span class="s2">"position_ego"</span><span class="p">]</span> <span class="o">=</span> <span class="n">egocentric_position</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="s2">"tailBase"</span><span class="p">,</span> <span class="n">heading_keypoint</span><span class="o">=</span><span class="s2">"snout"</span><span class="p">)</span>
 
-<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"ses-01.nc"</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"/data/sessions/ses-01/session.nc"</span><span class="p">)</span>  <span class="c1"># one folder per session; the wizard or a drop adds .ethograph/</span>
 </pre></div>
 </div>
 <p>Do that for each session. The same variables are then plottable in the GUI, so
 you can look at exactly what the model will read (<code class="docutils literal notranslate"><span class="pre">examples/create_dataset_cricket.ipynb</span></code>
 is this, end to end, with video and audio alignment).</p>
-<p>Labels come out of the GUI as they always do: <code class="docutils literal notranslate"><span class="pre">{name}_labels.tsv</span></code> beside the
+<p>Labels come out of the GUI as they always do: <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> in the session folder beside the
 <code class="docutils literal notranslate"><span class="pre">.nc</span></code>, with the label ids described in a <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>.</p>
 </section>
-<section id="project-yaml">
-<h2>2. <code class="docutils literal notranslate"><span class="pre">project.yaml</span></code><a class="headerlink" href="#project-yaml" title="Link to this heading">#</a></h2>
+<section id="segment-yaml">
+<h2>2. <code class="docutils literal notranslate"><span class="pre">segment.yaml</span></code><a class="headerlink" href="#segment-yaml" title="Link to this heading">#</a></h2>
 <p>Put this beside your data. It is the whole config — every key not written
 here has a default that is fine for a first run.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-01.nc</span>
-<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-01_labels.tsv</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-02.nc</span>
-<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-02_labels.tsv</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-03.nc</span><span class="w">                  </span><span class="c1"># the held-out session, named below</span>
-<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ses-03_labels.tsv</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-01</span><span class="w">      </span><span class="c1"># a session folder: its .nc, .ethograph/, labels.tsv</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-02</span><span class="w">      </span><span class="c1"># absolute, or relative to this file's folder</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-03</span><span class="w">      </span><span class="c1"># the held-out session, named below by its folder name</span>
 
 <span class="nt">features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kinematics</span><span class="w">                     </span><span class="c1"># → data/kinematics/</span>
@@ -547,7 +545,7 @@ here has a default that is fine for a first run.</p>
 <span class="w">    </span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
 <span class="w">    </span><span class="nt">val_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
 <span class="w">    </span><span class="nt">test_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span>
-<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ses-03.nc</span><span class="p p-Indicator">]</span><span class="w">      </span><span class="c1"># every trial of this session is `test`</span>
+<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ses-03</span><span class="p p-Indicator">]</span><span class="w">         </span><span class="c1"># every trial of this session is `test`</span>
 </pre></div>
 </div>
 <p>Three things worth knowing about it:</p>
@@ -568,10 +566,10 @@ events are skipped — they belong to the <a class="reference internal" href="..
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>                 <span class="c1"># materialises the dataset first, if needed</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># materialises the dataset first, if needed</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">run_dir</span><span class="p">)</span>                    <span class="c1"># runs/quickstart_20260827-1412/</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">test_metrics</span><span class="p">[</span><span class="s2">"postprocessed"</span><span class="p">][</span><span class="s2">"f1@50"</span><span class="p">])</span>   <span class="c1"># ses-03, never trained on</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">run_dir</span><span class="p">)</span>  <span class="c1"># runs/quickstart_20260827-1412/</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">test_metrics</span><span class="p">[</span><span class="s2">"postprocessed"</span><span class="p">][</span><span class="s2">"f1@50"</span><span class="p">])</span>  <span class="c1"># ses-03, never trained on</span>
 </pre></div>
 </div>
 <p>Progress prints as it goes, and the run directory keeps the config it ran, the
@@ -579,7 +577,7 @@ split it drew, the weights, <code class="docutils literal notranslate"><span cla
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> needs trials of at least 384 frames — it pools the time axis in
-half six times. If yours are shorter, <code class="docutils literal notranslate"><span class="pre">model.architecture:</span> <span class="pre">mstcn</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id330" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>, <a class="reference internal" href="../../community/references.html#id332" title="Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020. URL: https://arxiv.org/abs/2006.09220, arXiv:2006.09220.">Li <em>et al.</em>, 2020</a>]</span> works at any
+half six times. If yours are shorter, <code class="docutils literal notranslate"><span class="pre">model.architecture:</span> <span class="pre">mstcn</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id335" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>, <a class="reference internal" href="../../community/references.html#id337" title="Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020. URL: https://arxiv.org/abs/2006.09220, arXiv:2006.09220.">Li <em>et al.</em>, 2020</a>]</span> works at any
 length and is the usual baseline; nothing else in the config changes.</p>
 </div>
 </section>
@@ -587,12 +585,12 @@ length and is the usual baseline; nothing else in the config changes.</p>
 <h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
 <p>The number tells you how well it did; the predictions tell you <em>where</em> it went
 wrong. Write them out for the held-out session:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03.nc"</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03"</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="c1"># labels/predictions_quickstart_20260827-1412_20260827_151203/ses-03_predictions.tsv</span>
 </pre></div>
 </div>
-<p>That is a <code class="docutils literal notranslate"><span class="pre">labels/</span></code> folder beside <code class="docutils literal notranslate"><span class="pre">ses-03.nc</span></code> — one folder per call, so a
+<p>That is a <code class="docutils literal notranslate"><span class="pre">labels/</span></code> folder in the <code class="docutils literal notranslate"><span class="pre">ses-03</span></code> session folder — one per call, so a
 re-run never overwrites an earlier one — and the TSV in it is the GUI’s own
 labels format. Open ses-03 in the GUI and load it
 with <strong>File ▸ Import labels…</strong>: every row arrives as <code class="docutils literal notranslate"><span class="pre">automated</span></code>, drawn dotted
@@ -677,7 +675,7 @@ saw it, not just ses-03. That is <a class="reference internal" href="index.html"
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#put-the-features-in-the-session-file">1. Put the features in the session file</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-yaml">2. <code class="docutils literal notranslate"><span class="pre">project.yaml</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segment-yaml">2. <code class="docutils literal notranslate"><span class="pre">segment.yaml</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train">3. Train</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#look-at-the-mistakes-in-the-gui">4. Look at the mistakes in the GUI</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-to-go-from-here">Where to go from here</a></li>

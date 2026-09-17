@@ -512,6 +512,10 @@ closes its panel. A run folder’s frame-by-frame confidence curve is drawn
 dashed inside that run’s own panel, on its 0–1 axis, and nowhere else —
 the <strong>Confidence</strong> checkbox shows or hides it on every panel at once. A
 plain <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> has no curve.</p>
+<p>The Moll et al. 2025 template ships several such runs to try this on: they
+download with the dataset into its <code class="docutils literal notranslate"><span class="pre">labels/predictions_&lt;model&gt;/</span></code> folders
+(one per model, e.g. <code class="docutils literal notranslate"><span class="pre">predictions_mlp</span></code>, <code class="docutils literal notranslate"><span class="pre">predictions_c2f-tcn</span></code>,
+<code class="docutils literal notranslate"><span class="pre">predictions_feral-cp</span></code>), each ready for <strong>Import predictions → From folder</strong>.</p>
 <p>Each file gets at most one panel. Closed one? Add it back from the ➕ <strong>Add
 panel</strong> popup, which lists every loaded file. Click a prediction on its
 panel to select it and press <code class="docutils literal notranslate"><span class="pre">V</span></code> to play it back. Predictions are read-only.
@@ -529,7 +533,7 @@ when <code class="docutils literal notranslate"><span class="pre">trials</span><
 Each <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> name becomes a label class.</p>
 <p>Label names already in the active <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their IDs; new names are
 appended to it (see <a class="reference internal" href="mapping.html#target-auto-mapping"><span class="std std-ref">Importing labels from other formats</span></a>). The labels are written to the
-canonical <code class="docutils literal notranslate"><span class="pre">_labels.tsv</span></code> alongside the <code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</p>
+canonical <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> in the session folder.</p>
 <p>Global-time intervals are split across trials using the <code class="docutils literal notranslate"><span class="pre">trials</span></code> /
 <code class="docutils literal notranslate"><span class="pre">epochs</span></code> <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> (or the session’s trial table). See
 <a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.PynappleLabelConverter" title="ethograph.labels.converters.PynappleLabelConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">PynappleLabelConverter</span></code></a> for the
@@ -570,6 +574,7 @@ string names (resolved via <code class="docutils literal notranslate"><span clas
 
 <span class="c1"># Import via crowsetta</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">crowsetta</span>
+
 <span class="n">scribe</span> <span class="o">=</span> <span class="n">crowsetta</span><span class="o">.</span><span class="n">Transcriber</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"ethograph-seq"</span><span class="p">)</span>
 <span class="n">annot</span> <span class="o">=</span> <span class="n">scribe</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"labels_for_sharing.tsv"</span><span class="p">)</span><span class="o">.</span><span class="n">to_annot</span><span class="p">()</span>
 </pre></div>

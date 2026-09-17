@@ -484,6 +484,9 @@
 <tr class="row-odd"><td><p>Error with user settings</p></td>
 <td><p>In the top bar, first try <strong>Help ▸ Reset local settings (this dataset)</strong>. If that does not help, use <strong>Help ▸ Reset global settings (gui_settings.yaml)</strong>.</p></td>
 </tr>
+<tr class="row-even"><td><p>Plots are squeezed to thin strips or seem missing</p></td>
+<td><p>The saved layout holds more panels than fit. Close the extras with their ✕, or use <strong>Help ▸ Reset local settings (this dataset)</strong>: it rebuilds the default panels immediately.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -656,6 +659,7 @@ uncompressed. Converting in bulk up front is faster for a whole project:</p>
 <p><strong>Automatic fix:</strong> EthoGraph automatically registers <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> files to open correctly in Excel with tab delimiters the first time you run it. On Windows this writes to the current-user registry (no admin prompt); on macOS it uses <code class="docutils literal notranslate"><span class="pre">duti</span></code> if installed.</p>
 <p>If the association is not working, you can re-run it manually:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.utils.download</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_default_configs</span>
+
 <span class="n">ensure_default_configs</span><span class="p">()</span>
 </pre></div>
 </div>
