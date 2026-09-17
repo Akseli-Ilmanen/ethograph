@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -40,6 +41,13 @@ from ethograph.io.nwb_alignment import (
     _coerce_trial_id,
     discover_nwb,
     make_nwb_alignment,
+)
+from ethograph.io.session_layout import (
+    SETTINGS_DIRNAME,
+    adopt_legacy_files,
+    alignment_path,
+    root_nwb_files,
+    session_dir_of,
 )
 from ethograph.io.time_model import SourceCollection
 from ethograph.io.trialtree import TrialTree
@@ -82,14 +90,14 @@ def _detect_audio_rate(audio_path: str) -> float:
         return float(loader.rate)
 
 
-def _is_pynapple_path_folder(file_path: str) -> bool:
-    """Check if path is a pynapple folder or .npz file."""
-    p = Path(file_path)
-    return (
-        p.suffix in {".npz", ".nwb"}
-        or (p.is_dir() and any(p.glob("**/*.npz")))
-        or (p.is_dir() and any(p.glob("**/*.nwb")))
-    )
+def _is_pynapple_file(file_path: str) -> bool:
+    """An ``.npz`` or ``.nwb`` file: read through pynapple. Folders go through the session dispatch."""
+    return Path(file_path).suffix.lower() in {".npz", ".nwb"}
+
+
+def _has_pynapple_files(folder: Path) -> bool:
+    """pynapple objects anywhere under *folder*, ignoring the session's own ``.ethograph/``."""
+    return any(p for p in folder.glob("**/*.npz") if SETTINGS_DIRNAME not in p.parts)
 
 
 def _resolve_alignment(source_path: str | Path, alignment_path: str | Path | None = None):
@@ -198,8 +206,7 @@ def _load_pynapple_dataset(
 
     data, _detected_ep = load_nap_data(file_path)
 
-    parent = Path(file_path).parent if not Path(file_path).is_dir() else Path(file_path)
-    sidecar = _pynapple_sidecar_alignment(parent)
+    sidecar = _pynapple_sidecar_alignment(session_dir_of(file_path))
     if alignment_path and Path(alignment_path).exists():
         nwb_path = alignment_path
     elif sidecar is not None:
@@ -286,15 +293,68 @@ def _load_trialtree(
     labels_path: str | None = None,
 ) -> LoadResult:
     """Load a TrialTree or xarray.Dataset from a .nc file."""
-    dt = eto.open(file_path)
+    return _load_trialtree_from(_open_trialtree(file_path), file_path, metadata_path, alignment_path, labels_path)
 
-    # Plain Dataset .nc files (e.g. Movement datasets) have no trial children.
-    # Wrap them as a single-trial TrialTree so the GUI can work with them directly.
+
+def _check_individuals_against_session(catalog: DataCatalog, sio, file_path: str) -> None:
+    """A dataset may name a subset of the session's individuals, never anyone else.
+
+    The session record owns the list; the dim only restricts which individuals a
+    feature can show. An unknown name is a typo or the wrong session, so it is a
+    load error naming the names.
+    """
+    declared = [str(v) for v in getattr(sio, "individuals", [])]
+    combo = catalog.individual_combo
+    if not declared or combo is None:
+        return
+    unknown = [str(v) for v in catalog.combo_values(combo) if str(v) not in declared]
+    if unknown:
+        raise ValueError(
+            f"{Path(file_path).name} names individuals {unknown} that the session record does not "
+            f"declare ({declared}). Edit the session's individuals or the dataset's {combo!r} coordinate."
+        )
+
+
+def _open_trialtree(file_path: str) -> TrialTree:
+    """A ``.nc`` as a TrialTree; a plain Dataset (a movement file, say) becomes one trial."""
+    dt = eto.open(file_path)
     if not dt.children or not any(node.ds is not None and "trial" in node.ds.attrs for node in dt.children.values()):
         ds = xr.open_dataset(file_path, engine="netcdf4")
         dt = _wizard_ds_to_continuous_dt(ds)
         dt._source_path = file_path
+    return dt
 
+
+class AmbiguousSessionError(ValueError):
+    """A session folder holds several ``.nc`` files: versions of one dataset, and nobody said which.
+
+    The remedy is a line in the project's ``project.yaml``; the message spells it out and
+    ``candidates`` lets the GUI offer it as a button.
+    """
+
+    def __init__(self, folder: Path, candidates: list[Path]) -> None:
+        self.folder = folder
+        self.candidates = candidates
+        names = ", ".join(p.name for p in candidates)
+        oldest = min(candidates, key=lambda p: p.stat().st_mtime).name
+        super().__init__(
+            f"{folder} holds {names}. One session has one dataset, so these are versions of one file. "
+            f"Add the old ones to the project's project.yaml, e.g.   ignore: [{oldest}]   "
+            "(the GUI offers this per file), or name the one to use with source: the .nc file."
+        )
+
+
+def _not_ignored(files: list[Path], ignore: Sequence[str]) -> list[Path]:
+    return [p for p in files if not any(fnmatch(p.name, pattern) for pattern in ignore)]
+
+
+def _load_trialtree_from(
+    dt: TrialTree,
+    file_path: str,
+    metadata_path: str | None,
+    alignment_path: str | None,
+    labels_path: str | None,
+) -> LoadResult:
     sio = _resolve_alignment(file_path, alignment_path=alignment_path)
     resolved_metadata_df, resolved_metadata_path = load_metadata_df(
         source_path=file_path,
@@ -304,6 +364,7 @@ def _load_trialtree(
     )
 
     catalog = catalog_from_xarray(dt.itrial(0), dt, nwb_alignment=sio)
+    _check_individuals_against_session(catalog, sio, file_path)
 
     # TODO: ugly, rewreite with better validation, notify code.
     errors = validate_datatree(dt)
@@ -349,8 +410,9 @@ def load_features_dataset(
     metadata_path: str | None = None,
     alignment_path: str | None = None,
     labels_path: str | None = None,
+    ignore: Sequence[str] = (),
 ) -> LoadResult:
-    """Load dataset from file path.
+    """Load a session from its folder, or from a file in it.
 
     Supports ``.nc`` (NetCDF), ``.nwb``, ``.npz``, pynapple folders.
 
@@ -364,27 +426,110 @@ def load_features_dataset(
         Optional explicit alignment NWB. Overrides sidecar discovery — used
         for the user-specified alignment field and drag-and-dropped media.
     labels_path
-        Optional explicit labels TSV. Overrides the ``{name}_labels.tsv``
-        sidecar discovery — used for the user-specified "Import labels" path.
+        Optional explicit labels TSV. Overrides the session folder's
+        ``labels.tsv`` — used for the user-specified "Import labels" path.
+    ignore
+        File-name globs never read from a session folder's root (the project's
+        ``project.yaml`` ``ignore`` list): old versions of a dataset. A file
+        named explicitly as *file_path* is loaded regardless.
 
     Returns a :class:`LoadResult` with dt, labels, catalog, and metadata.
     """
-    if _is_pynapple_path_folder(file_path):
-        return _load_pynapple_dataset(
-            file_path,
-            metadata_path=metadata_path,
-            alignment_path=alignment_path,
-            labels_path=labels_path,
-        )
+    adopt_legacy_files(file_path, labels=labels_path is None, metadata=metadata_path is None)
+    kwargs = dict(metadata_path=metadata_path, alignment_path=alignment_path, labels_path=labels_path)
 
+    if Path(file_path).is_dir():
+        return _load_session_folder(Path(file_path), ignore=ignore, **kwargs)
+    if _is_pynapple_file(file_path):
+        return _load_pynapple_dataset(file_path, **kwargs)
     if file_path.endswith(".nc"):
-        return _load_trialtree(
-            file_path, metadata_path=metadata_path, alignment_path=alignment_path, labels_path=labels_path
-        )
+        return _load_trialtree(file_path, **kwargs)
 
     raise ValueError(
-        f"Unsupported file type: {Path(file_path).suffix!r}. "
-        "Expected .nc, .nwb, .npz, a pynapple folder, or a DANDI project directory."
+        f"Unsupported file type: {Path(file_path).suffix!r}. Expected a session folder, or a .nc, .nwb or .npz file."
+    )
+
+
+def _load_session_folder(
+    folder: Path,
+    metadata_path: str | None = None,
+    alignment_path: str | None = None,
+    labels_path: str | None = None,
+    ignore: Sequence[str] = (),
+) -> LoadResult:
+    """A session folder: its root ``.nwb``, its one ``.nc``, its pynapple files, or its alignment alone.
+
+    One backend per folder: a root ``.nwb`` beside ``.nc`` or ``.npz`` files is refused.
+    One dataset per folder: several root ``.nc`` files are versions of one dataset and
+    raise :class:`AmbiguousSessionError` until the project's ``ignore`` list names the
+    old ones. A folder with none of these but ``.ethograph/alignment.nwb`` is a
+    media-only session — trials from the alignment, no features yet.
+    """
+    kwargs = dict(metadata_path=metadata_path, alignment_path=alignment_path, labels_path=labels_path)
+    nwbs = _not_ignored(root_nwb_files(folder), ignore)
+    ncs = _not_ignored(sorted(p for p in folder.glob("*.nc") if p.is_file()), ignore)
+    pynapple = _has_pynapple_files(folder)
+    if nwbs and (ncs or pynapple):
+        others = [p.name for p in ncs] or ["pynapple files"]
+        raise ValueError(f"{folder} holds {nwbs[0].name} beside {', '.join(others)}: one backend per session folder")
+    if len(nwbs) > 1:
+        raise ValueError(f"{folder} holds several .nwb files ({', '.join(p.name for p in nwbs)}); open one of them")
+    if nwbs:
+        return _load_pynapple_dataset(str(nwbs[0]), **kwargs)
+    if len(ncs) > 1:
+        raise AmbiguousSessionError(folder, ncs)
+    if ncs:
+        return _load_trialtree_from(_open_trialtree(str(ncs[0])), str(ncs[0]), **kwargs)
+    if pynapple:
+        return _load_pynapple_dataset(str(folder), **kwargs)
+    if alignment_path and Path(alignment_path).exists() or alignment_path_of(folder).is_file():
+        return _load_alignment_only(folder, **kwargs)
+    raise ValueError(
+        f"{folder} is not a session: no .ethograph/alignment.nwb, no .nwb, and no .nc or .npz files. "
+        "Drop its media on the start page or run the Data wizard to make it one."
+    )
+
+
+def alignment_path_of(folder: Path) -> Path:
+    return alignment_path(folder)
+
+
+def _load_alignment_only(
+    folder: Path,
+    metadata_path: str | None = None,
+    alignment_path: str | None = None,
+    labels_path: str | None = None,
+) -> LoadResult:
+    """A session with media and trials but no features: everything comes from the alignment."""
+    nwb_path = alignment_path if alignment_path and Path(alignment_path).exists() else str(alignment_path_of(folder))
+    sio = make_nwb_alignment(nwb_path)
+    trials_ep = sio.trials_ep
+    if trials_ep is not None and len(trials_ep) == 0:
+        trials_ep = None
+    trial_ids = _trial_ids_from_ep(trials_ep)
+    data: dict = {}
+    catalog = catalog_from_pynapple(data, source_path=folder)
+    resolved_metadata_df, resolved_metadata_path = load_metadata_df(
+        source_path=str(folder),
+        metadata_path=metadata_path,
+        nwb_alignment=sio,
+        trial_ids=trial_ids,
+    )
+    from ethograph.labels.tsv_store import labels_tsv_path
+
+    tsv_path = Path(labels_path) if labels_path else labels_tsv_path(folder)
+    return LoadResult(
+        dt=None,
+        trial_ids=trial_ids,
+        nwb_alignment=sio,
+        metadata_df=resolved_metadata_df,
+        metadata_path=resolved_metadata_path,
+        all_labels_df=resolve_labels_tsv(folder, trial_ids, labels_path=tsv_path if labels_path else None),
+        labels_file_path=str(tsv_path) if tsv_path.exists() else None,
+        catalog=catalog,
+        data_loader=PynappleLoader(data, catalog),
+        source_collection=_build_source_collection_pynapple(data, trials_ep),
+        pynapple_data=data,
     )
 
 
@@ -491,15 +636,15 @@ def _wizard_single_media_helper(
         row["stop_time"] = float(duration)
 
     if video_path is not None:
-        row["video_cam-1"] = Path(video_path).name
+        row["video_cam-1"] = str(video_path)
         if video_offset is not None and video_offset != 0.0:
             row["video_cam-1_start"] = float(video_offset)
 
     if pose_path is not None:
-        row["pose_cam-1"] = Path(pose_path).name
+        row["pose_cam-1"] = str(pose_path)
 
     if audio_path is not None:
-        row["audio_mic-1"] = Path(audio_path).name
+        row["audio_mic-1"] = str(audio_path)
         if audio_offset is not None and audio_offset != 0.0:
             row["audio_mic-1_start"] = float(audio_offset)
 
@@ -522,15 +667,13 @@ def _wizard_single_media_helper(
         stream_rates["audio"] = _detect_audio_rate(audio_path)
 
     ref_path = video_path or pose_path or audio_path
-    media_root = Path(ref_path).parent if ref_path else None
-    output_dir = nwb_dir if nwb_dir is not None else (media_root or Path.cwd())
+    output_dir = nwb_dir if nwb_dir is not None else (Path(ref_path).parent if ref_path else Path.cwd())
 
     nwb_path = output_dir / ".ethograph" / "alignment.nwb"
     pair_media(
         trial_table,
         stream_rates=stream_rates,
         output_path=nwb_path,
-        media_root=media_root,
         pose_fps=fps,
     )
 

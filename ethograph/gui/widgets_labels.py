@@ -818,9 +818,10 @@ class LabelsWidget(QWidget):
         if dialog.exec_():
             labels = dialog.get_labels()
             if labels:
+                from ethograph.io.session_layout import session_dir_of
                 from ethograph.utils.paths import default_config_dir
 
-                data_dir = Path(self.app_state.nc_file_path).parent if self.app_state.nc_file_path else None
+                data_dir = session_dir_of(self.app_state.nc_file_path) if self.app_state.nc_file_path else None
                 config_dir = default_config_dir(data_dir)
                 mapping_path = config_dir / "mapping_temporary.txt"
                 mapping_path.parent.mkdir(parents=True, exist_ok=True)

@@ -315,12 +315,7 @@ def infer_session(
             with np.load(block_dir / f"{r.video_id}.npz") as npz:
                 blocks[r.video_id] = np.asarray(npz["features"], dtype=np.float32)
 
-    alignment = session.result.nwb_alignment
-    camera = session.video_device(config.labels.camera)
-    trials = {
-        r.video_id: (r.trial, float(alignment.stream_offset_for_trial(r.trial, "video", device=camera)))
-        for r in records
-    }
+    trials = {r.video_id: (r.trial, r.offset_s) for r in records}
     from ethograph.spot.stream import predict_records
 
     class_names = [config.class_name(label) for label in config.labels.classes]

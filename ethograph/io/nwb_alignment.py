@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
 if TYPE_CHECKING:
     from pynwb import NWBFile
@@ -124,15 +124,16 @@ def _classify_imageseries(nwb) -> dict[str, list[str]]:
     return result
 
 
-def discover_nwb(nc_path: str | Path) -> Path | None:
-    """Find an NWB session file near a data file.
+def discover_nwb(source: str | Path) -> Path | None:
+    """Find the session's alignment record from the session folder or any file in it.
 
     Search order:
-    1. ``<dir>/.ethograph/alignment.nwb``
-    2. Any ``.nwb`` file in ``<dir>/.ethograph/``
+    1. ``<session>/.ethograph/alignment.nwb``
+    2. Any ``.nwb`` file in ``<session>/.ethograph/``
     """
-    d = Path(nc_path).resolve().parent
-    ethograph_dir = d / _SETTINGS_DIR
+    from ethograph.io.session_layout import session_dir_of
+
+    ethograph_dir = session_dir_of(source) / _SETTINGS_DIR
     if ethograph_dir.is_dir():
         candidate = ethograph_dir / _NWB_FILENAME
         if candidate.exists():
@@ -171,6 +172,19 @@ class EmpytAlignment:
     @property
     def trials_df(self) -> pd.DataFrame:
         return pd.DataFrame()
+
+    @property
+    def individuals(self) -> list[str]:
+        """The individuals this session labels, in the order they were declared; ``[]`` when unknown."""
+        return []
+
+    def media_folders(self) -> dict[str, Path]:
+        """Per stream, the folder its files were paired from, when that folder exists here.
+
+        Read off the full paths each stream's ``ImageSeries`` records, so the GUI
+        can seed its folder settings on first open instead of asking.
+        """
+        return {}
 
     def get_media(self, trial, stream: str, device: str | None = None) -> str | None:
         return None
@@ -363,6 +377,23 @@ class NWBAlignment:
         df = nwb.trials.to_dataframe()
         self._trials_df_cache = df
         return self._trials_df_cache
+
+    @property
+    def individuals(self) -> list[str]:
+        return read_individuals(self.nwb)
+
+    def media_folders(self) -> dict[str, Path]:
+        folders: dict[str, Path] = {}
+        for name, acq in self.nwb.acquisition.items():
+            stream = name.split("_", 1)[0]
+            if stream in folders:
+                continue
+            for file in getattr(acq, "external_file", None) or []:
+                path = Path(str(file))
+                if path.is_absolute() and path.is_file():
+                    folders[stream] = path.parent
+                    break
+        return folders
 
     def _trial_row(self, trial) -> pd.Series | None:
         df = self.trials_df
@@ -1101,6 +1132,7 @@ def _add_external_series(
 def sync_acquisition_for_streams(
     nwbfile: NWBFile,
     stream_rates: dict[str, float],
+    media_paths: pd.DataFrame | None = None,
 ) -> None:
     """Create ImageSeries acquisition items for ALL external media streams.
 
@@ -1117,8 +1149,15 @@ def sync_acquisition_for_streams(
         Mapping of stream name to sampling rate, e.g.
         ``{"video": 30.0, "audio": 44100.0, "pose": 30.0}``. A
         ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
+    media_paths
+        The pairing table the trials came from, one row per trial in the same
+        order, whose media cells hold full paths. When given, ``external_file``
+        records those paths, so a reader finds the media without being told the
+        folder; the trials table keeps the basenames either way.
     """
     df = nwbfile.trials.to_dataframe()
+    if media_paths is not None and len(media_paths) != len(df):
+        raise ValueError(f"media_paths has {len(media_paths)} rows but the trials table has {len(df)}")
     stream_devices = _parse_stream_devices(list(df.columns))
 
     for stream, devices in stream_devices.items():
@@ -1134,7 +1173,11 @@ def sync_acquisition_for_streams(
             if valid.empty:
                 continue
 
-            external_files = valid[col].tolist()
+            if media_paths is not None and col in media_paths.columns:
+                positions = [df.index.get_loc(i) for i in valid.index]
+                external_files = [str(v) for v in media_paths[col].iloc[positions]]
+            else:
+                external_files = valid[col].tolist()
 
             start_col = f"{col}_start"
             if start_col in df.columns:
@@ -1159,7 +1202,6 @@ def _infer_times_from_media(
     trial_table: pd.DataFrame,
     video_cols: list[str],
     audio_cols: list[str],
-    media_root: Path | None,
     pose_cols: list[str] | None = None,
     pose_fps: float | None = None,
 ) -> pd.DataFrame:
@@ -1174,7 +1216,6 @@ def _infer_times_from_media(
             row,
             video_cols,
             audio_cols,
-            media_root,
             pose_cols=pose_cols,
             pose_fps=pose_fps,
         )
@@ -1191,21 +1232,20 @@ def _probe_trial_duration(
     row: pd.Series,
     video_cols: list[str],
     audio_cols: list[str],
-    media_root: Path | None,
     pose_cols: list[str] | None = None,
     pose_fps: float | None = None,
 ) -> float:
     from ethograph.utils.stream_durations import probe_duration
 
     for col in video_cols:
-        path = _resolve_media_path(row.get(col), media_root)
+        path = _existing_media_path(row.get(col))
         if path is not None:
             dur = probe_duration(str(path), "video")
             if dur is not None:
                 return dur
 
     for col in audio_cols:
-        path = _resolve_media_path(row.get(col), media_root)
+        path = _existing_media_path(row.get(col))
         if path is not None:
             dur = probe_duration(str(path), "audio")
             if dur is not None:
@@ -1213,7 +1253,7 @@ def _probe_trial_duration(
 
     if pose_cols and pose_fps is not None:
         for col in pose_cols:
-            path = _resolve_media_path(row.get(col), media_root)
+            path = _existing_media_path(row.get(col))
             if path is not None:
                 dur = probe_duration(str(path), "pose", pose_fps)
                 if dur is not None:
@@ -1222,12 +1262,11 @@ def _probe_trial_duration(
     raise ValueError(f"Could not probe duration for trial row: {row.to_dict()}")
 
 
-def _resolve_media_path(filename: Any, media_root: Path | None) -> Path | None:
-    if not filename or pd.isna(filename):
+def _existing_media_path(value: Any) -> Path | None:
+    """The path a pairing-table cell names, when it exists on this machine."""
+    if not value or pd.isna(value):
         return None
-    path = Path(filename)
-    if media_root and not path.is_absolute():
-        path = media_root / path
+    path = Path(value)
     return path if path.exists() else None
 
 
@@ -1251,6 +1290,79 @@ def trials_df_from_trials_ep(ep) -> pd.DataFrame:
             if col not in df.columns:
                 df[col] = list(meta[col])
     return df
+
+
+INDIVIDUALS_TABLE = "individuals"
+
+
+def write_individuals(nwbfile, individuals: Sequence[str]) -> None:
+    """Record the session's individuals in the NWB's scratch space, replacing any earlier list.
+
+    The session record is the one home for who is labelled: a ``.nc`` individual
+    dim is checked against this list, never the other way round.
+    """
+    names = [str(n) for n in individuals]
+    if len(set(names)) != len(names):
+        raise ValueError(f"individuals must be unique: {names}")
+    if INDIVIDUALS_TABLE in nwbfile.scratch:
+        del nwbfile.scratch[INDIVIDUALS_TABLE]
+    nwbfile.add_scratch(
+        pd.DataFrame({"individual": names}),
+        name=INDIVIDUALS_TABLE,
+        description="Individuals labelled in this session (ethograph)",
+    )
+
+
+def read_individuals(nwbfile) -> list[str]:
+    """The individuals recorded by :func:`write_individuals`, ``[]`` when none were."""
+    if INDIVIDUALS_TABLE not in nwbfile.scratch:
+        return []
+    return [str(v) for v in nwbfile.scratch[INDIVIDUALS_TABLE].to_dataframe()["individual"]]
+
+
+def set_individuals(nwb_path: str | Path, individuals: Sequence[str]) -> None:
+    """Edit the individuals list of an existing session record in place."""
+    with edit_nwb(nwb_path) as nwbfile:
+        write_individuals(nwbfile, individuals)
+
+
+def alignment_from_trialtree(dt, output_path: str | Path) -> Path:
+    """Write a bare ``alignment.nwb`` holding only a trials table read off a TrialTree.
+
+    The one sanctioned way a ``.nc`` with no alignment becomes a session (on the
+    user's explicit yes, from the cover page): each trial's duration is the extent
+    of its time coordinate plus one sample, and the trials are laid end to end
+    from ``0.0`` — trial-relative time is exact, session time is a convention.
+    """
+    from ethograph.io.pairing import pair_media
+
+    rows: list[dict] = []
+    cursor = 0.0
+    for trial_id, ds in dt.trial_items():
+        duration = _trial_duration_from_time_coords(ds)
+        rows.append({"trial": trial_id, "start_time": cursor, "stop_time": cursor + duration})
+        cursor += duration
+    if not rows:
+        raise ValueError("The dataset has no trials to write an alignment from")
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    pair_media(pd.DataFrame(rows), output_path=out)
+    return out
+
+
+def _trial_duration_from_time_coords(ds) -> float:
+    """The longest time axis of *ds* in seconds, plus one sample so the last sample is inside."""
+    best: float | None = None
+    for name, coord in ds.coords.items():
+        if "time" not in str(name).lower() or coord.ndim != 1 or coord.size == 0:
+            continue
+        values = np.asarray(coord.values, dtype=float)
+        step = float(np.median(np.diff(values))) if values.size > 1 else 0.0
+        duration = float(values.max() - values.min()) + step
+        best = duration if best is None else max(best, duration)
+    if best is None:
+        raise ValueError(f"Trial {ds.attrs.get('trial')!r} has no time coordinate to read a duration from")
+    return best
 
 
 def alignment_from_trials_ep(ep, output_path: str | Path) -> Path:

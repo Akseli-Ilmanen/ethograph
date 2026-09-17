@@ -36,14 +36,14 @@ only its condition columns, joined on `trial`.
 
 ## Loading metadata
 
-Loading a dataset auto-detects a sidecar `{stem}_metadata.tsv` beside it — e.g.
-`session.nc` picks up `session_metadata.tsv`.
+Loading a session auto-detects `metadata.tsv` in the session folder (a lone
+`{stem}_metadata.tsv` from older sessions is renamed to it once).
 
 To use a different file, set the **Metadata:** field in the loader form on the
 start page (*Custom set-up* card) before clicking **Load**. It accepts a
 tabular file (`.tsv` / `.csv` / `.xlsx`) with a `trial` column; other file
 types are ignored. The path is saved with the project. The **Template** button
-next to it writes a `{stem}_metadata.tsv` pre-filled with all trial IDs, ready
+next to it writes a `metadata.tsv` pre-filled with all trial IDs, ready
 to edit in a spreadsheet.
 
 For pynapple folders whose trial timing lives in a `trials.npz` IntervalSet:
@@ -57,7 +57,7 @@ Sources are tried in this order:
 1. The **Metadata:** field (or `metadata_path` in the API) — a `.tsv`, `.nwb`,
    `.npz` or pynapple folder.
 2. The **data source itself**, when it is a `.nwb`, `.npz` or pynapple folder.
-3. The **sidecar TSV** `{stem}_metadata.tsv` next to the data file.
+3. The **sidecar TSV** `metadata.tsv` in the session folder.
 4. Metadata embedded in the loaded **alignment NWB**.
 5. **Pynapple `IntervalSet` metadata**.
 
@@ -148,7 +148,7 @@ labelling never waits on a file write, and it flips back to `no` whenever new
 predictions land in a trial. Nothing is written until curation is active
 (label classes dropped into the curation scope, or something curated); a
 session that curates nothing leaves the metadata untouched. For an NWB source,
-arming curation creates a sidecar `{stem}_metadata.tsv`, seeded from the
+arming curation creates a sidecar `metadata.tsv`, seeded from the
 loaded table, and the column lives there — the NWB is left alone. Filter on it like any other column to walk only the trials
 that still need a look.
 
@@ -174,7 +174,7 @@ copy of your metadata before you start editing.
 
 Straight back into the source the metadata was read from — the tabular file, or
 the NWB trials table (edited columns only). Anything else (pynapple
-`IntervalSet`, no metadata yet) gets a sidecar `{stem}_metadata.tsv`, which
+`IntervalSet`, no metadata yet) gets a sidecar `metadata.tsv`, which
 outranks it on the next load. There is no undo.
 
 **One limit:** an NWB column keeps the dtype it was written with, so text

@@ -40,7 +40,7 @@ No config, no session, no alignment — just videos in, sidecars out:
 ```python
 import ethograph as eto
 
-eto.segment.extract_videos(["/data/videos"], "/data/features", stack_s=0.5)                       # S3D (default)
+eto.segment.extract_videos(["/data/videos"], "/data/features", stack_s=0.5)  # S3D (default)
 eto.segment.extract_videos(["/data/videos"], "/data/features", extractor="timm", analysis_fps=25)  # timm / DINOv2
 ```
 
@@ -132,7 +132,7 @@ each session's `video_dir` and let the alignment resolve the file within it:
 
 ```yaml
 sessions:
-  - source: ../sub-01/ses-01/behav/Trial_data.nc
+  - source: ../sub-01/ses-01/behav
     labels_path: ../sub-01/ses-01/behav/Trial_data_labels.tsv
     video_dir: /data/videos
 
@@ -145,8 +145,8 @@ video_features:
 ```python
 project = eto.segment.Project("project.yaml")
 
-project.video_features()              # extract only
-project.video_features(merge=True)    # extract, then merge into the sessions
+project.video_features()  # extract only
+project.video_features(merge=True)  # extract, then merge into the sessions
 ```
 
 Sidecars go to `{root}/video_features/`; the paths written are returned, and
@@ -215,7 +215,7 @@ them the same way, so `materialise` and `inference` see the variable:
 
 ```yaml
 sessions:
-  - source: D:\data\ses-01ehav\Trial_data.nc
+  - source: D:\data\ses-01ehav
     video_feature_folders:
       feral: D:\emb\ses-01          # one {video stem}.npy per trial's camera file
 features:
@@ -289,7 +289,7 @@ ignore.
 ```python
 ranking, names = project.rank_video_features()
 # the 20 most discriminating dims
-print([names[i] for i in ranking.top(20)] )
+print([names[i] for i in ranking.top(20)])
 ```
 
 This reads the **materialised dataset**, so it ranks exactly the columns a
@@ -305,7 +305,7 @@ in a project yet:
 ```python
 from ethograph.video_features import rank_features
 
-ranking = rank_features(trials)         # [(values (T, F), labels (T,)), ...]
+ranking = rank_features(trials)  # [(values (T, F), labels (T,)), ...]
 ```
 
 `labels` are dense per-frame class ids with 0 = background; background is
@@ -330,10 +330,10 @@ features:
 ```python
 from ethograph.video_features import S3DConfig, build_extractor, extract_s3d
 
-da = extract_s3d("clip.mp4", S3DConfig(stack_s=0.5))         # (time_video, s3d_dims)
+da = extract_s3d("clip.mp4", S3DConfig(stack_s=0.5))  # (time_video, s3d_dims)
 da.to_netcdf("clip_s3d.nc")
 
-da = build_extractor("timm").extract("clip.mp4")             # (time_video, timm_dims)
+da = build_extractor("timm").extract("clip.mp4")  # (time_video, timm_dims)
 ```
 
 ## Adding an extractor

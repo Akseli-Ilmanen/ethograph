@@ -143,7 +143,7 @@ class TestConfigFile:
 
     def test_builds_and_defaults_the_labels_path(self, tmp_path):
         cfg = config_from_dict(self._minimal(tmp_path), tmp_path)
-        assert cfg.sessions[0].labels_path.name == "ses-01_labels.tsv"
+        assert cfg.sessions[0].labels_path.name == "labels.tsv"
 
     def test_segments_features_section_shape_is_refused_by_name(self, tmp_path):
         data = self._minimal(tmp_path) | {"features": {"columns": {}}}

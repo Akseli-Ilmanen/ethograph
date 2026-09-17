@@ -56,7 +56,7 @@ at audio sample rates (e.g. 44 kHz) would be prohibitively large. They are
 stored as onset/offset time pairs in seconds:
 
 ```python
-ds["audio_cp_onsets"]  = xr.DataArray(
+ds["audio_cp_onsets"] = xr.DataArray(
     onset_times_s,
     dims=["audio_cp"],
     attrs={"target_feature": "audio", "method": method},

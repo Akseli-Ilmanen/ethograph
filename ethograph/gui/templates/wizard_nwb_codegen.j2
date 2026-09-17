@@ -18,9 +18,9 @@ session_table = pd.read_csv("{{ trial_table_source }}", sep="{{ trial_table_sep 
 # You may need to adjust regex/patterns.
 {% for mod in media_modalities %}
 {% if mod.file_mode == "single" %}
-{{ mod.name }}_by_trial = {"session": {"0": Path("{{ mod.single_file_path }}")}}
+{{ mod.name }}_by_trial = {"session": {"0": Path({{ mod.single_file_path | path_literal }})}}
 {% elif mod.folder_path %}
-{{ mod.name }}_folder = Path("{{ mod.folder_path }}")
+{{ mod.name }}_folder = Path({{ mod.folder_path | path_literal }})
 {% if mod.extensions | length == 1 %}
 {{ mod.name }}_files = natsort.natsorted({{ mod.name }}_folder.glob("{{ '**/*' if mod.nested_subfolders else '*' }}{{ mod.extensions[0] }}"))
 {% else %}
@@ -67,7 +67,7 @@ session_table = session_table.loc[:, (session_table != "").any()]
 {% endif %}
 # ─── 3. Build NWB alignment file ───
 {% if output_path %}
-nwb_path = Path("{{ output_path }}").parent / ".ethograph" / "alignment.nwb"
+nwb_path = Path({{ output_path | path_literal }}).parent / ".ethograph" / "alignment.nwb"
 {% else %}
 nwb_path = Path(".ethograph") / "alignment.nwb"
 {% endif %}
@@ -94,7 +94,7 @@ eto.pair_media(
 {% endif %}
 dt = eto.from_datasets(ds_list)
 {% if output_path %}
-dt.save("{{ output_path }}")
+dt.save({{ output_path | path_literal }})
 {% else %}
 dt.save("output.nc")  # TODO: set output path
 {% endif %}

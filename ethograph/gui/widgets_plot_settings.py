@@ -17,6 +17,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -34,6 +35,9 @@ HEATMAP_COLORMAPS = [
     "magma",
     "cividis",
 ]
+
+#: Resolution of the heatmap row-window position slider.
+_ROW_SLIDER_STEPS = 1000
 
 _NORM_DISPLAY_TO_KEY = {
     "No normalization": "none",
@@ -1138,6 +1142,31 @@ class PlotSettingsWidget(QWidget):
         self.heatmap_sort_now_btn.clicked.connect(self._on_heatmap_sort_now_clicked)
         sort_layout.addWidget(self.heatmap_sort_now_btn, 2, 0, 1, 4)
 
+        rows_group = QGroupBox("Heatmap rows")
+        rows_layout = QGridLayout()
+        rows_layout.setSpacing(2)
+        rows_layout.setContentsMargins(2, 2, 2, 2)
+        rows_group.setLayout(rows_layout)
+        layout.addWidget(rows_group)
+
+        rows_layout.addWidget(QLabel("Show (%):"), 0, 0)
+        self.heatmap_row_percent_spin = QDoubleSpinBox()
+        self.heatmap_row_percent_spin.setRange(1.0, 100.0)
+        self.heatmap_row_percent_spin.setDecimals(0)
+        self.heatmap_row_percent_spin.setSingleStep(5.0)
+        self.heatmap_row_percent_spin.setToolTip(
+            "Percent of rows shown as one contiguous block of the displayed order\n"
+            "(neighbours after sorting, not neighbouring channel indices)"
+        )
+        self.heatmap_row_percent_spin.valueChanged.connect(self._on_heatmap_row_window_changed)
+        rows_layout.addWidget(self.heatmap_row_percent_spin, 0, 1)
+
+        self.heatmap_row_position_slider = QSlider(Qt.Horizontal)
+        self.heatmap_row_position_slider.setRange(0, _ROW_SLIDER_STEPS)
+        self.heatmap_row_position_slider.setToolTip("Slide the block of shown rows from top to bottom")
+        self.heatmap_row_position_slider.valueChanged.connect(self._on_heatmap_row_window_changed)
+        rows_layout.addWidget(self.heatmap_row_position_slider, 1, 0, 1, 2)
+
         hm_group = QGroupBox("Heatmap Display")
         hm_layout = QGridLayout()
         hm_layout.setSpacing(2)
@@ -1187,6 +1216,23 @@ class PlotSettingsWidget(QWidget):
         with QSignalBlocker(self.heatmap_sort_overlap_spin):
             self.heatmap_sort_overlap_spin.setValue(self.app_state.get_with_default("heatmap_sort_overlap"))
         self.heatmap_sort_now_btn.setEnabled(mode == "visible")
+
+        percent = self.app_state.get_with_default("heatmap_row_percent")
+        position = self.app_state.get_with_default("heatmap_row_position")
+        with QSignalBlocker(self.heatmap_row_percent_spin):
+            self.heatmap_row_percent_spin.setValue(percent)
+        with QSignalBlocker(self.heatmap_row_position_slider):
+            self.heatmap_row_position_slider.setValue(round(position * _ROW_SLIDER_STEPS))
+        self.heatmap_row_position_slider.setEnabled(percent < 100.0)
+
+    def _on_heatmap_row_window_changed(self, _value: float):
+        percent = self.heatmap_row_percent_spin.value()
+        self.app_state.heatmap_row_percent = percent
+        self.app_state.heatmap_row_position = self.heatmap_row_position_slider.value() / _ROW_SLIDER_STEPS
+        self.heatmap_row_position_slider.setEnabled(percent < 100.0)
+        if self.plot_container:
+            for heatmap in self.plot_container.heatmap_plots:
+                heatmap.refresh_row_window()
 
     def _on_heatmap_sort_mode_changed(self, _index: int):
         mode = self.heatmap_sort_combo.currentData()

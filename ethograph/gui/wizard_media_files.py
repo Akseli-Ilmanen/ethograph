@@ -59,8 +59,8 @@ ROLE_COLORS = {
     "trial": COLOR_TRIAL,
     "camera": COLOR_CAMERA,
     "mic": COLOR_MIC,
-    "ignore": TEXT_DIM,
-    None: TEXT_DIM,
+    "ignore": TEXT_MID,
+    None: TEXT_MID,
 }
 
 # Convert extension sets to regex patterns for classification
@@ -167,7 +167,7 @@ def analyze_filenames_with_regex(files: list[Path], pattern: str) -> FilePattern
     values_by_group: dict[str, set[str]] = {g: set() for g in group_names}
 
     for f in files:
-        m = rx.search(f.stem)
+        m = rx.fullmatch(f.stem)
         if not m:
             continue
         matched_files.append(f)
@@ -220,7 +220,7 @@ def extract_file_row(
 ) -> dict[str, str]:
     row: dict[str, str] = {"path": str(filepath)}
     if tokenize_mode == "regex" and regex_pattern:
-        m = re.search(regex_pattern, filepath.stem)
+        m = re.fullmatch(regex_pattern, filepath.stem)
         if m:
             for key, val in m.groupdict().items():
                 if val is not None and key in ("trial", "camera", "mic"):
@@ -248,6 +248,7 @@ class StreamConfig:
     role_map: dict[int, str]  # segment position → role name
     nested: bool = False
     regex_pattern: str | None = None
+    extension: str | None = None  # one suffix of the stream, when the folder holds several
 
 
 @dataclass
@@ -262,6 +263,7 @@ class MediaConfig:
                     "roles": {str(k): v for k, v in sc.role_map.items()},
                     "nested": sc.nested,
                     **({"regex": sc.regex_pattern} if sc.regex_pattern else {}),
+                    **({"extension": sc.extension} if sc.extension else {}),
                 }
                 for name, sc in self.streams.items()
             }
@@ -276,6 +278,7 @@ class MediaConfig:
                 role_map={int(k): v for k, v in sc.get("roles", {}).items()},
                 nested=sc.get("nested", False),
                 regex_pattern=sc.get("regex"),
+                extension=sc.get("extension"),
             )
         return cls(streams=streams)
 
@@ -344,11 +347,11 @@ class FilenameList(QWidget):
             if folder_seg:
                 tok = fp.parent.name
                 if folder_seg.varying and folder_seg.role and folder_seg.role != "ignore":
-                    c = ROLE_COLORS.get(folder_seg.role, TEXT_DIM)
+                    c = ROLE_COLORS.get(folder_seg.role, TEXT_MID)
                     parts.append(f"<span style='color:{c};font-weight:700'>{tok}</span>")
                 else:
-                    parts.append(f"<span style='color:{TEXT_DIM}'>{tok}</span>")
-                parts.append(f"<span style='color:{TEXT_DIM}'>/</span>")
+                    parts.append(f"<span style='color:{TEXT_MID}'>{tok}</span>")
+                parts.append(f"<span style='color:{TEXT_MID}'>/</span>")
             prev_end = 0
             for idx, seg in enumerate(segs):
                 if idx >= len(spans):
@@ -356,15 +359,15 @@ class FilenameList(QWidget):
                 start, end = spans[idx]
                 if start > prev_end:
                     delim_text = stem[prev_end:start]
-                    parts.append(f"<span style='color:{TEXT_DIM}'>{delim_text}</span>")
+                    parts.append(f"<span style='color:{TEXT_MID}'>{delim_text}</span>")
                 tok_text = stem[start:end]
                 if seg.varying and seg.role and seg.role != "ignore":
-                    c = ROLE_COLORS.get(seg.role, TEXT_DIM)
+                    c = ROLE_COLORS.get(seg.role, TEXT_MID)
                     parts.append(f"<span style='color:{c};font-weight:700'>{tok_text}</span>")
                 else:
-                    parts.append(f"<span style='color:{TEXT_DIM}'>{tok_text}</span>")
+                    parts.append(f"<span style='color:{TEXT_MID}'>{tok_text}</span>")
                 prev_end = end
-            parts.append(f"<span style='color:{TEXT_DIM}'>{pattern.suffix}</span>")
+            parts.append(f"<span style='color:{TEXT_MID}'>{pattern.suffix}</span>")
 
             lbl = QLabel("".join(parts))
             lbl.setFont(mono)
@@ -379,9 +382,9 @@ class FilenameList(QWidget):
         rx = re.compile(pattern.regex_pattern)
         for fp in pattern.files[:MAX_PREVIEW]:
             stem = fp.stem
-            m = rx.search(stem)
+            m = rx.fullmatch(stem)
             if not m:
-                html = f"<span style='color:{TEXT_DIM}'>{stem}{pattern.suffix}</span>"
+                html = f"<span style='color:{TEXT_MID}'>{stem}{pattern.suffix}</span>"
             else:
                 group_spans = []
                 for name in rx.groupindex:
@@ -395,13 +398,13 @@ class FilenameList(QWidget):
                 prev = 0
                 for s, e, role in group_spans:
                     if s > prev:
-                        parts.append(f"<span style='color:{TEXT_DIM}'>{stem[prev:s]}</span>")
-                    c = ROLE_COLORS.get(role, TEXT_DIM)
+                        parts.append(f"<span style='color:{TEXT_MID}'>{stem[prev:s]}</span>")
+                    c = ROLE_COLORS.get(role, TEXT_MID)
                     parts.append(f"<span style='color:{c};font-weight:700'>{stem[s:e]}</span>")
                     prev = e
                 if prev < len(stem):
-                    parts.append(f"<span style='color:{TEXT_DIM}'>{stem[prev:]}</span>")
-                parts.append(f"<span style='color:{TEXT_DIM}'>{pattern.suffix}</span>")
+                    parts.append(f"<span style='color:{TEXT_MID}'>{stem[prev:]}</span>")
+                parts.append(f"<span style='color:{TEXT_MID}'>{pattern.suffix}</span>")
                 html = "".join(parts)
 
             lbl = QLabel(html)
@@ -420,7 +423,7 @@ class FilenameList(QWidget):
         self._rows.clear()
         mono = mono_font(FS)
         for fp in files[:MAX_PREVIEW]:
-            lbl = QLabel(f"<span style='color:{TEXT_DIM}'>{fp.name}</span>")
+            lbl = QLabel(f"<span style='color:{TEXT_MID}'>{fp.name}</span>")
             lbl.setFont(mono)
             lbl.setTextFormat(Qt.TextFormat.RichText)
             lbl.setStyleSheet("background:transparent; padding:2px 0;")
@@ -533,12 +536,7 @@ class PatternEditor(QWidget):
         self._edit = QLineEdit()
         self._edit.setReadOnly(True)
         self._edit.setFont(mono_font(FS))
-        self._edit.setStyleSheet(
-            f"QLineEdit {{ background:{BG_INPUT}; color:{TEXT}; "
-            f"border:1px solid {BORDER}; border-radius:4px; "
-            f"padding:6px 10px; font-size:{FS}px; }}"
-            f"QLineEdit:focus {{ border-color:{ACCENT}; }}"
-        )
+        self._style_edit(None)
         self._edit.selectionChanged.connect(self._on_selection_changed)
         layout.addWidget(self._edit)
 
@@ -554,6 +552,18 @@ class PatternEditor(QWidget):
         self._emit_timer.setSingleShot(True)
         self._emit_timer.setInterval(200)
         self._emit_timer.timeout.connect(lambda: self.pattern_changed.emit(self._build_regex()))
+
+    def _style_edit(self, role: str | None) -> None:
+        """The drag selection paints in the active role's colour with dark text, so the
+        highlight reads the same as the role button and the preview below it."""
+        color = ROLE_COLORS[role] if role else TEXT_MID
+        self._edit.setStyleSheet(
+            f"QLineEdit {{ background:{BG_INPUT}; color:{TEXT}; "
+            f"border:1px solid {BORDER}; border-radius:4px; "
+            f"padding:6px 10px; font-size:{FS}px; "
+            f"selection-background-color:{color}; selection-color:{BG}; }}"
+            f"QLineEdit:focus {{ border-color:{color}; }}"
+        )
 
     @staticmethod
     def _style_role_btn(btn: QPushButton, color: str, *, active: bool):
@@ -625,6 +635,7 @@ class PatternEditor(QWidget):
                 is_active = r == role
                 btn.setChecked(is_active)
                 self._style_role_btn(btn, role_colors[r], active=is_active)
+        self._style_edit(self._active_role)
 
     def _on_selection_changed(self):
         """Live-paint: when the user drags a selection while a role is active,
@@ -654,6 +665,7 @@ class PatternEditor(QWidget):
         for r, btn in self._role_buttons.items():
             btn.setChecked(False)
             self._style_role_btn(btn, role_colors[r], active=False)
+        self._style_edit(None)
         self._update_preview()
         self.pattern_changed.emit("")
 
@@ -668,17 +680,16 @@ class PatternEditor(QWidget):
         prev = 0
         for start, end, role in self._marks:
             if start > prev:
-                parts.append(f"<span style='color:{TEXT_DIM}'>{self._reference[prev:start]}</span>")
-            c = ROLE_COLORS.get(role, TEXT_DIM)
+                parts.append(f"<span style='color:{TEXT_MID}'>{self._reference[prev:start]}</span>")
+            c = ROLE_COLORS.get(role, TEXT_MID)
             parts.append(
-                f"<span style='color:{c};font-weight:bold;"
-                f"text-decoration:underline'>"
-                f"{self._reference[start:end]}</span>"
+                f"<span style='background:{c};color:{BG};font-weight:bold'>"
+                f"&nbsp;{self._reference[start:end]}&nbsp;</span>"
                 f"<sub style='color:{c}'> {role}</sub>"
             )
             prev = end
         if prev < len(self._reference):
-            parts.append(f"<span style='color:{TEXT_DIM}'>{self._reference[prev:]}</span>")
+            parts.append(f"<span style='color:{TEXT_MID}'>{self._reference[prev:]}</span>")
         self._preview.setText("".join(parts))
 
     def _build_regex(self) -> str:
@@ -719,7 +730,8 @@ class StreamPanel(QWidget):
         self._stream = stream
         self._allowed_roles = allowed_roles
         self._pattern: FilePattern | None = None
-        self._all_files: list[Path] = []
+        self._scanned_files: list[Path] = []  # every file of the stream in the folder
+        self._all_files: list[Path] = []  # after the extension filter
         self._build()
 
     def _build(self):
@@ -760,6 +772,29 @@ class StreamPanel(QWidget):
         )
         self._nested_cb.toggled.connect(lambda: self._on_folder(self._folder.text()))
         outer.addWidget(self._nested_cb)
+
+        # extension filter — shown only when the folder mixes several (DLC writes .h5 + .csv twins)
+        ext_row = QHBoxLayout()
+        ext_row.setContentsMargins(14, 0, 14, 0)
+        ext_row.setSpacing(6)
+        ext_lbl = QLabel("File type:")
+        ext_lbl.setStyleSheet(f"color:{TEXT_MID}; font-size:{FS - 1}px;")
+        ext_row.addWidget(ext_lbl)
+        self._ext_combo = QComboBox()
+        self._ext_combo.setStyleSheet(
+            f"QComboBox {{ background:{BG_INPUT}; color:{TEXT}; "
+            f"border:1px solid {BORDER}; border-radius:4px; "
+            f"padding:3px 8px; font-size:{FS - 1}px; }}"
+            f"QComboBox::drop-down {{ border:none; width:18px; }}"
+            f"QComboBox QAbstractItemView {{ background:{BG_PANEL}; "
+            f"color:{TEXT}; selection-background-color:{BORDER}; }}"
+        )
+        self._ext_combo.currentIndexChanged.connect(lambda _: self._apply_extension())
+        ext_row.addWidget(self._ext_combo, stretch=1)
+        self._ext_row = QWidget()
+        self._ext_row.setLayout(ext_row)
+        self._ext_row.setVisible(False)
+        outer.addWidget(self._ext_row)
 
         # pattern editor
         self._pattern_editor = PatternEditor()
@@ -802,7 +837,9 @@ class StreamPanel(QWidget):
     def _on_folder(self, text: str):
         p = Path(text)
         if not p.is_dir():
+            self._scanned_files = []
             self._all_files = []
+            self._set_extensions([])
             self._set_pattern(None)
             return
         if self._nested_cb.isChecked():
@@ -811,13 +848,43 @@ class StreamPanel(QWidget):
                 files = sorted(f for f in sd.iterdir() if f.is_file())
                 relevant = [f for f in files if classify_stream(f.name) == self._stream]
                 all_files.extend(relevant or files)
-            self._all_files = all_files
+            self._scanned_files = all_files
         else:
             files = sorted(f for f in p.iterdir() if f.is_file())
             relevant = [f for f in files if classify_stream(f.name) == self._stream]
-            self._all_files = relevant or files
+            self._scanned_files = relevant or files
+        self._set_extensions(sorted({f.suffix.lower() for f in self._scanned_files if f.suffix}))
+        self._apply_extension()
+
+    def _set_extensions(self, exts: list[str]) -> None:
+        """Offer one entry per suffix in the folder; hidden when there is nothing to choose."""
+        self._ext_combo.blockSignals(True)
+        current = self._ext_combo.currentText()
+        self._ext_combo.clear()
+        self._ext_combo.addItems(exts)
+        if current in exts:
+            self._ext_combo.setCurrentText(current)
+        self._ext_combo.blockSignals(False)
+        self._ext_row.setVisible(len(exts) > 1)
+
+    def _apply_extension(self) -> None:
+        ext = self.extension
+        self._all_files = [f for f in self._scanned_files if ext is None or f.suffix.lower() == ext]
         self._pattern_editor.set_files(self._all_files)
         self._apply_analysis()
+
+    @property
+    def extension(self) -> str | None:
+        """The suffix the user picked, or ``None`` when the folder holds only one."""
+        if self._ext_combo.count() <= 1:
+            return None
+        return self._ext_combo.currentText() or None
+
+    def set_extension(self, ext: str) -> None:
+        idx = self._ext_combo.findText(ext)
+        if idx < 0:
+            raise ValueError(f"{ext!r} is not an extension in {self._folder.text()!r}")
+        self._ext_combo.setCurrentIndex(idx)
 
     def _apply_analysis(self):
         if not self._all_files:
@@ -877,7 +944,13 @@ class StreamPanel(QWidget):
         if not folder or not self._all_files:
             return None
         if self._pattern is None:
-            return StreamConfig(folder=folder, role_map={}, nested=self._nested_cb.isChecked(), regex_pattern=None)
+            return StreamConfig(
+                folder=folder,
+                role_map={},
+                nested=self._nested_cb.isChecked(),
+                regex_pattern=None,
+                extension=self.extension,
+            )
         role_map = {
             seg.position: seg.role
             for seg in self._pattern.segments
@@ -888,6 +961,7 @@ class StreamPanel(QWidget):
             role_map=role_map,
             nested=self._nested_cb.isChecked(),
             regex_pattern=self._pattern.regex_pattern,
+            extension=self.extension,
         )
 
     def apply_config(self, cfg: StreamConfig) -> None:
@@ -895,6 +969,8 @@ class StreamPanel(QWidget):
         if cfg.regex_pattern:
             self._pattern_editor.set_regex(cfg.regex_pattern)
         self._folder.setText(cfg.folder)
+        if cfg.extension:
+            self.set_extension(cfg.extension)
         if self._pattern is not None and not cfg.regex_pattern:
             _apply_roles(self._pattern, cfg.role_map)
             self._set_pattern(self._pattern)

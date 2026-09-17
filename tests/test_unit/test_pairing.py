@@ -26,16 +26,15 @@ class TestDiscoverMedia:
             (pose_dir / name).touch()
 
         df = discover_media(
-            tmp_path,
             [
-                SourceSpec(stream="video", folder="video"),
-                SourceSpec(stream="pose", folder="pose"),
+                SourceSpec(stream="video", folder=str(video_dir)),
+                SourceSpec(stream="pose", folder=str(pose_dir)),
             ],
         )
 
         assert list(df["trial"]) == [1, 2, 3]
-        assert df["video_cam-1"].tolist() == ["a1.mp4", "b2.mp4", "c3.mp4"]
-        assert df["pose_cam-1"].tolist() == ["a1.h5", "b2.h5", "c3.h5"]
+        assert df["video_cam-1"].tolist() == [str(video_dir / n) for n in ("a1.mp4", "b2.mp4", "c3.mp4")]
+        assert df["pose_cam-1"].tolist() == [str(pose_dir / n) for n in ("a1.h5", "b2.h5", "c3.h5")]
 
     def test_patternless_count_mismatch_raises(self, tmp_path: Path):
         video_dir = tmp_path / "video"
@@ -49,10 +48,9 @@ class TestDiscoverMedia:
 
         with pytest.raises(ValueError, match="3|2"):
             discover_media(
-                tmp_path,
                 [
-                    SourceSpec(stream="video", folder="video"),
-                    SourceSpec(stream="audio", folder="audio"),
+                    SourceSpec(stream="video", folder=str(video_dir)),
+                    SourceSpec(stream="audio", folder=str(audio_dir)),
                 ],
             )
 
@@ -65,18 +63,18 @@ class TestDiscoverMedia:
 
         source = SourceSpec(
             stream="video",
-            folder="video",
+            folder=str(video_dir),
             pattern=r"trial(?P<trial>\d+)_(?P<camera>\w+)",
         )
-        df = discover_media(tmp_path, [source])
+        df = discover_media([source])
 
         assert set(df.columns) == {"trial", "video_camA", "video_camB"}
         assert sorted(df["trial"].tolist()) == [1, 2]
         row1 = df[df["trial"] == 1].iloc[0]
-        assert row1["video_camA"] == "trial1_camA.mp4"
-        assert row1["video_camB"] == "trial1_camB.mp4"
+        assert row1["video_camA"] == str(video_dir / "trial1_camA.mp4")
+        assert row1["video_camB"] == str(video_dir / "trial1_camB.mp4")
 
-    def test_non_matching_file_raises(self, tmp_path: Path):
+    def test_non_matching_file_is_skipped(self, tmp_path: Path):
         video_dir = tmp_path / "video"
         video_dir.mkdir()
         (video_dir / "trial1_camA.mp4").touch()
@@ -84,20 +82,82 @@ class TestDiscoverMedia:
 
         source = SourceSpec(
             stream="video",
-            folder="video",
+            folder=str(video_dir),
             pattern=r"trial(?P<trial>\d+)_(?P<camera>\w+)",
         )
-        with pytest.raises(ValueError, match="nomatch"):
-            discover_media(tmp_path, [source])
+        table = discover_media([source])
+        assert list(table["trial"]) == [1]
+        assert table.iloc[0]["video_camA"] == str(video_dir / "trial1_camA.mp4")
+
+    def test_pattern_matching_nothing_raises(self, tmp_path: Path):
+        video_dir = tmp_path / "video"
+        video_dir.mkdir()
+        (video_dir / "nomatch.mp4").touch()
+
+        source = SourceSpec(stream="video", folder=str(video_dir), pattern=r"trial(?P<trial>\d+)")
+        with pytest.raises(ValueError, match="matches none"):
+            discover_media([source])
+
+    def test_extension_narrows_a_mixed_folder(self, tmp_path: Path):
+        """A DLC folder holds .h5 and .csv twins of every file; one extension keeps one twin."""
+        pose_dir = tmp_path / "pose"
+        pose_dir.mkdir()
+        for name in ("trial1_camA.h5", "trial1_camA.csv", "trial2_camA.h5", "trial2_camA.csv"):
+            (pose_dir / name).touch()
+        pattern = r"trial(?P<trial>\d+)_(?P<camera>\w+)"
+
+        with pytest.raises(ValueError, match="trial1_camA.csv, trial1_camA.h5"):
+            discover_media([SourceSpec(stream="pose", folder=str(pose_dir), pattern=pattern)])
+
+        df = discover_media([SourceSpec(stream="pose", folder=str(pose_dir), pattern=pattern, extension=".h5")])
+        assert list(df["pose_camA"]) == [str(pose_dir / "trial1_camA.h5"), str(pose_dir / "trial2_camA.h5")]
+
+    def test_extension_must_belong_to_the_stream(self, tmp_path: Path):
+        pose_dir = tmp_path / "pose"
+        pose_dir.mkdir()
+        (pose_dir / "a.h5").touch()
+        with pytest.raises(ValueError, match="not a pose extension"):
+            discover_media([SourceSpec(stream="pose", folder=str(pose_dir), extension=".mp4")])
 
     def test_empty_folder_raises(self, tmp_path: Path):
         video_dir = tmp_path / "video"
         video_dir.mkdir()
         with pytest.raises(ValueError):
-            discover_media(tmp_path, [SourceSpec(stream="video", folder="video")])
+            discover_media([SourceSpec(stream="video", folder=str(video_dir))])
 
 
 class TestPairMedia:
+    def test_full_paths_become_basenames_in_trials_and_paths_in_external_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """The table says where the files are; the NWB stores names per trial and paths per stream."""
+        from ethograph.utils import stream_durations
+
+        cam1 = tmp_path / "rig" / "cam1"
+        cam2 = tmp_path / "elsewhere" / "cam2"
+        cam1.mkdir(parents=True)
+        cam2.mkdir(parents=True)
+        for d in (cam1, cam2):
+            for i in (1, 2):
+                (d / f"t{i}.mp4").touch()
+        monkeypatch.setattr(stream_durations, "get_video_duration", lambda path: 4.0)
+
+        table = pd.DataFrame(
+            {
+                "trial": [1, 2],
+                "video_cam-1": [str(cam1 / "t1.mp4"), str(cam1 / "t2.mp4")],
+                "video_cam-2": [str(cam2 / "t1.mp4"), str(cam2 / "t2.mp4")],
+            }
+        )
+        out = tmp_path / "session" / ".ethograph" / "alignment.nwb"
+        pair_media(table, stream_rates={"video": 30.0}, output_path=out)
+
+        align = NWBAlignment(out)
+        assert align.get_media(2, "video", "cam-2") == "t2.mp4"
+        assert align.resolve_media_path(2, "video", "cam-2") == str(cam2 / "t2.mp4")
+        assert align.resolve_media_path(1, "video", "cam-1") == str(cam1 / "t1.mp4")
+        assert align.start_time(2) == pytest.approx(4.0)
+
     def test_writes_sidecar_readable_by_nwb_alignment(self, tmp_path: Path):
         video_dir = tmp_path / "video"
         video_dir.mkdir()
@@ -218,3 +278,14 @@ class TestPerDeviceRate:
         assert alignment.get_stream_rate("video", "cam-1") == 30.0
         assert alignment.get_stream_rate("video", "cam-2") == 60.0
         alignment.close()
+
+
+def test_media_folders_come_from_the_recorded_paths(tmp_path: Path):
+    """The alignment tells the GUI where each stream's files are, per stream, when they exist here."""
+    cam = tmp_path / "cams"
+    cam.mkdir()
+    (cam / "t1.mp4").touch()
+    table = pd.DataFrame({"trial": [1], "start_time": [0.0], "stop_time": [1.0], "video_cam-1": [str(cam / "t1.mp4")]})
+    out = tmp_path / ".ethograph" / "alignment.nwb"
+    pair_media(table, stream_rates={"video": 30.0}, output_path=out)
+    assert NWBAlignment(out).media_folders() == {"video": cam}

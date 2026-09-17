@@ -75,7 +75,7 @@ def state_with_saved_labels(app_state, tmp_path):
     nc_path.write_bytes(b"")
     app_state.nc_file_path = str(nc_path)
     app_state._all_labels_df = _labels()
-    save_labels_tsv(tmp_path / "session_labels.tsv", _labels())
+    save_labels_tsv(tmp_path / "labels.tsv", _labels())  # one labels file per session folder
     app_state.changes_saved = False
     return app_state
 

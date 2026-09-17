@@ -18,10 +18,10 @@ Presents three entry points (matching the design in the project brief):
      folder of ``trial001.mp4, trial002.mp4, ...`` (optionally with matching
      pose/audio files) becomes a real multi-trial ``TrialTree``.
 
+   The folder the files came from becomes the session and gets ``.ethograph/``
+   (from several folders, the user picks one — ``dialog_session_folder``).
    With a **project folder** chosen (remembered in ``gui_settings.yaml``) the
-   drop lands in the project's ``sessions/{timestamp}/`` and is listed for
-   reopening (``gui/project.py``); without one it is throwaway in the system
-   temp dir (unique name per drop; stale ones are cleaned up best-effort).
+   session is registered there and listed for reopening (``gui/project.py``).
 3. **Data wizard** — reuse :meth:`IOWidget._on_create_nc_clicked`.
 
 The page runs *before* the main window is shown: it accepts once a dataset
@@ -32,10 +32,8 @@ never opens.
 from __future__ import annotations
 
 import logging
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import uuid4
 
 import natsort
 import numpy as np
@@ -65,8 +63,19 @@ from qtpy.QtWidgets import (
 
 from ethograph.datasets import DATASETS
 from ethograph.gui.dialog_select_template import TEMPLATE_ASSETS_DIR
+from ethograph.gui.dialog_session_folder import choose_session_folder
 from ethograph.gui.file_dialogs import browse_open_dir
-from ethograph.gui.project import DropRecord, list_drops, new_drop_dir, project_dir_of, record_drop, restore_drop
+from ethograph.gui.project import (
+    DropRecord,
+    is_foreign_session,
+    list_drops,
+    project_dir_of,
+    project_settings_of,
+    record_drop,
+    register_session,
+    restore_drop,
+)
+from ethograph.gui.session_folder import source_folders
 from ethograph.io.audio_extract import ensure_extracted_audio, has_embedded_audio
 from ethograph.io.nc_drop import concat_on_camera, positions_fit_frame
 from ethograph.io.validation import (
@@ -78,7 +87,7 @@ from ethograph.io.validation import (
     VIDEO_EXTENSIONS,
     movement_dataset_info,
 )
-from ethograph.utils.paths import SETTINGS_DIR, tmp_alignment_base
+from ethograph.utils.paths import SETTINGS_DIR
 
 # POSE_SOFTWARES is shared with the pose-overlay prompt in pose_render.
 from .app_constants import POSE_SOFTWARES
@@ -360,6 +369,7 @@ class _DropDetailsDialog(QDialog):
         audio_track_videos: list[str] | None = None,
         extract_audio_default: bool = True,
         npy_sr_default: float = 30.0,
+        pose_software_default: str | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -405,6 +415,8 @@ class _DropDetailsDialog(QDialog):
             row.addWidget(QLabel("Source software:"))
             self._software_combo = QComboBox()
             self._software_combo.addItems(POSE_SOFTWARES)
+            if pose_software_default in POSE_SOFTWARES:
+                self._software_combo.setCurrentText(pose_software_default)
             row.addWidget(self._software_combo, 1)
             layout.addLayout(row)
 
@@ -441,6 +453,10 @@ class _DropDetailsDialog(QDialog):
 
     def extract_audio(self) -> bool:
         return self._extract_audio_cb is not None and self._extract_audio_cb.isChecked()
+
+
+class _DropCancelled(Exception):
+    """The user closed the session-folder question; the drop is abandoned quietly."""
 
 
 class _DropList(QListWidget):
@@ -486,7 +502,7 @@ class CoverPage(QDialog):
         self.shell = shell
         self.io_widget = io_widget
         self.app_state = io_widget.app_state
-        self._drop_tmp_dir: Path | None = None
+        self._drop_session_dir: Path | None = None
         #: Set when a recorded drop was picked from the reopen list: the IO
         #: fields already hold its state, so Load must not rebuild it.
         self._reopened_drop: Path | None = None
@@ -594,8 +610,9 @@ class CoverPage(QDialog):
     def _build_project_bar(self) -> QFrame:
         """Where this study's drops are kept — chosen once, remembered globally.
 
-        Data never moves into the folder; only what a drop synthesises
-        (alignment NWB, derived ``.nc``, layout) lands under ``sessions/``,
+        Data never moves: a drop makes a session out of the folder the files
+        came from (``.ethograph/`` with the alignment, any derived ``.nc`` and
+        the layout) and the project only keeps a registry of those folders,
         which is what makes the drop reopenable from the list on card 2.
         """
         bar = QFrame()
@@ -610,9 +627,9 @@ class CoverPage(QDialog):
 
         label = QLabel("<b>Project folder</b>")
         label.setToolTip(
-            "A folder for this study. Drag &amp; drops made while it is set are kept in\n"
-            "its sessions/ folder (one timestamped folder per drop) and can be reopened\n"
-            "from the drop card. Remembered across restarts. Your data stays where it is."
+            "A folder for this study. Sessions made by drag &amp; drop while it is set are\n"
+            "listed here and can be reopened from the drop card. Remembered across restarts.\n"
+            "Your data stays where it is: the dropped folder itself becomes the session."
         )
         row.addWidget(label)
 
@@ -852,7 +869,7 @@ class CoverPage(QDialog):
         reopen_layout = QHBoxLayout(self._reopen_row)
         reopen_layout.setContentsMargins(0, 0, 0, 0)
         self._reopen_combo = QComboBox()
-        self._reopen_combo.setToolTip("Drops made with this project folder set, kept under its sessions/ folder.")
+        self._reopen_combo.setToolTip("Sessions made by drag & drop while this project folder was set.")
         self._reopen_combo.activated.connect(self._on_reopen_drop)
         reopen_layout.addWidget(self._reopen_combo, 1)
         layout.addWidget(self._reopen_row)
@@ -989,55 +1006,70 @@ class CoverPage(QDialog):
         self._close_if_loaded()
 
     def _maybe_offer_alignment_from_trials(self):
-        """Pynapple folder with a trials IntervalSet but no alignment NWB:
-        offer to convert it into ``.ethograph/alignment.nwb`` once.
+        """A folder with a dataset but no alignment record is promoted to a session, once.
 
-        The alignment NWB is the only trial-timing source the loader reads —
-        a ``trials.npz`` is never consulted directly. This conversion (start/
-        end plus any metadata columns → trials table) is the one sanctioned
-        bridge, and it only happens with the user's explicit yes.
+        The alignment NWB is the only trial-timing source the loader reads. A
+        pynapple trials IntervalSet or a ``.nc``'s trial structure can seed it,
+        but only with the user's explicit yes: this is a write into their folder.
         """
         from qtpy.QtWidgets import QMessageBox
 
-        from ethograph.io.nwb_alignment import alignment_from_trials_ep
+        from ethograph.io.nwb_alignment import alignment_from_trials_ep, alignment_from_trialtree
         from ethograph.io.pynapple import find_trials_intervalset
+        from ethograph.io.session_layout import alignment_path, session_dir_of
 
-        folder_str = getattr(self.app_state, "nc_file_path", None)
-        if not folder_str:
+        source_str = getattr(self.app_state, "nc_file_path", None)
+        if not source_str or not Path(source_str).exists():
             return
-        folder = Path(folder_str)
-        if not folder.is_dir():
-            return
-        sidecar = folder / ".ethograph" / "alignment.nwb"
+        source = Path(source_str)
+        folder = session_dir_of(source)
+        sidecar = alignment_path(folder)
         explicit = getattr(self.app_state, "nwb_file_path", None)
-        if sidecar.exists() or (explicit and Path(explicit).exists()):
+        if sidecar.exists() or (explicit and Path(explicit).exists()) or source.suffix.lower() == ".nwb":
             return
-        try:
-            ep = find_trials_intervalset(folder)
-        except Exception:  # noqa: BLE001 - a broken npz must not block loading
-            logger.exception("Scanning for a trials IntervalSet failed")
-            return
-        if ep is None or len(ep) == 0:
-            return
+
+        write = None
+        what = ""
+        if source.is_dir():
+            try:
+                ep = find_trials_intervalset(folder)
+            except Exception:  # noqa: BLE001 - a broken npz must not block loading
+                logger.exception("Scanning for a trials IntervalSet failed")
+                ep = None
+            if ep is not None and len(ep) > 0:
+                what = f"a trials IntervalSet ({len(ep)} trials)"
+                write = lambda: alignment_from_trials_ep(ep, sidecar)  # noqa: E731
+        if write is None:
+            ncs = [source] if source.suffix.lower() == ".nc" else sorted(folder.glob("*.nc"))
+            if not ncs:
+                return
+            try:
+                from ethograph.io.data_loader import _open_trialtree
+
+                dt = _open_trialtree(str(ncs[0]))
+            except Exception:  # noqa: BLE001 - the load itself will report a broken file
+                logger.exception("Reading %s to offer an alignment failed", ncs[0])
+                return
+            what = f"{ncs[0].name} ({len(dt.trials)} trials)"
+            write = lambda: alignment_from_trialtree(dt, sidecar)  # noqa: E731
 
         answer = QMessageBox.question(
             self,
-            "Create alignment from trials?",
-            f"This folder has no alignment NWB, but contains a trials IntervalSet "
-            f"({len(ep)} trials).\n\n"
-            "Create .ethograph/alignment.nwb from it? Trial timing (and any "
-            "per-trial metadata it carries) will come from that file from now on.\n\n"
-            "Without it, the session loads as a single continuous recording.",
+            "Make this folder a session?",
+            f"{folder} has no .ethograph/alignment.nwb, but holds {what}.\n\n"
+            "Create the alignment from it? Trial timing (and any per-trial metadata it "
+            "carries) will come from that file from now on, and the folder becomes the session.\n\n"
+            "Without it, the data loads as a single continuous recording.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
         )
         if answer != QMessageBox.Yes:
             return
         try:
-            alignment_from_trials_ep(ep, sidecar)
-            logger.info("Created %s from trials IntervalSet (%d trials)", sidecar, len(ep))
+            write()
+            logger.info("Created %s from %s", sidecar, what)
         except Exception as e:  # noqa: BLE001 - outermost GUI boundary
-            logger.exception("Failed to create alignment from trials IntervalSet")
+            logger.exception("Failed to create the alignment")
             notify_dialog(f"Could not create alignment.nwb:\n{e}", "error")
 
     def _prepare_dropped(self) -> bool:
@@ -1047,7 +1079,7 @@ class CoverPage(QDialog):
         cancelled a follow-up prompt or preparation failed.
         """
         self._reopened_drop = None
-        self._drop_tmp_dir = None
+        self._drop_session_dir = None
         dropped = list(self._drop.paths)
         buckets = classify_files(dropped)
         try:
@@ -1056,9 +1088,14 @@ class CoverPage(QDialog):
             if details is None:
                 return False  # user cancelled the follow-up prompt
             self._populate_io_from_buckets(buckets, details)
-            if self._drop_tmp_dir is not None and self._project_dir() is not None:
-                record_drop(self._drop_tmp_dir, dropped, self.app_state)
-                self._refresh_project_ui()
+            if self._drop_session_dir is not None:
+                record_drop(self._drop_session_dir, dropped, self.app_state)
+                project = self._project_dir()
+                if project is not None:
+                    register_session(project, self._drop_session_dir)
+                    self._refresh_project_ui()
+        except _DropCancelled:
+            return False
         except Exception as e:  # noqa: BLE001 - outermost GUI boundary
             logger.exception("Failed to prepare dropped files")
             notify_dialog(f"Could not prepare dropped files:\n{e}", "error")
@@ -1113,6 +1150,7 @@ class CoverPage(QDialog):
             audio_track_videos=audio_track_videos,
             extract_audio_default=not buckets["audio"],
             npy_sr_default=npy_sr_default,
+            pose_software_default=project_settings_of(self.app_state).pose_software,
             parent=self,
         )
         if not dlg.exec_():
@@ -1187,9 +1225,7 @@ class CoverPage(QDialog):
         feature_entries = self._feature_entries(cam_map, nc_sessions)
         needs_session_file = not other_sessions and self._session_nc_is_written(feature_entries)
         if has_media or needs_session_file:
-            # Fresh per-drop temp dir so throwaway files never share a
-            # .ethograph/local_settings.yaml with a previous drop.
-            self._drop_tmp_dir = self._prepare_drop_dir()
+            self._drop_session_dir = self._choose_session_dir(buckets)
         if details.get("extract_audio") and details.get("audio_track_videos"):
             # The user opted to pull the videos' embedded audio: each track
             # becomes a throwaway .wav that joins the dropped audio files.
@@ -1217,7 +1253,8 @@ class CoverPage(QDialog):
             # alignment above. Feature/camera dropdown + heatmap come for free.
             app_state.nc_file_path = str(self._compute_video_motion_nc(cam_map))
         else:
-            app_state.nc_file_path = str(nwb_path)
+            # Media only: the folder is the session; its alignment carries the trial.
+            app_state.nc_file_path = str(self._drop_session_dir)
 
         # Drag & drop never takes a metadata table — setting nc_file_path above
         # reloads local settings, which can restore a stale metadata_path (e.g.
@@ -1336,17 +1373,22 @@ class CoverPage(QDialog):
                 columns["stop_time"] = list(stops)
 
         state.trial_table = pd.DataFrame(columns)
-        self._drop_tmp_dir = self._prepare_drop_dir()
-        state.session_dir = str(self._drop_tmp_dir)
-        state.output_path = str(self._drop_tmp_dir / "session.nc")
+        self._drop_session_dir = self._choose_session_dir(buckets)
+        state.session_dir = str(self._drop_session_dir)
+        state.output_path = str(self._drop_session_dir / "session.nc")
 
         dt = build_multi_trial_dt(state)
         for trial_id, npy_ds in zip(columns["trial"], npy_datasets, strict=False):
             dt.update_trial(trial_id, lambda ds, npy_ds=npy_ds: ds.merge(npy_ds))
-        dt.to_netcdf(state.output_path)
 
         app_state = self.app_state
-        app_state.nc_file_path = state.output_path
+        if any(len(ds.data_vars) for _, ds in dt.trial_items()):
+            dt.to_netcdf(state.output_path)
+            app_state.nc_file_path = state.output_path
+        else:
+            # Media only: the trials live in .ethograph/alignment.nwb and the
+            # folder is the session — no feature file to write yet.
+            app_state.nc_file_path = str(self._drop_session_dir)
         app_state.metadata_path = None
         app_state.labels_import_path = None
         app_state.video_folder = None
@@ -1445,7 +1487,7 @@ class CoverPage(QDialog):
         from ethograph.gui.dialog_busy_progress import BusyProgressDialog
 
         dlg = BusyProgressDialog("Computing video motion…", parent=self)
-        nc_path, error = dlg.execute(self._build_video_motion_nc, cam_map, self._drop_tmp_dir)
+        nc_path, error = dlg.execute(self._build_video_motion_nc, cam_map, self._drop_session_dir)
         if error or nc_path is None:
             raise RuntimeError(f"Could not compute video motion: {error}")
         return nc_path
@@ -1491,7 +1533,7 @@ class CoverPage(QDialog):
         )
         ds.attrs["fps"] = fps_used
 
-        out_path = out_dir / f"video_motion-{uuid4().hex[:8]}.nc"
+        out_path = out_dir / "session.nc"
         ds.to_netcdf(out_path)
         return out_path
 
@@ -1557,7 +1599,7 @@ class CoverPage(QDialog):
             entries,
             details.get("source_software"),
             details.get("pose_fps"),
-            self._drop_tmp_dir,
+            self._drop_session_dir,
         )
         if error or nc_path is None:
             raise RuntimeError(f"Could not read pose data: {error}")
@@ -1584,7 +1626,7 @@ class CoverPage(QDialog):
         ds = concat_on_camera(datasets, [e.camera for e in entries])
         if not ds.attrs.get("fps"):
             raise RuntimeError("A pose file dropped without a video needs its frame rate.")
-        out_path = out_dir / f"session-{uuid4().hex[:8]}.nc"
+        out_path = out_dir / "session.nc"
         ds.to_netcdf(out_path)
         return out_path
 
@@ -1676,39 +1718,36 @@ class CoverPage(QDialog):
 
         pairing = pd.DataFrame([{"trial": 1, "start_time": 0.0, "stop_time": stop_time, **row}])
 
-        out_path = self._drop_tmp_dir / f"alignment-{uuid4().hex[:8]}.tmp.nwb"
+        out_path = self._drop_session_dir / SETTINGS_DIR / "alignment.nwb"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        if out_path.exists():
+            out_path.unlink()  # a previous drop's; _choose_session_dir refused anyone else's
         pair_media(pairing, stream_rates=stream_rates, output_path=out_path)
         return out_path
 
-    def _prepare_drop_dir(self) -> Path:
-        """Return a fresh, empty per-drop dir for the synthesised alignment/.nc.
+    def _choose_session_dir(self, buckets: dict[str, list[str]]) -> Path:
+        """The folder that becomes this drop's session: it receives ``.ethograph/``.
 
-        Each drop gets its OWN subdirectory so its ``.ethograph/local_settings.yaml``
-        starts empty — a shared directory would leak a previous drop's panel layout
-        (e.g. one saved with no video panel) into the next drop, so dropped media
-        would silently fail to appear.
-
-        With a project folder set the dir is ``{project}/sessions/{timestamp}``
-        and is kept (that is what a reopen reads). Otherwise it is a throwaway
-        under the system temp dir: older drop dirs are removed best-effort; a
-        dir whose files are still open (Windows locks HDF5) is simply left.
+        Files from one folder: that folder, no question asked. From several: the
+        user picks one (:func:`choose_session_folder`), preselected by kind and
+        by what they chose last time. Data never moves. A folder that is already
+        somebody's session — ``.ethograph/`` without a drop record — is refused
+        rather than have its alignment replaced; re-dropping into a folder a
+        drop made is fine, the files there are regenerable.
         """
-        project = self._project_dir()
-        if project is not None:
-            return new_drop_dir(project)
-        base = tmp_alignment_base()
-        base.mkdir(parents=True, exist_ok=True)
-        for stale in base.iterdir():
-            try:
-                if stale.is_dir():
-                    shutil.rmtree(stale, ignore_errors=True)
-                else:
-                    stale.unlink()
-            except OSError:
-                pass
-        drop_dir = base / uuid4().hex[:8]
-        drop_dir.mkdir(parents=True, exist_ok=True)
-        return drop_dir
+        folders = source_folders(buckets)
+        if not folders:
+            raise RuntimeError("Nothing dropped names a folder to put the session in.")
+        chosen = choose_session_folder(folders, self.app_state, self)
+        if chosen is None:
+            raise _DropCancelled
+        if is_foreign_session(chosen):
+            raise RuntimeError(
+                f"{chosen} is already a session (it has .ethograph/ but no drop record).\n"
+                "Open it from the Custom set-up card, or drop the files with another folder chosen."
+            )
+        (chosen / SETTINGS_DIR).mkdir(parents=True, exist_ok=True)
+        return chosen
 
     # ------------------------------------------------------------------
     # Loaded-state helpers

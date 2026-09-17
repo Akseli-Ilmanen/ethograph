@@ -45,9 +45,9 @@ def _write_video(path: Path, n_frames: int, size=(64, 48), fps=25) -> None:
             container.mux(packet)
 
 
-def _record(tmp_path, n_frames=60, crop=None) -> TrialRecord:
+def _record(tmp_path, n_frames=60, crop=None, first_frame=0, video_frames=None) -> TrialRecord:
     video = tmp_path / "v.mp4"
-    _write_video(video, n_frames)
+    _write_video(video, video_frames or n_frames)
     return TrialRecord(
         video_id="v",
         source=tmp_path / "s.nc",
@@ -59,6 +59,7 @@ def _record(tmp_path, n_frames=60, crop=None) -> TrialRecord:
         height=32,
         events={},
         crop=crop,
+        first_frame=first_frame,
     )
 
 
@@ -107,6 +108,15 @@ class TestDecode:
         assert len(ours) == 12
         assert all(np.array_equal(a, b) for a, b in zip(ours, theirs))
         assert len(list(iter_rgb_frames(record.video_path, step=5))) == 3
+
+    @pytest.mark.parametrize("start", [1, 13, 37, 59])
+    def test_a_start_past_0_is_the_full_decode_from_there(self, tmp_path, start):
+        """Seeking lands on a keyframe before *start*; the frames up to it are dropped by timestamp, exactly."""
+        record = _record(tmp_path, n_frames=60)
+        full = list(iter_rgb_frames(record.video_path))
+        cut = list(iter_rgb_frames(record.video_path, start=start))
+        assert len(cut) == 60 - start
+        assert all(np.array_equal(a, b) for a, b in zip(cut, full[start:]))
 
 
 class TestGraphedForward:
@@ -200,7 +210,9 @@ class TestRollingBuffer:
         from ethograph.spot.dataset import _iter_frames
         from ethograph.spot.stream import normalise
 
-        record = _record(tmp_path, n_frames=num_frames, crop=(4, 2, 60, 46))
+        record = _record(
+            tmp_path, n_frames=num_frames, crop=(4, 2, 60, 46), first_frame=11, video_frames=num_frames + 20
+        )
         stored = {"clip_len": clip_len, "stride": stride, "crop_dim": 24, "modality": "rgb"}
         block = np.arange(num_frames // stride * 2, dtype=np.float32).reshape(-1, 2)
         model = _Recorder()
@@ -208,7 +220,7 @@ class TestRollingBuffer:
         assert total == num_frames
 
         # the reference: decode everything, build each window by hand
-        prepared = [prepare_frame(f, record) for f in _iter_frames(record.video_path)]
+        prepared = [prepare_frame(f, record) for f in _iter_frames(record)]
         seen = [(s, f) for batch, fb in model.seen for s, f in zip(batch, fb)]
         starts = window_starts(num_frames, clip_len, stride, clip_len // 2)
         assert len(seen) == len(starts)

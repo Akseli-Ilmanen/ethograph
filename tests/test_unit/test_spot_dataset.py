@@ -9,6 +9,7 @@ and the crop's effect on `plan_session`'s pre-resize geometry -- not the
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -16,7 +17,7 @@ import pytest
 
 from ethograph.spot import dataset as spot_dataset
 from ethograph.spot.config import CropConfig, config_from_dict
-from ethograph.spot.dataset import TrialRecord, export_is_current, plan_session
+from ethograph.spot.dataset import TrialRecord, export_is_current, plan_session, trial_frame_range
 
 
 def _record(tmp_path: Path, num_frames=3, width=640, height=480, crop=None) -> TrialRecord:
@@ -84,6 +85,14 @@ class TestExportIsCurrent:
         _write_frames(out_dir, 3)
         assert export_is_current(out_dir, _record(tmp_path, num_frames=3, crop=None)) is True
 
+    def test_export_from_before_trial_windows_is_current_only_for_a_window_at_frame_0(self, tmp_path):
+        out_dir = tmp_path / "v"
+        _write_frames(out_dir, 3)
+        old_spec = {"width": 640, "height": 480, "crop": None}
+        (out_dir / spot_dataset.EXPORT_FILE).write_text(json.dumps(old_spec), encoding="utf-8")
+        assert export_is_current(out_dir, _record(tmp_path)) is True
+        assert export_is_current(out_dir, replace(_record(tmp_path), first_frame=500)) is False
+
     def test_legacy_export_cannot_be_trusted_for_a_wanted_crop(self, tmp_path):
         """No `export.json` and the config now wants a crop -- re-decode."""
         out_dir = tmp_path / "v"
@@ -108,14 +117,25 @@ class TestExportIsCurrent:
 
 
 class _FakeAlignment:
+    """Trial 1 of a video: the video's frame 0 sits at trial time *offset*; *start*/*stop* on the session clock."""
+
+    def __init__(self, offset: float = 0.0, start: float = 0.0, stop: float | None = None):
+        self.offset, self.start, self.stop = offset, start, stop
+
     def stream_offset_for_trial(self, trial, stream, device=None):
-        return 0.0
+        return self.offset
+
+    def start_time(self, trial):
+        return self.start
+
+    def stop_time(self, trial):
+        return self.stop
 
 
 class _FakeResult:
-    def __init__(self, labels_df: pd.DataFrame):
+    def __init__(self, labels_df: pd.DataFrame, alignment: _FakeAlignment | None = None):
         self.all_labels_df = labels_df
-        self.nwb_alignment = _FakeAlignment()
+        self.nwb_alignment = alignment or _FakeAlignment()
 
 
 class _FakeSpec:
@@ -125,11 +145,11 @@ class _FakeSpec:
 class _FakeSession:
     """The handful of `Session` attributes/methods `plan_session` reads."""
 
-    def __init__(self, tmp_path: Path, labels_df: pd.DataFrame, trial_ids=(1,)):
+    def __init__(self, tmp_path: Path, labels_df: pd.DataFrame, trial_ids=(1,), alignment=None):
         self.spec = _FakeSpec()
         self.source = tmp_path / "ses.nc"
         self.trial_ids = list(trial_ids)
-        self.result = _FakeResult(labels_df)
+        self.result = _FakeResult(labels_df, alignment)
         self._video_path = tmp_path / "cam-1.mp4"
 
     def media_path(self, trial, stream: str = "video", device: str | None = None):
@@ -249,3 +269,45 @@ class TestSeveralEventsPerTrial:
     def test_inference_planning_never_refuses(self, tmp_path, monkeypatch):
         monkeypatch.setattr(spot_dataset, "probe_video", lambda video: (200.0, 1000, 640, 480))
         assert len(plan_session(self._twice(tmp_path), self._config(tmp_path, cap=1), require_events=False)) == 1
+
+
+class TestTrialFrameRange:
+    """A trial is its window of the video, not the file."""
+
+    def test_a_per_trial_file_is_exported_whole(self):
+        assert trial_frame_range(0.0, 5.0, 1000, 200.0) == (0, 1000)
+        assert trial_frame_range(0.0, None, 1000, 200.0) == (0, 1000)
+
+    def test_a_stop_one_frame_short_of_the_end_is_the_end(self):
+        assert trial_frame_range(0.0, 4.996, 1000, 200.0) == (0, 1000)
+
+    def test_a_trial_inside_a_long_video_is_cut_out(self):
+        # the video started 60 s before the trial; the trial lasts 10 s
+        assert trial_frame_range(-60.0, 10.0, 720_000, 200.0) == (12_000, 14_000)
+
+    def test_a_video_starting_after_the_trial_starts_at_its_frame_0(self):
+        assert trial_frame_range(1.0, 10.0, 720_000, 200.0) == (0, 1800)
+
+
+class TestPlanSessionWindow:
+    """Events count from the window's first frame, and the window's start is folded into the offset."""
+
+    def _config(self, tmp_path):
+        source = tmp_path / "ses.nc"
+        source.touch()
+        return config_from_dict({"sessions": [str(source)], "labels": {"classes": [31]}}, tmp_path)
+
+    def test_a_trial_carved_from_a_long_video(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(spot_dataset, "probe_video", lambda video: (200.0, 720_000, 640, 480))
+        alignment = _FakeAlignment(offset=-60.0, start=60.0, stop=70.0)
+        session = _FakeSession(tmp_path, _labels_df(onset_s=2.5), alignment=alignment)
+        record = plan_session(session, self._config(tmp_path))[0]
+        assert (record.first_frame, record.num_frames) == (12_000, 2000)
+        assert record.events == {"label_31": [500]}
+        assert record.offset_s == pytest.approx(0.0)
+
+    def test_an_event_outside_the_window_skips_the_trial(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(spot_dataset, "probe_video", lambda video: (200.0, 720_000, 640, 480))
+        alignment = _FakeAlignment(offset=-60.0, start=60.0, stop=70.0)
+        session = _FakeSession(tmp_path, _labels_df(onset_s=12.0), alignment=alignment)
+        assert plan_session(session, self._config(tmp_path)) == []

@@ -37,7 +37,7 @@ Arming is also the one moment a metadata file appears. The `curated` column is
 EthoGraph's own bookkeeping, so it is never written into a recording or into
 `.ethograph/alignment.nwb`: that write happens in place, and for a non-NWB
 dataset the alignment NWB is the only holder of your trial timing. Instead the
-metadata table you have loaded is copied to a sidecar `{stem}_metadata.tsv`
+metadata table you have loaded is copied to a sidecar `metadata.tsv`
 next to the data, and that file is the metadata table from then on — it is
 what the next load reads, and where later edits to trial metadata go. An
 existing metadata file is used as it stands, never overwritten.
@@ -107,7 +107,7 @@ by hand have no curve and none is drawn.
 Seeds don't have to be hand-placed. Because the queue is built from the labels
 TSV, you can generate first-guess labels **programmatically from a time-series
 criterion** — say, the first frame where beak opening exceeds a threshold
-width — write them into the `{name}_labels.tsv` file with
+width — write them into the session's `labels.tsv` with
 `labeling_method = automated` (see {ref}`the column reference
 <target-exporting-labels>`), load it into the GUI, and walk the guesses here.
 A rough automatic pass plus a fast frame-accurate review is often far quicker

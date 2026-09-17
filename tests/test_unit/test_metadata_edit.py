@@ -86,7 +86,7 @@ def test_alignment_sidecar_beats_a_new_tsv(tmp_path, trials_nwb):
 def test_falls_back_to_sidecar_tsv(tmp_path):
     target = resolve_metadata_target(tmp_path / "session.nc")
     assert target.kind == TARGET_TABULAR
-    assert target.path == tmp_path / "session_metadata.tsv"
+    assert target.path == tmp_path / "metadata.tsv"  # one per session folder
 
 
 def test_pynapple_folder_falls_back_to_sidecar_inside_it(tmp_path):
@@ -254,7 +254,7 @@ def test_ensure_tabular_target_copies_an_nwb_table_to_the_sidecar(tmp_path, tria
     target = ensure_tabular_target(nc, df, alignment_path=trials_nwb)
 
     assert target is not None and target.kind == TARGET_TABULAR
-    assert target.path == tmp_path / "session_metadata.tsv"
+    assert target.path == tmp_path / "metadata.tsv"  # one per session folder
     assert list(pd.read_csv(target.path, sep="\t")["condition"]) == ["a", "b", "c"]
     # The NWB is left exactly as it was.
     assert list(_read_trials(trials_nwb)["condition"]) == ["ctrl", "ctrl", "ctrl"]
@@ -263,7 +263,7 @@ def test_ensure_tabular_target_copies_an_nwb_table_to_the_sidecar(tmp_path, tria
 def test_ensure_tabular_target_never_overwrites_an_existing_sidecar(tmp_path, trials_nwb):
     nc = tmp_path / "session.nc"
     nc.write_bytes(b"")
-    sidecar = tmp_path / "session_metadata.tsv"
+    sidecar = tmp_path / "metadata.tsv"
     save_metadata_table(sidecar, pd.DataFrame({"trial": [1], "condition": ["kept"]}))
 
     target = ensure_tabular_target(nc, pd.DataFrame({"trial": [1], "condition": ["new"]}), alignment_path=trials_nwb)
@@ -291,7 +291,7 @@ def test_ensure_tabular_target_writes_a_sidecar_that_does_not_exist_yet(tmp_path
 
     target = ensure_tabular_target(nc, pd.DataFrame({"trial": [1, 2]}))
 
-    assert target.path == tmp_path / "session_metadata.tsv"
+    assert target.path == tmp_path / "metadata.tsv"  # one per session folder
     assert list(pd.read_csv(target.path, sep="\t")["trial"]) == [1, 2]
 
 

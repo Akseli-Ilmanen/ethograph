@@ -25,11 +25,12 @@ Timing = Literal["none", "offset", "pulses", "onsets"]
 @dataclass
 class RigSource:
     stream: str  # video | pose | audio
-    folder: str  # relative to session_dir
+    folder: str  # absolute path; session_wide: the file itself
     pattern: str | None = None  # regex over stem, named groups trial/camera/mic; None = natsorted
     n_devices: int = 1
     rate: float | None = None  # audio rate; video/pose read from header
     software: str | None = None  # pose
+    extension: str | None = None  # one suffix of the stream, when the folder holds several
     session_wide: bool = False  # one file for the whole session; `folder` is then that file
     offset_s: float | None = None  # session_wide: when the file starts, relative to trial 1
 
@@ -37,17 +38,18 @@ class RigSource:
 @dataclass
 class RigSpec:
     rig_name: str
-    session_dir: str
+    session_dir: str  # the folder that receives .ethograph/ (and session.nc); never a media root
     mode: Mode
     sources: list[RigSource] = field(default_factory=list)
     timing: Timing = "none"
     split_files: bool = False  # free_running: recorder rotated files (storage detail)
     offset_s: float | None = None  # timing == offset
-    recording_file: str | None = None  # relative to session_dir, e.g. "ephys/session.rhd"; modes 2/3
+    recording_file: str | None = None  # absolute path of the recorder file; modes 2/3
     recording_interface: str = "IntanRecordingInterface"  # neuroconv class name; digital twin derived
     frame_line: str | None = None  # digital line with a pulse per frame (timing == pulses)
     trigger_line: str | None = None  # digital line with a pulse per trial (triggered)
-    trial_table_file: str | None = None  # optional metadata TSV/CSV with a `trial` column
+    trial_table_file: str | None = None  # optional metadata TSV/CSV with a `trial` column, absolute path
+    individuals: list[str] = field(default_factory=list)  # who is labelled; recorded in the session record
     burst_gap: float = 10.0  # x median frame interval, triggered + pulses
 
 
@@ -59,6 +61,18 @@ _DEVICE_PREFIX = {"video": "cam", "pose": "cam", "audio": "mic"}
 # ---------------------------------------------------------------------------
 
 
+def path_literal(path: str) -> str:
+    r"""*path* as a Python string literal that survives a Windows path.
+
+    ``"C:\Users\..."`` is a syntax error (``\U`` starts a unicode escape), so paths
+    are emitted raw: ``r"C:\Users\..."``. A raw literal cannot end in a backslash or
+    hold a double quote; those rare cases fall back to :func:`repr`.
+    """
+    if '"' in path or path.endswith("\\"):
+        return repr(path)
+    return f'r"{path}"'
+
+
 def _raw_pattern(pattern: str) -> str:
     """Render a regex as a raw string literal, so `re.compile` sees it unescaped."""
     if '"' in pattern:
@@ -67,7 +81,7 @@ def _raw_pattern(pattern: str) -> str:
 
 
 def _format_source_literal(src: RigSource) -> str:
-    parts = [f'"stream": {src.stream!r}', f'"folder": {src.folder!r}']
+    parts = [f'"stream": {src.stream!r}', f'"folder": {path_literal(src.folder)}']
     if src.pattern:
         parts.append(f'"pattern": {_raw_pattern(src.pattern)}')
     if src.n_devices != 1:
@@ -76,6 +90,8 @@ def _format_source_literal(src: RigSource) -> str:
         parts.append(f'"rate": {src.rate!r}')
     if src.software is not None:
         parts.append(f'"software": {src.software!r}')
+    if src.extension is not None:
+        parts.append(f'"extension": {src.extension!r}')
     if src.session_wide:
         parts.append('"session_wide": True')
         parts.append(f'"offset_s": {src.offset_s!r}')
@@ -92,7 +108,7 @@ def _format_rig_literal(spec: RigSpec) -> str:
         lines.append(f"        {_format_source_literal(src)},")
     lines.append("    ],")
     if spec.mode != "pair":
-        lines.append(f'    "recording_file": {spec.recording_file!r},')
+        lines.append(f'    "recording_file": {path_literal(spec.recording_file or "")},')
         lines.append(f'    "recording_interface": {spec.recording_interface!r},')
     if spec.frame_line is not None:
         lines.append(f'    "frame_line": {spec.frame_line!r},')
@@ -103,7 +119,9 @@ def _format_rig_literal(spec: RigSpec) -> str:
     if spec.timing == "offset":
         lines.append(f'    "offset_s": {spec.offset_s!r},')
     if spec.trial_table_file is not None:
-        lines.append(f'    "trial_table_file": {spec.trial_table_file!r},')
+        lines.append(f'    "trial_table_file": {path_literal(spec.trial_table_file)},')
+    if spec.individuals:
+        lines.append(f'    "individuals": {list(spec.individuals)!r},')
     lines.append("}")
     return "\n".join(lines)
 
@@ -128,7 +146,7 @@ def _video_source(spec: RigSpec) -> RigSource:
 
 
 def _session_wide_entries(spec: RigSpec) -> list[tuple[str, str, str, str]]:
-    """Sources recorded once for the whole session: (column, file, rate, offset) as notebook text."""
+    """Sources recorded once for the whole session: (column, file literal, rate, offset) as notebook text."""
     entries: list[tuple[str, str, str, str]] = []
     for src in spec.sources:
         if not src.session_wide:
@@ -136,7 +154,7 @@ def _session_wide_entries(spec: RigSpec) -> list[tuple[str, str, str, str]]:
         col = f"{src.stream}_{_DEVICE_PREFIX[src.stream]}-1"
         rate_text = repr(src.rate) if src.rate is not None else "None  # TODO: set the sample rate"
         offset_text = repr(src.offset_s) if src.offset_s is not None else 'rig["offset_s"]'
-        entries.append((col, src.folder, rate_text, offset_text))
+        entries.append((col, path_literal(src.folder), rate_text, offset_text))
     return entries
 
 
@@ -152,13 +170,15 @@ def _digital_interface_name(recording_interface: str) -> str:
 
 
 def _create_jinja_env() -> jinja2.Environment:
-    return jinja2.Environment(
+    env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(_TEMPLATE_DIR)),
         keep_trailing_newline=True,
         lstrip_blocks=True,
         trim_blocks=True,
         undefined=jinja2.StrictUndefined,
     )
+    env.filters["path_literal"] = path_literal
+    return env
 
 
 _env: jinja2.Environment | None = None
@@ -214,7 +234,6 @@ def _timing_cells(spec: RigSpec) -> tuple[list[nbformat.NotebookNode], bool]:
         video = _video_source(spec)
         entries = _session_wide_entries(spec)
         ctx = {
-            "video_folder": video.folder,
             "camera_columns": repr(_camera_columns(video)),
             "session_wide_entries": entries,
         }
@@ -224,7 +243,6 @@ def _timing_cells(spec: RigSpec) -> tuple[list[nbformat.NotebookNode], bool]:
         video = _video_source(spec)
         ctx = {
             "digital_interface": _digital_interface_name(spec.recording_interface),
-            "video_folder": video.folder,
             "camera_columns": repr(_camera_columns(video)),
         }
         if spec.mode == "free_running":
@@ -239,7 +257,6 @@ def _timing_cells(spec: RigSpec) -> tuple[list[nbformat.NotebookNode], bool]:
     camera_columns = _camera_columns(video)
     ctx = {
         "digital_interface": _digital_interface_name(spec.recording_interface),
-        "video_folder": video.folder,
         "camera_columns": repr(camera_columns),
         "primary_camera_column": camera_columns[0],
     }
@@ -253,6 +270,7 @@ def _write_cell(spec: RigSpec, session_wide: bool) -> nbformat.NotebookNode:
             "stream_rates_literal": stream_rates_literal,
             "session_wide": session_wide,
             "session_wide_entries": _session_wide_entries(spec),
+            "individuals": bool(spec.individuals),
         }
         return _code_cell(_render("write_pair.py.j2", ctx))
 
@@ -262,13 +280,15 @@ def _write_cell(spec: RigSpec, session_wide: bool) -> nbformat.NotebookNode:
         "session_wide": session_wide,
         "has_digital": spec.timing in ("pulses", "onsets"),
         "has_trial_metadata": spec.timing == "onsets",
+        "individuals": bool(spec.individuals),
     }
     return _code_cell(_render("write_neuroconv.py.j2", ctx))
 
 
 def _open_cell(spec: RigSpec) -> nbformat.NotebookNode:
-    target = f"{spec.session_dir}/.ethograph" if spec.mode == "pair" else f"{spec.session_dir}/session.nwb"
-    return _md_cell(f"## Open\n\nStart page → select `{target}`")
+    """Where to open the result, and each source's folder for the GUI's media fields."""
+    sources = [(src.stream, str(Path(src.folder).parent) if src.session_wide else src.folder) for src in spec.sources]
+    return _md_cell(_render("open.md.j2", {"session_dir": spec.session_dir, "sources": sources}))
 
 
 # ---------------------------------------------------------------------------

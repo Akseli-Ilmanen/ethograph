@@ -74,3 +74,13 @@ def test_none_mode_drops_the_order(heatmap):
     heatmap.set_sort_order(np.array([1, 0]))
     heatmap.set_sort_order(None)
     assert heatmap._sort_order is None
+
+
+def test_row_window_takes_neighbours_in_sorted_order(heatmap, app_state):
+    _fill_buffer(heatmap, peaks_at=[8.0, 1.0, 5.0, 3.0])
+    heatmap.set_sort_order(np.array([1, 3, 2, 0]))
+    app_state.heatmap_row_percent = 50.0
+    app_state.heatmap_row_position = 1.0
+    heatmap.refresh_row_window()
+    assert heatmap._last_visible_labels == ["ch2", "ch0"]
+    assert heatmap.image_item.image.shape[1] == 2

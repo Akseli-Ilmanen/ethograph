@@ -8,10 +8,10 @@ the GUI reads (`.nc`, pynapple, NWB) through the same loaders and writes its
 predictions in the GUI's own labels format.
 
 ```python
-import ethograph as eto                   # after installing PyTorch, then `uv pip install "ethograph[model]"`
+import ethograph as eto  # after installing PyTorch, then `uv pip install "ethograph[model]"`
 
 project = eto.segment.Project("project.yaml")
-project.materialise()   # feature engineering → materialised dataset
+project.materialise()  # feature engineering → materialised dataset
 
 # Stage 1 — find good settings on a 60/20/20 split of the trials
 best = project.search()
@@ -160,8 +160,8 @@ from ethograph.features.geometry import egocentric_position, heading, intra_dist
 
 ds["position_ego"] = egocentric_position(ds["position"], "body", heading_keypoint="head")
 ds["intra"] = intra_distances(ds["position"])
-ds["heading"] = heading(ds["position"], "body", "head")   # unit vector: attrs normalise=0
-ds = add_changepoint_features(ds, sigmas=[2, 3, 5])       # *_cp_binary, *_cp_sigma3, …
+ds["heading"] = heading(ds["position"], "body", "head")  # unit vector: attrs normalise=0
+ds = add_changepoint_features(ds, sigmas=[2, 3, 5])  # *_cp_binary, *_cp_sigma3, …
 ```
 
 Every function in {mod}`ethograph.features.geometry` takes and returns
@@ -201,18 +201,14 @@ honest — see {doc}`feral`.
 ```yaml
 root: .                       # data/ and runs/ live here (default: this file's folder)
 
-sessions:                     # every path explicit — no sidecar/folder guessing
-  - source: ../sub-01/ses-01/behav/Trial_data.nc
-    labels_path: ../sub-01/ses-01/behav/Trial_data_labels.tsv
+sessions:                     # a session is a folder; labels_path only when the file is elsewhere
+  - source: ../sub-01/ses-01/behav                      # the session folder: .ethograph/, labels.tsv, its .nc layers
     video_dir: ../videos
-  - source: ../sub-01/ses-02/behav/Trial_data.nc
-    labels_path: ../sub-01/ses-02/behav/Trial_data_labels.tsv
+  - source: ../sub-01/ses-02/behav
     video_dir: ../videos
-  - source: ../sub-01/ses-03/behav/Trial_data.nc
-    labels_path: ../sub-01/ses-03/behav/Trial_data_labels.tsv
+  - source: ../sub-01/ses-03/behav
     video_dir: ../videos
-  - source: ../sub-02/ses-01/behav/Trial_data.nc
-    labels_path: ../sub-02/ses-01/behav/Trial_data_labels.tsv
+  - source: ../sub-02/ses-01/behav
     video_dir: ../videos
 
 trials:
@@ -297,7 +293,7 @@ with {doc}`pixel event spotting <../spot/index>`): a session is a `source`
 plus whatever the stage you run needs from it.
 
 - **`source`** — the session file. Always.
-- **`labels_path`** — its curated labels TSV. Unset, it is `{stem}_labels.tsv`
+- **`labels_path`** — its curated labels TSV. Unset, it is the session folder's `labels.tsv`
   beside `source` (the GUI's own convention; the log says what was assumed).
   Training and scoring read it. A session you only **predict into** needs
   none — a `labels_path` naming a file that does not exist simply means the
@@ -317,9 +313,9 @@ So a session to train on and one to predict into sit side by side:
 
 ```yaml
 sessions:
-  - source: ../sub-01/ses-000_date-20250503_02/behav/Trial_data3.nc
+  - source: ../sub-01/ses-000_date-20250503_02/behav
     labels_path: ../sub-01/ses-000_date-20250503_02/behav/Trial_data_labels.tsv
-  - source: ../sub-01/ses-000_date-20250506_02/behav/Trial_data3.nc     # no labels: predict into it
+  - source: ../sub-01/ses-000_date-20250506_02/behav     # no labels: predict into it
 ```
 
 `inference()` covers every listed session unless `sessions=` narrows it, so
@@ -434,9 +430,9 @@ validation is for. `test` is never read, so it is still an honest number at
 the end.
 
 ```python
-result = project.search()               # or search(n_trials=50)
+result = project.search()  # or search(n_trials=50)
 print(result.best_params, result.best_score)
-print(result.trials)                    # one row per trial
+print(result.trials)  # one row per trial
 ```
 
 A parameter is keyed by the same dotted path an override uses, so there is one
@@ -484,17 +480,17 @@ it every architecture would pool incomparable trials into one `study.db`.
 ```python
 import ethograph as eto
 
-SHARED = {   # keys that mean the same thing to every architecture
+SHARED = {  # keys that mean the same thing to every architecture
     "train.learning_rate": {"type": "float", "low": 1.0e-5, "high": 1.0e-2, "log": True},
     "train.loss.alpha": {"type": "float", "low": 0.0, "high": 0.5},
 }
 VARIANTS = {
-    "asformer_enc": {                       # ASFormer, encoder only
+    "asformer_enc": {  # ASFormer, encoder only
         "architecture": "asformer",
-        "params": {"num_decoders": 0},      # pinned
+        "params": {"num_decoders": 0},  # pinned
         "space": {"model.params.num_f_maps": {"type": "categorical", "choices": [64, 128, 256]}},
     },
-    "asformer_dec": {                       # ASFormer as published: does refinement pay?
+    "asformer_dec": {  # ASFormer as published: does refinement pay?
         "architecture": "asformer",
         "params": {},
         "space": {"model.params.num_decoders": {"type": "int", "low": 1, "high": 3}},
@@ -506,21 +502,23 @@ VARIANTS = {
     },
 }
 
-eto.segment.Project("project.yaml").materialise()      # once, for every variant
+eto.segment.Project("project.yaml").materialise()  # once, for every variant
 
 results = []
 for variant, spec in VARIANTS.items():
-    overrides = eto.segment.as_overrides({
-        "model.architecture": spec["architecture"],
-        "train.run_name": f"{variant}_kin",            # → searches/search_{variant}_kin/
-        "model.params": spec["params"],
-        "search.params": {**SHARED, **spec["space"]},
-    })
+    overrides = eto.segment.as_overrides(
+        {
+            "model.architecture": spec["architecture"],
+            "train.run_name": f"{variant}_kin",  # → searches/search_{variant}_kin/
+            "model.params": spec["params"],
+            "search.params": {**SHARED, **spec["space"]},
+        }
+    )
     result = eto.segment.Project("project.yaml", *overrides).search()
     results.append((result.best_score, variant, result.config_path))
 
 best_score, best_variant, best_config = max(results)
-eto.segment.Project(best_config).cross_validate()      # stage 2 on the winner only
+eto.segment.Project(best_config).cross_validate()  # stage 2 on the winner only
 ```
 
 Two entries may share an architecture and differ only in what is pinned versus
@@ -541,7 +539,7 @@ With the settings settled, hold out a whole **session** per fold:
 
 ```python
 best = eto.segment.Project(result.config_path)
-folds = best.cross_validate()           # one fold per session
+folds = best.cross_validate()  # one fold per session
 ```
 
 Fold *i* trains on every session but the *i*-th and then predicts that one, so
@@ -556,7 +554,7 @@ session, and the path of the prediction set:
 Folds are independent, so you can run some of them:
 
 ```python
-best.cross_validate(folds=["ses-01", "ses-02"])     # two folds, not all four
+best.cross_validate(folds=["ses-01", "ses-02"])  # two folds, not all four
 ```
 
 which is how you compare two parameter sets at a fraction of the cost. When

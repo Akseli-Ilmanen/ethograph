@@ -3,7 +3,13 @@
 Reorganises actions that previously lived on the right sidebar into a
 conventional application menu bar:
 
-    File | Changepoints | Tools | Docs | Help
+    File | Changepoints | Tools | Model | Window | Docs | Help
+
+**Window** lists every open dialog. Dialogs are owned by the main window, so
+on Windows and macOS they never get a taskbar / Dock entry of their own and
+are easy to lose behind the shell or on a disconnected screen; the menu is
+the one place to find and raise them, and *Gather all windows* pulls each
+one back onto the main window's screen.
 
 **Docs** holds only external links (browser); **Help** holds only in-app
 diagnostic/recovery actions — no nested submenus in either.
@@ -33,6 +39,7 @@ import webbrowser
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
+    QApplication,
     QDialog,
     QScrollArea,
     QToolButton,
@@ -146,6 +153,7 @@ class TopBarBuilder:
         self._build_changepoints_menu(menu_bar)
         self._build_tools_menu(menu_bar)
         self._build_model_menu(menu_bar)
+        self._build_window_menu(menu_bar)
         self._build_docs_menu(menu_bar)
         self._build_help_menu(menu_bar)
         self._add_sidebar_toggle_button(menu_bar)
@@ -497,6 +505,34 @@ class TopBarBuilder:
         )
 
     # ------------------------------------------------------------------
+    # Window menu
+    # ------------------------------------------------------------------
+
+    def _build_window_menu(self, menu_bar):
+        """Rebuilt on every open: one action per open dialog, which raises it."""
+        menu = menu_bar.addMenu("&Window")
+        menu.aboutToShow.connect(lambda: self._populate_window_menu(menu))
+        self._window_menu = menu
+
+    def _populate_window_menu(self, menu):
+        menu.clear()
+        menu.addAction("Gather all windows onto this screen", self._gather_windows)
+        menu.addSeparator()
+        windows = open_dialog_windows(self.shell)
+        if not windows:
+            none = menu.addAction("No open windows")
+            none.setEnabled(False)
+            return
+        for w in windows:
+            menu.addAction(w.windowTitle(), lambda _=False, w=w: raise_window(w))
+
+    def _gather_windows(self):
+        """Move every open dialog onto the main window's screen and raise it."""
+        for w in open_dialog_windows(self.shell):
+            move_onto_screen(w, self.shell)
+            raise_window(w)
+
+    # ------------------------------------------------------------------
     # Docs + Help menus
     # ------------------------------------------------------------------
 
@@ -533,8 +569,13 @@ class TopBarBuilder:
         if self.app_state._local_settings_path() is None:
             notify("No dataset loaded — there are no local settings to reset.", severity="warning")
             return
-        self.app_state.reset_local_settings()
-        notify("Local settings reset for this dataset — reload it for a clean layout.")
+        # The auto-save snapshots the live panels into panel_layout, so a
+        # loaded dataset's panels are rebuilt, not only forgotten.
+        loaded = bool(self.app_state.ready)
+        self.app_state.reset_local_settings(keep_selections=loaded)
+        if loaded:
+            self.meta.rebuild_default_panels()
+        notify("Local settings reset for this dataset.")
 
     # ------------------------------------------------------------------
     # Small utilities
@@ -560,6 +601,43 @@ class TopBarBuilder:
             if callable(fn):
                 return fn
         return None
+
+
+def open_dialog_windows(shell) -> list[QWidget]:
+    """Visible top-level windows other than the shell, sorted by title.
+
+    Menus, tooltips and other title-less popups are excluded: only windows a
+    user could have dragged somewhere and lost.
+    """
+    found = [
+        w
+        for w in QApplication.topLevelWidgets()
+        if w is not shell and w.isVisible() and w.isWindow() and w.windowTitle() and w.windowType() != Qt.Popup
+    ]
+    return sorted(found, key=lambda w: w.windowTitle().lower())
+
+
+def raise_window(w: QWidget) -> None:
+    if w.isMinimized():
+        w.showNormal()
+    w.raise_()
+    w.activateWindow()
+
+
+def move_onto_screen(w: QWidget, shell: QWidget) -> None:
+    """Place ``w`` fully inside the shell's screen, centred over the shell
+    unless its current position is already on that screen."""
+    screen = shell.screen()
+    if screen is None:
+        return
+    avail = screen.availableGeometry()
+    geo = w.frameGeometry()
+    if avail.contains(geo.center()):
+        return
+    geo.moveCenter(shell.frameGeometry().center())
+    geo.moveLeft(max(avail.left(), min(geo.left(), avail.right() - geo.width() + 1)))
+    geo.moveTop(max(avail.top(), min(geo.top(), avail.bottom() - geo.height() + 1)))
+    w.move(geo.topLeft())
 
 
 def build_menu_bar(shell):

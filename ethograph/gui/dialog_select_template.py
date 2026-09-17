@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 from qtpy.QtCore import QSize, Qt, QThread, Signal  # noqa: E402
 from qtpy.QtGui import QMovie, QPixmap  # noqa: E402
 from qtpy.QtWidgets import (  # noqa: E402
+    QCheckBox,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -22,15 +23,22 @@ from qtpy.QtWidgets import (  # noqa: E402
 from ethograph.datasets import (  # noqa: E402
     DATASETS,
     DOWNLOAD_BASE,
+    are_prediction_runs_downloaded,
+    are_video_features_downloaded,
     dataset_dir,
     get_gui_assets,
+    get_prediction_run_assets,
+    get_video_feature_assets,
     is_dataset_downloaded,
     resolve_dataset_paths,
+    video_features_size_mb,
 )
 from ethograph.gui.notify import notify_dialog  # noqa: E402
 from ethograph.utils.download import (  # noqa: E402
     download_assets,
+    download_prediction_runs,
     download_template_local_settings,
+    download_video_features,
     ensure_alignment_nwb,
     ensure_default_configs,
     write_example_configs,
@@ -79,6 +87,10 @@ def _build_alignment_nwb(key_or_dict) -> None:
         ensure_alignment_nwb(key_or_dict["dataset_key"])
 
 
+def _n_prediction_run_files(key: str) -> int:
+    return sum(len(files) for files in get_prediction_run_assets(key).values())
+
+
 class _DownloadWorker(QThread):
     """Downloads template assets in a background thread."""
 
@@ -86,9 +98,10 @@ class _DownloadWorker(QThread):
     finished = Signal()
     error = Signal(str)
 
-    def __init__(self, key: str):
+    def __init__(self, key: str, video_features: bool = False):
         super().__init__()
         self._key = key
+        self._video_features = video_features
         self._cancelled = False
 
     def cancel(self):
@@ -96,6 +109,7 @@ class _DownloadWorker(QThread):
 
     def run(self):
         info = DATASETS[self._key]
+        n_base = len(get_gui_assets(self._key))
         try:
             download_assets(
                 release_tag=info["release_tag"],
@@ -104,6 +118,21 @@ class _DownloadWorker(QThread):
                 on_progress=self.progress.emit,
                 cancelled=lambda: self._cancelled,
             )
+            # Shipped prediction runs are part of the dataset, not an option:
+            # tiny, and the point of the template is comparing them.
+            if not self._cancelled:
+                download_prediction_runs(
+                    self._key,
+                    on_progress=lambda count, name: self.progress.emit(n_base + count, name),
+                    cancelled=lambda: self._cancelled,
+                )
+            n_runs = _n_prediction_run_files(self._key)
+            if self._video_features and not self._cancelled:
+                download_video_features(
+                    self._key,
+                    on_progress=lambda count, name: self.progress.emit(n_base + n_runs + count, name),
+                    cancelled=lambda: self._cancelled,
+                )
         except Exception as exc:
             self.error.emit(str(exc))
             return
@@ -119,6 +148,7 @@ class TemplateDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.selected_template = None
+        self._video_feature_boxes: dict[str, QCheckBox] = {}
         self.setWindowTitle("Select Templates")
 
         outer = QVBoxLayout()
@@ -187,6 +217,21 @@ class TemplateDialog(QDialog):
             status.setStyleSheet("color: gray;")
         card_layout.addWidget(status)
 
+        if ds.get("video_feature_folders") and not audio_locked:
+            folders = ", ".join(ds["video_feature_folders"])
+            if are_video_features_downloaded(key):
+                box = QCheckBox("Video features downloaded")
+                box.setChecked(True)
+                box.setEnabled(False)
+            else:
+                box = QCheckBox(f"Download video features (~{video_features_size_mb(key)} MB)")
+            box.setToolTip(
+                f"Per-video embeddings ({folders}) saved next to the dataset.\n"
+                "Import a folder via add panel → import to view it as a heatmap."
+            )
+            card_layout.addWidget(box, alignment=Qt.AlignCenter)
+            self._video_feature_boxes[key] = box
+
         if not audio_locked:
             card.mousePressEvent = lambda event, k=key: self._on_card_clicked(k)
         return card
@@ -208,8 +253,12 @@ class TemplateDialog(QDialog):
             pixmap = QPixmap(str(image_path))
             label.setPixmap(pixmap.scaled(220, 160, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
+    def _wants_video_features(self, key: str) -> bool:
+        box = self._video_feature_boxes.get(key)
+        return box is not None and box.isChecked() and not are_video_features_downloaded(key)
+
     def _on_card_clicked(self, key: str):
-        if is_dataset_downloaded(key):
+        if is_dataset_downloaded(key) and are_prediction_runs_downloaded(key) and not self._wants_video_features(key):
             self._finalize(key)
             return
         self._download_and_select(key)
@@ -265,14 +314,17 @@ class TemplateDialog(QDialog):
         self.accept()
 
     def _download_and_select(self, key: str):
-        assets = get_gui_assets(key)
-        progress = QProgressDialog("Downloading example data...", "Cancel", 0, len(assets), self)
+        video_features = self._wants_video_features(key)
+        total = len(get_gui_assets(key)) + _n_prediction_run_files(key)
+        if video_features:
+            total += sum(len(names) for names in get_video_feature_assets(key).values())
+        progress = QProgressDialog("Downloading example data...", "Cancel", 0, total, self)
         progress.setWindowTitle("Downloading")
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
         progress.setValue(0)
 
-        worker = _DownloadWorker(key)
+        worker = _DownloadWorker(key, video_features=video_features)
 
         def on_progress(count, name):
             if not progress.wasCanceled():

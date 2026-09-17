@@ -442,6 +442,7 @@ class VideoConfigTab(_BaseConfigTab):
             if sc:
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
+                config.extension = sc.extension
             config.pattern = self._stream_panel.pattern
             config.n_devices = _pattern_device_count(config.pattern, "camera")
         elif self._file_edit:
@@ -803,6 +804,7 @@ class PoseConfigTab(_BaseConfigTab):
             if sc:
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
+                config.extension = sc.extension
             config.pattern = self._stream_panel.pattern
             config.n_devices = _pattern_device_count(config.pattern, "camera")
         elif self._file_edit:
@@ -996,6 +998,7 @@ class AudioConfigTab(_BaseConfigTab):
             if sc:
                 config.folder_path = sc.folder
                 config.nested_subfolders = sc.nested
+                config.extension = sc.extension
             config.pattern = self._stream_panel.pattern
             config.n_devices = _pattern_device_count(config.pattern, "mic")
         elif self._file_edit:

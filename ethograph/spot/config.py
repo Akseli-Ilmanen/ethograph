@@ -27,6 +27,7 @@ from typing import Any
 import yaml
 
 from ethograph.features.label_inputs import branches_of, check_branches_disjoint
+from ethograph.io.session_layout import adopt_legacy_files
 from ethograph.labels.tsv_store import labels_tsv_path
 from ethograph.segment.config import (
     LabelInputsConfig,
@@ -37,6 +38,7 @@ from ethograph.segment.config import (
     build_dataclass,
     merge_label_input_columns,
     name_colliding_sessions,
+    project_ignore,
     read_yaml_chain,
 )
 from ethograph.utils.paths import defaults_dir
@@ -544,8 +546,11 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
     duplicates = {c for c in cfg.labels.classes if cfg.labels.classes.count(c) > 1}
     if duplicates:
         raise ValueError(f"config.labels.classes lists {sorted(duplicates)} more than once")
+    ignore = project_ignore(config_path or base_dir)
     for spec in cfg.sessions:
+        spec.ignore = ignore
         if spec.labels_path is None:
+            adopt_legacy_files(spec.source, metadata=False)
             spec.labels_path = labels_tsv_path(spec.source)
             logger.info("%s: labels_path not set, assuming %s", spec.source, spec.labels_path)
     cfg.infer.validate()

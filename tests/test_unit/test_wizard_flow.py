@@ -73,7 +73,7 @@ class TestAdapters:
         audio = next(s for s in spec.sources if s.stream == "audio")
         assert audio.session_wide is True
         assert audio.offset_s == pytest.approx(-0.4)
-        assert audio.folder == str(Path("audio") / "session_ch1.wav")
+        assert audio.folder == str(session / "audio" / "session_ch1.wav")
         assert spec.timing == "none"
 
     def test_notebook_for_pair_mode_pairs_the_wav_with_its_offset(self, session: Path, tmp_path: Path):
@@ -86,32 +86,15 @@ class TestAdapters:
 
 
 class TestDialogRoute:
-    def test_pair_mode_walks_sources_table_write_and_writes_the_notebook(self, qtbot, session: Path, monkeypatch):
+    def test_pair_mode_walks_sources_table_write_and_writes_only_the_notebook(self, qtbot, session: Path, monkeypatch):
         monkeypatch.setattr("ethograph.gui.wizard_single.get_video_fps", lambda _p: 30)
         monkeypatch.setattr(wizard_overview, "notify_dialog", lambda *a, **k: None)
-        written: dict = {}
+        monkeypatch.setattr(wizard_overview, "open_with_chooser", lambda _p: None)
 
-        def fake_build(state):
-            written["state"] = state
-            raise RuntimeError("stop before building the session file")
+        def refuse_build(_state):
+            raise AssertionError("the wizard must not build the session itself")
 
-        monkeypatch.setattr("ethograph.gui.wizard_multi_builder.build_multi_trial_dt", fake_build)
-
-        class _NoModal:
-            """The real one spins a modal loop; run the job inline instead."""
-
-            was_cancelled = False
-
-            def __init__(self, *_a, **_k):
-                pass
-
-            def execute(self, fn, *args, **kwargs):
-                try:
-                    return fn(*args, **kwargs), None
-                except RuntimeError as exc:
-                    return None, exc
-
-        monkeypatch.setattr("ethograph.gui.dialog_busy_progress.BusyProgressDialog", _NoModal)
+        monkeypatch.setattr("ethograph.gui.wizard_multi_builder.build_multi_trial_dt", refuse_build)
 
         app_state = _AppState()
         app_state.project_path = str(session / "project")
@@ -131,16 +114,17 @@ class TestDialogRoute:
         dlg._on_next()  # table → write
         assert dlg._route[dlg._pos] is dlg._page_write
         assert dlg._page_write._notebook.text().endswith(str(Path("project") / "wizard" / f"{session.name}.ipynb"))
-        dlg._on_next()  # write: notebook first, then the build (stubbed)
+        dlg._on_next()  # write: the notebook, and nothing else
         nb_path = Path(dlg._state.notebook_path)
         assert nb_path.is_file()
         nb = nbformat.read(str(nb_path), as_version=4)
         assert nb.cells[1].metadata["tags"] == ["parameters"]
-        assert written["state"].mode == "pair"
+        assert not list(session.rglob("*.nc")) and not (session / ".ethograph").exists()
 
     def test_triggered_mode_visits_timing_and_only_writes_the_notebook(self, qtbot, session: Path, monkeypatch):
         monkeypatch.setattr("ethograph.gui.wizard_single.get_video_fps", lambda _p: 30)
         monkeypatch.setattr(wizard_overview, "notify_dialog", lambda *a, **k: None)
+        monkeypatch.setattr(wizard_overview, "open_with_chooser", lambda _p: None)
         app_state = _AppState()
         app_state.project_path = str(session / "project")
         (session / "project").mkdir()
@@ -158,7 +142,6 @@ class TestDialogRoute:
         assert dlg._route[dlg._pos] is dlg._page_trials
         dlg._on_next()
         assert dlg._route[dlg._pos] is dlg._page_write
-        assert not dlg._page_write._output.isVisibleTo(dlg._page_write)
         dlg._on_next()
         nb = nbformat.read(dlg._state.notebook_path, as_version=4)
         code = "\n".join(c.source for c in nb.cells if c.cell_type == "code")

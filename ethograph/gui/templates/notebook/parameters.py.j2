@@ -1,3 +1,5 @@
-session_dir = "{{ session_dir }}"  # the one thing to change next session
+# Where this session's .ethograph/ (alignment, labels, settings) goes. Media folders are
+# listed per source below; on a new session change session_dir and every folder.
+session_dir = {{ session_dir | path_literal }}
 
 rig = {{ rig_literal }}

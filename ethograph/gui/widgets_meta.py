@@ -1154,7 +1154,7 @@ class MetaWidget(GridSectionContainer):
             logger.exception("Saved panel layout could not be applied; resetting to defaults")
             self.app_state.panel_layout = None
             self._camera_grid_pending = True
-            self._rebuild_default_panels()
+            self.rebuild_default_panels()
             notify("Saved panel layout could not be applied and was reset to defaults.", "warning")
 
     def arrange_camera_grid_if_default(self) -> None:
@@ -1168,10 +1168,14 @@ class MetaWidget(GridSectionContainer):
         self._camera_grid_pending = False
         self.shell.video_area.arrange_grid()
 
-    def _rebuild_default_panels(self):
-        """Recover from a saved layout that failed mid-apply: drop whatever
-        panels it left behind and recreate the data-availability defaults
-        (the same set ``_setup_panel_controls`` builds on a fresh load)."""
+    def rebuild_default_panels(self):
+        """Drop every dynamic panel, space and radial plot and recreate the
+        data-availability defaults (the same set ``_setup_panel_controls``
+        builds on a fresh load). Used when a saved layout fails mid-apply and
+        when the user resets local settings: the auto-save snapshots the live
+        panels, so the layout must be rebuilt, not only forgotten."""
+        self.data_widget.apply_space_layout_state([])
+        self.data_widget.apply_radial_layout_state([])
         pc = self.plot_container
         for plot in list(pc._dyn_panels):
             pc.remove_panel(plot)

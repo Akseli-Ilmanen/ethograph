@@ -76,13 +76,13 @@ def elapsed_s(self) -> float:
     anchor, stream = self._dac_anchor, self._stream
     if anchor is not None and stream is not None:
         idx0, dac0 = anchor
-        audible = idx0 + (stream.time - dac0) * self._out_rate   # Pa_GetStreamTime
-        audible = max(0.0, min(audible, self._idx))              # never beyond handed
+        audible = idx0 + (stream.time - dac0) * self._out_rate  # Pa_GetStreamTime
+        audible = max(0.0, min(audible, self._idx))  # never beyond handed
         media_s = audible / self._out_rate * self._speed
     else:
-        media_s = self._fallback_estimate()                      # §3.3
+        media_s = self._fallback_estimate()  # §3.3
     media_s = min(media_s, self.duration_s)
-    media_s = max(media_s, self._last_media_s)                   # monotonic floor kept
+    media_s = max(media_s, self._last_media_s)  # monotonic floor kept
     self._last_media_s = media_s
     return media_s
 ```

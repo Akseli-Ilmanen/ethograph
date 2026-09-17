@@ -2,7 +2,7 @@
 # One file for the whole session: (file, sample rate, when it starts relative to trial 1)
 session_wide = {
 {% for col, file, rate, offset in session_wide_entries %}
-    "{{ col }}": (f"{session_dir}/{{ file }}", {{ rate }}, {{ offset }}),
+    "{{ col }}": ({{ file }}, {{ rate }}, {{ offset }}),
 {% endfor %}
 }
 
@@ -14,4 +14,7 @@ eto.pair_media(
     session_wide=session_wide,
 {% endif %}
     output_path=f"{session_dir}/.ethograph/alignment.nwb",
+{% if individuals %}
+    individuals=rig["individuals"],  # who is labelled; the session record is their one home
+{% endif %}
 )

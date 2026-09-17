@@ -23,4 +23,7 @@ eto.pair_media(
     session_wide=session_wide,
 {% endif %}
     output_path=f"{session_dir}/session.nwb",
+{% if individuals %}
+    individuals=rig["individuals"],  # who is labelled; the session record is their one home
+{% endif %}
 )

@@ -255,3 +255,21 @@ class TestTimingRequiresVideoSource:
         )
         with pytest.raises(ValueError, match="no video source"):
             build_notebook(spec)
+
+
+class TestPathLiteral:
+    """A Windows path in a plain literal is a syntax error (backslash-U); emit it raw."""
+
+    def test_path_round_trips_through_python(self) -> None:
+        from ethograph.gui.wizard_notebook import path_literal
+
+        win = str(Path("C:/Users/name/Documents/VidData")).replace("/", chr(92))
+        for path in (win, "/home/name/VidData", win + chr(92), 'a"b'):
+            assert eval(path_literal(path)) == path  # noqa: S307
+
+    def test_notebook_session_dir_is_raw(self) -> None:
+        spec = _pair_spec()
+        spec.session_dir = "C:/Users/name/VidData".replace("/", chr(92))
+        nb = build_notebook(spec)
+        code_cells = [c for c in nb.cells if c.cell_type == "code"]
+        assert f'session_dir = r"{spec.session_dir}"' in code_cells[0].source

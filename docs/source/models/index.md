@@ -58,7 +58,7 @@ flowchart TD
 ```{toctree}
 :maxdepth: 1
 :hidden:
-
+Trial windows <trial_windows>
 LightGBM (point events, CPU-only) <onset_model>
 Action segmentation (state events) <segment/index>
 PES (point events from pixels) <spot/index>

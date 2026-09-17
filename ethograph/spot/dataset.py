@@ -18,6 +18,12 @@ What it writes, under ``config.root``::
 config's ``name``, else the source's stem) — the key the split, the index
 and every prediction file agree on.
 
+A trial is **its window of the video**, not the video file: a trial carved out
+of a longer recording exports only the frames between its start and stop
+(:func:`trial_frame_range`), and every frame index in the dataset counts from
+the window's first frame. A per-trial file whose window is the whole file is
+exported whole.
+
 Decoding is the expensive part and it resumes: a trial whose folder already
 holds the expected frame count *and* was exported at the same size and crop
 (``export.json`` beside the frames) is left alone.
@@ -30,6 +36,7 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from itertools import islice
 from pathlib import Path
 from typing import Iterable, Iterator
 
@@ -75,6 +82,12 @@ class TrialRecord:
     #: ``(x0, y0, x1, y1)`` source pixels cut out before the resize; ``None``
     #: = the whole frame.
     crop: tuple[int, int, int, int] | None = None
+    #: Index in the video file of the trial's first frame; ``num_frames`` and
+    #: ``events`` count from here.
+    first_frame: int = 0
+    #: Trial-relative seconds of the record's frame 0 (``trial = video + offset``,
+    #: with the window's start folded in).
+    offset_s: float = 0.0
 
     @property
     def n_events(self) -> int:
@@ -82,7 +95,12 @@ class TrialRecord:
 
     def export_spec(self) -> dict:
         """What decides the pixels on disk -- the content of ``export.json``."""
-        return {"width": self.width, "height": self.height, "crop": list(self.crop) if self.crop else None}
+        return {
+            "width": self.width,
+            "height": self.height,
+            "crop": list(self.crop) if self.crop else None,
+            "first_frame": self.first_frame,
+        }
 
     def to_json(self) -> dict:
         flat = sorted((frame, name) for name, frames in self.events.items() for frame in frames)
@@ -146,6 +164,24 @@ def event_frame(onset_s: float, offset_s: float, fps: float) -> int:
     return int(round((onset_s - offset_s) * fps))
 
 
+def trial_frame_range(offset_s: float, duration_s: float | None, n_frames: int, fps: float) -> tuple[int, int]:
+    """``(first, stop)`` frame indices of the video that fall inside the trial.
+
+    *offset_s* is the trial-relative time of the video's frame 0, so the trial
+    starts at video frame ``-offset_s * fps``. *duration_s* ``None`` (no stop
+    time in the alignment) runs to the end of the video. A stop within one
+    frame of the video's end is the video's end: a per-trial file whose trial
+    was timed off its own duration must not lose its last frame to rounding.
+    """
+    first = max(0, int(round(-offset_s * fps)))
+    if duration_s is None:
+        return first, n_frames
+    stop = min(n_frames, int(round((duration_s - offset_s) * fps)))
+    if n_frames - stop <= 1:
+        stop = n_frames
+    return first, stop
+
+
 def plan_session(session: Session, config: SpotConfig, *, require_events: bool = True) -> list[TrialRecord]:
     """What :func:`export_frames` would write for one session, decoding nothing.
 
@@ -178,7 +214,17 @@ def plan_session(session: Session, config: SpotConfig, *, require_events: bool =
         if crop is not None:
             crop.check_fits(width, height, f"{session.spec.label} trial {trial} ({video.name})")
             width, height = crop.width, crop.height
-        offset = float(alignment.stream_offset_for_trial(trial, "video", device=camera))
+        video_offset = float(alignment.stream_offset_for_trial(trial, "video", device=camera))
+        stop_s = alignment.stop_time(trial)
+        duration = None if stop_s is None else float(stop_s) - float(alignment.start_time(trial))
+        first, stop = trial_frame_range(video_offset, duration, n_frames, fps)
+        if stop <= first:
+            logger.warning(
+                "%s trial %s: no frame of %s lies inside the trial, skipped", session.spec.label, trial, video
+            )
+            continue
+        offset = video_offset + first / fps
+        n_frames = stop - first
         frames = {config.class_name(label): [event_frame(t, offset, fps) for t in ts] for label, ts in events.items()}
         outside = {name: [f for f in fs if not 0 <= f < n_frames] for name, fs in frames.items()}
         outside = {name: fs for name, fs in outside.items() if fs}
@@ -198,14 +244,17 @@ def plan_session(session: Session, config: SpotConfig, *, require_events: bool =
                 height=config.labels.frame_height,
                 events=frames,
                 crop=None if crop is None else crop.as_tuple(),
+                first_frame=first,
+                offset_s=offset,
             )
         )
     return records
 
 
-def _iter_frames(video: Path, decode_threads: int | None = None) -> Iterator[np.ndarray]:
-    """Decoded RGB frames of *video*, in order (:func:`ethograph.io.video_decode.iter_rgb_frames`)."""
-    return iter_rgb_frames(video, threads=decode_threads)
+def _iter_frames(record: TrialRecord, decode_threads: int | None = None) -> Iterator[np.ndarray]:
+    """The trial's decoded RGB frames, in order (:func:`ethograph.io.video_decode.iter_rgb_frames`)."""
+    frames = iter_rgb_frames(record.video_path, threads=decode_threads, start=record.first_frame)
+    return islice(frames, record.num_frames)
 
 
 def export_is_current(out_dir: Path, record: TrialRecord) -> bool:
@@ -222,8 +271,9 @@ def export_is_current(out_dir: Path, record: TrialRecord) -> bool:
         return False
     spec_path = out_dir / EXPORT_FILE
     if not spec_path.is_file():
-        return record.crop is None
+        return record.crop is None and record.first_frame == 0
     stored = json.loads(spec_path.read_text(encoding="utf-8"))
+    stored.setdefault("first_frame", 0)  # written before a trial could start inside its video
     if stored == record.export_spec():
         return True
     logger.warning(
@@ -253,7 +303,7 @@ def export_frames(record: TrialRecord, frames_dir: Path) -> int:
     size = (record.width, record.height)
     crop = record.crop
     written = 0
-    for i, frame in enumerate(_iter_frames(record.video_path)):
+    for i, frame in enumerate(_iter_frames(record)):
         if crop is not None:
             x0, y0, x1, y1 = crop
             frame = frame[y0:y1, x0:x1]

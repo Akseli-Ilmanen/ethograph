@@ -15,10 +15,9 @@ digital = {{ digital_interface }}(
 )
 pulses = digital.get_event_times("camera_frame")
 
-_video_folder = Path(session_dir) / "{{ video_folder }}"
 videos = {
     _col: ExternalVideoInterface(
-        file_paths=[_video_folder / f for f in table[_col].dropna()], video_name=_col
+        file_paths=[Path(f) for f in table[_col].dropna()], video_name=_col
     )
     for _col in {{ camera_columns }}
 }

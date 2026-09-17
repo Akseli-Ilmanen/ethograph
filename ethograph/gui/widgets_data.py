@@ -35,10 +35,12 @@ import ethograph as eto
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.notify import notify, notify_dialog
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, individual_color_map
+from ethograph.gui.project import project_settings_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec
-from ethograph.io.data_loader import load_features_dataset
+from ethograph.io.data_loader import AmbiguousSessionError, load_features_dataset
 from ethograph.io.derived import DerivedLoader
 from ethograph.io.plot_sources import FileSource
+from ethograph.io.session_layout import session_dir_of
 from ethograph.io.time_model import compute_trial_video_bounds
 from ethograph.io.video_feature_files import VideoFeatureFiles, attach_video_features, feature_name_for
 from ethograph.labels.intervals import get_interval_bounds, select_subject
@@ -1213,6 +1215,14 @@ class DataWidget(QWidget):
             self._phase_infer_media(ctx)
             self._phase_prepare_dataset(ctx)
             self._phase_validate(ctx)
+        except AmbiguousSessionError as e:
+            from ethograph.gui.dialog_ambiguous_session import resolve_ambiguous_session
+
+            if resolve_ambiguous_session(e, self.app_state, self):
+                self.on_load_clicked()  # the ignore list changed: try again
+            else:
+                self._cancel_load(str(e))
+            return
         except _LoadError as e:
             self._cancel_load(str(e))
             return
@@ -1247,7 +1257,10 @@ class DataWidget(QWidget):
                 metadata_path=self.app_state.metadata_path,
                 alignment_path=getattr(self.app_state, "nwb_file_path", None),
                 labels_path=labels_path,
+                ignore=project_settings_of(self.app_state).ignore,
             )
+        except AmbiguousSessionError:
+            raise  # on_load_clicked turns this into the "which file?" dialog
         except (OSError, ValueError, KeyError) as e:
             logger.exception("load_features_dataset failed")
             raise _LoadError(f"Failed to load feature dataset: {type(e).__name__}: {e}") from e
@@ -1412,7 +1425,7 @@ class DataWidget(QWidget):
         self._populate_receiver_combo()
 
         self.io_widget.on_load_complete()
-        self.labels_widget.refresh_mapping_for_data_dir(Path(ctx.nc_file_path).parent)
+        self.labels_widget.refresh_mapping_for_data_dir(session_dir_of(ctx.nc_file_path))
         self.changepoints_widget.setEnabled(True)
         self.plot_settings_widget.set_enabled_state()
         if self.ephys_widget:

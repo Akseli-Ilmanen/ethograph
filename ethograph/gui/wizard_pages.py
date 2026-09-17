@@ -39,10 +39,11 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ethograph.gui.file_dialogs import browse_open_file, browse_save_file
+from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.make_pretty import styled_link
 from ethograph.gui.project import project_dir_of
-from ethograph.gui.wizard_state import WizardState
+from ethograph.gui.session_folder import ranked_kinds
+from ethograph.gui.wizard_state import ModalityConfig, WizardState
 from ethograph.utils.paths import defaults_dir
 
 ASSETS = Path(__file__).parent / "assets" / "wizard"
@@ -382,8 +383,27 @@ class TimingPage(QWidget):
 # ─── Last page: write ─────────────────────────────────────────────────────────
 
 
+def default_session_dir(state: WizardState, app_state=None) -> str:
+    """The folder the wizard proposes as ``session_dir`` in the notebook (it receives ``.ethograph/``).
+
+    The enabled media folder of the best-ranked kind (``session_folder.ranked_kinds``,
+    honouring the user's remembered choice) — the folder itself, never its parent,
+    since a media folder is a fine session folder when there is one per session.
+    With no media folder, the project folder, then home.
+    """
+    preferred = list(getattr(app_state, "session_folder_kinds", None) or [])
+    for kind in ranked_kinds(preferred):
+        cfg: ModalityConfig | None = getattr(state, kind, None)
+        if cfg is not None and cfg.enabled and cfg.folder_path and not cfg.is_continuous_mode:
+            return str(Path(cfg.folder_path).resolve())
+    project = project_dir_of(app_state) if app_state is not None else None
+    return str(project) if project else str(Path.home())
+
+
 class WritePage(QWidget):
-    """Rig name, notebook path and, for mode 1, the session file to write."""
+    """Rig name and notebook path. The wizard only writes the notebook; where the
+    session's files go (``session_dir``, and whether there is a ``.nc`` at all) is
+    decided in the notebook's first cell, never here."""
 
     def __init__(self, app_state, parent: QWidget | None = None):
         super().__init__(parent)
@@ -398,17 +418,10 @@ class WritePage(QWidget):
         self._notebook = QLineEdit()
         self._notebook.setReadOnly(True)
         form.addRow("Notebook", self._notebook)
-        out_row = QHBoxLayout()
-        self._output = QLineEdit()
-        self._output.setPlaceholderText("session.nc")
-        browse = QPushButton("Browse…")
-        browse.setAutoDefault(False)
-        browse.clicked.connect(self._browse_output)
-        out_row.addWidget(self._output, 1)
-        out_row.addWidget(browse)
-        self._output_label = QLabel("Session file")
-        form.addRow(self._output_label, out_row)
         lay.addLayout(form)
+        self._open_notebook = QCheckBox("Open the notebook when done (you pick the program, e.g. VS Code)")
+        self._open_notebook.setChecked(True)
+        lay.addWidget(self._open_notebook)
         self._hint = _muted("")
         lay.addWidget(self._hint)
         self._cells = _muted("")
@@ -424,33 +437,29 @@ class WritePage(QWidget):
         name = self._rig.text().strip() or "rig"
         self._notebook.setText(str(self._wizard_dir() / f"{name}.ipynb"))
 
-    def _browse_output(self) -> None:
-        path = browse_save_file(self, self._app_state, "Session file", "NetCDF (*.nc)")
-        if path:
-            self._output.setText(path)
-
     def populate_from_state(self, state: WizardState) -> None:
-        folders = [c.folder_path for c in (state.video, state.pose, state.audio) if c.enabled and c.folder_path]
-        session_dir = Path(folders[0]).parent if folders else Path.home()
+        session_dir = Path(default_session_dir(state, self._app_state))
         state.session_dir = str(session_dir)
+        if not self._rig.text() and state.rig_name:
+            self._rig.setText(state.rig_name)  # the project's default rig
         if not self._rig.text():
-            self._rig.setText(session_dir.name or "rig")
+            # A media folder is named after its stream ("video"), which says
+            # nothing about the rig; its parent is the recording.
+            media = {Path(c.folder_path).resolve() for c in (state.video, state.pose, state.audio) if c.folder_path}
+            named_after = session_dir.parent if session_dir in media else session_dir
+            self._rig.setText(named_after.name or "rig")
         self._refresh_notebook_path()
         pair = state.mode == "pair"
-        self._output.setVisible(pair)
-        self._output_label.setVisible(pair)
         if pair:
-            if not self._output.text():
-                self._output.setText(str(session_dir / "session.nc"))
             self._hint.setText(
-                "The wizard pairs the files now, writes .ethograph/alignment.nwb beside the session file, "
-                "and saves the notebook as the record. Next session: change session_dir in its first cell "
-                "and run all."
+                f"The notebook is written now and the wizard closes. Its first cell proposes {session_dir} as "
+                "the session folder (it receives .ethograph/alignment.nwb, labels and settings; the media stay "
+                "where they are); change it there if you like, run all, then open that folder on the start page."
             )
         else:
             self._hint.setText(
                 "The wizard cannot read a digital line; the notebook does. It is written now and the "
-                "wizard closes. Run it, then pick the session.nwb it writes on the start page."
+                "wizard closes. Run it, then open the folder holding the session.nwb it writes on the start page."
             )
         cells = ["1 · parameters", "2 · discover files", "3 · trial table"]
         if state.timing != "none":
@@ -466,12 +475,9 @@ class WritePage(QWidget):
     def validate(self, state: WizardState) -> str | None:
         if not self._rig.text().strip():
             return "Give the rig a name; it names the notebook."
-        if state.mode == "pair" and not self._output.text().strip():
-            return "Pick where to write the session file."
         return None
 
     def collect_state(self, state: WizardState) -> None:
         state.rig_name = self._rig.text().strip()
         state.notebook_path = self._notebook.text()
-        if state.mode == "pair":
-            state.output_path = self._output.text().strip()
+        state.open_notebook = self._open_notebook.isChecked()

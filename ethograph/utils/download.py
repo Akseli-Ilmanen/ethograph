@@ -13,7 +13,10 @@ from ethograph.datasets import (
     dataset_dir,
     get_gui_assets,
     get_notebook_assets,
+    get_prediction_run_assets,
+    get_video_feature_assets,
     is_dataset_downloaded,
+    prediction_runs_dir,
 )
 from ethograph.utils.paths import BUNDLED_DEFAULTS_DIR
 
@@ -221,6 +224,7 @@ def download_assets(
     dest: Path,
     on_progress: Callable[[int, str], None] | None = None,
     cancelled: Callable[[], bool] | None = None,
+    local_names: dict[str, str] | None = None,
 ) -> None:
     """Download asset files from a GitHub release to *dest*.
 
@@ -236,14 +240,18 @@ def download_assets(
         ``(completed_count, current_filename)`` callback.
     cancelled : callable, optional
         Returns ``True`` to abort the download loop.
+    local_names : dict, optional
+        Release asset name → filename to save it under; an asset not listed
+        keeps its name.
     """
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
+    local_names = local_names or {}
 
     for i, name in enumerate(assets):
         if cancelled and cancelled():
             return
-        local_path = dest / name
+        local_path = dest / local_names.get(name, name)
         if local_path.exists():
             if on_progress:
                 on_progress(i + 1, name)
@@ -259,6 +267,68 @@ def download_assets(
         part_path.replace(local_path)
         if on_progress:
             on_progress(i + 1, name)
+
+
+def download_video_features(
+    key: str,
+    on_progress: Callable[[int, str], None] | None = None,
+    cancelled: Callable[[], bool] | None = None,
+) -> None:
+    """Download *key*'s optional video-feature folders into its dataset folder.
+
+    Each folder comes from its own release and lands as
+    ``{dataset}/{folder}/{video stem}.npy``, ready to import as a video feature.
+    *on_progress* counts files across all folders.
+    """
+    folders = DATASETS[key].get("video_feature_folders", {})
+    done = 0
+    for folder, assets in get_video_feature_assets(key).items():
+        offset = done
+
+        def _progress(count: int, name: str, offset: int = offset, folder: str = folder) -> None:
+            if on_progress:
+                on_progress(offset + count, f"{folder}/{name}")
+
+        download_assets(
+            release_tag=folders[folder]["release_tag"],
+            assets=assets,
+            dest=dataset_dir(key) / folder,
+            on_progress=_progress,
+            cancelled=cancelled,
+        )
+        done += len(assets)
+
+
+def download_prediction_runs(
+    key: str,
+    on_progress: Callable[[int, str], None] | None = None,
+    cancelled: Callable[[], bool] | None = None,
+) -> None:
+    """Download *key*'s shipped prediction runs into its ``labels/`` folder.
+
+    Each run lands as ``{dataset}/labels/predictions_{suffix}/`` holding the
+    ``*_predictions.tsv`` + ``*_probs.npz`` pair, so File → Import
+    predictions → From folder opens it like any other run and several can be
+    stacked against each other. *on_progress* counts files across all runs.
+    """
+    release_tag = DATASETS[key]["release_tag"]
+    done = 0
+    for folder, files in get_prediction_run_assets(key).items():
+        offset = done
+
+        def _progress(count: int, name: str, offset: int = offset, folder: str = folder) -> None:
+            if on_progress:
+                on_progress(offset + count, f"{folder}/{name}")
+
+        download_assets(
+            release_tag=release_tag,
+            assets=list(files),
+            dest=prediction_runs_dir(key) / folder,
+            on_progress=_progress,
+            cancelled=cancelled,
+            local_names=files,
+        )
+        done += len(files)
 
 
 def download_template_local_settings(key: str) -> Path | None:

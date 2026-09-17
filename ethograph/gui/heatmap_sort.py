@@ -64,3 +64,20 @@ def argmax_window_order(data: np.ndarray, time: np.ndarray, window_s: float, ove
     peak_window[has_value] = np.nanargmax(means[:, has_value], axis=0)
     peak_window[~has_value] = np.inf
     return np.argsort(peak_window, kind="stable")
+
+
+def row_window(n_rows: int, percent: float, position: float) -> slice:
+    """The contiguous block of display rows kept by the row-window control.
+
+    ``percent`` of ``n_rows`` (at least one row) are kept; ``position`` in
+    ``[0, 1]`` slides the block from the top row to the bottom one. The block
+    is taken from the displayed (possibly sorted) order, so neighbouring rows
+    are neighbours in that order, not in the original index.
+    """
+    if not 0.0 < percent <= 100.0:
+        raise ValueError(f"percent must be in (0, 100], got {percent}")
+    if not 0.0 <= position <= 1.0:
+        raise ValueError(f"position must be in [0, 1], got {position}")
+    n_shown = min(n_rows, max(1, int(np.ceil(n_rows * percent / 100.0))))
+    start = int(round((n_rows - n_shown) * position))
+    return slice(start, start + n_shown)

@@ -32,6 +32,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ethograph.io.session_layout import labels_path
 from ethograph.labels.intervals import (
     INTERVAL_COLUMNS,
     INTERVAL_DTYPES,
@@ -87,18 +88,20 @@ def _ensure_label_columns(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-def labels_tsv_path(nc_path: str | Path, suffix: str = "") -> Path:
-    """Derive the labels TSV path from the .nc file path.
+def labels_tsv_path(source: str | Path, suffix: str = "") -> Path:
+    """The session's labels file: ``labels{suffix}.tsv`` in the session folder.
+
+    *source* is the session folder or any file in it (``session.nc``, an ``.nwb``);
+    one folder is one session, so the name never depends on the file.
 
     Examples
     --------
-    >>> labels_tsv_path("experiment/data.nc")
-    PosixPath('experiment/data_labels.tsv')
-    >>> labels_tsv_path("experiment/data.nc", suffix="_downsampled_100x")
-    PosixPath('experiment/data_downsampled_100x_labels.tsv')
+    >>> labels_tsv_path("experiment/data.nc").name
+    'labels.tsv'
+    >>> labels_tsv_path("experiment", suffix="_downsampled_100x").name
+    'labels_downsampled_100x.tsv'
     """
-    nc_path = Path(nc_path)
-    return nc_path.parent / f"{nc_path.stem}{suffix}_labels.tsv"
+    return labels_path(source, suffix)
 
 
 # ---------------------------------------------------------------------------

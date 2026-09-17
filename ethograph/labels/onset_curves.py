@@ -95,8 +95,10 @@ TrialCurves = tuple[np.ndarray, dict[int, np.ndarray]]
 
 
 def labels_dir(session_path: str | Path) -> Path:
-    """The ``labels/`` folder beside a session file — where backups live too."""
-    return Path(session_path).parent / "labels"
+    """The session folder's ``labels/`` — where backups live too."""
+    from ethograph.io.session_layout import session_dir_of
+
+    return session_dir_of(session_path) / "labels"
 
 
 def run_dir(session_path: str | Path, timestamp: str, model: str = LIGHTGBM) -> Path:

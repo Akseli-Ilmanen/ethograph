@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import jinja2
 
+from ethograph.gui.wizard_notebook import path_literal
 from ethograph.io.validation import (
     AUDIO_EXTENSIONS,
     EPHYS_EXTENSIONS,
@@ -201,6 +202,7 @@ def _create_jinja_env() -> jinja2.Environment:
         return f'"{prefix}{ext}"'
 
     env.filters["format_glob"] = format_glob
+    env.filters["path_literal"] = path_literal
     return env
 
 

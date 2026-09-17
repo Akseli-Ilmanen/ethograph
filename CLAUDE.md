@@ -31,8 +31,11 @@ EthoGraph is a GUI for labelling start/stop times of animal movements, paired wi
 
 ```python
 import ethograph as eto
-dt = eto.open("data.nc"); dt = eto.from_datasets([ds1, ds2])
-time = eto.get_time_coord(da); data, filt = eto.sel_valid(da, kwargs)
+
+dt = eto.open("data.nc")
+dt = eto.from_datasets([ds1, ds2])
+time = eto.get_time_coord(da)
+data, filt = eto.sel_valid(da, kwargs)
 ```
 
 ## Hard Rules
@@ -139,6 +142,8 @@ THIRD_PARTY_NOTICES.md        # Index of every vendored tree and adapted file
 `.nwb` sources are read/edited directly; `.ethograph/alignment.nwb` sidecars exist only for non-NWB sources.
 
 - **Trial timing has one source: the alignment NWB trials table.**
+- **A session is a folder: it holds `.ethograph/alignment.nwb` or a root `.nwb`, and at most one `.nc` (its dataset).** A second root `.nc` is an old version and refused (`AmbiguousSessionError`) until `project.yaml`'s `ignore` names it; a file named explicitly is always loaded. Every session file is named by the folder through `io/session_layout.py` (`session_dir_of`, never `Path(...).parent`). Media folders are absolute and separate: the pairing table carries full paths (`discover_media` takes no root); the NWB stores basenames per trial and full paths per stream. The session record declares the individuals; a dataset's individual dim may only name a subset.
+- **A drop makes the dropped folder the session** (`.ethograph/` goes there; several source folders → one popup, `gui/session_folder.py` ranks kinds); a folder that already has an alignment without a drop record is never overwritten.
 - **Metadata is purely additive** — a tabular file joined on `trial`, resolved explicit `alignment_path` → NWB source trials → sidecar TSV, edited in the trials table and written back to the source it was read from. Media filenames are the alignment's, joined read-only onto the table's right-hand side, never written to a metadata file.
 - **The trials table's filters are the one trial filter, and every operation runs over `app_state.trials`.** No dialog gets a metadata filter of its own; the label filter is a second, session-only slot intersected after the column filters.
 - **Drag & drop = single-trial loading** (`cover_page.classify_files()`). A dropped `.nc` is always features; a pose overlay only in its video's pixels.
@@ -151,7 +156,7 @@ THIRD_PARTY_NOTICES.md        # Index of every vendored tree and adapted file
 
 **Keypoint labelling's binding design rules live in `docs/source/advanced/keypoint_labelling/`. Read them before editing `gui/pose_*.py`, `dialog_pose_labelling.py`, `dialog_tag_sheet.py` or `table_filter.py`.** Scope: one camera, one trial.
 
-Skeleton colour precedence: `skeleton_config_override` (user-drawn) > NWB config recoloured with `skeleton_base_color`. Anchored shapes (`skeleton/shapes.py`) are templates bound to ≥2 control points.
+Skeleton precedence: `skeleton_config_override` (user-drawn) > the project's `project.yaml` skeleton > NWB config; each recoloured with `skeleton_base_color`. **`project.yaml` holds study defaults** (individuals, cameras, mics, rig, pose software, skeleton); a session's record or dataset overrides them, machine paths never go in it (`gui/project.py`). Anchored shapes (`skeleton/shapes.py`) are templates bound to ≥2 control points.
 
 ### Panels are layout instances — no per-plot-type toggles
 
@@ -172,7 +177,7 @@ The one singleton panel. **The console binds what a panel renders**, not what ba
 
 ### Labels
 
-**Storage:** TSV (`{name}_labels.tsv`) beside the `.nc`, columns `onset_s, offset_s, labels (int), individual, individual_rec, event_type, confidence, labeling_method, trial, changepoint_corrected, prediction_source, n_samples`; `onset_s`/`offset_s` are trial-relative. Names in `mapping.txt`. In memory: `app_state._all_labels_df` (all trials), `app_state.label_intervals` (current trial).
+**Storage:** TSV (`labels.tsv`, one per session folder; `io/session_layout.py` names every session file), columns `onset_s, offset_s, labels (int), individual, individual_rec, event_type, confidence, labeling_method, trial, changepoint_corrected, prediction_source, n_samples`; `onset_s`/`offset_s` are trial-relative. Names in `mapping.txt`. In memory: `app_state._all_labels_df` (all trials), `app_state.label_intervals` (current trial).
 
 - **A label's subject is a pair: `individual` + `individual_rec`** (`NO_RECIPIENT` = solo). The receiver is an attribute, never a second track; exclusivity is per actor.
 - **A visible label is a selectable label**; mutation refuses a selection outside the active branch.
@@ -230,4 +235,4 @@ Bridge pattern: intervals → dense → correct → intervals. **A click snaps t
 
 - NetCDF with trials. Time coords: anything containing `time`. Every `data_var` with a time dim is a feature; changepoints via `schema.is_changepoint`; colour vars by "rgb" in the name.
 - Media/session metadata: `.nwb` sources read directly; non-NWB read `.ethograph/alignment.nwb`.
-- Labels live in `_labels.tsv`, not the `.nc`.
+- Labels live in the session folder's `labels.tsv`, not the `.nc`.

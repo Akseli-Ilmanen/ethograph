@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ethograph.labels.onset_curves import RUN_PREFIX
 from ethograph.utils.paths import cache_dir
 
 if TYPE_CHECKING:
@@ -53,7 +54,20 @@ DATASETS: dict[str, dict] = {
         # probing the media cannot reproduce.
         "download_alignment": True,
         "size_mb": 14,
+        # Optional per-video embeddings, one folder each, offered as an
+        # unchecked box on the template card. Files are ``{video stem}.npy``
+        # so the folder imports as a video feature (add panel → import).
+        "video_feature_folders": {
+            "embeddings_feral": {"release_tag": "v0.2.35", "size_mb": 7},
+            "embeddings_s3d": {"release_tag": "v0.2.34", "size_mb": 18},
+        },
         "extra_gui_assets": ["Trial_data_labels.tsv"],
+        # Prediction runs of different models over this session, shipped so
+        # they can be stacked against each other (File → Import predictions →
+        # From folder). Each suffix names a release asset pair
+        # ``{nc stem}_predictions_{suffix}.tsv`` + ``{nc stem}_probs_{suffix}.npz``
+        # and lands in ``labels/predictions_{suffix}/``.
+        "prediction_runs": ["mlp", "c2f-tcn", "feral-cp", "feral-nocp"],
         "assets_notebook": [
             "Trial_data.nc",
             "2024-12-17_115_Crow1-cam-1.mp4",
@@ -304,6 +318,67 @@ def get_gui_assets(key: str) -> list[str]:
     _add(ds.get("audio_file"))
     _add(ds.get("labels_file"))
     return assets
+
+
+def get_video_feature_assets(key: str) -> dict[str, list[str]]:
+    """Map each optional video-feature folder of *key* to its ``{video stem}.npy`` files."""
+    ds = DATASETS[key]
+    stems = sorted(
+        {Path(fname).stem for row in ds.get("media", []) for col, fname in row.items() if col.startswith("video_")}
+    )
+    return {folder: [f"{stem}.npy" for stem in stems] for folder in ds.get("video_feature_folders", {})}
+
+
+def video_features_size_mb(key: str) -> int:
+    """Total download size of *key*'s optional video-feature folders."""
+    return sum(spec["size_mb"] for spec in DATASETS[key].get("video_feature_folders", {}).values())
+
+
+def are_video_features_downloaded(key: str) -> bool:
+    """Whether every optional video-feature file of *key* is present locally."""
+    dest = dataset_dir(key)
+    return all(
+        (dest / folder / name).exists() for folder, names in get_video_feature_assets(key).items() for name in names
+    )
+
+
+def get_prediction_run_assets(key: str) -> dict[str, dict[str, str]]:
+    """Map each shipped prediction run of *key* to its release assets.
+
+    Keys are the run folders under the session's ``labels/``
+    (``predictions_{suffix}``); each value maps a release asset name to the
+    filename it is saved under. The release carries the model in the file
+    name, the local copy in the folder name: ``{stem}_predictions.tsv`` +
+    ``{stem}_probs.npz`` is exactly what a run writes and what
+    :class:`~ethograph.labels.predictions.PredictionsStore` opens.
+    """
+    ds = DATASETS[key]
+    suffixes = ds.get("prediction_runs", [])
+    if not suffixes:
+        return {}
+    stem = Path(ds["nc_filename"]).stem
+    return {
+        f"{RUN_PREFIX}{suffix}": {
+            f"{stem}_predictions_{suffix}.tsv": f"{stem}_predictions.tsv",
+            f"{stem}_probs_{suffix}.npz": f"{stem}_probs.npz",
+        }
+        for suffix in suffixes
+    }
+
+
+def prediction_runs_dir(key: str) -> Path:
+    """The ``labels/`` folder the shipped prediction runs of *key* land in."""
+    return dataset_dir(key) / "labels"
+
+
+def are_prediction_runs_downloaded(key: str) -> bool:
+    """Whether every shipped prediction-run file of *key* is present locally."""
+    root = prediction_runs_dir(key)
+    return all(
+        (root / folder / local).exists()
+        for folder, files in get_prediction_run_assets(key).items()
+        for local in files.values()
+    )
 
 
 def get_notebook_assets(key: str) -> list[str]:

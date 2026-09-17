@@ -15,7 +15,7 @@ from .app_constants import (
     HEATMAP_DEBOUNCE_MS,
     Z_INDEX_BACKGROUND,
 )
-from .heatmap_sort import argmax_window_order
+from .heatmap_sort import argmax_window_order, row_window
 from .make_pretty import clean_display_labels
 from .plots_base import BasePlot, PanelStateMixin, ThrottleDebounce
 
@@ -46,6 +46,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
 
         self.label_items = []
         self._n_channels = 1
+        self._n_rows_shown = 1
         self._channel_labels = []
         self._sort_order: np.ndarray | None = None
         # (feature, trial, selections) the trial-window sort was last computed for.
@@ -85,12 +86,19 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self.vb.setMouseEnabled(x=True, y=True)
 
     def _setup_global_y_space(self):
-        n = self._n_channels
+        n = self._n_rows_shown
         if n <= 0:
             return
         margin = 0.5
         self.vb.setLimits(yMin=-margin, yMax=n - 1 + margin)
         self.plot_item.setYRange(-margin, n - 1 + margin, padding=0)
+
+    def refresh_row_window(self) -> None:
+        """Re-render after the row-window percent or position changed."""
+        self._last_visible_labels = None
+        if self._buffered_data is not None:
+            t0, t1 = self.get_current_xlim()
+            self._render_heatmap(t0, t1)
 
     def set_sort_order(self, order: np.ndarray | None):
         self._sort_order = order
@@ -536,7 +544,15 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             else:
                 sorted_labels = list(self._channel_labels)
 
-            n_total = self._n_channels
+            rows = row_window(
+                normalized.shape[1],
+                float(self.app_state.get_with_default("heatmap_row_percent")),
+                float(self.app_state.get_with_default("heatmap_row_position")),
+            )
+            normalized = normalized[:, rows]
+            sorted_labels = sorted_labels[rows]
+            n_total = normalized.shape[1]
+            self._n_rows_shown = n_total
 
             vmin, vmax = self._cached_levels or self._compute_symmetric_levels(normalized)
 
@@ -617,6 +633,6 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self.plot_item.setYRange(ymin, ymax)
 
     def _apply_y_constraints(self):
-        n = self._n_channels
+        n = self._n_rows_shown
         margin = 0.5
         self.vb.setLimits(yMin=-margin, yMax=n - 1 + margin)

@@ -31,6 +31,7 @@ from ethograph.gui.project import project_dir_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.io.metadata_table import metadata_tsv_path
 from ethograph.io.pynapple import label_intervalsets
+from ethograph.io.session_layout import session_dir_of
 from ethograph.io.validation import EPHYS_FILE_FILTER
 from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv
 from ethograph.utils.paths import (
@@ -160,9 +161,9 @@ class IOWidget(QWidget):
         # Path widgets
         self.nc_file_path_edit = self._create_path_widget(
             self._load_layout,
-            label="Get session (required):",
+            label="Session folder (required):",
             object_name="nc_file_path",
-            browse_callback=lambda: self.on_browse_clicked("file", "data"),
+            browse_callback=self._browse_data_folder,
         )
 
         # Alignment row: NWB path + ephys offset in a single row.
@@ -294,7 +295,7 @@ class IOWidget(QWidget):
         self.local_backup_edit.setReadOnly(True)
         self.local_backup_edit.setPlaceholderText("labels/backups/")
         if self.app_state.nc_file_path:
-            backup_dir = str(Path(self.app_state.nc_file_path).parent / "labels" / "backups")
+            backup_dir = str(session_dir_of(self.app_state.nc_file_path) / "labels" / "backups")
             self.local_backup_edit.setText(backup_dir)
         local_backup_row.addWidget(self.local_backup_edit)
         layout.addLayout(local_backup_row)
@@ -411,7 +412,7 @@ class IOWidget(QWidget):
         combo.clear()
         combo.addItem("Flat (no subfolders)")
         if nc_path:
-            parts = Path(nc_path).parent.parts[1:]
+            parts = session_dir_of(nc_path).parts[1:]
             for i, _ in enumerate(parts):
                 subfolder = "/".join(parts[len(parts) - i - 1 :])
                 combo.addItem(subfolder)
@@ -956,7 +957,7 @@ class IOWidget(QWidget):
 
         active = self.mapping_file_path_edit.text().strip()
         if not active:
-            data_dir = Path(self.app_state.nc_file_path).parent if self.app_state.nc_file_path else None
+            data_dir = session_dir_of(self.app_state.nc_file_path) if self.app_state.nc_file_path else None
             active = str(default_config_dir(data_dir) / "mapping.txt")
         name_to_id, added = extend_mapping(names, active)
         if added:
@@ -1018,23 +1019,25 @@ class IOWidget(QWidget):
             self.label_file_path_edit.setText(canary_path)
             del self._canary_labels_path
 
-        self._auto_populate_nwb_video_folder()
+        self._seed_media_folders_from_alignment()
         self._auto_discover_nwb()
         self._auto_discover_metadata()
         self._auto_import_crowsetta_labels()
 
-    def _auto_populate_nwb_video_folder(self):
-        """If the loaded NWB file downloaded trial clips, auto-fill the video folder field."""
-        dt = getattr(self.app_state, "dt", None)
-        if dt is None:
-            return
-        video_folder = getattr(self.app_state, "nwb_video_folder", None)
-        if not video_folder:
-            return
-        video_folder = str(video_folder)
-        self.video_folder_edit.setText(video_folder)
-        self.app_state.video_folder = video_folder
-        logger.info("NWB auto-set video folder: %s", video_folder)
+    def _seed_media_folders_from_alignment(self):
+        """Fill an empty video/pose/audio folder from where the alignment paired its files.
+
+        The alignment records full paths per stream; a folder setting the user
+        has not touched takes that folder, and then persists with the session's
+        local settings like any other. A folder already set is left alone.
+        """
+        alignment = getattr(self.app_state, "nwb_alignment", None)
+        folders = alignment.media_folders() if alignment is not None else {}
+        for stream, attr in (("video", "video_folder"), ("pose", "pose_folder"), ("audio", "audio_folder")):
+            folder = folders.get(stream)
+            if folder is not None and not getattr(self.app_state, attr, None):
+                setattr(self.app_state, attr, str(folder))
+                logger.info("Seeded %s from the alignment: %s", attr, folder)
 
     def _ensure_crowsetta_formats(self):
         """Add crowsetta formats to labels combo if not already present."""
@@ -1160,7 +1163,7 @@ class IOWidget(QWidget):
         line_edit = QLineEdit()
         line_edit.setObjectName(f"{object_name}_edit")
         if object_name == "nc_file_path":
-            line_edit.setPlaceholderText("Path to .nc / .nwb / .npz file or pynapple folder")
+            line_edit.setPlaceholderText("A folder holding .ethograph/, a .nwb, .nc or pynapple files")
 
         browse_button = QPushButton("Browse")
         browse_button.setObjectName(f"{object_name}_browse_button")
@@ -1169,7 +1172,7 @@ class IOWidget(QWidget):
         if object_name == "nc_file_path":
             self.import_labels_checkbox = QCheckBox("Import labels")
             self.import_labels_checkbox.setObjectName("import_labels_checkbox")
-            self.import_labels_checkbox.setToolTip("Load labels from {name}_labels.tsv alongside the .nc file.\n")
+            self.import_labels_checkbox.setToolTip("Load the session folder's labels.tsv.\n")
             self.import_labels_checkbox.stateChanged.connect(self._on_import_labels_checked)
             self.import_labels_checkbox.setChecked(bool(self.app_state.import_labels_nc_data))
 
@@ -1183,12 +1186,6 @@ class IOWidget(QWidget):
             for btn in extra_buttons:
                 row_layout.addWidget(btn)
         row_layout.addWidget(browse_button)
-        if object_name == "nc_file_path":
-            browse_folder_button = QPushButton("Browse folder")
-            browse_folder_button.setObjectName(f"{object_name}_browse_folder_button")
-            browse_folder_button.setToolTip("Browse for a pynapple data folder")
-            browse_folder_button.clicked.connect(self._browse_data_folder)
-            row_layout.addWidget(browse_folder_button)
         row_layout.addWidget(clear_button)
         target_layout.addRow(label, row_layout)
 
@@ -1474,7 +1471,7 @@ class IOWidget(QWidget):
             logger.info("Auto-discovered NWB alignment: %s", nwb)
 
     def _auto_discover_metadata(self):
-        """Auto-discover {stem}_metadata.tsv near the loaded data file."""
+        """Auto-discover the session folder's metadata.tsv."""
         nc_path = self.app_state.nc_file_path
         if not nc_path:
             return
@@ -1489,9 +1486,7 @@ class IOWidget(QWidget):
             return
         from ethograph.utils.paths import find_nwb_file
 
-        p = Path(selected_path)
-        data_dir = str(p) if p.is_dir() else str(p.parent)
-        nwb = find_nwb_file(data_dir)
+        nwb = find_nwb_file(str(session_dir_of(selected_path)))
         if nwb is not None:
             self.nwb_file_path_edit.setText(str(nwb))
             logger.info("Auto-populated alignment from browse: %s", nwb)
@@ -1511,11 +1506,11 @@ class IOWidget(QWidget):
             self._try_auto_populate_alignment(path)
 
     def _browse_data_folder(self):
-        """Browse for a pynapple data folder."""
+        """Browse for a session folder (one holding .ethograph/, a .nwb, or pynapple files)."""
         path = browse_open_dir(
             None,
             self.app_state,
-            "Open pynapple data folder",
+            "Open session folder",
             preferred_dir=self.nc_file_path_edit.text().strip() or None,
         )
         if path:
@@ -1526,7 +1521,7 @@ class IOWidget(QWidget):
     def on_browse_clicked(self, browse_type="file", media_type=None):
         if browse_type == "file":
             if media_type == "data":
-                self._browse_data_file()
+                self._browse_data_folder()  # a session is a folder; a file only names its folder
                 return
 
             elif media_type == "labels":

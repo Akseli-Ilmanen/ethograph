@@ -98,17 +98,16 @@ def read_names(features_dir: Path) -> list[str]:
     return list(json.loads((features_dir / NAMES_FILE).read_text(encoding="utf-8"))["names"])
 
 
-def _events_on_trial_clock(session: Session, record: TrialRecord, config: SpotConfig) -> dict[int, list[float]]:
+def _events_on_trial_clock(record: TrialRecord, config: SpotConfig) -> dict[int, list[float]]:
     """The record's events back as trial-relative seconds.
 
-    The record holds video frames; ``trial = video + offset`` (the
-    ``VideoSync`` convention) takes them back to the clock the features are on.
+    The record holds frames of its trial's window; ``trial = video + offset``
+    (the ``VideoSync`` convention, the window's start folded into
+    ``offset_s``) takes them back to the clock the features are on.
     """
-    alignment = session.result.nwb_alignment
-    camera = session.video_device(config.labels.camera)
-    offset = float(alignment.stream_offset_for_trial(record.trial, "video", device=camera))
     return {
-        config.class_label(name): [f / record.fps + offset for f in frames] for name, frames in record.events.items()
+        config.class_label(name): [f / record.fps + record.offset_s for f in frames]
+        for name, frames in record.events.items()
     }
 
 
@@ -130,9 +129,7 @@ def export_features(config: SpotConfig, sessions: list[Session], records: list[T
         time, x = trial_features(session, record.trial, config.features)
         if x.shape[1] != len(names):
             raise ValueError(f"{record.video_id}: {x.shape[1]} columns for {len(names)} names — the layout drifted")
-        write_trial_features(
-            out_dir / f"{record.video_id}.npz", time, x, _events_on_trial_clock(session, record, config)
-        )
+        write_trial_features(out_dir / f"{record.video_id}.npz", time, x, _events_on_trial_clock(record, config))
     logger.info("features/: %d trials x %d columns %s", len(records), len(names), names)
     return out_dir
 

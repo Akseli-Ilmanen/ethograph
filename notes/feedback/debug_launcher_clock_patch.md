@@ -34,6 +34,7 @@ changes to the clock internals.
 ```python
 _orig_advance_from_clock = VideoSync._advance_from_clock
 
+
 def logged_advance_from_clock(self):
     clock = self._audio_clock
     elapsed = clock.elapsed_s() if clock is not None else 0.0
@@ -49,6 +50,7 @@ def logged_advance_from_clock(self):
         f"{self.marker_time_override:.4f}" if self.marker_time_override is not None else "None",
         self._clock_start_t + elapsed,
     )
+
 
 VideoSync._advance_from_clock = logged_advance_from_clock
 ```

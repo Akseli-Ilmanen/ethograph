@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING
 
 import pandas as pd
-from movement.io import load_dataset
+from movement.io.load import get_supported_source_software
 
 if TYPE_CHECKING:
     from ethograph.gui.wizard_media_files import FilePattern
 
-AVAILABLE_SOFTWARES: list[str] = list(get_args(load_dataset.__annotations__["source_software"]))
+#: Pose software movement can load, DeepLabCut first (the wizard's default).
+AVAILABLE_SOFTWARES: list[str] = sorted(get_supported_source_software(), key=lambda s: (s != "DeepLabCut", s))
 
 #: The three modes of page 0.
 MODES = ("pair", "free_running", "triggered")
@@ -29,6 +30,7 @@ class ModalityConfig:
     n_devices: int = 1
     pattern: FilePattern | None = None
     nested_subfolders: bool = False
+    extension: str | None = None  # one suffix when the folder holds several (DLC: .h5 + .csv)
     fps: int | None = None
     fps_by_camera: dict[str, int] = field(default_factory=dict)
     audio_sr: float | None = None
@@ -50,6 +52,21 @@ class ModalityConfig:
     @property
     def is_continuous_mode(self) -> bool:
         return self.file_mode == "aligned_to_session"
+
+
+SESSION_FILE_SUFFIX = ".nc"
+
+
+def session_output_path(text: str) -> str:
+    """The session file the wizard will write, always carrying the ``.nc`` suffix.
+
+    The output is typed or picked by the user; a bare ``session`` would be
+    written without an extension and refused by the loader afterwards.
+    """
+    path = text.strip()
+    if path and not path.lower().endswith(SESSION_FILE_SUFFIX):
+        path += SESSION_FILE_SUFFIX
+    return path
 
 
 @dataclass
@@ -87,6 +104,8 @@ class WizardState:
     session_dir: str = ""
     rig_name: str = ""
     notebook_path: str = ""
+    #: Hand the written notebook to the OS's program chooser when the wizard finishes.
+    open_notebook: bool = True
     output_path: str = ""
     file_durations: dict[str, dict[str, float]] = field(default_factory=dict)
 

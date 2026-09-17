@@ -6,13 +6,21 @@ import ethograph as eto
 
 # Session-wide files are not per trial; they are paired in the write cell.
 sources = [
-    eto.SourceSpec(stream=s["stream"], folder=s["folder"], pattern=s.get("pattern"), software=s.get("software"))
+    eto.SourceSpec(
+        stream=s["stream"],
+        folder=s["folder"],
+        pattern=s.get("pattern"),
+        software=s.get("software"),
+        extension=s.get("extension"),
+    )
     for s in rig["sources"]
     if not s.get("session_wide")
 ]
-table = eto.discover_media(session_dir, sources)
+table = eto.discover_media(sources)  # one row per trial, each cell a file's full path
+# Optional: join per-trial metadata (a CSV/TSV with a "trial" column) onto the table.
+# Delete this block if you have none; the media pairing above is all the write cell needs.
 if rig.get("trial_table_file"):
-    _trial_table_path = Path(session_dir) / rig["trial_table_file"]
+    _trial_table_path = Path(rig["trial_table_file"])
     _sep = "	" if _trial_table_path.suffix == ".tsv" else ","
     trials = pd.read_csv(_trial_table_path, sep=_sep)
     table = table.merge(trials, on="trial", how="left")

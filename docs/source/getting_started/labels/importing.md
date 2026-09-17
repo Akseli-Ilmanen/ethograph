@@ -24,6 +24,11 @@ or a plain `.tsv`). With **Load as: overlay**, each file opens in its own
 panels, below the video. Import several files to stack them and compare
 models against each other and against your labels.
 
+The Moll et al. 2025 template ships several such runs to try this on: they
+download with the dataset into its `labels/predictions_<model>/` folders
+(one per model, e.g. `predictions_mlp`, `predictions_c2f-tcn`,
+`predictions_feral-cp`), each ready for **Import predictions → From folder**.
+
 Each file gets at most one panel. Closed one? Add it back from the ➕ **Add
 panel** popup, which lists every imported file. Click a prediction on its
 panel to select it and press `V` to play it back. Predictions are read-only.
@@ -44,7 +49,7 @@ Each `IntervalSet` name becomes a label class.
 
 Label names already in the active `mapping.txt` keep their IDs; new names are
 appended to it (see {ref}`target-auto-mapping`). The labels are written to the
-canonical `_labels.tsv` alongside the `.nc`.
+canonical `labels.tsv` in the session folder.
 
 Global-time intervals are split across trials using the `trials` /
 `epochs` `IntervalSet` (or the session's trial table). See
@@ -92,6 +97,7 @@ ethoseq.to_file("labels_for_sharing.tsv")
 
 # Import via crowsetta
 import crowsetta
+
 scribe = crowsetta.Transcriber(format="ethograph-seq")
 annot = scribe.from_file("labels_for_sharing.tsv").to_annot()
 ```

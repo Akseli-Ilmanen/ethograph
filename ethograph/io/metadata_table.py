@@ -21,6 +21,7 @@ import pandas as pd
 
 from ethograph.io.nwb_alignment import make_nwb_alignment
 from ethograph.io.pynapple import load_nap_data
+from ethograph.io.session_layout import metadata_path
 
 logger = logging.getLogger(__name__)
 
@@ -110,10 +111,9 @@ def trials_ep_from_metadata_df(df: pd.DataFrame):
     return _build_trials_ep(df)
 
 
-def metadata_tsv_path(nc_path: str | Path) -> Path:
-    """Derive the metadata TSV path from a dataset file path."""
-    p = Path(nc_path).resolve()
-    return p.parent / f"{p.stem}_metadata.tsv"
+def metadata_tsv_path(source: str | Path) -> Path:
+    """The session's ``metadata.tsv``, from the session folder or any file in it."""
+    return metadata_path(source)
 
 
 def load_metadata_tsv(path: str | Path) -> pd.DataFrame:

@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from ethograph.gui.heatmap_sort import argmax_window_order, window_starts
+from ethograph.gui.heatmap_sort import argmax_window_order, row_window, window_starts
 
 
 def test_windows_tile_the_range_with_the_requested_overlap():
@@ -43,3 +43,11 @@ def test_bad_parameters_are_refused():
         window_starts(0.0, 1.0, window_s=0.0, overlap=0.5)
     with pytest.raises(ValueError):
         window_starts(0.0, 1.0, window_s=1.0, overlap=1.0)
+
+
+def test_row_window_keeps_a_contiguous_block_that_slides_to_both_ends():
+    assert row_window(10, 100.0, 0.7) == slice(0, 10)
+    assert row_window(10, 30.0, 0.0) == slice(0, 3)
+    assert row_window(10, 30.0, 1.0) == slice(7, 10)
+    assert row_window(10, 30.0, 0.5) == slice(4, 7)
+    assert row_window(3, 1.0, 1.0) == slice(2, 3)

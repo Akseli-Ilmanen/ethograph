@@ -63,9 +63,12 @@ def _build_single_trial_ds(
         ds.attrs["fps"] = fps
 
     if state.pose.enabled:
-        pose_path = _get_file_for_trial(row, "pose")
-        if pose_path:
-            ds = _load_pose_into_ds(ds, pose_path, state.pose)
+        pose_name = _get_file_for_trial(row, "pose")
+        if pose_name:
+            pose_path = resolve_media_path(state.pose, pose_name)
+            if pose_path is None:
+                raise ValueError(f"Trial {trial_id}: pose file {pose_name!r} is not in the pose folder")
+            ds = _load_pose_into_ds(ds, str(pose_path), state.pose)
 
     return ds
 
@@ -137,56 +140,65 @@ def _build_nwb_file(
         else:
             stream_rates["audio"] = float(state.audio.audio_sr)
 
-    table = trial_table.copy()
-    if not {"start_time", "stop_time"}.issubset(table.columns):
-        table = _infer_trial_times(table, state, fps)
-
     pair_media(
-        trial_table=table,
+        trial_table=with_media_paths(trial_table, state),
         stream_rates=stream_rates,
         session_wide=session_wide or None,
         output_path=nwb_path,
+        pose_fps=fps,
+        individuals=state.individuals or None,
     )
 
     return nwb_path
 
 
-def _infer_trial_times(table: pd.DataFrame, state: WizardState, fps: float | None) -> pd.DataFrame:
-    """Compute start_time / stop_time for each trial by probing media file durations."""
+def with_media_paths(table: pd.DataFrame, state: WizardState) -> pd.DataFrame:
+    """The trial table with every media cell resolved to its file's full path.
+
+    The wizard's table names files by basename; ``pair_media`` wants to know where
+    they are, both to probe trial durations and to record the paths in the NWB. A
+    name that resolves to no file raises, naming the trial and column.
+    """
     table = table.copy()
-    starts: list[float] = []
-    stops: list[float] = []
-    cursor = 0.0
-    for _, row in table.iterrows():
-        dur = _probe_row_duration(row, state, fps)
-        starts.append(cursor)
-        stops.append(cursor + dur)
-        cursor += dur
-    table["start_time"] = starts
-    table["stop_time"] = stops
+    for stream in ("video", "audio", "pose"):
+        cfg: ModalityConfig = getattr(state, stream)
+        if not cfg.enabled:
+            continue
+        for col in [c for c in table.columns if c.startswith(f"{stream}_") and not c.endswith("_start")]:
+            resolved: list[str] = []
+            for trial, value in zip(table["trial"], table[col]):
+                if value is None or (isinstance(value, float) and pd.isna(value)) or value == "":
+                    resolved.append("")
+                    continue
+                path = resolve_media_path(cfg, str(value))
+                if path is None:
+                    raise ValueError(f"Trial {trial}: {col} names {value!r}, which is not in the {stream} folder")
+                resolved.append(str(path))
+            table[col] = resolved
     return table
 
 
-def _probe_row_duration(row: pd.Series, state: WizardState, fps: float | None) -> float:
-    """Return the duration (seconds) of a trial by probing its media files."""
-    from ethograph.utils.stream_durations import probe_duration
+def resolve_media_path(cfg: ModalityConfig, name: str) -> Path | None:
+    """Map a trial-table cell (a bare filename or a full path) to an existing file of *cfg*.
 
-    for stream in ["video", "audio", "pose"]:
-        cfg = getattr(state, stream)
-        if not cfg.enabled:
-            continue
-        stream_fps = fps if stream == "pose" else None
-        for col in row.index:
-            if not col.startswith(f"{stream}_"):
-                continue
-            path_str = row.get(col)
-            if not path_str or pd.isna(path_str):
-                continue
-            path = Path(str(path_str))
-            if not path.exists():
-                continue
-            dur = probe_duration(str(path), stream, stream_fps)
-            if dur is not None:
-                return dur
-
-    raise ValueError(f"Could not probe duration for trial row: {row.to_dict()}")
+    The trial table stores filenames only; the modality config knows where they live —
+    first through the files its pattern was built from, then through its folder.
+    """
+    direct = Path(name)
+    if direct.is_absolute() and direct.exists():
+        return direct
+    basename = direct.name
+    known = list(cfg.pattern.files) if cfg.pattern else []
+    known += [Path(f) for f in cfg.files]
+    for candidate in known:
+        if candidate.name == basename and candidate.exists():
+            return candidate
+    if cfg.folder_path:
+        folder = Path(cfg.folder_path)
+        flat = folder / basename
+        if flat.exists():
+            return flat
+        if cfg.nested_subfolders:
+            for candidate in folder.rglob(basename):
+                return candidate
+    return None

@@ -1,0 +1,9 @@
+## Open
+
+Start page → **Session folder** → `{{ session_dir }}`.
+
+The alignment records where each source's files are, so on this machine they are found
+as they are. On another machine, or if a source does not appear, point the GUI at its folder:
+{% for stream, folder in sources %}
+- {{ stream }}: `{{ folder }}`
+{% endfor %}

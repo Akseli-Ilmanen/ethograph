@@ -15,10 +15,9 @@ digital = {{ digital_interface }}(
 )
 onsets = digital.get_event_times("camera_trigger")
 
-_video_folder = Path(session_dir) / "{{ video_folder }}"
 videos = {
     _col: ExternalVideoInterface(
-        file_paths=[_video_folder / f for f in table[_col].dropna()], video_name=_col
+        file_paths=[Path(f) for f in table[_col].dropna()], video_name=_col
     )
     for _col in {{ camera_columns }}
 }
@@ -35,4 +34,4 @@ _frame_counts = np.array(_primary.get_header_frame_counts())
 _durations = _frame_counts / np.array(_primary.get_header_frame_rates())
 trial_onsets = onsets
 trial_durations = _durations
-trial_video_files = table["{{ primary_camera_column }}"].dropna().tolist()
+trial_video_files = [Path(f).name for f in table["{{ primary_camera_column }}"].dropna()]

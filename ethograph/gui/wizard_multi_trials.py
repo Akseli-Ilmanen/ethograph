@@ -182,6 +182,8 @@ class TrialsPage(QWidget):
     def populate_from_table(self, state: WizardState, table: pd.DataFrame) -> None:
         """Show the pairing table :func:`~ethograph.io.pairing.discover_media` built."""
         self._wizard_state = state
+        if state.individuals and not self._individuals_edit.text().strip():
+            self._individuals_edit.setText(", ".join(state.individuals))  # the project's default
         self._auto_df = table
         self._update_auto_table()
         self._update_requirements_display()

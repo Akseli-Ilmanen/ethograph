@@ -53,7 +53,7 @@ def test_save_load_roundtrip():
 
 def test_metadata_tsv_path():
     p = metadata_tsv_path("/data/experiment.nc")
-    assert p.name == "experiment_metadata.tsv"
+    assert p.name == "metadata.tsv"
 
 
 def test_empty_metadata_df():

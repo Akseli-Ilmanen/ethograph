@@ -42,7 +42,7 @@ from qtpy.QtWidgets import (
 from ethograph.gui.dialog_function_params import _do_open_source
 from ethograph.gui.wizard_media_files import extract_file_row
 from ethograph.gui.wizard_multi_codegen import generate_alignment_code
-from ethograph.gui.wizard_state import ModalityConfig, WizardState
+from ethograph.gui.wizard_state import ModalityConfig, WizardState, session_output_path
 from ethograph.io.time_sources import PynappleSource
 from ethograph.utils.paths import defaults_dir
 
@@ -891,7 +891,8 @@ class TimelinePage(QWidget):
         self._plot.setXRange(center - window / 2, center + window / 2, padding=0)
 
     def collect_state(self, state: WizardState):
-        state.output_path = self._output_edit.text()
+        state.output_path = session_output_path(self._output_edit.text())
+        self._output_edit.setText(state.output_path)
 
     def _browse_output(self):
         result = QFileDialog.getSaveFileName(
@@ -901,9 +902,7 @@ class TimelinePage(QWidget):
             "NetCDF files (*.nc);;All files (*)",
         )
         if result and result[0]:
-            path = result[0]
-            if not path.endswith(".nc"):
-                path += ".nc"
+            path = session_output_path(result[0])
             self._output_edit.setText(path)
             if self._state:
                 self._state.output_path = path

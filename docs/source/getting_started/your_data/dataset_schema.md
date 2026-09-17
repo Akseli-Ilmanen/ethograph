@@ -135,7 +135,7 @@ speed = nap.Tsd(t=time_s, d=speed_values)
 
 position = nap.TsdFrame(
     t=time_s,
-    d=pos_array,                        # shape: (n_time, 3)
+    d=pos_array,  # shape: (n_time, 3)
     columns=["x", "y", "z"],
 )
 ```
@@ -164,7 +164,7 @@ different individuals.
 ds = xr.Dataset(
     data_vars={
         "speed": xr.DataArray(
-            speed_array,                # shape: (time, individual)
+            speed_array,  # shape: (time, individual)
             dims=["time", "individual"],
         ),
     },
@@ -219,7 +219,7 @@ variable is automatically discovered and gets a selection
 
 ```python
 ds["emg"] = xr.DataArray(
-    emg_data,                            # shape: (time, channels)
+    emg_data,  # shape: (time, channels)
     dims=["time", "channels"],
     coords={"channels": ["biceps", "triceps"]},
 )
@@ -270,7 +270,7 @@ The variable should have an `RGB` dimension of size 3:
 
 ```python
 ds["angle_rgb"] = xr.DataArray(
-    rgb_values,                          # shape: (time, keypoint, individual, 3)
+    rgb_values,  # shape: (time, keypoint, individual, 3)
     dims=["time", "keypoint", "individual", "RGB"],
 )
 ```
@@ -295,7 +295,7 @@ import pynapple as nap
 
 angle_rgb = nap.TsdFrame(
     t=time_s,
-    d=rgb_values,                        # shape: (n_time, 3)
+    d=rgb_values,  # shape: (n_time, 3)
     columns=["R", "G", "B"],
 )
 data = {"angle_rgb": angle_rgb}

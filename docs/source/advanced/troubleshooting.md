@@ -15,6 +15,7 @@ Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issue
 |---------|----------|
 | Unexpected error in the GUI | Save labels (`Ctrl + S`), then restart the GUI. Save semi-regularly! |
 | Error with user settings | In the top bar, first try **Help ▸ Reset local settings (this dataset)**. If that does not help, use **Help ▸ Reset global settings (gui_settings.yaml)**. |
+| Plots are squeezed to thin strips or seem missing | The saved layout holds more panels than fit. Close the extras with their ✕, or use **Help ▸ Reset local settings (this dataset)**: it rebuilds the default panels immediately. |
 
 ---
 
@@ -200,6 +201,7 @@ If the association is not working, you can re-run it manually:
 
 ```python
 from ethograph.utils.download import ensure_default_configs
+
 ensure_default_configs()
 ```
 

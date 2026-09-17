@@ -26,6 +26,7 @@ from typing import Any, ClassVar, Iterable
 import yaml
 
 from ethograph.features.label_inputs import check_branches_disjoint
+from ethograph.io.session_layout import adopt_legacy_files
 from ethograph.labels.tsv_store import labels_tsv_path
 from ethograph.utils.paths import defaults_dir, ethograph_home
 from ethograph.video_features.base import CropBox, Extractor, check_extractor_name, extractor_module
@@ -185,6 +186,8 @@ class SessionSpec:
     sessions of one recording. Give the second a ``name``.
     """
 
+    #: The session folder (holds ``.ethograph/`` and the one ``.nc``). A file path
+    #: is accepted and names its folder, loading that file whatever else is there.
     source: Path
     labels_path: Path | None = None
     video_dir: Path | None = None
@@ -195,6 +198,9 @@ class SessionSpec:
     #: keys, log lines. Defaults to the source's stem, which is fine until
     #: every session's file is called ``Trial_data.nc``.
     name: str | None = None
+    #: The project's ``ignore`` globs (``project.yaml`` nearest the config): root
+    #: files of the session folder never read. Filled by ``config_from_dict``.
+    ignore: tuple[str, ...] = ()
     #: Video features from files, ``{variable: folder}``: one ``{video stem}.npy``
     #: per trial's camera file, attached in memory when the session opens
     #: (:mod:`ethograph.io.video_feature_files`), so ``features.columns`` can
@@ -206,6 +212,20 @@ class SessionSpec:
         if self.name:
             return self.name
         return self.source.name if self.source.is_dir() else self.source.stem
+
+
+def project_ignore(start: Path) -> tuple[str, ...]:
+    """The ``ignore`` list of the ``project.yaml`` nearest *start* (a config file or folder); ``()`` without one."""
+    from ethograph.gui.project import find_project_dir, load_project_settings
+
+    project = find_project_dir(start)
+    try:
+        return load_project_settings(project).ignore
+    except ValueError as exc:
+        # A pipeline config that was itself named project.yaml (older docs said so) is
+        # not project settings; a run must not die on it, only a GUI project may.
+        logger.warning("%s is not project settings, no ignore list applied: %s", project, exc)
+        return ()
 
 
 def name_colliding_sessions(specs: list[SessionSpec]) -> None:
@@ -1407,6 +1427,7 @@ def _default_labels_path(spec: SessionSpec) -> None:
     built (or re-read on every :meth:`Project.update`) without ever opening
     a session.
     """
+    adopt_legacy_files(spec.source, metadata=False)  # a lone {stem}_labels.tsv becomes labels.tsv first
     spec.labels_path = labels_tsv_path(spec.source)
     logger.info("%s: no labels_path set — defaulting to %s", spec.source, spec.labels_path)
 
@@ -1418,7 +1439,9 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
     cfg.config_path = config_path
     if not cfg.sessions:
         raise ValueError("config.sessions is empty — list at least one session")
+    ignore = project_ignore(config_path or base_dir)
     for spec in cfg.sessions:
+        spec.ignore = ignore
         if spec.labels_path is None:
             _default_labels_path(spec)
     name_colliding_sessions(cfg.sessions)

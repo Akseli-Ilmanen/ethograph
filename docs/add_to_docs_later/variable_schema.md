@@ -92,11 +92,14 @@ s3d:
 ```python
 from ethograph.io import schema
 
-schema.write_sidecar(session_folder, {
-    "speed": {"kind": schema.KINEMATIC_FEATURE},
-    "heading_angle": {"kind": schema.KINEMATIC_FEATURE, "normalise": False},
-    "s3d": {"kind": schema.VIDEO_FEATURE},
-})
+schema.write_sidecar(
+    session_folder,
+    {
+        "speed": {"kind": schema.KINEMATIC_FEATURE},
+        "heading_angle": {"kind": schema.KINEMATIC_FEATURE, "normalise": False},
+        "s3d": {"kind": schema.VIDEO_FEATURE},
+    },
+)
 ```
 
 Without it a pynapple session works exactly as before, but nothing is
@@ -123,7 +126,7 @@ group.set_info(
     source_label=["nose", "tail"],
     **schema.changepoint_metadata(2, target_feature="speed"),
 )
-schema.changepoint_units(group.metadata)   # [0, 1]
+schema.changepoint_units(group.metadata)  # [0, 1]
 ```
 
 ## Normalising a file written before this convention
@@ -216,10 +219,10 @@ S3D features in {mod}`ethograph.video_features`.
 ```python
 from ethograph.io import schema
 
-schema.kind_of(ds["speed"])          # "kinematic_feature" (or None)
-schema.is_changepoint(ds["troughs"]) # True — a raw binary mask
-schema.is_normalise(ds["heading"])   # False
+schema.kind_of(ds["speed"])  # "kinematic_feature" (or None)
+schema.is_changepoint(ds["troughs"])  # True — a raw binary mask
+schema.is_normalise(ds["heading"])  # False
 schema.is_egocentric(ds["pos_ego"])  # True / False / None when unstated
-schema.kinds_in(ds)                  # {"kinematic_feature": [...], ...}
+schema.kinds_in(ds)  # {"kinematic_feature": [...], ...}
 schema.select_kinds(ds, ["video_feature"])
 ```

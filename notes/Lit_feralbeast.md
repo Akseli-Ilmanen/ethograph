@@ -36,12 +36,14 @@ The TAS literature's shared contract — per-frame features `(T, D)` plus per-fr
 
 ```python
 class FeatureExtractor(Protocol):
-    def fit(self, videos: Sequence[Path]) -> Self: ...        # no-op for all shipped extractors
-    def transform(self, video: Path) -> xr.DataArray: ...     # dims (time, feature)
+    def fit(self, videos: Sequence[Path]) -> Self: ...  # no-op for all shipped extractors
+    def transform(self, video: Path) -> xr.DataArray: ...  # dims (time, feature)
+
 
 class TemporalHead(Protocol):
     def fit(self, features: xr.DataArray, targets: xr.DataArray) -> Self: ...
-    def predict_proba(self, features: xr.DataArray) -> xr.DataArray: ...   # (time, class)
+    def predict_proba(self, features: xr.DataArray) -> xr.DataArray: ...  # (time, class)
+
 
 class TargetCodec(Protocol):
     def encode(self, events: EventTable, n_frames: int) -> xr.DataArray: ...
@@ -55,8 +57,8 @@ class TargetCodec(Protocol):
 ```python
 @dataclass
 class ExtractorConfig:
-    name: str                    # "kinematics" | "s3d-kinetics" | "vit-mae-b" | "vjepa2-vitb" | "regnety-200mf-gsm"
-    trainable_layers: int = 0    # 0 = frozen + cached features; >0 = fine-tune last N (fused training, [gpu])
+    name: str  # "kinematics" | "s3d-kinetics" | "vit-mae-b" | "vjepa2-vitb" | "regnety-200mf-gsm"
+    trainable_layers: int = 0  # 0 = frozen + cached features; >0 = fine-tune last N (fused training, [gpu])
 ```
 
 `trainable_layers == 0` is today's workflow unchanged (extract once, cache, train head in seconds). `> 0` switches to the fused loop the vendored E2E-Spot already implements. Everything downstream — codec, evaluation, GUI review — is identical in both modes.

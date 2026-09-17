@@ -155,8 +155,8 @@ def test_missing_labels_path_defaults_and_is_never_created(project: Path):
     from ethograph.segment.sessions import open_session
 
     s3 = _make_session(project.parent / "sessions" / "s3", "s3", [1], seed=20)
-    s3_labels = s3.with_name("s3_labels.tsv")
-    s3_labels.unlink()  # a session that was never curated has no labels file yet
+    s3.with_name("s3_labels.tsv").unlink()  # a session that was never curated has no labels file yet
+    s3_labels = s3.with_name("labels.tsv")  # one labels file per session folder
 
     cfg = config_from_dict(
         {

@@ -14,6 +14,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
+import ethograph.gui.cover_page as cover_page_mod
 from ethograph.io.validation import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 
 
@@ -739,7 +740,7 @@ def test_cover_page_image_only_drop_rejected(gui):
         page._populate_io_from_buckets(buckets, {"data_sr": None, "source_software": None, "pose_fps": None})
 
 
-def test_cover_page_pose_only_drop_loads_as_features(gui):
+def test_cover_page_pose_only_drop_loads_as_features(gui, monkeypatch, tmp_path):
     """A pose file dropped with no video and no image loads on its own: the
     pose becomes a features .nc (position/confidence) with a pose-only
     alignment — plottable panels never require a camera."""
@@ -755,13 +756,15 @@ def test_cover_page_pose_only_drop_loads_as_features(gui):
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
+    # The session folder is chosen by the drop; keep it out of the data folder here.
+    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
     buckets = classify_files([str(pose_csv)])
     assert buckets["pose"] == [str(pose_csv)]
     page._populate_io_from_buckets(buckets, {"data_sr": None, "source_software": "DeepLabCut", "pose_fps": 30.0})
 
     app_state = meta.app_state
     assert app_state.nc_file_path and app_state.nc_file_path.endswith(".nc")
-    assert app_state.nwb_file_path and app_state.nwb_file_path.endswith(".tmp.nwb")
+    assert app_state.nwb_file_path and app_state.nwb_file_path.endswith(str(Path(".ethograph") / "alignment.nwb"))
     align = NWBAlignment(app_state.nwb_file_path)
     assert align.cameras == []  # no camera view exists for a standalone pose
     assert align.get_stream_rate("pose", "cam-1") == 30.0
@@ -791,8 +794,8 @@ def test_cover_page_pose_only_drop_loads_as_features(gui):
     assert meta.data_widget.space_plots[-1].dock_widget is not None
 
 
-def test_cover_page_builds_single_trial_alignment(gui, birdpark_data_dir):
-    """Drag&drop path: build a real alignment.tmp.nwb from birdpark media."""
+def test_cover_page_builds_single_trial_alignment(gui, birdpark_data_dir, tmp_path):
+    """Drag&drop path: build a real .ethograph/alignment.nwb from birdpark media."""
     from ethograph.gui.cover_page import CoverPage
     from ethograph.io.nwb_alignment import NWBAlignment
 
@@ -805,7 +808,7 @@ def test_cover_page_builds_single_trial_alignment(gui, birdpark_data_dir):
         pytest.skip("birdpark has no video files to build an alignment from")
 
     page = CoverPage(shell, meta.io_widget)
-    page._drop_tmp_dir = page._prepare_drop_dir()
+    page._drop_session_dir = tmp_path
     cam_map = [(str(videos[0]), None)]
     audio_files = [str(audios[0])] if audios else []
     nwb_path = page._build_tmp_alignment(cam_map, audio_files)
@@ -816,7 +819,7 @@ def test_cover_page_builds_single_trial_alignment(gui, birdpark_data_dir):
     assert rate and rate > 0  # real fps, not a hardcoded fallback
 
 
-def test_cover_page_session_plus_media_builds_alignment(gui, birdpark_data_dir):
+def test_cover_page_session_plus_media_builds_alignment(gui, birdpark_data_dir, monkeypatch, tmp_path):
     """Dropping a session .nc together with media synthesises a tmp alignment
     (nwb_file_path override) so the media is loadable — the session file's
     folder has no .ethograph sidecar describing the dropped files."""
@@ -831,18 +834,20 @@ def test_cover_page_session_plus_media_builds_alignment(gui, birdpark_data_dir):
         pytest.skip("birdpark is missing a video or .nc session file")
 
     page = CoverPage(shell, meta.io_widget)
+    # The session folder is chosen by the drop; keep it out of the data folder here.
+    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
     buckets = classify_files([str(session), str(videos[0])])
     page._populate_io_from_buckets(buckets, {"data_sr": None, "source_software": None})
 
     app_state = meta.app_state
     assert app_state.nc_file_path == str(session)
-    assert app_state.nwb_file_path and app_state.nwb_file_path.endswith(".tmp.nwb")
+    assert app_state.nwb_file_path and app_state.nwb_file_path.endswith(str(Path(".ethograph") / "alignment.nwb"))
     align = NWBAlignment(app_state.nwb_file_path)
     assert align.cameras == ["cam-1"]
     assert app_state.video_folder == str(videos[0].parent)
 
 
-def test_cover_page_audio_only_alignment(gui, birdpark_data_dir):
+def test_cover_page_audio_only_alignment(gui, birdpark_data_dir, tmp_path):
     """Audio-only drops build an alignment too (duration from the audio file)."""
     from ethograph.gui.cover_page import CoverPage
     from ethograph.io.nwb_alignment import NWBAlignment
@@ -855,7 +860,7 @@ def test_cover_page_audio_only_alignment(gui, birdpark_data_dir):
         pytest.skip("birdpark has no audio-only files")
 
     page = CoverPage(shell, meta.io_widget)
-    page._drop_tmp_dir = page._prepare_drop_dir()
+    page._drop_session_dir = tmp_path
     nwb_path = page._build_tmp_alignment([], [str(audios[0])])
 
     align = NWBAlignment(nwb_path)
@@ -869,7 +874,7 @@ def test_cover_page_audio_only_alignment(gui, birdpark_data_dir):
     assert resolved and Path(resolved).name == audios[0].name
 
 
-def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui):
+def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui, monkeypatch, tmp_path):
     """ "Several trials of one device" layout: 2+ video/pose files with no
     camera-matching dialog — natural-sort paired into a real multi-trial
     TrialTree, mirroring the Data wizard's single-camera 'Pair' route."""
@@ -887,6 +892,8 @@ def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui):
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
+    # The session folder is chosen by the drop; keep it out of the data folder here.
+    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
     page._drop_layout_combo.setCurrentIndex(page._drop_layout_combo.findData("multi_trial"))
     buckets = classify_files([str(v) for v in videos] + [str(p) for p in poses])
     assert page._is_multi_trial_drop(buckets)
@@ -906,7 +913,7 @@ def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui):
         assert resolved and Path(resolved) in videos
 
 
-def test_cover_page_many_npy_drop_is_one_trial_each(gui, tmp_path):
+def test_cover_page_many_npy_drop_is_one_trial_each(gui, tmp_path, monkeypatch):
     """Several .npy files are trials whatever the layout; with no media, each
     array's length at the given rate is its trial."""
     import ethograph as eto
@@ -920,6 +927,8 @@ def test_cover_page_many_npy_drop_is_one_trial_each(gui, tmp_path):
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
+    # The session folder is chosen by the drop; keep it out of the data folder here.
+    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
     page._populate_io_from_buckets(classify_files(npys), {"data_sr": 10.0, "pose_fps": None})
 
     dt = eto.open(meta.app_state.nc_file_path)
@@ -1122,21 +1131,26 @@ def test_birdpark_load_then_toggle_changepoints_via_menu(birdpark_gui):
 
 
 def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
-    """With a project folder set, a drop's folder lands under the project's
-    sessions/ and the reopen list puts its recorded state back into the IO
-    fields; without one the drop stays throwaway and the list is hidden."""
+    """The dropped files' own folder becomes the session (it gets .ethograph/);
+    with a project set it is registered there and the reopen list puts its
+    recorded state back into the IO fields. Without a project the list is hidden
+    and the session folder is the same: data never moves."""
     from ethograph.gui.cover_page import CoverPage
-    from ethograph.gui.project import list_drops, record_drop
-    from ethograph.utils.paths import is_throwaway_path
+    from ethograph.gui.project import list_drops, record_drop, register_session
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
     state = meta.app_state
+    rig = tmp_path / "rig"
+    rig.mkdir()
+    (rig / "clip.mp4").touch()
+    buckets = {"video": [str(rig / "clip.mp4")]}
 
     state.project_path = None
     page._refresh_project_ui()
     assert page._reopen_row.isHidden()
-    assert is_throwaway_path(page._prepare_drop_dir())
+    assert page._choose_session_dir(buckets) == rig
+    assert (rig / ".ethograph").is_dir()
 
     project = tmp_path / "study"
     project.mkdir()
@@ -1145,11 +1159,12 @@ def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
     assert not page._reopen_row.isHidden()
     assert not page._reopen_combo.isEnabled()  # nothing recorded yet
 
-    drop_dir = page._prepare_drop_dir()
-    assert drop_dir.parent == project / "sessions"
+    drop_dir = page._choose_session_dir(buckets)
+    assert drop_dir == rig
     state.video_folder = str(tmp_path)
     state.primary_camera = "cam-1"
-    record_drop(drop_dir, [str(tmp_path / "clip.mp4")], state)
+    record_drop(drop_dir, [str(rig / "clip.mp4")], state)
+    register_session(project, drop_dir)
     page._refresh_project_ui()
     assert page._reopen_combo.count() == 2  # placeholder + the drop
     assert [f for f, _ in list_drops(project)] == [drop_dir]
@@ -1164,3 +1179,17 @@ def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
     assert page._drop.paths == []  # Load takes the restored fields, not a rebuild
 
     page.close()
+
+
+def test_reset_local_settings_survives_the_next_auto_save(moll2025_gui):
+    shell, meta = moll2025_gui
+    pc = meta.plot_container
+    n_default = len(pc._dyn_panels)
+    for _ in range(3):
+        pc.add_panel("heatmap", feature="s3d")
+
+    shell._top_bar._reset_local_settings()
+    meta._snapshot_layouts()
+
+    assert len(pc._dyn_panels) == n_default
+    assert len(meta.app_state.panel_layout["panels"]) == n_default

@@ -18,6 +18,7 @@ from ethograph.gui.app_constants import DEFAULT_LABEL_OVERLAY_MODES, LABELLING_M
 from ethograph.gui.notify import notify
 from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.io.metadata_table import load_metadata_df
+from ethograph.io.session_layout import session_dir_of
 from ethograph.io.time_model import (
     RestrictionWindow,
     TimeRange,
@@ -203,6 +204,10 @@ class AppStateSpec:
         # import_labels_nc_data — it says how the user wants imports to
         # behave, not something tied to one dataset.
         "merge_imported_predictions": (bool, False, True),
+        # Which kind of folder (nc, video, audio, ...) received the session files
+        # the last times the user chose; most recent first. Read by the drop
+        # popup and the wizard to preselect a session folder (gui/session_folder).
+        "session_folder_kinds": (list[str], [], True),
         "trial_conditions": (list | None, None, False),
         "keypoints": (list[str], [], False),
         # Global preference: the "Import labels" checkbox is remembered across
@@ -532,6 +537,9 @@ class AppStateSpec:
         "heatmap_sort_mode": (str, "none", True),
         "heatmap_sort_window_s": (float, 0.5, True),
         "heatmap_sort_overlap": (float, 0.5, True),
+        # Row window: percent of the (sorted) rows shown, and where the block sits (0 = top, 1 = bottom).
+        "heatmap_row_percent": (float, 100.0, True),
+        "heatmap_row_position": (float, 0.0, True),
         # Firing rate
         "fr_bin_size": (float, 0.01, True),
         "fr_sigma": (float, 2.0, True),
@@ -1193,17 +1201,26 @@ class ObservableAppState(QObject):
     def label_individuals(self) -> list[str]:
         """Every individual that can act or receive, backend-agnostic.
 
-        The dataset's individual dim when it has one (whatever its spelling),
-        otherwise the names the labels themselves use — a session with no
-        individual dimension still labels *somebody*. Falls back to a single
-        ``"default"`` so the selector is never empty.
+        The session record's list when it declares one (``alignment.individuals``),
+        else the dataset's individual dim (whatever its spelling), else the
+        project's default (``project.yaml``), else the names the labels themselves
+        use — a session with no individual dimension still labels *somebody*.
+        Falls back to a single ``"default"`` so the selector is never empty.
         """
+        declared = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
+        if declared:
+            return declared
         loader = getattr(self, "data_loader", None)
         catalog = getattr(loader, "catalog", None)
         if catalog is not None and catalog.individual_combo:
             values = [str(v) for v in catalog.combo_values(catalog.individual_combo)]
             if values:
                 return values
+        from ethograph.gui.project import project_settings_of
+
+        project_default = list(project_settings_of(self).individuals)
+        if project_default:
+            return project_default
         names: list[str] = []
         df = self._all_labels_df
         if df is not None and not df.empty and "individual" in df.columns:
@@ -1331,10 +1348,10 @@ class ObservableAppState(QObject):
         if not nc_file_path:
             return None
         try:
-            nc_path = Path(nc_file_path)
-        except (TypeError, ValueError):
+            session = session_dir_of(nc_file_path)
+        except (TypeError, ValueError, OSError):
             return None
-        return nc_path.parent / self.SETTINGS_DIRNAME / self.LOCAL_SETTINGS_FILENAME
+        return session / self.SETTINGS_DIRNAME / self.LOCAL_SETTINGS_FILENAME
 
     def _yaml_read(self, path: Path) -> dict:
         if not path.exists():
@@ -1663,12 +1680,14 @@ class ObservableAppState(QObject):
             logger.error("Error deleting YAML file: %s", e)
             return False
 
-    def reset_local_settings(self) -> bool:
+    def reset_local_settings(self, *, keep_selections: bool = False) -> bool:
         """Reset this dataset's SCOPE_LOCAL settings to defaults.
 
         Deletes ``.ethograph/local_settings.yaml`` AND resets the in-memory
         local vars — deleting the file alone would be undone by the next
         auto-save, which writes local settings from live state.
+        ``keep_selections`` keeps the ``*_sel`` attrs: a loaded dataset's
+        panels and trial navigation render from them.
         """
         path = self._local_settings_path()
         if path is None:
@@ -1676,6 +1695,8 @@ class ObservableAppState(QObject):
         deleted = self.delete_yaml(str(path))
         for var in AppStateSpec.saveable_attributes(scope=AppStateSpec.SCOPE_LOCAL):
             setattr(self, var, AppStateSpec.get_default(var))
+        if keep_selections:
+            return deleted
         for attr in list(dir(self)):
             if attr.endswith("_sel") or attr.endswith("_sel_previous"):
                 try:
@@ -1872,9 +1893,9 @@ class ObservableAppState(QObject):
         effective_remote_path = remote_path or self.remote_backup_path or None
         effective_remote_mode = remote_mode if remote_mode is not None else self.remote_backup_mode
 
-        nc_path = Path(self.nc_file_path)
+        session = session_dir_of(self.nc_file_path)
         suffix = self._get_downsampled_suffix()
-        stem = f"{nc_path.stem}{suffix}"
+        stem = f"labels{suffix}"
 
         # Enrich with computed columns (duration, sequence, global timing, trial attrs)
         from ethograph.labels.export import enrich_labels_df
@@ -1895,27 +1916,27 @@ class ObservableAppState(QObject):
         save_labels_tsv(primary_tsv, save_df)
 
         # 2. Local backup with timestamp
-        backup_dir = nc_path.parent / "labels" / "backups"
+        backup_dir = session / "labels" / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_labels_tsv(backup_dir / f"{stem}_labels_{timestamp}.tsv", save_df)
+        save_labels_tsv(backup_dir / f"{stem}_{timestamp}.tsv", save_df)
 
         # 3. Remote backup (optional)
         # remote_path_depth controls how many parent folders to mirror inside remote_root:
-        #   0 = flat (Trial_data_labels.tsv)
-        #   1 = behav/Trial_data_labels.tsv
-        #   2 = ses-000/behav/Trial_data_labels.tsv  (etc.)
+        #   0 = flat (labels.tsv)
+        #   1 = behav/labels.tsv
+        #   2 = ses-000/behav/labels.tsv  (etc.)
         if self.remote_backup_enabled and effective_remote_path:
             remote_root = Path(effective_remote_path)
             depth = self.remote_path_depth
             if depth > 0:
-                parent_parts = nc_path.parent.parts[1:]  # strip drive / leading '/'
+                parent_parts = session.parts[1:]  # strip drive / leading '/'
                 mirror_parts = parent_parts[max(0, len(parent_parts) - depth) :]
                 remote_dir = remote_root.joinpath(*mirror_parts)
             else:
                 remote_dir = remote_root
             remote_dir.mkdir(parents=True, exist_ok=True)
-            remote_file = remote_dir / f"{stem}_labels.tsv"
+            remote_file = remote_dir / f"{stem}.tsv"
             if effective_remote_mode in ("overwrite", "git"):
                 save_labels_tsv(remote_file, save_df)
                 if effective_remote_mode == "git":

@@ -15,6 +15,7 @@ Qt-free: this module is imported by headless notebooks, not just the GUI.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,10 +30,13 @@ from ethograph.io.nwb_alignment import (
     _infer_times_from_media,
     edit_nwb,
     sync_acquisition_for_streams,
+    write_individuals,
 )
 
 if TYPE_CHECKING:
     from pynwb import NWBFile
+
+logger = logging.getLogger(__name__)
 
 #: Default device name per stream, used when a source names no device and
 #: (for a pattern) captures no camera/mic group of its own.
@@ -47,11 +51,19 @@ class SourceSpec:
     """One media source of a rig: where its files are and how they map to trials/devices."""
 
     stream: str  # "video" | "pose" | "audio"
-    folder: str | None = None  # relative to session_dir, or absolute
-    files: tuple[str, ...] = ()  # explicit list; wins over folder
-    pattern: str | None = None  # regex over the file *stem*: named groups trial (required), camera|mic (optional)
+    folder: str | None = None  # absolute path of the folder holding the files
+    files: tuple[str, ...] = ()  # explicit absolute paths; wins over folder
+    pattern: str | None = None  # regex the whole file *stem* must match; groups: trial (required), camera|mic
     device: str | None = None  # device name when pattern has no camera/mic group (default "cam-1" / "mic-1")
     software: str | None = None  # pose only, e.g. "DeepLabCut"
+    extension: str | None = None  # keep only files with this suffix (e.g. ".h5"); None = every extension of the stream
+
+
+def _basename(value: object) -> str:
+    """The filename the NWB trials table stores for a cell: a full path's name, ``""`` when empty."""
+    if value is None or value == "" or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return Path(str(value)).name
 
 
 def _stream_extensions(stream: str) -> frozenset[str]:
@@ -63,21 +75,23 @@ def _stream_extensions(stream: str) -> frozenset[str]:
     return frozenset(by_stream[stream])
 
 
-def _resolve_path(value: str, session_dir: Path) -> Path:
-    path = Path(value)
-    return path if path.is_absolute() else session_dir / path
-
-
-def _source_files(session_dir: Path, source: SourceSpec) -> list[Path]:
+def _source_files(source: SourceSpec) -> list[Path]:
     """Every file *source* names, natsorted; extension-filtered when scanned from a folder."""
     if source.files:
-        return list(natsort.natsorted(_resolve_path(f, session_dir) for f in source.files))
+        return list(natsort.natsorted(Path(f) for f in source.files))
     if not source.folder:
         raise ValueError(f"SourceSpec for stream {source.stream!r} needs a 'folder' or 'files'")
-    folder = _resolve_path(source.folder, session_dir)
+    folder = Path(source.folder)
     if not folder.is_dir():
         raise ValueError(f"{source.stream} folder does not exist: {folder}")
     exts = _stream_extensions(source.stream)
+    if source.extension is not None:
+        ext = source.extension.lower()
+        if ext not in exts:
+            raise ValueError(
+                f"Extension {source.extension!r} is not a {source.stream} extension (one of {sorted(exts)})"
+            )
+        exts = frozenset({ext})
     files = natsort.natsorted(f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in exts)
     if not files:
         raise ValueError(f"No {source.stream} files found in {folder} (looked for {sorted(exts)})")
@@ -93,34 +107,52 @@ def _pattern_frame(source: SourceSpec, files: list[Path]) -> pd.DataFrame:
 
     rows: list[dict[str, str]] = []
     for f in files:
-        m = rx.search(f.stem)
+        m = rx.fullmatch(f.stem)
         if not m:
-            raise ValueError(f"Pattern {source.pattern!r} does not match file: {f}")
+            logger.info("Skipping %s: does not match pattern %r", f.name, source.pattern)
+            continue
         gd = m.groupdict()
         device = gd.get(device_group) or source.device or _DEFAULT_DEVICE[source.stream]
-        rows.append({"trial": gd["trial"], "device": device, "file": f.name})
+        rows.append({"trial": gd["trial"], "device": device, "file": str(f)})
 
+    if not rows:
+        raise ValueError(f"Pattern {source.pattern!r} matches none of the {len(files)} {source.stream} files")
     df = pd.DataFrame(rows)
     if df["trial"].str.isdigit().all():
         df["trial"] = df["trial"].astype(int)
+    dup = df[df.duplicated(["trial", "device"], keep=False)]
+    if not dup.empty:
+        first = dup.iloc[0]
+        names = ", ".join(
+            Path(f).name for f in dup[(dup["trial"] == first["trial"]) & (dup["device"] == first["device"])]["file"]
+        )
+        raise ValueError(
+            f"Pattern {source.pattern!r} maps several {source.stream} files to trial {first['trial']} / "
+            f"{first['device']}: {names}. Narrow the pattern or pick one extension."
+        )
     piv = df.pivot(index="trial", columns="device", values="file")
     piv.columns = [f"{source.stream}_{d}" for d in piv.columns]
     return piv.reset_index()
 
 
-def discover_media(session_dir: str | Path, sources: Sequence[SourceSpec]) -> pd.DataFrame:
-    """The pairing table: ``trial`` + one ``{stream}_{device}`` column per source/device, basenames only.
+def discover_media(sources: Sequence[SourceSpec]) -> pd.DataFrame:
+    """The pairing table: ``trial`` + one ``{stream}_{device}`` column per source/device, full paths.
+
+    Each cell is the file's full path, so the table says where every file is and
+    :func:`pair_media` needs no root; the NWB trials table receives the basenames.
 
     - pattern ``None``: files natsorted; row i is trial i+1; device from ``device`` or the default.
-    - pattern set: every file must match; named groups build trial + device columns.
+    - pattern set: named groups build trial + device columns; a file the pattern does not match
+      is skipped (logged at INFO).
     - Extensions: only those in :mod:`ethograph.io.validation` ``VIDEO_``/``AUDIO_``/``POSE_EXTENSIONS``
-      for the source's stream.
+      for the source's stream; ``extension`` narrows a scanned folder to one of them (a DLC folder
+      holds ``.h5`` and ``.csv`` twins of every file).
     - Fail fast: two pattern-less sources with different file counts -> ``ValueError`` naming both counts;
-      a pattern that fails to match a file -> ``ValueError`` naming the file; an empty folder -> ``ValueError``.
+      a pattern that matches no file at all -> ``ValueError``; two files on one (trial, device) ->
+      ``ValueError`` naming them; an empty folder -> ``ValueError``.
     - A trial present in one source but not another leaves ``""`` in the missing cell (like the current
       template).
     """
-    session_dir = Path(session_dir)
     if not sources:
         raise ValueError("No sources given")
 
@@ -128,13 +160,13 @@ def discover_media(session_dir: str | Path, sources: Sequence[SourceSpec]) -> pd
     patternless_counts: dict[str, int] = {}
 
     for source in sources:
-        files = _source_files(session_dir, source)
+        files = _source_files(source)
 
         if source.pattern is None:
             device = source.device or _DEFAULT_DEVICE[source.stream]
             col = f"{source.stream}_{device}"
             patternless_counts[col] = len(files)
-            frames.append(pd.DataFrame({"trial": range(1, len(files) + 1), col: [f.name for f in files]}))
+            frames.append(pd.DataFrame({"trial": range(1, len(files) + 1), col: [str(f) for f in files]}))
             continue
 
         frames.append(_pattern_frame(source, files))
@@ -178,6 +210,7 @@ def _pair_into_existing(
     *,
     stream_rates: dict[str, float] | None,
     session_wide: dict[str, tuple[str, float, float]] | None,
+    individuals: Sequence[str] | None = None,
 ) -> NWBFile:
     """Add *trial_table*'s media columns and *session_wide* streams to the NWB at *path*, in place.
 
@@ -196,11 +229,13 @@ def _pair_into_existing(
             raise ValueError(f"trial_table has {len(trial_table)} rows but {path.name} has {len(table)} trials")
 
         for col in media_cols:
-            values = [str(v) if pd.notna(v) else "" for v in trial_table[col]]
+            values = [_basename(v) for v in trial_table[col]]
             table.add_column(name=col, description=f"{col} filename", data=values)
 
         if stream_rates:
-            sync_acquisition_for_streams(nwbfile, stream_rates)
+            sync_acquisition_for_streams(nwbfile, stream_rates, media_paths=trial_table)
+        if individuals is not None:
+            write_individuals(nwbfile, individuals)
 
         if session_wide:
             stops = [float(s) for s in nwbfile.trials["stop_time"][:]]
@@ -231,8 +266,8 @@ def _pair_into_new(
     stream_rates: dict[str, float] | None,
     session_wide: dict[str, tuple[str, float, float]] | None,
     output_path: Path | None,
-    media_root: str | Path | None,
     pose_fps: float | None,
+    individuals: Sequence[str] | None = None,
 ) -> NWBFile:
     """Build a fresh alignment NWB from *trial_table*, plus one ImageSeries per *session_wide* stream."""
     from datetime import datetime
@@ -262,7 +297,6 @@ def _pair_into_new(
             trial_table,
             video_cols,
             audio_cols,
-            Path(media_root) if media_root else None,
             pose_cols=pose_cols,
             pose_fps=pose_fps,
         )
@@ -281,11 +315,13 @@ def _pair_into_new(
         if "trial" in table.columns:
             trial_row["trial"] = _coerce_trial_id(row["trial"])
         for col in media_cols:
-            trial_row[col] = str(row[col]) if pd.notna(row[col]) else ""
+            trial_row[col] = _basename(row[col])
         nwbfile.add_trial(**trial_row)
 
     if stream_rates:
-        sync_acquisition_for_streams(nwbfile, stream_rates)
+        sync_acquisition_for_streams(nwbfile, stream_rates, media_paths=table)
+    if individuals is not None:
+        write_individuals(nwbfile, individuals)
 
     if session_wide:
         stops = table["stop_time"].astype(float).tolist()
@@ -310,8 +346,8 @@ def pair_media(
     stream_rates: dict[str, float] | None = None,
     session_wide: dict[str, tuple[str, float, float]] | None = None,
     output_path: str | Path | None = None,
-    media_root: str | Path | None = None,
     pose_fps: float | None = None,
+    individuals: Sequence[str] | None = None,
 ) -> NWBFile:
     """Write ``.ethograph/alignment.nwb`` from a pairing table.
 
@@ -319,7 +355,7 @@ def pair_media(
     ``ImageSeries`` whose segments start at the trial starts; ``session_wide`` streams each get
     one ``ImageSeries`` with a ``starting_time``.
     ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media
-    (needs ``media_root``).
+    files the table names.
 
     If ``output_path`` is an existing NWB that *already has a trials table* (a neuroconv-written
     source), the streams are added to that file in place through
@@ -331,8 +367,9 @@ def pair_media(
     Parameters
     ----------
     trial_table
-        ``trial`` + ``{stream}_{device}`` filename columns (as :func:`discover_media` returns).
-        ``start_time``/``stop_time`` optional.
+        ``trial`` + ``{stream}_{device}`` columns holding each file's full path (as
+        :func:`discover_media` returns); a bare filename is accepted when times are given.
+        The NWB trials table receives the basenames. ``start_time``/``stop_time`` optional.
     stream_rates
         Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``; a
         ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
@@ -341,11 +378,12 @@ def pair_media(
         file spanning the whole session rather than one file per trial.
     output_path
         Where to write (or, for an existing NWB with a trials table, extend) the ``.nwb`` file.
-    media_root
-        Folder the filename columns are relative to; only needed when times are inferred.
     pose_fps
         Frame rate for probing pose files, when inferring times from a table whose only media
         columns are ``pose_*``.
+    individuals
+        The individuals this session labels. Recorded in the session record, which is their
+        one home; a dataset's individual dim is checked against it on load.
 
     Returns
     -------
@@ -353,12 +391,14 @@ def pair_media(
     """
     out = Path(output_path) if output_path is not None else None
     if out is not None and out.exists() and _existing_nwb_has_trials(out):
-        return _pair_into_existing(out, trial_table, stream_rates=stream_rates, session_wide=session_wide)
+        return _pair_into_existing(
+            out, trial_table, stream_rates=stream_rates, session_wide=session_wide, individuals=individuals
+        )
     return _pair_into_new(
         trial_table,
         stream_rates=stream_rates,
         session_wide=session_wide,
         output_path=out,
-        media_root=media_root,
         pose_fps=pose_fps,
+        individuals=individuals,
     )

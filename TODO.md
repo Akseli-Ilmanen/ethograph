@@ -6,7 +6,7 @@
 1) Create small gifs (low resolution).For github readme and maybe other place holders, as short demo.
 2) Discussion with Heberto. You can load in VAME/others? predictions as nwb, pynapple extracts intervalset, and load those as predictions. You don't get confidence,
 and they have to save as nwb.
-3) Video-only sessions (user picks just a video folder) still get a synthesised .nc file. The GUI reads it only to work out the multi-animal situation (individual dim / names); it carries no feature data otherwise. Think this through: either drop the file and read individuals from somewhere else (alignment NWB, a settings entry), or make the synthesised dataset carry something useful (per-video trial, fps, ROI/motion traces later). Related: opening a folder of videos with no dataset at all (notes/feral_notes.md §1).
+3) DONE (2026-09-16, ADR 0013): a session is a folder; a video-only drop or wizard run gets only `.ethograph/alignment.nwb` and individuals live in that record (with `project.yaml` as the study default). Was: Video-only sessions (user picks just a video folder) still get a synthesised .nc file. The GUI reads it only to work out the multi-animal situation (individual dim / names); it carries no feature data otherwise. Think this through: either drop the file and read individuals from somewhere else (alignment NWB, a settings entry), or make the synthesised dataset carry something useful (per-video trial, fps, ROI/motion traces later). Related: opening a folder of videos with no dataset at all (notes/feral_notes.md §1).
 4) Boris IO, the following may be helpful
 https://neuroconv.readthedocs.io/en/main/conversion_examples_gallery/behavior/boris.html
 https://neuroconv.readthedocs.io/en/main/conversion_examples_gallery/behavior/moseq_keypoints.html
@@ -28,3 +28,4 @@ If your `NWB` files contains pose or spike times, you can visualize them for fre
   selected in the GUI.
 -> VERIFY THIS WORKS
 11) in docs/segment we mention that we take dataset structure where mapping.txt is single class per frame, put for multi label, mult individual this breaks down. Inestigate how claude solved this.
+12) project.yaml: move the remote label backup (path, mode, depth) from gui_settings.yaml to the project, since a backup target is per study; paths in project.yaml must be checked on load like every other path. Also still open from ADR 0013: rename `.ethograph/alignment.nwb` to `session.nwb` (52 files, read the old name as a fallback).

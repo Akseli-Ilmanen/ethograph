@@ -324,7 +324,9 @@ def predict_trial(
     next_start = -PAD_LEN * stride
     decoded = 0
     to_rgb = RGBConverter()
-    for raw in decode_frames(record.video_path, threads=decode_threads):
+    for raw in decode_frames(record.video_path, threads=decode_threads, start=record.first_frame):
+        if decoded == record.num_frames:
+            break
         if decoded % stride == 0:
             buffer.append(prepare_frame(to_rgb(raw), record, jpeg_roundtrip))
         decoded += 1
