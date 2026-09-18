@@ -14,6 +14,7 @@ Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issue
 | Problem | Solution |
 |---------|----------|
 | Unexpected error in the GUI | Save labels (`Ctrl + S`), then restart the GUI. Save semi-regularly! |
+| A plot or video is frozen, black, blank or out of date | Press `Ctrl+R` (**Help ▸ Reset panels**). Every plot is rebuilt and every video reloaded in place, as if the window had been closed and reopened; the layout, the dataset and your labels are untouched. |
 | Error with user settings | In the top bar, first try **Help ▸ Reset local settings (this dataset)**. If that does not help, use **Help ▸ Reset global settings (gui_settings.yaml)**. |
 | Plots are squeezed to thin strips or seem missing | The saved layout holds more panels than fit. Close the extras with their ✕, or use **Help ▸ Reset local settings (this dataset)**: it rebuilds the default panels immediately. |
 

@@ -477,6 +477,18 @@
 <p>You can download the entire dataset from <a class="reference external" href="https://zenodo.org/records/13144875">here</a> or use the code below. I only tested the <code class="docutils literal notranslate"><span class="pre">copExpBP08</span></code> recording. If problems arise, the ReadMe <a class="reference external" href="https://zenodo.org/records/13144875">here</a> is very helpful.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_folder</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>WindowsPath('c:/Users/aksel/Documents/Code/ethograph/data/birdpark')
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
     <span class="n">_here</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">__vsc_ipynb_file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
 <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
@@ -488,18 +500,20 @@
 <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"https://zenodo.org/api/records/13144875"</span><span class="p">)</span>
 <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
 
-<span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">"files"</span><span class="p">]:</span>
-    <span class="k">if</span> <span class="n">file</span><span class="p">[</span><span class="s2">"checksum"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"md5:32d1ae6049556c803f68b6d354c952ca"</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Checksum matches: </span><span class="si">{</span><span class="n">file</span><span class="p">[</span><span class="s1">'key'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">output_path</span> <span class="o">=</span> <span class="n">data_folder</span> <span class="o">/</span> <span class="n">file</span><span class="p">[</span><span class="s2">"key"</span><span class="p">]</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file</span><span class="p">[</span><span class="s2">"links"</span><span class="p">][</span><span class="s2">"self"</span><span class="p">],</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="mi">8192</span><span class="p">):</span>
-                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">output_path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".zip"</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">zip_ref</span><span class="p">:</span>
-                <span class="n">zip_ref</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">data_folder</span><span class="p">)</span>
-        <span class="k">break</span>
+<span class="c1"># Download dataset if not already present</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">data_folder</span> <span class="o">/</span> <span class="s2">"copExpBP08"</span> <span class="o">/</span> <span class="s2">"BP_2021-05-25_08-12-51_655154_0380000.mp4"</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">"files"</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">file</span><span class="p">[</span><span class="s2">"checksum"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"md5:32d1ae6049556c803f68b6d354c952ca"</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Checksum matches: </span><span class="si">{</span><span class="n">file</span><span class="p">[</span><span class="s1">'key'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">data_folder</span> <span class="o">/</span> <span class="n">file</span><span class="p">[</span><span class="s2">"key"</span><span class="p">]</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file</span><span class="p">[</span><span class="s2">"links"</span><span class="p">][</span><span class="s2">"self"</span><span class="p">],</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="mi">8192</span><span class="p">):</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">output_path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".zip"</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">zip_ref</span><span class="p">:</span>
+                    <span class="n">zip_ref</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">data_folder</span><span class="p">)</span>
+            <span class="k">break</span>
 </pre></div>
 </div>
 </div>
@@ -554,12 +568,12 @@
     <span class="n">data_vars</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">"vibration"</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
             <span class="n">radioSignals</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
-            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"individuals"</span><span class="p">],</span>
+            <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">],</span>
         <span class="p">),</span>
     <span class="p">},</span>
     <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">"time"</span><span class="p">:</span> <span class="n">time_coords</span><span class="p">,</span>
-        <span class="s2">"individuals"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"male (red radio)"</span><span class="p">,</span> <span class="s2">"female (yellow radio)"</span><span class="p">],</span>  <span class="c1"># specific to copExpBP08</span>
+        <span class="s2">"individual"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"male (red radio)"</span><span class="p">,</span> <span class="s2">"female (yellow radio)"</span><span class="p">],</span>  <span class="c1"># specific to copExpBP08</span>
     <span class="p">},</span>
     <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">"fps"</span><span class="p">:</span> <span class="n">fps</span><span class="p">,</span>
@@ -588,15 +602,15 @@
 <span class="n">ds</span><span class="p">[</span><span class="s2">"vibration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">vibration</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">vibration</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">999_999</span><span class="p">)</span>
 
 <span class="n">envelopes</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">individuals</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
-    <span class="n">raw</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">vibration</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individuals</span><span class="o">=</span><span class="n">ind</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">individual</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">vibration</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individual</span><span class="o">=</span><span class="n">ind</span><span class="p">)</span>
     <span class="n">filled</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">median</span><span class="p">())</span><span class="o">.</span><span class="n">values</span>
     <span class="n">env_time</span><span class="p">,</span> <span class="n">env</span> <span class="o">=</span> <span class="n">bandpass_envelope</span><span class="p">(</span><span class="n">filled</span><span class="p">,</span> <span class="n">audio_sr</span><span class="p">,</span> <span class="n">band</span><span class="o">=</span><span class="n">env_band</span><span class="p">,</span> <span class="n">env_rate</span><span class="o">=</span><span class="n">env_rate</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="n">env_cutoff</span><span class="p">)</span>
     <span class="n">envelopes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
 
 <span class="n">ds</span><span class="p">[</span><span class="s2">"vibration_env"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
     <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">envelopes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-    <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time_env"</span><span class="p">,</span> <span class="s2">"individuals"</span><span class="p">],</span>
+    <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time_env"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">],</span>
     <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time_env"</span><span class="p">:</span> <span class="n">env_time</span><span class="p">},</span>
 <span class="p">)</span>
 
@@ -621,6 +635,591 @@
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Saved to c:\Users\aksel\Documents\Code\ethograph\data\birdpark\copExpBP08\BP_2021-05-25_08-12-51_655154_0380000.nc
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individual</span><span class="o">=</span><span class="s1">'female (yellow radio)'</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div><svg style="position: absolute; width: 0; height: 0; overflow: hidden">
+<defs>
+<symbol id="icon-database" viewBox="0 0 32 32">
+<path d="M16 0c-8.837 0-16 2.239-16 5v4c0 2.761 7.163 5 16 5s16-2.239 16-5v-4c0-2.761-7.163-5-16-5z"></path>
+<path d="M16 17c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+<path d="M16 26c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+</symbol>
+<symbol id="icon-file-text2" viewBox="0 0 32 32">
+<path d="M28.681 7.159c-0.694-0.947-1.662-2.053-2.724-3.116s-2.169-2.030-3.116-2.724c-1.612-1.182-2.393-1.319-2.841-1.319h-15.5c-1.378 0-2.5 1.121-2.5 2.5v27c0 1.378 1.122 2.5 2.5 2.5h23c1.378 0 2.5-1.122 2.5-2.5v-19.5c0-0.448-0.137-1.23-1.319-2.841zM24.543 5.457c0.959 0.959 1.712 1.825 2.268 2.543h-4.811v-4.811c0.718 0.556 1.584 1.309 2.543 2.268zM28 29.5c0 0.271-0.229 0.5-0.5 0.5h-23c-0.271 0-0.5-0.229-0.5-0.5v-27c0-0.271 0.229-0.5 0.5-0.5 0 0 15.499-0 15.5 0v7c0 0.552 0.448 1 1 1h7v19.5z"></path>
+<path d="M23 26h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 22h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 18h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+</symbol>
+</defs>
+</svg>
+<style>/* CSS stylesheet for displaying xarray objects in notebooks */
+
+:root {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base rgba(0, 0, 0, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, white)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+  );
+}
+
+html[theme="dark"],
+html[data-theme="dark"],
+body[data-theme="dark"],
+body.vscode-dark {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base, rgba(255, 255, 255, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, #111111)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
+  );
+}
+
+.xr-wrap {
+  display: block !important;
+  min-width: 300px;
+  max-width: 700px;
+  line-height: 1.6;
+  padding-bottom: 4px;
+}
+
+.xr-text-repr-fallback {
+  /* fallback to plain text repr when CSS is not injected (untrusted notebook) */
+  display: none;
+}
+
+.xr-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.xr-header {
+  border-bottom: solid 1px var(--xr-border-color);
+  margin-bottom: 4px;
+}
+
+.xr-header > div,
+.xr-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xr-obj-type,
+.xr-obj-name {
+  margin-left: 2px;
+  margin-right: 10px;
+}
+
+.xr-obj-type,
+.xr-group-box-contents > label {
+  color: var(--xr-font-color2);
+  display: block;
+}
+
+.xr-sections {
+  padding-left: 0 !important;
+  display: grid;
+  grid-template-columns: 150px auto auto 1fr 0 20px 0 20px;
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+.xr-section-item {
+  display: contents;
+}
+
+.xr-section-item > input,
+.xr-group-box-contents > input,
+.xr-array-wrap > input {
+  display: block;
+  opacity: 0;
+  height: 0;
+  margin: 0;
+}
+
+.xr-section-item > input + label,
+.xr-var-item > input + label {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-item > input:enabled + label,
+.xr-var-item > input:enabled + label,
+.xr-array-wrap > input:enabled + label,
+.xr-group-box-contents > input:enabled + label {
+  cursor: pointer;
+  color: var(--xr-font-color2);
+}
+
+.xr-section-item > input:focus-visible + label,
+.xr-var-item > input:focus-visible + label,
+.xr-array-wrap > input:focus-visible + label,
+.xr-group-box-contents > input:focus-visible + label {
+  outline: auto;
+}
+
+.xr-section-item > input:enabled + label:hover,
+.xr-var-item > input:enabled + label:hover,
+.xr-array-wrap > input:enabled + label:hover,
+.xr-group-box-contents > input:enabled + label:hover {
+  color: var(--xr-font-color0);
+}
+
+.xr-section-summary {
+  grid-column: 1;
+  color: var(--xr-font-color2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.xr-section-summary > em {
+  font-weight: normal;
+}
+
+.xr-span-grid {
+  grid-column-end: -1;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label > span {
+  display: inline-block;
+  padding-left: 0.6em;
+}
+
+.xr-section-summary-in:disabled + label {
+  color: var(--xr-font-color2);
+}
+
+.xr-section-summary-in + label:before {
+  display: inline-block;
+  content: "►";
+  font-size: 11px;
+  width: 15px;
+  text-align: center;
+}
+
+.xr-section-summary-in:disabled + label:before {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-summary-in:checked + label:before {
+  content: "▼";
+}
+
+.xr-section-summary-in:checked + label > span {
+  display: none;
+}
+
+.xr-section-summary,
+.xr-section-inline-details,
+.xr-group-box-contents > label {
+  padding-top: 4px;
+}
+
+.xr-section-inline-details {
+  grid-column: 2 / -1;
+}
+
+.xr-section-details {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  margin-bottom: 5px;
+}
+
+.xr-section-summary-in ~ .xr-section-details {
+  display: none;
+}
+
+.xr-section-summary-in:checked ~ .xr-section-details {
+  display: contents;
+}
+
+.xr-children {
+  display: inline-grid;
+  grid-template-columns: 100%;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.xr-group-box {
+  display: inline-grid;
+  grid-template-columns: 0px 30px auto;
+}
+
+.xr-group-box-vline {
+  grid-column-start: 1;
+  border-right: 0.2em solid;
+  border-color: var(--xr-border-color);
+  width: 0px;
+}
+
+.xr-group-box-hline {
+  grid-column-start: 2;
+  grid-row-start: 1;
+  height: 1em;
+  width: 26px;
+  border-bottom: 0.2em solid;
+  border-color: var(--xr-border-color);
+}
+
+.xr-group-box-contents {
+  grid-column-start: 3;
+  padding-bottom: 4px;
+}
+
+.xr-group-box-contents > label::before {
+  content: "📂";
+  padding-right: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label::before {
+  content: "📁";
+}
+
+.xr-group-box-contents > input:checked + label {
+  padding-bottom: 0px;
+}
+
+.xr-group-box-contents > input:checked ~ .xr-sections {
+  display: none;
+}
+
+.xr-group-box-contents > input + label > span {
+  display: none;
+}
+
+.xr-group-box-ellipsis {
+  font-size: 1.4em;
+  font-weight: 900;
+  color: var(--xr-font-color2);
+  letter-spacing: 0.15em;
+  cursor: default;
+}
+
+.xr-array-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.xr-array-wrap > label {
+  grid-column: 1;
+  vertical-align: top;
+}
+
+.xr-preview {
+  color: var(--xr-font-color3);
+}
+
+.xr-array-preview,
+.xr-array-data {
+  padding: 0 5px !important;
+  grid-column: 2;
+}
+
+.xr-array-data,
+.xr-array-in:checked ~ .xr-array-preview {
+  display: none;
+}
+
+.xr-array-in:checked ~ .xr-array-data,
+.xr-array-preview {
+  display: inline-block;
+}
+
+.xr-dim-list {
+  display: inline-block !important;
+  list-style: none;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.xr-dim-list li {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.xr-dim-list:before {
+  content: "(";
+}
+
+.xr-dim-list:after {
+  content: ")";
+}
+
+.xr-dim-list li:not(:last-child):after {
+  content: ",";
+  padding-right: 5px;
+}
+
+.xr-has-index {
+  font-weight: bold;
+}
+
+.xr-var-list,
+.xr-var-item {
+  display: contents;
+}
+
+.xr-var-item > div,
+.xr-var-item label,
+.xr-var-item > .xr-var-name span {
+  background-color: var(--xr-background-color-row-even);
+  border-color: var(--xr-background-color-row-odd);
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.xr-var-item > .xr-var-name:hover span {
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(odd) > div,
+.xr-var-list > li:nth-child(odd) > label,
+.xr-var-list > li:nth-child(odd) > .xr-var-name span {
+  background-color: var(--xr-background-color-row-odd);
+  border-color: var(--xr-background-color-row-even);
+}
+
+.xr-var-name {
+  grid-column: 1;
+}
+
+.xr-var-dims {
+  grid-column: 2;
+}
+
+.xr-var-dtype {
+  grid-column: 3;
+  text-align: right;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-preview {
+  grid-column: 4;
+}
+
+.xr-index-preview {
+  grid-column: 2 / 5;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-name,
+.xr-var-dims,
+.xr-var-dtype,
+.xr-preview,
+.xr-attrs dt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
+  overflow: visible;
+  width: auto;
+  z-index: 1;
+}
+
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  display: none;
+  border-top: 2px dotted var(--xr-background-color);
+  padding-bottom: 20px !important;
+  padding-top: 10px !important;
+}
+
+.xr-var-attrs-in + label,
+.xr-var-data-in + label,
+.xr-index-data-in + label {
+  padding: 0 1px;
+}
+
+.xr-var-attrs-in:checked ~ .xr-var-attrs,
+.xr-var-data-in:checked ~ .xr-var-data,
+.xr-index-data-in:checked ~ .xr-index-data {
+  display: block;
+}
+
+.xr-var-data > table {
+  float: right;
+}
+
+.xr-var-data > pre,
+.xr-index-data > pre,
+.xr-var-data > table > tbody > tr {
+  background-color: transparent !important;
+}
+
+.xr-var-name span,
+.xr-var-data,
+.xr-index-name div,
+.xr-index-data,
+.xr-attrs {
+  padding-left: 25px !important;
+}
+
+.xr-attrs,
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  grid-column: 1 / -1;
+}
+
+dl.xr-attrs {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt,
+.xr-attrs dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+  width: auto;
+}
+
+.xr-attrs dt {
+  font-weight: normal;
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: var(--xr-background-color);
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.xr-icon-database,
+.xr-icon-file-text2,
+.xr-no-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1.5em !important;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.xr-var-attrs-in:checked + label > .xr-icon-file-text2,
+.xr-var-data-in:checked + label > .xr-icon-database,
+.xr-index-data-in:checked + label > .xr-icon-database {
+  color: var(--xr-font-color0);
+  filter: drop-shadow(1px 1px 5px var(--xr-font-color2));
+  stroke-width: 0.8px;
+}
+</style><pre class='xr-text-repr-fallback'>&lt;xarray.Dataset&gt; Size: 166MB
+Dimensions:                       (time: 10240000, individuals: 2,
+                                   time_env: 83935)
+Coordinates:
+  * time                          (time) float64 82MB 0.0 4.096e-05 ... 419.4
+  * time_env                      (time_env) float64 671kB 0.0 ... 419.4
+    individual                    &lt;U21 84B &#x27;female (yellow radio)&#x27;
+Dimensions without coordinates: individuals
+Data variables:
+    vibration                     (time, individuals) float32 82MB 6.44e+05 ....
+    vibration_env                 (time_env, individuals) float64 1MB 94.01 ....
+    vibration_env_turning_points  (individuals, time_env) int8 168kB 1 0 ... 0 1
+Attributes:
+    fps:       47.6837158203125
+    audio_sr:  24414.0625</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-30501f4a-6304-4409-a6ed-400ed54c86e5' class='xr-section-summary-in' type='checkbox' disabled /><label for='section-30501f4a-6304-4409-a6ed-400ed54c86e5' class='xr-section-summary'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>time</span>: 10240000</li><li><span>individuals</span>: 2</li><li><span class='xr-has-index'>time_env</span>: 83935</li></ul></div></li><li class='xr-section-item'><input id='section-0f41c761-cb3b-4b95-aa1a-a8aa6c150ac6' class='xr-section-summary-in' type='checkbox' checked /><label for='section-0f41c761-cb3b-4b95-aa1a-a8aa6c150ac6' class='xr-section-summary' title='Expand/collapse section'>Coordinates: <span>(3)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 4.096e-05 ... 419.4 419.4</div><input id='attrs-1f4e39a7-79b7-4e1d-a2bb-f89695f33f01' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-1f4e39a7-79b7-4e1d-a2bb-f89695f33f01' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-022c1303-c747-4b5f-982c-54bff5b06c55' class='xr-var-data-in' type='checkbox'><label for='data-022c1303-c747-4b5f-982c-54bff5b06c55' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([0.000000e+00, 4.096000e-05, 8.192000e-05, ..., 4.194303e+02,
+       4.194303e+02, 4.194304e+02], shape=(10240000,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time_env</span></div><div class='xr-var-dims'>(time_env)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 0.004997 ... 419.4 419.4</div><input id='attrs-4cb32fdd-627b-4720-985a-09516d995702' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-4cb32fdd-627b-4720-985a-09516d995702' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-55562a87-9a01-4421-9ec1-0a9c2a795897' class='xr-var-data-in' type='checkbox'><label for='data-55562a87-9a01-4421-9ec1-0a9c2a795897' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([0.000000e+00, 4.997120e-03, 9.994240e-03, ..., 4.194183e+02,
+       4.194233e+02, 4.194283e+02], shape=(83935,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>individual</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>&lt;U21</div><div class='xr-var-preview xr-preview'>&#x27;female (yellow radio)&#x27;</div><input id='attrs-950928df-444a-4d05-ada5-3adcdfecfc29' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-950928df-444a-4d05-ada5-3adcdfecfc29' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-c5d65685-1972-4fb5-9bd7-41c0c5158b80' class='xr-var-data-in' type='checkbox'><label for='data-c5d65685-1972-4fb5-9bd7-41c0c5158b80' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array(&#x27;female (yellow radio)&#x27;, dtype=&#x27;&lt;U21&#x27;)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-9cd8c348-033b-461e-9ed0-99a9b69ff9cc' class='xr-section-summary-in' type='checkbox' checked /><label for='section-9cd8c348-033b-461e-9ed0-99a9b69ff9cc' class='xr-section-summary' title='Expand/collapse section'>Data variables: <span>(3)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>vibration</span></div><div class='xr-var-dims'>(time, individuals)</div><div class='xr-var-dtype'>float32</div><div class='xr-var-preview xr-preview'>6.44e+05 3.769e+05 ... 3.619e+05</div><input id='attrs-415a5e7c-4347-4340-968e-b360ef19115d' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-415a5e7c-4347-4340-968e-b360ef19115d' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-a801e834-1bb4-46b3-8f0d-74c2d559eb4c' class='xr-var-data-in' type='checkbox'><label for='data-a801e834-1bb4-46b3-8f0d-74c2d559eb4c' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[643953.2 , 376856.88],
+       [644001.7 , 377338.16],
+       [643844.3 , 377037.25],
+       ...,
+       [659848.8 , 361840.9 ],
+       [659723.75, 361960.38],
+       [659928.1 , 361865.66]], shape=(10240000, 2), dtype=float32)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>vibration_env</span></div><div class='xr-var-dims'>(time_env, individuals)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>94.01 1.447e+03 ... 2.966e+03 110.2</div><input id='attrs-9ffc7d3f-4dde-4bca-9242-6d9ef1be0e5a' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-9ffc7d3f-4dde-4bca-9242-6d9ef1be0e5a' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-6771bc2a-8296-4626-ba4b-9369de5e2463' class='xr-var-data-in' type='checkbox'><label for='data-6771bc2a-8296-4626-ba4b-9369de5e2463' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[  94.00768174, 1446.56327619],
+       [  90.48048364, 1029.73980487],
+       [  87.32002591,  702.73275585],
+       ...,
+       [2965.54956845,  109.94689303],
+       [2966.69202708,  110.12645773],
+       [2966.45590175,  110.16722037]], shape=(83935, 2))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>vibration_env_turning_points</span></div><div class='xr-var-dims'>(individuals, time_env)</div><div class='xr-var-dtype'>int8</div><div class='xr-var-preview xr-preview'>1 0 0 0 0 0 0 0 ... 0 0 0 0 0 0 0 1</div><input id='attrs-0f3486e4-8b6a-496d-95ce-aec9cbe85ae9' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-0f3486e4-8b6a-496d-95ce-aec9cbe85ae9' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-d0b8e682-9342-4ed6-80ad-0c467690f07c' class='xr-var-data-in' type='checkbox'><label for='data-d0b8e682-9342-4ed6-80ad-0c467690f07c' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>kind :</span></dt><dd>changepoint_feature</dd><dt><span>changepoint_mask :</span></dt><dd>1</dd><dt><span>type :</span></dt><dd>changepoints</dd><dt><span>target_feature :</span></dt><dd>vibration_env</dd></dl></div><div class='xr-var-data'><pre>array([[1, 0, 0, ..., 0, 0, 1],
+       [1, 0, 0, ..., 0, 0, 1]], shape=(2, 83935), dtype=int8)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-879bb622-465a-431b-bb64-5396f3b00b8d' class='xr-section-summary-in' type='checkbox' checked /><label for='section-879bb622-465a-431b-bb64-5396f3b00b8d' class='xr-section-summary' title='Expand/collapse section'>Attributes: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>fps :</span></dt><dd>47.6837158203125</dd><dt><span>audio_sr :</span></dt><dd>24414.0625</dd></dl></div></li></ul></div></div></div></div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -628,6 +1227,578 @@
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div><svg style="position: absolute; width: 0; height: 0; overflow: hidden">
+<defs>
+<symbol id="icon-database" viewBox="0 0 32 32">
+<path d="M16 0c-8.837 0-16 2.239-16 5v4c0 2.761 7.163 5 16 5s16-2.239 16-5v-4c0-2.761-7.163-5-16-5z"></path>
+<path d="M16 17c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+<path d="M16 26c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+</symbol>
+<symbol id="icon-file-text2" viewBox="0 0 32 32">
+<path d="M28.681 7.159c-0.694-0.947-1.662-2.053-2.724-3.116s-2.169-2.030-3.116-2.724c-1.612-1.182-2.393-1.319-2.841-1.319h-15.5c-1.378 0-2.5 1.121-2.5 2.5v27c0 1.378 1.122 2.5 2.5 2.5h23c1.378 0 2.5-1.122 2.5-2.5v-19.5c0-0.448-0.137-1.23-1.319-2.841zM24.543 5.457c0.959 0.959 1.712 1.825 2.268 2.543h-4.811v-4.811c0.718 0.556 1.584 1.309 2.543 2.268zM28 29.5c0 0.271-0.229 0.5-0.5 0.5h-23c-0.271 0-0.5-0.229-0.5-0.5v-27c0-0.271 0.229-0.5 0.5-0.5 0 0 15.499-0 15.5 0v7c0 0.552 0.448 1 1 1h7v19.5z"></path>
+<path d="M23 26h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 22h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 18h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+</symbol>
+</defs>
+</svg>
+<style>/* CSS stylesheet for displaying xarray objects in notebooks */
+
+:root {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base rgba(0, 0, 0, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, white)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+  );
+}
+
+html[theme="dark"],
+html[data-theme="dark"],
+body[data-theme="dark"],
+body.vscode-dark {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base, rgba(255, 255, 255, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, #111111)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
+  );
+}
+
+.xr-wrap {
+  display: block !important;
+  min-width: 300px;
+  max-width: 700px;
+  line-height: 1.6;
+  padding-bottom: 4px;
+}
+
+.xr-text-repr-fallback {
+  /* fallback to plain text repr when CSS is not injected (untrusted notebook) */
+  display: none;
+}
+
+.xr-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.xr-header {
+  border-bottom: solid 1px var(--xr-border-color);
+  margin-bottom: 4px;
+}
+
+.xr-header > div,
+.xr-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xr-obj-type,
+.xr-obj-name {
+  margin-left: 2px;
+  margin-right: 10px;
+}
+
+.xr-obj-type,
+.xr-group-box-contents > label {
+  color: var(--xr-font-color2);
+  display: block;
+}
+
+.xr-sections {
+  padding-left: 0 !important;
+  display: grid;
+  grid-template-columns: 150px auto auto 1fr 0 20px 0 20px;
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+.xr-section-item {
+  display: contents;
+}
+
+.xr-section-item > input,
+.xr-group-box-contents > input,
+.xr-array-wrap > input {
+  display: block;
+  opacity: 0;
+  height: 0;
+  margin: 0;
+}
+
+.xr-section-item > input + label,
+.xr-var-item > input + label {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-item > input:enabled + label,
+.xr-var-item > input:enabled + label,
+.xr-array-wrap > input:enabled + label,
+.xr-group-box-contents > input:enabled + label {
+  cursor: pointer;
+  color: var(--xr-font-color2);
+}
+
+.xr-section-item > input:focus-visible + label,
+.xr-var-item > input:focus-visible + label,
+.xr-array-wrap > input:focus-visible + label,
+.xr-group-box-contents > input:focus-visible + label {
+  outline: auto;
+}
+
+.xr-section-item > input:enabled + label:hover,
+.xr-var-item > input:enabled + label:hover,
+.xr-array-wrap > input:enabled + label:hover,
+.xr-group-box-contents > input:enabled + label:hover {
+  color: var(--xr-font-color0);
+}
+
+.xr-section-summary {
+  grid-column: 1;
+  color: var(--xr-font-color2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.xr-section-summary > em {
+  font-weight: normal;
+}
+
+.xr-span-grid {
+  grid-column-end: -1;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label > span {
+  display: inline-block;
+  padding-left: 0.6em;
+}
+
+.xr-section-summary-in:disabled + label {
+  color: var(--xr-font-color2);
+}
+
+.xr-section-summary-in + label:before {
+  display: inline-block;
+  content: "►";
+  font-size: 11px;
+  width: 15px;
+  text-align: center;
+}
+
+.xr-section-summary-in:disabled + label:before {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-summary-in:checked + label:before {
+  content: "▼";
+}
+
+.xr-section-summary-in:checked + label > span {
+  display: none;
+}
+
+.xr-section-summary,
+.xr-section-inline-details,
+.xr-group-box-contents > label {
+  padding-top: 4px;
+}
+
+.xr-section-inline-details {
+  grid-column: 2 / -1;
+}
+
+.xr-section-details {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  margin-bottom: 5px;
+}
+
+.xr-section-summary-in ~ .xr-section-details {
+  display: none;
+}
+
+.xr-section-summary-in:checked ~ .xr-section-details {
+  display: contents;
+}
+
+.xr-children {
+  display: inline-grid;
+  grid-template-columns: 100%;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.xr-group-box {
+  display: inline-grid;
+  grid-template-columns: 0px 30px auto;
+}
+
+.xr-group-box-vline {
+  grid-column-start: 1;
+  border-right: 0.2em solid;
+  border-color: var(--xr-border-color);
+  width: 0px;
+}
+
+.xr-group-box-hline {
+  grid-column-start: 2;
+  grid-row-start: 1;
+  height: 1em;
+  width: 26px;
+  border-bottom: 0.2em solid;
+  border-color: var(--xr-border-color);
+}
+
+.xr-group-box-contents {
+  grid-column-start: 3;
+  padding-bottom: 4px;
+}
+
+.xr-group-box-contents > label::before {
+  content: "📂";
+  padding-right: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label::before {
+  content: "📁";
+}
+
+.xr-group-box-contents > input:checked + label {
+  padding-bottom: 0px;
+}
+
+.xr-group-box-contents > input:checked ~ .xr-sections {
+  display: none;
+}
+
+.xr-group-box-contents > input + label > span {
+  display: none;
+}
+
+.xr-group-box-ellipsis {
+  font-size: 1.4em;
+  font-weight: 900;
+  color: var(--xr-font-color2);
+  letter-spacing: 0.15em;
+  cursor: default;
+}
+
+.xr-array-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.xr-array-wrap > label {
+  grid-column: 1;
+  vertical-align: top;
+}
+
+.xr-preview {
+  color: var(--xr-font-color3);
+}
+
+.xr-array-preview,
+.xr-array-data {
+  padding: 0 5px !important;
+  grid-column: 2;
+}
+
+.xr-array-data,
+.xr-array-in:checked ~ .xr-array-preview {
+  display: none;
+}
+
+.xr-array-in:checked ~ .xr-array-data,
+.xr-array-preview {
+  display: inline-block;
+}
+
+.xr-dim-list {
+  display: inline-block !important;
+  list-style: none;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.xr-dim-list li {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.xr-dim-list:before {
+  content: "(";
+}
+
+.xr-dim-list:after {
+  content: ")";
+}
+
+.xr-dim-list li:not(:last-child):after {
+  content: ",";
+  padding-right: 5px;
+}
+
+.xr-has-index {
+  font-weight: bold;
+}
+
+.xr-var-list,
+.xr-var-item {
+  display: contents;
+}
+
+.xr-var-item > div,
+.xr-var-item label,
+.xr-var-item > .xr-var-name span {
+  background-color: var(--xr-background-color-row-even);
+  border-color: var(--xr-background-color-row-odd);
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.xr-var-item > .xr-var-name:hover span {
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(odd) > div,
+.xr-var-list > li:nth-child(odd) > label,
+.xr-var-list > li:nth-child(odd) > .xr-var-name span {
+  background-color: var(--xr-background-color-row-odd);
+  border-color: var(--xr-background-color-row-even);
+}
+
+.xr-var-name {
+  grid-column: 1;
+}
+
+.xr-var-dims {
+  grid-column: 2;
+}
+
+.xr-var-dtype {
+  grid-column: 3;
+  text-align: right;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-preview {
+  grid-column: 4;
+}
+
+.xr-index-preview {
+  grid-column: 2 / 5;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-name,
+.xr-var-dims,
+.xr-var-dtype,
+.xr-preview,
+.xr-attrs dt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
+  overflow: visible;
+  width: auto;
+  z-index: 1;
+}
+
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  display: none;
+  border-top: 2px dotted var(--xr-background-color);
+  padding-bottom: 20px !important;
+  padding-top: 10px !important;
+}
+
+.xr-var-attrs-in + label,
+.xr-var-data-in + label,
+.xr-index-data-in + label {
+  padding: 0 1px;
+}
+
+.xr-var-attrs-in:checked ~ .xr-var-attrs,
+.xr-var-data-in:checked ~ .xr-var-data,
+.xr-index-data-in:checked ~ .xr-index-data {
+  display: block;
+}
+
+.xr-var-data > table {
+  float: right;
+}
+
+.xr-var-data > pre,
+.xr-index-data > pre,
+.xr-var-data > table > tbody > tr {
+  background-color: transparent !important;
+}
+
+.xr-var-name span,
+.xr-var-data,
+.xr-index-name div,
+.xr-index-data,
+.xr-attrs {
+  padding-left: 25px !important;
+}
+
+.xr-attrs,
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  grid-column: 1 / -1;
+}
+
+dl.xr-attrs {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt,
+.xr-attrs dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+  width: auto;
+}
+
+.xr-attrs dt {
+  font-weight: normal;
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: var(--xr-background-color);
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.xr-icon-database,
+.xr-icon-file-text2,
+.xr-no-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1.5em !important;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.xr-var-attrs-in:checked + label > .xr-icon-file-text2,
+.xr-var-data-in:checked + label > .xr-icon-database,
+.xr-index-data-in:checked + label > .xr-icon-database {
+  color: var(--xr-font-color0);
+  filter: drop-shadow(1px 1px 5px var(--xr-font-color2));
+  stroke-width: 0.8px;
+}
+</style><pre class='xr-text-repr-fallback'>&lt;xarray.Dataset&gt; Size: 166MB
+Dimensions:                       (time: 10240000, individuals: 2,
+                                   time_env: 83935)
+Coordinates:
+  * time                          (time) float64 82MB 0.0 4.096e-05 ... 419.4
+  * individuals                   (individuals) &lt;U21 168B &#x27;male (red radio)&#x27; ...
+  * time_env                      (time_env) float64 671kB 0.0 ... 419.4
+Data variables:
+    vibration                     (time, individuals) float32 82MB 6.44e+05 ....
+    vibration_env                 (time_env, individuals) float64 1MB 94.01 ....
+    vibration_env_turning_points  (individuals, time_env) int8 168kB 1 0 ... 0 1
+Attributes:
+    fps:       47.6837158203125
+    audio_sr:  24414.0625</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-7293e91b-a8f4-43c1-b2f8-0fcf2d534b77' class='xr-section-summary-in' type='checkbox' disabled /><label for='section-7293e91b-a8f4-43c1-b2f8-0fcf2d534b77' class='xr-section-summary'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>time</span>: 10240000</li><li><span class='xr-has-index'>individuals</span>: 2</li><li><span class='xr-has-index'>time_env</span>: 83935</li></ul></div></li><li class='xr-section-item'><input id='section-8ef055a9-8a78-47ed-ba1a-7a7ddb892d46' class='xr-section-summary-in' type='checkbox' checked /><label for='section-8ef055a9-8a78-47ed-ba1a-7a7ddb892d46' class='xr-section-summary' title='Expand/collapse section'>Coordinates: <span>(3)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 4.096e-05 ... 419.4 419.4</div><input id='attrs-1ec7069b-45df-42c2-9798-4845530235c1' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-1ec7069b-45df-42c2-9798-4845530235c1' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-98e3f962-33af-4e72-9cf0-dbc782096460' class='xr-var-data-in' type='checkbox'><label for='data-98e3f962-33af-4e72-9cf0-dbc782096460' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([0.000000e+00, 4.096000e-05, 8.192000e-05, ..., 4.194303e+02,
+       4.194303e+02, 4.194304e+02], shape=(10240000,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>individuals</span></div><div class='xr-var-dims'>(individuals)</div><div class='xr-var-dtype'>&lt;U21</div><div class='xr-var-preview xr-preview'>&#x27;male (red radio)&#x27; &#x27;female (yell...</div><input id='attrs-ccda02da-c42a-4bd1-bdb8-bfd8add5e811' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-ccda02da-c42a-4bd1-bdb8-bfd8add5e811' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-a04f8aac-3dc7-44a4-8d5d-cba6402a3756' class='xr-var-data-in' type='checkbox'><label for='data-a04f8aac-3dc7-44a4-8d5d-cba6402a3756' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;male (red radio)&#x27;, &#x27;female (yellow radio)&#x27;], dtype=&#x27;&lt;U21&#x27;)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time_env</span></div><div class='xr-var-dims'>(time_env)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 0.004997 ... 419.4 419.4</div><input id='attrs-1e96ab86-67ef-43ac-a0d8-a6af32979c73' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-1e96ab86-67ef-43ac-a0d8-a6af32979c73' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-5ad7bd34-b08a-4ff8-a38f-b8bd51afe342' class='xr-var-data-in' type='checkbox'><label for='data-5ad7bd34-b08a-4ff8-a38f-b8bd51afe342' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([0.000000e+00, 4.997120e-03, 9.994240e-03, ..., 4.194183e+02,
+       4.194233e+02, 4.194283e+02], shape=(83935,))</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-3fbc6e3d-62ec-44a1-9ba0-a580bf911aa1' class='xr-section-summary-in' type='checkbox' checked /><label for='section-3fbc6e3d-62ec-44a1-9ba0-a580bf911aa1' class='xr-section-summary' title='Expand/collapse section'>Data variables: <span>(3)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>vibration</span></div><div class='xr-var-dims'>(time, individuals)</div><div class='xr-var-dtype'>float32</div><div class='xr-var-preview xr-preview'>6.44e+05 3.769e+05 ... 3.619e+05</div><input id='attrs-fdc20be7-9fdd-4688-aff7-61238c512ce6' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-fdc20be7-9fdd-4688-aff7-61238c512ce6' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-bf735643-9f78-4558-ab2d-bae978a41f42' class='xr-var-data-in' type='checkbox'><label for='data-bf735643-9f78-4558-ab2d-bae978a41f42' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[643953.2 , 376856.88],
+       [644001.7 , 377338.16],
+       [643844.3 , 377037.25],
+       ...,
+       [659848.8 , 361840.9 ],
+       [659723.75, 361960.38],
+       [659928.1 , 361865.66]], shape=(10240000, 2), dtype=float32)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>vibration_env</span></div><div class='xr-var-dims'>(time_env, individuals)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>94.01 1.447e+03 ... 2.966e+03 110.2</div><input id='attrs-f806fae4-9ada-4e9e-ae57-a2cddae9c872' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-f806fae4-9ada-4e9e-ae57-a2cddae9c872' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-5a80b5a0-8fe3-4986-8bfd-87dd8cc1d094' class='xr-var-data-in' type='checkbox'><label for='data-5a80b5a0-8fe3-4986-8bfd-87dd8cc1d094' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[  94.00768174, 1446.56327619],
+       [  90.48048364, 1029.73980487],
+       [  87.32002591,  702.73275585],
+       ...,
+       [2965.54956845,  109.94689303],
+       [2966.69202708,  110.12645773],
+       [2966.45590175,  110.16722037]], shape=(83935, 2))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>vibration_env_turning_points</span></div><div class='xr-var-dims'>(individuals, time_env)</div><div class='xr-var-dtype'>int8</div><div class='xr-var-preview xr-preview'>1 0 0 0 0 0 0 0 ... 0 0 0 0 0 0 0 1</div><input id='attrs-7592c9ef-a8e7-4934-ba8c-2a8e5cee7456' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-7592c9ef-a8e7-4934-ba8c-2a8e5cee7456' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-45da3400-72b6-4395-9734-0b4a9c42400d' class='xr-var-data-in' type='checkbox'><label for='data-45da3400-72b6-4395-9734-0b4a9c42400d' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>kind :</span></dt><dd>changepoint_feature</dd><dt><span>changepoint_mask :</span></dt><dd>1</dd><dt><span>type :</span></dt><dd>changepoints</dd><dt><span>target_feature :</span></dt><dd>vibration_env</dd></dl></div><div class='xr-var-data'><pre>array([[1, 0, 0, ..., 0, 0, 1],
+       [1, 0, 0, ..., 0, 0, 1]], shape=(2, 83935), dtype=int8)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-5390e043-bda9-44f2-aa81-9694c4481835' class='xr-section-summary-in' type='checkbox' checked /><label for='section-5390e043-bda9-44f2-aa81-9694c4481835' class='xr-section-summary' title='Expand/collapse section'>Attributes: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>fps :</span></dt><dd>47.6837158203125</dd><dt><span>audio_sr :</span></dt><dd>24414.0625</dd></dl></div></li></ul></div></div></div></div>
 </div>
 <section id="decent-for-segmentation">
 <h3>Decent for segmentation<a class="headerlink" href="#decent-for-segmentation" title="Link to this heading">#</a></h3>
