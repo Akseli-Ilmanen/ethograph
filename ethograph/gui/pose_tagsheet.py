@@ -25,7 +25,7 @@ Which families, and what OpenCV is still for
 --------------------------------------------
 The sheet prints exactly what :mod:`~ethograph.gui.pose_detect` can read —
 :data:`~ethograph.gui.pose_detect.TAG_FAMILIES` — and nothing else, because a
-sheet of tags EthoGraph cannot detect is a trap rather than a feature. That rules
+sheet of tags Ethograph cannot detect is a trap rather than a feature. That rules
 out ``tag36h10`` in particular: OpenCV renders it perfectly well (2320 IDs), but
 AprilTag 3 dropped the family, so it would print beautifully and never decode.
 
@@ -626,7 +626,7 @@ def write_pdf(spec: SheetSpec, path: str | Path, resolution: int = PDF_RESOLUTIO
     writer.setPageSize(_page_size(spec))
     writer.setPageMargins(QMarginsF(0.0, 0.0, 0.0, 0.0), QPageLayout.Millimeter)
     writer.setResolution(int(resolution))
-    writer.setTitle("EthoGraph tag sheet")
+    writer.setTitle("Ethograph tag sheet")
     painter = QPainter(writer)
     try:
         render_pages(painter, spec, pages, resolution / 25.4, writer.newPage)

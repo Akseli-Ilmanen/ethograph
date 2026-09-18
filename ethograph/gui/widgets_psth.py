@@ -1,4 +1,4 @@
-"""PSTH popup dialog — integrates with EthoGraph's EphysWidget + LabelsWidget.
+"""PSTH popup dialog — integrates with Ethograph's EphysWidget + LabelsWidget.
 
 Opens when the user clicks "Open PSTH" in EphysWidget's traceview panel.
 Cluster selection is driven by the cluster table in EphysWidget (not duplicated

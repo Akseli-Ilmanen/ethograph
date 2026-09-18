@@ -27,7 +27,7 @@ A test earns its place if **its failure would surprise you**. Keep invariant gua
 
 ## Project Overview
 
-EthoGraph is a GUI for labelling start/stop times of animal movements, paired with model pipelines that predict labels. It loads NetCDF/NWB/pynapple datasets and displays synchronized video/audio/ephys.
+Ethograph is a GUI for labelling start/stop times of animal movements, paired with model pipelines that predict labels. It loads NetCDF/NWB/pynapple datasets and displays synchronized video/audio/ephys.
 
 ```python
 import ethograph as eto

@@ -58,7 +58,7 @@ That timer only runs while curation is **active** (``app_state.curation_active``
 never saved): dropping label classes into the scope area or curating anything
 arms it via :meth:`CurationPanel.activate`, and a fresh dataset disarms it. A
 session that curates nothing therefore touches no file. Arming is also the one
-moment a metadata TSV is created — the ``curated`` column is EthoGraph's own
+moment a metadata TSV is created — the ``curated`` column is Ethograph's own
 state and never goes into a recording or the alignment NWB, so
 :func:`~ethograph.io.metadata_edit.ensure_tabular_target` copies the loaded
 table to the sidecar TSV, which becomes the metadata table from then on.

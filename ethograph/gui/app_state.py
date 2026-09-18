@@ -266,7 +266,7 @@ class AppStateSpec:
         # no preference recorded yet (defaults to all checked). A name absent
         # from the current dataset's cameras is simply never offered.
         "grid_selected_cameras": (list[str] | None, None, True),
-        # Output volume as a % (0–100) applied inside EthoGraph's own audio
+        # Output volume as a % (0–100) applied inside Ethograph's own audio
         # stream, independent of the system volume. Global — a listening
         # preference, not a dataset property.
         "playback_volume_pct": (float, 100.0, True),
@@ -1362,7 +1362,7 @@ class ObservableAppState(QObject):
             return yaml.safe_load(f) or {}
 
     # os.replace() on Windows needs exclusive access to the destination; a
-    # second EthoGraph instance briefly opening the same global settings
+    # second Ethograph instance briefly opening the same global settings
     # file for its own autosave is enough to raise WinError 32. Retry a
     # few times before giving up.
     _REPLACE_RETRIES = 5

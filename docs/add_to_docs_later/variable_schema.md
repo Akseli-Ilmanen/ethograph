@@ -1,7 +1,7 @@
 (target-variable-schema)=
 # Variable schema
 
-What a data variable *is*, written on the variable itself. EthoGraph follows
+What a data variable *is*, written on the variable itself. Ethograph follows
 the schema sketched in movement's
 [issue #978](https://github.com/neuroinformatics-unit/movement/issues/978):
 a feature is an ordinary `DataArray` beside `position`/`confidence`, described

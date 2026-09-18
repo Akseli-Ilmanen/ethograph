@@ -6,7 +6,7 @@ you:
 | Folder | Who writes it | What lives there |
 |---|---|---|
 | **Session folder** — one per recording | You: the session file. The GUI: labels, alignment, layout. | Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session's videos is itself a fine session folder, but nothing requires it. |
-| **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag & drop. Your session folders can live here too, but don't have to — EthoGraph never copies data into it. |
+| **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag & drop. Your session folders can live here too, but don't have to — Ethograph never copies data into it. |
 | `~/.ethograph/` | The GUI. | Your settings, caches, and a starter project used while no project folder is chosen. |
 
 ## The project folder
@@ -35,7 +35,7 @@ my_project/                            # chosen on the start page
 
 ```{important}
 **One session folder, one `.nc`.** A second `.nc` at the root is an old version,
-and EthoGraph refuses to guess which one is current — in the GUI and in a
+and Ethograph refuses to guess which one is current — in the GUI and in a
 `segment` or `spot` run alike. Tell the project which files to skip, once, in
 `project.yaml`:
 

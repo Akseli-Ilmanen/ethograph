@@ -94,7 +94,7 @@ speed = nap.Tsd(t=np.arange(27000) / 30.0, d=np.random.randn(27000))
 
 :::{tab-item} NWB
 
-NWB files follow the [NWB standard](https://www.nwb.org/). EthoGraph reads:
+NWB files follow the [NWB standard](https://www.nwb.org/). Ethograph reads:
 
 - **Trials**: `nwb.trials` table (`start_time`, `stop_time`, plus custom columns).
 - **Behavioural data**: {class}`~pynwb.TimeSeries` in `nwb.processing` modules.

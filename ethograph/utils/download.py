@@ -22,7 +22,7 @@ from ethograph.utils.paths import BUNDLED_DEFAULTS_DIR
 
 logger = logging.getLogger(__name__)
 
-_RELEASE_BASE = "https://github.com/Akseli-Ilmanen/EthoGraph/releases/download"
+_RELEASE_BASE = "https://github.com/Akseli-Ilmanen/Ethograph/releases/download"
 
 #: Network settings for release-asset fetches. GitHub redirects every asset to
 #: ``release-assets.githubusercontent.com``, a four-IP anycast range that some

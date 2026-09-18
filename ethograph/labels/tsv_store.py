@@ -1,4 +1,4 @@
-"""TSV-based label storage for EthoGraph.
+"""TSV-based label storage for Ethograph.
 
 File format:
     trial                   - trial identifier
@@ -176,7 +176,7 @@ def load_labels_tsv(path: str | Path) -> pd.DataFrame:
     if path.suffix.lower() in (".xlsx", ".xls"):
         df = pd.read_excel(path)
     else:
-        # comment="#": files saved while EthoGraph briefly wrote a leading
+        # comment="#": files saved while Ethograph briefly wrote a leading
         # "# time_basis:" line still read back as a normal table.
         df = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig", comment="#")
     validate_labels_tsv(df, path)

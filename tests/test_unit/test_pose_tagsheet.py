@@ -86,7 +86,7 @@ def test_a_family_the_detector_cannot_read_is_not_printable():
     """tag36h10 renders fine in OpenCV and never decodes — so it is refused.
 
     Printing is not allowed to be a superset of detecting: a sheet of tags
-    EthoGraph cannot read is worse than no sheet, because the failure only
+    Ethograph cannot read is worse than no sheet, because the failure only
     shows up after the animals are already wearing them.
     """
     from ethograph.gui.pose_detect import PointDetectorError

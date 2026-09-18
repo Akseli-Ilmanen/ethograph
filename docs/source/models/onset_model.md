@@ -68,7 +68,7 @@ Labels of another class can be inputs too:
 * a **state** class becomes its on/off indicator — `1` inside every interval,
   `0` outside;
 * a **point** class becomes a Laplacian bump centred on the event, at two
-  widths (0.1 s and 1 s) — the same kernel EthoGraph puts on
+  widths (0.1 s and 1 s) — the same kernel Ethograph puts on
   {doc}`changepoints <../advanced/changepoints/index>`, so one column says both
   *it is here* and *it was a while ago*.
 

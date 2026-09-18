@@ -19,7 +19,7 @@ https://neuroconv.readthedocs.io/en/main/conversion_examples_gallery/behavior/mo
 If your `NWB` files contains pose or spike times, you can visualize them for free in the GUI.
 - **Pose.** neuroconv's `DeepLabCutInterface` (and the SLEAP and LightningPose
   ones) write ndx-pose into the same file. Give it the video as `source_video`
-  and EthoGraph pairs the pose to that camera. Or leave the pose file beside the
+  and Ethograph pairs the pose to that camera. Or leave the pose file beside the
   `.nwb` and pair it with {func}`~ethograph.pair_media`, as in step 6; both
   end up on the same overlay.
 - **Spike sorting.** `KiloSortSortingInterface` writes the units, which gives

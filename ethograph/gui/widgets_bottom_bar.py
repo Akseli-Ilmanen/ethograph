@@ -230,10 +230,10 @@ class BottomPlaybackBar(QWidget):
         self.speed_info_label.setToolTip("Effective frame rate / audio sample rate at the current speed setting.")
         bot.addWidget(self.speed_info_label)
 
-        # Playback volume: gain inside EthoGraph's own output stream, so it is
+        # Playback volume: gain inside Ethograph's own output stream, so it is
         # independent of the system/device volume. Applied live mid-playback.
         volume_tooltip = (
-            "Playback volume within EthoGraph (independent of the system volume).\n"
+            "Playback volume within Ethograph (independent of the system volume).\n"
             "Logarithmic scale, like a mixing-desk fader: equal slider steps sound\n"
             "like equal loudness steps (50% ≈ −18 dB, 100% = the recording's own level)."
         )

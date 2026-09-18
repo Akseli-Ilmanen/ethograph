@@ -1,4 +1,4 @@
-# Windows EthoGraph 0.2.12 Test Overview
+# Windows Ethograph 0.2.12 Test Overview
 
 Hi,
 
@@ -26,7 +26,7 @@ case, especially compared with the earlier version I tested.
 
 - OS: Windows 11
 - Python: `3.12.13`
-- EthoGraph: `0.2.12`
+- Ethograph: `0.2.12`
 - Relevant playback stack: `pygfx 0.17.0`, `pynaviz 0.2.0`,
   `wgpu 0.32.0`, `rendercanvas 2.7.2`, `sounddevice 0.5.5`
 - Tested through a local debug launcher that logs video/audio/playback state.
@@ -51,7 +51,7 @@ original dataset:
 
 - `Audio-synced` regular playback is audible on Windows.
 - The 8 kHz/3-channel proxy workflows are much more usable than the older
-  EthoGraph version.
+  Ethograph version.
 - Label overlays and playheads render correctly across multiple stacked panels.
 - Channel selection works after clicking an audio trace/spectrogram panel and
   using the right-side channel dropdown.

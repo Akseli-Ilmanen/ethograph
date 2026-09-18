@@ -6,7 +6,7 @@ format** combo offers:
 
 | Option | Source | Converter |
 |--------|--------|-----------|
-| **`.tsv`** | EthoGraph TSV (backup, colleague's labels, manual edit) | (native) |
+| **`.tsv`** | Ethograph TSV (backup, colleague's labels, manual edit) | (native) |
 | **`pynapple (.npz)`** | Pynapple file with {class}`~pynapple.IntervalSet` objects | {class}`~ethograph.labels.converters.PynappleLabelConverter` |
 | **`pynapple (.nwb)`** | NWB file loaded via {class}`~pynapple.IntervalSet` objects | {class}`~ethograph.labels.converters.PynappleLabelConverter` |
 | **BORIS** (`.boris`) | [BORIS](https://www.boris.unito.it/) project files | {class}`~ethograph.labels.boris.BorisLabelConverter` (via the BORIS import wizard) |
@@ -94,7 +94,7 @@ the import wizard lives at `ethograph.gui.wizard_boris`.
 
 ## Crowsetta interop
 
-EthoGraph registers an `ethograph-seq`
+Ethograph registers an `ethograph-seq`
 [crowsetta](https://crowsetta.readthedocs.io/) format for sharing labels with
 string names (resolved via `mapping.txt`):
 

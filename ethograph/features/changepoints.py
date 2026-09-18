@@ -398,7 +398,7 @@ def _shape_at_candidates(
     """``(prominence, asymmetry)`` of *source* at every candidate, over *window* samples each side.
 
     Prominence is how far the candidate sits below the lower of the two
-    hills beside it: ``min(max before, max after) - source[i]``. A trough
+    hills beside it: ``min(max before, max after) - source[i]``. A through
     between two movements scores high; a dip beside one movement and a
     flat stretch scores low, because only what both sides share counts.
     Asymmetry is ``mean after - mean before``: positive where a movement

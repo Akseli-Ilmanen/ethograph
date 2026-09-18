@@ -1,4 +1,4 @@
-"""Trial-aligned raster + PSTH histogram plot widget (reusable, no EthoGraph deps)."""
+"""Trial-aligned raster + PSTH histogram plot widget (reusable, no Ethograph deps)."""
 
 from __future__ import annotations
 

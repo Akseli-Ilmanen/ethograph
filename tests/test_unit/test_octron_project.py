@@ -1,6 +1,6 @@
 """The OCTRON project layer writes what OCTRON reads, and the config round-trips.
 
-Two things must agree and nothing forces them to: the organizer JSON EthoGraph
+Two things must agree and nothing forces them to: the organizer JSON Ethograph
 writes and the schema OCTRON's own ``restore_object_organizer`` produces /
 ``collect_labels`` consumes; and the ``octron.yaml`` keys and the CLI flags
 they become.

@@ -49,7 +49,7 @@ flowchart TD
 - **Action segmentation** — `eto.segment` vendors the models and loss of DLC2Action {cite:p}`kozlova2025dlc2action`, adapted there to pose/kinematic input:
   - DLC2Action's own variants: `mstcn` (MS-TCN3, which feeds the last two layers of the first stage into the second; from MS-TCN++ {cite:p}`li2020mstcnpp`) and `c2f_transformer` (C2F-TCN {cite:p}`singhania2021c2ftcn` with attention in place of convolution).
   - Original architectures, as adapted in DLC2Action: `asformer` {cite:p}`yi2021asformer`, `c2f_tcn` {cite:p}`singhania2021c2ftcn`, `edtcn` {cite:p}`lea2017edtcn`, `motionbert` {cite:p}`zhu2023motionbert`, and `mlp`, a per-frame baseline.
-  - Added in EthoGraph: `rnn` (a bidirectional GRU/LSTM baseline), `specscalpel` {cite:p}`ji2026specscalpel` and `lady` {cite:p}`ji2026lady`.
+  - Added in Ethograph: `rnn` (a bidirectional GRU/LSTM baseline), `specscalpel` {cite:p}`ji2026specscalpel` and `lady` {cite:p}`ji2026lady`.
 - **Precise event spotting** — E2E-Spot {cite:p}`hong2022e2espot`.
 - **FERAL** {cite:p}`skovorodnikov2025feral` — a video foundation model (V-JEPA 2) fine-tuned on the pixels alone, in its own
   environment on a large GPU. Either on its own, with the GUI's labels exported to its `labels.json`, or as a video feature

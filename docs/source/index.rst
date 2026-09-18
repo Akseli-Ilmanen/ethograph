@@ -14,7 +14,7 @@
 ethograph
 =========
 
-EthoGraph is a graphical user interface for visualizing and segmenting
+Ethograph is a graphical user interface for visualizing and segmenting
 multimodal timeseries behavioural data. It builds upon a number of :ref:`open-source
 libraries <target-support>` to load and quickly render video and pose files, audio and
 spectrograms, ephys recordings in various formats, and arbitrary
@@ -133,7 +133,7 @@ Quickstart
 
      <div class="dcpg won" id="dcp0">
        <div class="dcqt">Are you working with NWB files?</div>
-       <div class="dcqh"><code>.nwb</code> files are self-contained &mdash; EthoGraph loads them directly.</div>
+       <div class="dcqh"><code>.nwb</code> files are self-contained &mdash; Ethograph loads them directly.</div>
        <div class="dcch">
          <label class="dcc"><input type="radio" name="dcnwb" value="yes" onchange="dcRad(this,'nwb')">
            <div><strong>Yes &mdash; I have .nwb files</strong><span>From DANDI, NeuroConv, or another NWB pipeline</span></div></label>
@@ -190,7 +190,7 @@ Quickstart
          <div class="dcqh">Existing annotations can be imported rather than redone.</div>
          <div class="dcch">
            <label class="dcc"><input type="radio" name="dclbl" value="no" onchange="dcRad(this,'labelled')">
-             <div><strong>No &mdash; I'll label in EthoGraph</strong></div></label>
+             <div><strong>No &mdash; I'll label in Ethograph</strong></div></label>
            <label class="dcc"><input type="radio" name="dclbl" value="yes" onchange="dcRad(this,'labelled')">
              <div><strong>Yes &mdash; in Audacity, Praat, evsonganaly&hellip;</strong>
              <span>Or another annotation tool</span></div></label>
@@ -310,7 +310,7 @@ Quickstart
      if(st.labelled!=='yes')return '';
      return '<div class="dcres next" style="margin-top:.9rem"><h4>Import your existing annotations</h4>'
        +'<p>Use <em>File &rarr; Import labels&hellip;</em> and pick your format &mdash; the list appears once '
-       +'an audio folder is loaded. EthoGraph reads these through '
+       +'an audio folder is loaded. Ethograph reads these through '
        +'<a href="https://crowsetta.readthedocs.io/" target="_blank" rel="noopener">crowsetta</a>:</p>'
        +'<ul>'
        +'<li>Audacity label track &mdash; <code>aud-seq</code> (<code>.txt</code>)</li>'
@@ -336,7 +336,7 @@ Quickstart
      }
      if(st.d.has('other')){
        return '<div class="dcres next"><h4>Convert to a supported format</h4>'+tags()
-         +'<p>EthoGraph has no built-in loader for your format. Pick whichever route fits your data:</p>'
+         +'<p>Ethograph has no built-in loader for your format. Pick whichever route fits your data:</p>'
          +'<ul>'
          +'<li><strong>Save as <code>.npy</code></strong> &mdash; a plain array of shape '
          +'<code>(n_samples, n_variables)</code>. Drag it onto the start page; a popup asks the '
@@ -365,7 +365,7 @@ Quickstart
            +'per-stream offsets in an <a href="'+PREP+'">alignment file</a>.</p>'
          : '';
        return '<div class="dcres ok"><h4>Drag &amp; drop your files</h4>'+tags()
-         +'<p>Drop these onto the start page and click <strong>Load</strong>. EthoGraph sorts them '
+         +'<p>Drop these onto the start page and click <strong>Load</strong>. Ethograph sorts them '
          +'by type and builds the alignment for you &mdash; no scripting. '+follow+'</p>'+multi+'</div>'
          +importNote();
      }
@@ -384,7 +384,7 @@ Quickstart
 Installation
 ------------
 
-EthoGraph is installed with `uv <https://docs.astral.sh/uv/>`_, a fast Python package manager:
+Ethograph is installed with `uv <https://docs.astral.sh/uv/>`_, a fast Python package manager:
 
 .. tab-set::
 
@@ -430,10 +430,10 @@ Support
 -------
 
 .. image:: _static/media/opensource.png
-   :alt: Open-source projects EthoGraph depends on
+   :alt: Open-source projects Ethograph depends on
    :width: 100%
 
-EthoGraph is built on top of a number of open-source projects:
+Ethograph is built on top of a number of open-source projects:
 `PyAV <https://pyav.org/docs/stable/>`_,
 `audioio <https://github.com/bendalab/audioio>`_,
 `Neo <https://neo.readthedocs.io>`_ :cite:p:`garcia2014neo`,

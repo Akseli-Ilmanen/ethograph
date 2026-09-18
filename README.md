@@ -1,11 +1,11 @@
 # ethograph
 
 <p align="center">
-  <img src="docs/source/_static/media/demo.gif" alt="EthoGraph demo" width="40.8%">
-  <img src="docs/source/_static/media/label_basic_downsampled.gif" alt="Labelling in EthoGraph" width="58.1%">
+  <img src="docs/source/_static/media/demo.gif" alt="Ethograph demo" width="40.8%">
+  <img src="docs/source/_static/media/label_basic_downsampled.gif" alt="Labelling in Ethograph" width="58.1%">
 </p>
 
-EthoGraph is a graphical user interface for visualizing and segmenting
+Ethograph is a graphical user interface for visualizing and segmenting
 multimodal timeseries behavioural data. It builds upon a number of
 [open-source libraries](#support) to load and quickly render video and pose
 files, audio and spectrograms, ephys recordings in various formats, and
@@ -58,9 +58,9 @@ recommend the
 
 ## Support
 
-<img src="docs/source/_static/media/opensource.png" alt="Open-source projects EthoGraph depends on" width="100%">
+<img src="docs/source/_static/media/opensource.png" alt="Open-source projects Ethograph depends on" width="100%">
 
-EthoGraph is built on top of a number of open-source projects:
+Ethograph is built on top of a number of open-source projects:
 [PyAV](https://pyav.org/docs/stable/),
 [audioio](https://github.com/bendalab/audioio),
 [Neo](https://neo.readthedocs.io),
@@ -79,6 +79,6 @@ that segment behaviour build on
 [FERAL](https://github.com/Skovorp/feral) and
 [E2E-Spot](https://github.com/jhong93/spot).
 
-EthoGraph is GPL-3.0-or-later. The code it vendors or adapts from other
+Ethograph is GPL-3.0-or-later. The code it vendors or adapts from other
 projects, and each one's licence, is listed in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

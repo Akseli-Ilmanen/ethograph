@@ -24,7 +24,7 @@ proposes describing derived features by their `attrs` — `kind`, `source`,
 `units`, `is_egocentric` — so that trackers and behaviour classifiers can
 exchange engineered features, selected with `ds.filter_by_attrs(...)`. The
 issue is explicitly a sketch and asks segmentation-tool authors what they
-need. EthoGraph is such a tool, and already had two ad-hoc conventions doing
+need. Ethograph is such a tool, and already had two ad-hoc conventions doing
 part of the job: `attrs["type"] = "changepoints"` (read in a dozen places)
 and `attrs["normalise"]` (invented for the segmentation pipeline's
 normalisation).

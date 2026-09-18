@@ -317,7 +317,7 @@ class TimingPage(QWidget):
 
         note = QLabel(
             "Everything on this page becomes the timing cell of your notebook. neuroconv reads the line and "
-            "puts every frame on the session clock; EthoGraph opens the result. Recipe: "
+            "puts every frame on the session clock; Ethograph opens the result. Recipe: "
             + styled_link(NEUROCONV_HOWTO, "How to time-align behavior videos")
         )
         note.setWordWrap(True)
@@ -469,7 +469,7 @@ class WritePage(QWidget):
             if not pair
             else "4 · pair_media → alignment.nwb"
         )
-        cells.append("open in EthoGraph")
+        cells.append("open in Ethograph")
         self._cells.setText("  →  ".join(cells))
 
     def validate(self, state: WizardState) -> str | None:

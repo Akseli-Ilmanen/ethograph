@@ -25,6 +25,6 @@ iou_thresh: 0.7
 skip_frames: 0
 one_object_per_label: false
 
-# Frame suggestion (EthoGraph's side)
+# Frame suggestion (Ethograph's side)
 suggest_motion_share: 0.3    # mixed: share of picks taken from the strongest movements
 suggest_motion_gate: 0.5     # mixed: candidates below this motion quantile are not clustered

@@ -31,7 +31,7 @@ sits on top of the column filters — so "wild-type trials where the sequence
 broke" is one question, and answering it does not throw the genotype filter
 away. **Clear** takes it off again; nothing about the labels is modified,
 ever. Every operation downstream then narrows with the table, because the
-table's visible trials are the one trial filter in EthoGraph.
+table's visible trials are the one trial filter in Ethograph.
 """
 
 from __future__ import annotations

@@ -1,13 +1,13 @@
-# EthoGraph Feedback Report: Audio/Video Annotation Feasibility
+# Ethograph Feedback Report: Audio/Video Annotation Feasibility
 
 Prepared for: Akseli Ilmanen
 Prepared by: Luca Yapura with Codex assistance
 Date: 2026-07-23
-EthoGraph version tested: `0.2.4.4`
+Ethograph version tested: `0.2.4.4`
 
 ## Short Summary
 
-We tested EthoGraph for a two-animal copulation annotation workflow that needs synchronized video, imported behaviour labels, and external audio. EthoGraph worked well for loading converted sessions, inspecting labels, using branch mappings, and video-only short-window annotation. The main unresolved problem is audio-synchronized annotation: once audio is involved, playback becomes choppy/delayed, the playhead can become unreliable during repeated play/pause, and regular/main playback does not appear to start the selected audio stream in the upstream/native Windows path.
+We tested Ethograph for a two-animal copulation annotation workflow that needs synchronized video, imported behaviour labels, and external audio. Ethograph worked well for loading converted sessions, inspecting labels, using branch mappings, and video-only short-window annotation. The main unresolved problem is audio-synchronized annotation: once audio is involved, playback becomes choppy/delayed, the playhead can become unreliable during repeated play/pause, and regular/main playback does not appear to start the selected audio stream in the upstream/native Windows path.
 
 The strongest positive result is that Windows native audio output can work in principle: state-label/interval playback produced audible audio from a mono PCM16 WAV diagnostic. The strongest negative result is that this did not translate into robust continuous audio/video playback suitable for precise annotation.
 
@@ -134,13 +134,13 @@ proxy1280_mpaudio:
   no separate WAV
 ```
 
-The `.nc` files are intentionally small and contain only a minimal timeline variable plus trial metadata and label sidecars. Video/audio are external files referenced through the EthoGraph alignment sidecars. This isolates GUI media playback, audio plotting, zooming, and synchronization rather than testing a large dense feature dataset.
+The `.nc` files are intentionally small and contain only a minimal timeline variable plus trial metadata and label sidecars. Video/audio are external files referenced through the Ethograph alignment sidecars. This isolates GUI media playback, audio plotting, zooming, and synchronization rather than testing a large dense feature dataset.
 
 ## Results: What Worked
 
 ### Data Loading And Labels
 
-- Converted EthoGraph sessions loaded.
+- Converted Ethograph sessions loaded.
 - Imported behaviour labels loaded.
 - Branch mapping worked after selecting the relevant branch in the GUI.
 - Manual label creation/editing looked usable in short-window sessions.
@@ -227,7 +227,7 @@ Zooming and channel switching should not block playback or make the UI temporari
 
 ### 5. Embedded MP4/AAC Audio Did Not Load
 
-The source/proxy MP4 files contain valid embedded AAC audio according to `ffprobe`, but EthoGraph/audioio did not load the MP4 as an audio source on either Linux or Windows.
+The source/proxy MP4 files contain valid embedded AAC audio according to `ffprobe`, but Ethograph/audioio did not load the MP4 as an audio source on either Linux or Windows.
 
 Windows GUI console showed repeated errors like:
 
@@ -286,7 +286,7 @@ The private biological videos are probably not necessary to reproduce the core i
 
 ### Suggested Synthetic Test Dataset
 
-Create a two-trial EthoGraph session with:
+Create a two-trial Ethograph session with:
 
 ```text
 Trials:

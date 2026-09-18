@@ -1,4 +1,4 @@
-# Windows EthoGraph Annotation Feasibility Report
+# Windows Ethograph Annotation Feasibility Report
 
 Last updated: 2026-08-18
 
@@ -14,13 +14,13 @@ Last updated: 2026-08-18
   TrialTree files open, normal feature selection works, and singleton time
   slices return shape `(1,)` instead of raising the old "No dimension containing
   'time'" error.
-- WAV audio loads correctly through both `audioio` and EthoGraph's
+- WAV audio loads correctly through both `audioio` and Ethograph's
   `SharedAudioCache` for the tested 24.414 kHz float WAV, 16 kHz PCM16 WAV, and
   8 kHz PCM16 WAV variants.
 - The new `AudioClock` can open a Windows `sounddevice` output stream and
   resamples playback to a fixed 48 kHz output rate. This directly targets the
   previous regular-playback audio/synchronization limitation.
-- Embedded MP4/AAC audio still does not load as an EthoGraph audio source.
+- Embedded MP4/AAC audio still does not load as an Ethograph audio source.
   `0.2.12` now surfaces a clearer message saying embedded video-container audio
   is not decoded in place and that separate WAV/FLAC/OGG should be supplied.
   Direct `audioio.load_audio()` probing of the MP4 still produced a Python
@@ -190,7 +190,7 @@ These results are retained as the baseline for the `0.2.12` retest.
   delay. Main stream playback remained video-only/no-audio.
 - `proxy1280_mic1_pcm16_8k`: worked somewhat at 30 fps initially, but zooming or
   repeated stop/start again caused choppiness, delay, or timeouts.
-- Integrated EthoGraph Downsample did not materially change playback behaviour,
+- Integrated Ethograph Downsample did not materially change playback behaviour,
   consistent with it downsampling TrialTree/data arrays rather than external
   media streams.
 - `proxy1280_mpaudio`: no audio trace/spectrogram and no audible audio.
@@ -230,7 +230,7 @@ Completed checks:
   - Can open and stop a Windows `sounddevice.OutputStream` using the default
     output device.
 - MP4/AAC smoke test:
-  - EthoGraph's `SharedAudioCache` now returns a clearer message: embedded
+  - Ethograph's `SharedAudioCache` now returns a clearer message: embedded
     video-container audio is not decoded in place; re-drop video with audio
     extraction enabled or supply separate WAV/FLAC/OGG.
   - Direct `audioio.load_audio()` on the MP4 still fails and produced a Python
@@ -344,7 +344,7 @@ Load:
 outputs\playback_diagnostics\proxy1280_mpaudio\annotation_pilot_imported_proxy1280_mpaudio.nc
 ```
 
-Expected result: EthoGraph should not decode embedded AAC as an audio source,
+Expected result: Ethograph should not decode embedded AAC as an audio source,
 but it should fail gracefully without crashing the GUI.
 
 ## Creator-Facing Reproduction Notes
@@ -380,7 +380,7 @@ Pass criteria for this project:
 - `1280 x 936` proxy video with mono WAV audio remains usable at native speed or
   at a clearly documented lower review speed.
 - Embedded MP4/AAC either works reliably or is documented as unsupported for
-  EthoGraph audio trace/spectrogram/playback.
+  Ethograph audio trace/spectrogram/playback.
 
 Likely implementation area for the observed `0.2.12` freeze: in
 `Audio-synced` regular playback, the audio clock can continue while video frame
@@ -481,7 +481,7 @@ Multi-panel layout retest:
 - No duplicate/stale playheads were reported during this pass.
 - The video freeze was not reproduced during this multi-panel pass.
 - Starting and stopping playback had a small delay, but the user described it as
-  workable and clearly better than the old EthoGraph version.
+  workable and clearly better than the old Ethograph version.
 - In the 3-channel session, very short playback bursts have a timing-sensitive
   failure mode. The delay after pressing Stop does not seem to be the main
   factor; the critical factor is how long playback was actually allowed to run.

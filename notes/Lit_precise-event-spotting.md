@@ -107,7 +107,7 @@ two above it:
 **Combine by rank-normalising within a session and taking the max**, never a
 sum. **Validate as a risk–coverage curve** (fraction of errors caught vs.
 fraction reviewed) — the defensible form of any review-time claim, and
-model-agnostic, so it is a natural EthoGraph output for anything in the
+model-agnostic, so it is a natural Ethograph output for anything in the
 codec slot. Keep a small randomly sampled audit set outside any active-learning
 loop or the savings number is unfalsifiable.
 

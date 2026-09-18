@@ -1995,7 +1995,7 @@ def store_to_movement_ds(
     """Build a movement-format poses dataset from *store*.
 
     Dims are ``(time, space, keypoint, individual)`` — singular, as movement
-    ≥0.17 and the rest of EthoGraph name them — so the result feeds the existing
+    ≥0.17 and the rest of Ethograph name them — so the result feeds the existing
     ``PoseRenderData`` path and everything downstream (overlay, filtering,
     kinematics, NWB) unchanged. Time is in seconds; ``fps`` must come from the
     video, never a default.

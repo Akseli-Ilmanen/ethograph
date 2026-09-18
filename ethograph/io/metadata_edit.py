@@ -9,7 +9,7 @@ NWB trials tables are written in append mode (``NWBHDF5IO(path, "a")``): the
 export path used by :func:`~ethograph.io.nwb_alignment.edit_nwb` copies
 already-written datasets verbatim, so a changed value never reaches the file.
 
-:data:`DERIVED_COLUMNS` — state EthoGraph works out for itself, the curation
+:data:`DERIVED_COLUMNS` — state Ethograph works out for itself, the curation
 verdict — never goes into an NWB. That write happens in place
 (there is no atomic replace to fall back on), and for a non-NWB dataset the
 alignment NWB is the sole holder of the trial timing, so a crash mid-write
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 TARGET_TABULAR = "tabular"
 TARGET_NWB = "nwb"
 
-#: Columns EthoGraph derives rather than reads. Written to a tabular file
+#: Columns Ethograph derives rather than reads. Written to a tabular file
 #: only — see the module docstring.
 DERIVED_COLUMNS = frozenset({CURATED_COLUMN})
 

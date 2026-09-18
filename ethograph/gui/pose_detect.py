@@ -253,7 +253,7 @@ def family_note(family: str) -> str:
         "tag25h9": "35 IDs, 7 modules — one module less paper than tag36h11 for the same pixels per module.",
         "tag16h5": (
             "30 IDs, 6 modules — the smallest printable tag, and the thinnest margin. "
-            "It proposes far more bad reads than the others; EthoGraph drops every one that "
+            "It proposes far more bad reads than the others; Ethograph drops every one that "
             "needed a bit correction, so what survives is trustworthy, but a genuinely "
             "corrupted read has less room to be caught. Check a run before relying on it."
         ),

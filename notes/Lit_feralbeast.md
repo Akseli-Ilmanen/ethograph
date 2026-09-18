@@ -1,6 +1,6 @@
-# EthoGraph — video-model review and decisions
+# Ethograph — video-model review and decisions
 
-*Date: 2026-08-25. Covers E2E-Spot and successors, FERAL, BEAST, and how they fit the EthoGraph library design.*
+*Date: 2026-08-25. Covers E2E-Spot and successors, FERAL, BEAST, and how they fit the Ethograph library design.*
 
 ---
 
@@ -119,7 +119,7 @@ class ExtractorConfig:
 ### Ethology context
 - No ethology/neuroscience paper uses E2E-Spot or successors; that lineage is entirely sports (SoccerNet). The animal side jumped straight to video foundation models (FERAL, TRACE, BEAST, Autobehaver, PlayClass), all state-oriented, none evaluated at frame tolerance. The frame-precise point-event gap for animals is open.
 - Transferable non-sport insights from the E2E-Spot citation graph: few-shot (UMEG-Net), class-imbalance losses (Santra et al. SoftIC), label dilation vs displacement (T-DEED), dense events under handheld/occluded cameras (TTA dataset), sequence metrics (F3Set edit score), single-frame-label ambiguity and loss/metric mismatch (BME runner-up report).
-- SSL in practice: (1) frozen SSL backbone — indistinguishable from S3D-Kinetics from the user's side, no SSL code runs; (2) fine-tune with your labels — still supervised, only the init differs; (3) run the SSL objective on your unlabeled data — the only level where contrastive/masked losses enter your code. EthoGraph does 1 and 2, not 3.
+- SSL in practice: (1) frozen SSL backbone — indistinguishable from S3D-Kinetics from the user's side, no SSL code runs; (2) fine-tune with your labels — still supervised, only the init differs; (3) run the SSL objective on your unlabeled data — the only level where contrastive/masked losses enter your code. Ethograph does 1 and 2, not 3.
 
 ---
 

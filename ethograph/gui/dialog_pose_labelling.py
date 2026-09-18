@@ -2780,7 +2780,7 @@ class PoseLabellingDialog(QDialog):
         learn_btn.setToolTip(
             "Run the detector on the frames you labelled and match each decoded\n"
             "tag to the nearest labelled point — so labelling the animal a tag is\n"
-            "stuck to is what teaches EthoGraph whose tag it is.\n\n"
+            "stuck to is what teaches Ethograph whose tag it is.\n\n"
             "At least two labelled frames must agree before a row is proposed."
         )
         learn_btn.clicked.connect(self._on_learn_assignment)

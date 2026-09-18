@@ -1,11 +1,11 @@
-"""Box labelling — OCTRON's workflow inside EthoGraph, one time index across cameras.
+"""Box labelling — OCTRON's workflow inside Ethograph, one time index across cameras.
 
 **Tools ▸ Box labelling (OCTRON)…** A non-modal dialog laid out as OCTRON's own
 dock (a toolbox with *Manage project*, *Generate annotation data*, *Train
 model*, *Analyze videos*) so OCTRON users are at home. It drives every open
 camera view at once and calls the OCTRON fork headless for everything below
 the canvas (``labels/octron_project.py`` for the files, ``gui/box_annotate.py``
-for SAM). What is EthoGraph's: the label manager works *by individual and
+for SAM). What is Ethograph's: the label manager works *by individual and
 camera* — pick an individual, click it in each camera where it is visible,
 ``X`` where it is not, ``Tab`` for the next — frame suggestion, a per-camera
 balance table, and training / prediction as separate ``octron`` processes

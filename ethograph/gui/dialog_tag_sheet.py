@@ -9,7 +9,7 @@ recording does, which is when this is actually needed.
 The dialog is a table of *sheet rows* rather than one family and a count: a rig
 usually wants a handful of big tags and many small ones, and printing one size
 per page wastes most of the paper. The family column offers exactly what
-:mod:`~ethograph.gui.pose_detect` can read, because a sheet of tags EthoGraph
+:mod:`~ethograph.gui.pose_detect` can read, because a sheet of tags Ethograph
 cannot detect is a trap rather than a feature. Mixing families on one sheet is a
 **printing** convenience only — one detector reads one family, so two families in
 one video mean two detection passes, and the dialog says so the moment a second
@@ -87,7 +87,7 @@ PREVIEW_OVERSAMPLE = 3
 _COLUMNS = ("Family", "First ID", "Count", "Tag mm", "Min mm")
 
 _COLUMN_TOOLTIPS = (
-    "Which AprilTag family. Only the ones EthoGraph can DETECT are offered —\n"
+    "Which AprilTag family. Only the ones Ethograph can DETECT are offered —\n"
     "printing a family it cannot read would be a trap.\n\n"
     "tag36h11 is the default and has the most margin; the smaller families\n"
     "need less paper for the same pixels per module.",
@@ -259,7 +259,7 @@ class TagSheetDialog(QDialog):
     def _build_rows_group(self) -> QGroupBox:
         group = QGroupBox("Tags to print")
         group.setToolTip(
-            "Only families EthoGraph can DETECT are offered: a sheet of tags the\n"
+            "Only families Ethograph can DETECT are offered: a sheet of tags the\n"
             "Detect stage cannot read is a trap. (tag36h10 is deliberately absent —\n"
             "OpenCV renders it, but AprilTag 3 dropped the family, so it would\n"
             "print perfectly and never decode.)"

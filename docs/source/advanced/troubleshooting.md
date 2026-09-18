@@ -195,7 +195,7 @@ for f in *.mp4; do ffmpeg -i "$f" -vn -acodec pcm_s16le "${f%.mp4}.wav"; done
 
 Excel on Windows may not correctly parse `.tsv` files when double-clicked due to regional delimiter settings.
 
-**Automatic fix:** EthoGraph automatically registers `.tsv` files to open correctly in Excel with tab delimiters the first time you run it. On Windows this writes to the current-user registry (no admin prompt); on macOS it uses `duti` if installed.
+**Automatic fix:** Ethograph automatically registers `.tsv` files to open correctly in Excel with tab delimiters the first time you run it. On Windows this writes to the current-user registry (no admin prompt); on macOS it uses `duti` if installed.
 
 If the association is not working, you can re-run it manually:
 

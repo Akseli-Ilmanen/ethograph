@@ -1,4 +1,4 @@
-"""Crowsetta format registration for EthoGraph.
+"""Crowsetta format registration for Ethograph.
 
 Registers 'ethograph-seq' as a Crowsetta format: an extended simple-seq with
 `individual` and `trial` columns. Import this module to register the format.

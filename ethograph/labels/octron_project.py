@@ -1,11 +1,11 @@
 """An OCTRON project on disk, spoken in OCTRON's own layout (Qt-free, torch-free).
 
-EthoGraph's box labelling drives the OCTRON fork headless. This module owns
+Ethograph's box labelling drives the OCTRON fork headless. This module owns
 the *files* OCTRON expects, so anything written here opens unchanged in the
 OCTRON GUI and trains with OCTRON's own ``octron split`` / ``octron train``::
 
     {project}/octron/                       # the OCTRON project root (OCTRON_DIRNAME)
-    ├── octron.yaml                         # EthoGraph's training/prediction config
+    ├── octron.yaml                         # Ethograph's training/prediction config
     ├── {hash8}/                            # one folder per camera video
     │   ├── video data.zarr                 # SAM's resized frame cache (written by the SAM session)
     │   ├── video_info.txt                  # informational; read by OCTRON's organizer recovery
@@ -40,7 +40,7 @@ MASK_SUFFIX = " masks.zarr"
 PREDICTIONS_DIRNAME = "predictions"
 MASK_OPACITY = 0.4
 
-#: How an EthoGraph individual becomes an OCTRON label (= YOLO class).
+#: How an Ethograph individual becomes an OCTRON label (= YOLO class).
 #: ``suffix`` (the default, OCTRON's 'LED 1 / LED 2' case) trains one class and
 #: keeps the individual as OCTRON's suffix — right for animals that look alike,
 #: where identity is the tracker's job; ``per_individual`` gives each
@@ -99,7 +99,7 @@ class OctronConfig:
     iou_thresh: float = 0.7
     skip_frames: int = 0
     one_object_per_label: bool = False
-    # Frame suggestion (EthoGraph's side, not OCTRON's)
+    # Frame suggestion (Ethograph's side, not OCTRON's)
     suggest_motion_share: float = 0.3  # mixed: share of picks from the strongest movements
     suggest_motion_gate: float = 0.5  # mixed: candidates below this motion quantile are not clustered
 
@@ -124,7 +124,7 @@ class OctronConfig:
     def save(self, path: Path) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        header = "# EthoGraph box labelling — OCTRON training/prediction settings (octron.yaml)\n"
+        header = "# Ethograph box labelling — OCTRON training/prediction settings (octron.yaml)\n"
         path.write_text(header + yaml.safe_dump(asdict(self), sort_keys=False), encoding="utf-8")
 
     def label_for(self, individual: str) -> tuple[str, str]:
@@ -211,7 +211,7 @@ def _relative_posix(path: Path, root: Path) -> str:
 
 
 class OctronProject:
-    """The OCTRON project folder of an EthoGraph project."""
+    """The OCTRON project folder of an Ethograph project."""
 
     def __init__(self, root: Path):
         self.root = Path(root)
@@ -273,7 +273,7 @@ class OctronProject:
         # The layout OCTRON's restore_object_organizer parses ("Video path:",
         # "Video abbreviated hash:"); everything else is for a human.
         lines = [
-            "# Written by EthoGraph — informational, not read by training",
+            "# Written by Ethograph — informational, not read by training",
             f"Video path: {entry.path.as_posix()}",
             f"Video abbreviated hash: {entry.hash8}",
             f"Width: {entry.width}",
@@ -381,7 +381,7 @@ class OctronProject:
                 return obj
         pairs = [(obj.label, obj.suffix) for obj in existing] + [(label, suffix)]
         colors, label_id_map = _compute_colors(pairs)
-        if color is not None:  # the caller's colour wins (EthoGraph keeps one colour per individual)
+        if color is not None:  # the caller's colour wins (Ethograph keeps one colour per individual)
             colors[-1] = [float(c) for c in color]
         used = {obj.obj_id for obj in existing}
         obj_id = next(i for i in range(len(existing) + 1) if i not in used)

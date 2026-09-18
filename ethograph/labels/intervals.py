@@ -1,4 +1,4 @@
-"""Interval-based label representation and core primitives for EthoGraph.
+"""Interval-based label representation and core primitives for Ethograph.
 
 Labels are stored as a pandas DataFrame with columns:
     onset_s        (float64) - start time in seconds
@@ -162,7 +162,7 @@ def ensure_labeling_method(df: pd.DataFrame) -> pd.DataFrame:
     ``confidence``: a label written before methods existed is a hand-made one
     unless a model scored it below :data:`HUMAN_CONFIDENCE`, in which case it
     is automated output nobody has curated yet — the conservative reading, so
-    a file from an older EthoGraph never claims more review than it got.
+    a file from an older Ethograph never claims more review than it got.
     """
     ensure_confidence(df)
     derived = pd.Series(

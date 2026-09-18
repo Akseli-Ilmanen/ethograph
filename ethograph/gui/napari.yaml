@@ -1,12 +1,12 @@
 name: ethograph
-display_name: EthoGraph
+display_name: Ethograph
 visibility: public
 contributions:
   commands:
     - id: ethograph.make_widget
       python_name: ethograph.gui.widgets_meta:MetaWidget
-      title: EthoGraph
+      title: Ethograph
 
   widgets:
     - command: ethograph.make_widget
-      display_name: EthoGraph
+      display_name: Ethograph

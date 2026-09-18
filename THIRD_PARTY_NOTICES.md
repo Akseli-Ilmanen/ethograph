@@ -1,6 +1,6 @@
 # Third-party notices
 
-EthoGraph is licensed under the GNU General Public License v3.0 or later
+Ethograph is licensed under the GNU General Public License v3.0 or later
 (`LICENSE`). It ships copies of, and code adapted from, the projects below.
 Each vendored tree carries its own `LICENSE` and a `NOTICE.md` naming the
 upstream commit and every edit made to the copy; this file is the index.
@@ -32,13 +32,13 @@ the per-file headers. E2E-Spot's `model/impl/` likewise carries GSM
 with an AGPL-3.0 work. The files under `ethograph/segment/dlc2action/` and
 `ethograph/utils/arraytools.py` remain under the AGPL-3.0, and the AGPL's
 network-interaction clause (its section 13) applies to them; the rest of
-EthoGraph stays GPL-3.0-or-later. Thunderhopper's two functions in
+Ethograph stays GPL-3.0-or-later. Thunderhopper's two functions in
 `arraytools.py` note in their own docstrings that they were in turn adapted
 from `scipy.signal._arraytools` (BSD-3-Clause).
 
 ## Adapted code
 
-Code written in EthoGraph's own modules from a published implementation.
+Code written in Ethograph's own modules from a published implementation.
 The adapted function says so in its docstring.
 
 | Where | Upstream | Licence | What |
