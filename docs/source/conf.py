@@ -73,6 +73,11 @@ extensions = [
     "sphinxcontrib.bibtex",
 ]
 
+# A diagram takes its natural height at the column's width; the extension's
+# default squeezes every diagram into a 500px box, which shrinks a tall
+# flowchart until its text is unreadable.
+mermaid_height = "auto"
+
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 bibtex_default_style = "plain"
@@ -137,6 +142,7 @@ html_theme = "pydata_sphinx_theme"
 html_title = "ethograph"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_js_files = ["js/mermaid_zoom.js"]
 
 # Serve page sources under their own extension rather than the default
 # ".txt", so the "Download source" link on an example page hands back a

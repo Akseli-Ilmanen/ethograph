@@ -1,3 +1,7 @@
+---
+html_theme.sidebar_secondary.remove: true
+---
+
 (target-models)=
 # Models
 
@@ -7,29 +11,21 @@ GPU**, on **the shape of the label**, and on **what the model sees**.
 
 ```{mermaid}
 flowchart TD
-    start([Hand-labelled trials]) --> gpu{Do you have a GPU?}
+    gpu{Do you have<br/>a GPU?}
+    gpu -->|No| lgbm[<b>LightGBM</b><br/>point events, CPU<br/><i>Model ▸ LightGBM</i>]
+    gpu -->|Yes| shape{What kind<br/>of label?}
 
-    gpu -->|No| lgbm[LightGBM model<br/><i>point events only</i><br/><i>CPU, GUI native</i><br/><i>Model ▸ LightGBM: Train… / Predict…</i>]
-    gpu -->|Yes| shape{What kind of label?}
+    shape -->|"Point event<br/>(one moment)"| input{What does the<br/>model see?}
+    shape -->|"State event<br/>(onset + offset)"| big{A large GPU<br/>or a cluster?}
 
-    shape -->|"Point event<br/>(one moment per trial)"| input{What does the model see?}
-    shape -->|"State event<br/>(an interval: onset + offset)"| big{A large GPU or<br/>a GPU cluster?}
+    input -->|Video only| spot[<b>E2E-Spot</b><br/><code>eto.spot</code>]
+    input -->|"Video + pose, sensors,<br/>custom features…"| spotfeat[<b>E2E-Spot</b><br/>+ features]
 
-    input -->|Video only| spot[Event spotting: E2E-Spot<br/><code>eto.spot</code>]
-    input -->|Video + pose| spotfeat[E2E-Spot + features]
-
-    big -->|No| segment[Action segmentation<br/><code>eto.segment</code><br/><i>DLC2Action models + added architectures</i>]
-    big -->|Yes| sees{What does FERAL see?}
-    sees -->|Video only| feral[FERAL alone<br/><i>export labels.json, FERAL-native</i><br/><code>eto.segment.export_feral</code>]
-    sees -->|"Video + other features<br/>(pose, changepoints, sensors)"| feralseg[FERAL embeddings<br/>as a video feature]
+    big -->|Yes| sees{What does<br/>FERAL see?}
+    sees -->|Video only| feral[<b>FERAL alone</b><br/><code>export_feral</code>]
+    sees -->|"Video + pose, sensors,<br/>custom features…"| feralseg[<b>FERAL embeddings</b><br/>as a video feature]
+    big -->|No| segment[<b>Action segmentation</b><br/><code>eto.segment</code>]
     feralseg --> segment
-
-    segment --> curate
-    lgbm --> curate
-    spot --> curate
-    spotfeat --> curate
-    feral --> curate
-    curate([Curate the predictions in the GUI]) --> conf[Read and threshold confidence]
 
     click segment "segment/index.html"
     click lgbm "onset_model.html"
@@ -37,9 +33,20 @@ flowchart TD
     click spotfeat "spot/multimodal.html"
     click feral "segment/feral.html"
     click feralseg "segment/feral.html"
-    click curate "curation.html"
-    click conf "confidence.html"
 ```
+
+Every box is a link. Whichever model you pick, its predictions come back to the
+GUI: {doc}`curate them <curation>`, then {doc}`read and threshold their
+confidence <confidence>`.
+
+| Model | Label | Sees | Needs | Where |
+|---|---|---|---|---|
+| {doc}`LightGBM <onset_model>` | point event | session features | CPU | GUI: *Model ▸ LightGBM: Train… / Predict…* |
+| {doc}`E2E-Spot <spot/index>` | point event | video | GPU | `eto.spot` |
+| {doc}`E2E-Spot + features <spot/multimodal>` | point event | video + pose, sensors, custom features… | GPU | `eto.spot` |
+| {doc}`Action segmentation <segment/index>` | state event | pose, changepoints, sensors, video features | GPU | `eto.segment` (DLC2Action models + added architectures) |
+| {doc}`FERAL embeddings <segment/feral>` | state event | video + pose, sensors, custom features… | large GPU or cluster | FERAL's embedding as a video feature of `eto.segment` |
+| {doc}`FERAL alone <segment/feral>` | state event | video | large GPU or cluster | `eto.segment.export_feral` writes FERAL's `labels.json` |
 
 ## Where the models come from
 
