@@ -105,7 +105,7 @@ work even with no labelling mode armed; the rest need one.
 | Shortcut | Action |
 |----------|--------|
 | `Shift+N` | Open the "Add panel" popup |
-| `Ctrl+R` | Refresh line plot |
+| `Ctrl+R` | Reset panels: rebuild every plot and reload every video in place, keeping the layout (also **Help ▸ Reset panels**) |
 | `Ctrl+A` | Toggle autoscale |
 | Left double-click | Autoscale (once) |
 | `Ctrl+L` | Toggle lock axes |

@@ -152,3 +152,19 @@ def test_broken_saved_layout_falls_back_to_defaults(moll2025_gui, monkeypatch):
 
     assert app_state.panel_layout is None, "broken layout must be discarded"
     assert pc.line_plots, "data-availability default lineplot must be rebuilt"
+
+
+def test_reset_panels_rebuilds_the_same_layout(moll2025_gui):
+    """Ctrl+R replaces every panel with a fresh instance, yet the layout the
+    user had (panel set, features, selections) comes back unchanged."""
+    viewer, meta = moll2025_gui
+    del meta.apply_saved_panel_layout  # the fixture's stub ignores every saved layout
+    pc = meta.plot_container
+    pc.add_lineplot(feature="position")
+    before_panels = list(pc._dyn_panels)
+    before_layout = pc.layout_state()["panels"]
+
+    meta.reset_panels()
+
+    assert pc.layout_state()["panels"] == before_layout
+    assert not set(map(id, before_panels)) & set(map(id, pc._dyn_panels)), "panels must be rebuilt, not reused"

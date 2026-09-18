@@ -540,6 +540,7 @@ class TopBarBuilder:
             menu.addAction("Visualize data alignment", show_align)
 
         menu.addSeparator()
+        menu.addAction("Reset panels (Ctrl+R)", self.meta.reset_panels)
         menu.addAction("Reset local settings (this dataset)", self._reset_local_settings)
         reset_gui = self._first_method(getattr(self.meta, "io_widget", None), "_on_reset_gui_clicked")
         if reset_gui is not None:

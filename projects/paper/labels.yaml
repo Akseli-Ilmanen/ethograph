@@ -1,0 +1,16 @@
+# Paper-wide label display: per individual, class id -> name, RGB colour, letter.
+Freddy:
+  1:  {name: pullOutStick,     color: [1.0, 0.4, 0.69803922],        letter: A}
+  2:  {name: diagonalToBox,    color: [0.4, 0.61960784, 1.0],        letter: B}
+  3:  {name: toss,             color: [0.6, 0.2, 1.0],               letter: C}
+  4:  {name: swoopPreBox,      color: [1.0, 0.2, 0.2],               letter: D}
+  7:  {name: pullOutAlongWall, color: [0.0, 0.6, 0.0],               letter: F}
+  8:  {name: swoopOut,         color: [0.69803922, 0.43529412, 0.17254902], letter: G}
+  9:  {name: stickToDisp,      color: [1.0, 1.0, 0.0],               letter: H}
+  10: {name: stickInDisp,      color: [0.0, 0.8, 0.8],               letter: I}
+  11: {name: rightToPellet,    color: [0.50196078, 0.50196078, 0.0], letter: J}
+  12: {name: snapPellet,       color: [1.0, 0.0, 1.0],               letter: K}
+  13: {name: eat,              color: [1.0, 0.64705882, 0.0],        letter: L}
+  5:  {name: reachToWall,      color: [0.4, 1.0, 0.4],               letter: L1}
+  6:  {name: right,            color: [1.0, 0.6, 0.4],               letter: L2}
+  14: {name: curvedRight,      color: [0.0, 0.50196078, 1.0],        letter: R1}

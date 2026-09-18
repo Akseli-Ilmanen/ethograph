@@ -683,7 +683,12 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         elif anchor is None:
             self._dock_host.addDockWidget(Qt.LeftDockWidgetArea, dock)
         else:
+            anchor_height = anchor.height()
             self._dock_host.splitDockWidget(anchor, dock, Qt.Vertical)
+            # The pair always shares a splitter, so this holds even when the
+            # flat resizeDocks in _apply_panel_sizes is dropped by a 2D layout.
+            half = max(PANEL_MIN_HEIGHT, anchor_height // 2)
+            self._dock_host.resizeDocks([anchor, dock], [half, half], Qt.Vertical)
         dock.show()
         self._dyn_panels.append(plot)
 

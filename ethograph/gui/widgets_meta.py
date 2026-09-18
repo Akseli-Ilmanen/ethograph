@@ -1163,6 +1163,25 @@ class MetaWidget(GridSectionContainer):
         self._camera_grid_pending = False
         self.shell.video_area.arrange_grid()
 
+    def reset_panels(self):
+        """Rebuild every panel and reload every video in place, keeping the
+        layout — what closing and reopening the window would do, without
+        reloading the dataset. The recovery for a panel or video that stopped
+        rendering."""
+        if not self.app_state.ready:
+            return
+        self._snapshot_layouts()
+        # Prediction panels are session-only: the saved layout does not name them.
+        prediction_paths = [panel.prediction_path for panel in self.plot_container.prediction_panels()]
+        self.data_widget.video_mgr.unload_videos()
+        self.apply_saved_panel_layout()
+        for path in prediction_paths:
+            self.plot_container.add_panel("predictions", prediction_path=path)
+        self.app_state._preserve_x_range_next = True
+        self.data_widget.on_trial_changed()
+        self.plot_container.schedule_labels_redraw()
+        notify("Panels reset.")
+
     def rebuild_default_panels(self):
         """Drop every dynamic panel, space and radial plot and recreate the
         data-availability defaults (the same set ``_setup_panel_controls``

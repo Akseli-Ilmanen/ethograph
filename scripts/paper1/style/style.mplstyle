@@ -1,0 +1,26 @@
+# Font family: Arial is installed on Windows and recognised by CorelDraw, so
+# exported PDFs import without the "substitute missing font" dialog that
+# matplotlib's default DejaVu Sans triggers (Corel can't use the embedded subset).
+font.family: sans-serif
+font.sans-serif: Arial, DejaVu Sans
+
+# Font sizes
+font.size: 13
+axes.labelsize: 15
+axes.titlesize: 15
+xtick.labelsize: 14
+ytick.labelsize: 14
+legend.fontsize: 12
+figure.titlesize: 15
+
+# Lines
+lines.linewidth: 2
+
+# Figure
+figure.figsize: 10, 8
+figure.dpi: 150
+savefig.dpi: 600
+
+# Grid
+axes.grid: False
+grid.alpha: 0.3

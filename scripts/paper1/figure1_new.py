@@ -1,16 +1,13 @@
-"""Figure 1: one movement in 3D, above one trial's ground truth against a saved prediction set.
+"""Figure 1: one movement in 3D, above one trial's ground truth.
 
-Nothing is trained or predicted: the model row is read from the newest
-``predictions_*/*_predictions.tsv`` under :data:`ROOT`; class names and
-colours come from :data:`MAPPING`.
+Class names and colours come from :data:`MAPPING`.
 
 Top: the beak and stick tips' 3D trajectories during the ground-truth
-:data:`MOVEMENT` label, coloured by :data:`COLOR_VAR`, with :data:`CONTEXT_S` either
-side in grey — full view with the box,
-and zoomed on the beak without it. Below, top to bottom: curated ground truth,
-model output, :data:`TRACE_VAR` drawn as a curve coloured by :data:`COLOR_VAR`, and
-:data:`COLOR_VAR` again as a 1D colour strip; in both, frames outside every
-ground-truth label are :data:`CONTEXT_COLOR`. No text but the time-axis
+:data:`MOVEMENT` label, coloured by :data:`COLOR_VAR` — full view with the box,
+and zoomed on the beak without it. Below, top to bottom: curated ground truth as grey boxes,
+:data:`TRACE_VAR` coloured by :data:`COLOR_VAR`, :data:`COLOR_VAR` as a 1D colour
+strip, and :data:`ZOOM_S` of the :data:`MOVEMENT` label above :data:`TRACE_VAR` coloured
+by :data:`COLOR_VAR`. No text but the time-axis
 numbers. Writes one ``figure1_trial{N}_azim{A}.{pdf,png}`` per entry of
 :data:`AZIMUTHS` into ``{ROOT}/azimuths``.
 
@@ -21,17 +18,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.collections import LineCollection
 from matplotlib.figure import SubFigure
+from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 import ethograph as eto
 from ethograph.labels.intervals import LABELING_AUTOMATED, load_label_mapping
-from ethograph.labels.plots import plot_label_segments
 from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv
 
 ROOT = Path(r"C:\Users\aksel\Documents\Code\ethograph\projects\paper\figure1")
@@ -50,6 +49,12 @@ T_START: float | None = 0.35
 T_END: float | None = 3.7
 TRACE_VAR = "speed"
 COLOR_VAR = "angle_rgb"
+#: The zoomed trace's time window (s), on the plotted axis (``T_START`` reads 0).
+ZOOM_S = (1.5, 2.0)
+#: One letter per ground-truth label on the plotted axis, in onset order.
+LABEL_LETTERS = ("A", "B", "C", "C", "C", "C", "D", "E", "F", "G")
+LABEL_FACE = (0.8, 0.8, 0.8)
+LABEL_EDGE = (0.3, 0.3, 0.3)
 
 #: The ground-truth label whose interval the 3D panels draw, by mapping name.
 MOVEMENT = "nodding"
@@ -57,12 +62,9 @@ MOVEMENT = "nodding"
 TRAJECTORIES = {"beakTip": 1.0, "stickTip": 0.6}
 #: Padding around the zoomed keypoint's path, in the position's units.
 ZOOM_MARGIN = 0.1
-#: Seconds of trajectory drawn before and after the movement, in :data:`CONTEXT_COLOR`.
-CONTEXT_S = 0.1
-CONTEXT_COLOR = (0.6, 0.6, 0.6)
 ELEVATION = 25
-#: One figure per azimuth, in 5° steps from 185° to 270°, skipping 210°.
-AZIMUTHS = tuple(azim for azim in range(185, 275, 5) if azim != 210)
+#: One figure per azimuth, in 5° steps from 200° to 250°.
+AZIMUTHS = tuple(azim for azim in range(200, 250, 5))
 #: The box: its x/y footprint corners and z floor/ceiling, in the position's units.
 BOX_XY = np.array([[-7.00, 0.00], [-7.00, 9.80], [6.80, 9.80], [6.80, 0.00]])
 BOX_Z = (0.65, 2.75)
@@ -70,15 +72,6 @@ BOX_Z = (0.65, 2.75)
 FRONT_EDGES = ((0, 1), (4, 5), (0, 4), (1, 5))
 DEPTH_EDGES = ((0, 3), (1, 2), (4, 7), (5, 6))
 DEPTH_FRACTION = 1 / 5
-
-
-def newest_predictions(root: Path) -> Path:
-    """The ``*_predictions.tsv`` of the newest ``predictions_*`` folder under *root*."""
-    # Folder names end in their timestamp, so name order is time order.
-    tsvs = sorted(root.glob("predictions_*/*_predictions.tsv"), key=lambda p: p.parent.name)
-    if not tsvs:
-        raise FileNotFoundError(f"No predictions_*/*_predictions.tsv under {root}")
-    return tsvs[-1]
 
 
 def state_rows(df: pd.DataFrame, trial: int) -> pd.DataFrame:
@@ -93,6 +86,45 @@ def movement_interval(truth: pd.DataFrame, mapping: dict) -> tuple[float, float]
     if len(rows) != 1:
         raise ValueError(f"Expected one {MOVEMENT!r} label in this trial, found {len(rows)}")
     return float(rows["onset_s"].iloc[0]), float(rows["offset_s"].iloc[0])
+
+
+# Vector-editor-friendly export (CorelDRAW, Illustrator), as session.py's save_pdf:
+# the paper style's Arial font, TrueType fonts kept as editable text, and paths
+# written unsimplified.
+plt.style.use(Path(__file__).parent / "style" / "style ppt.mplstyle")
+mpl.rcParams.update(
+    {
+        "svg.fonttype": "path",
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "text.usetex": False,
+        "path.simplify": False,
+    }
+)
+
+
+def save_pdf(fig: plt.Figure, path: Path, dpi: int = 150) -> None:
+    """Write *fig* the way session.py's ``save_pdf`` does, then close it: through
+    ``PdfPages`` with the figure's own bounds, which CorelDRAW imports cleanly."""
+    with PdfPages(path) as pdf:
+        pdf.savefig(fig, dpi=dpi, bbox_inches=None, metadata={"Creator": "matplotlib"})
+    plt.close(fig)
+
+
+def draw_labels(ax: plt.Axes, labels: pd.DataFrame) -> None:
+    """Every label as a grey full-height box with a dark grey outline, its ``letter`` on it."""
+    for onset, offset, letter in labels[["onset_s", "offset_s", "letter"]].itertuples(index=False):
+        ax.axvspan(onset, offset, facecolor=LABEL_FACE, edgecolor=LABEL_EDGE, linewidth=1)
+        ax.text(
+            (onset + offset) / 2,
+            0.5,
+            letter,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="center",
+            fontsize=9,
+            clip_on=True,
+        )
 
 
 def box_vertices() -> np.ndarray:
@@ -134,9 +166,8 @@ def plot_movement(
     draw_box(full)
     draw_scene(full, positions, colors, azim)
 
-    # The zoom's limits are the zoomed keypoint's whole drawn path, context
-    # included. mplot3d never clips lines to the axes, so the box is left out and
-    # other trajectories' points beyond the limits are blanked.
+    # The zoom's limits are the zoomed keypoint's whole drawn path. mplot3d never
+    # clips lines to the axes, so the box is left out and other trajectories' points beyond the limits are blanked.
     zoomed = positions[next(iter(TRAJECTORIES))]
     lo, hi = np.nanmin(zoomed, axis=0) - ZOOM_MARGIN, np.nanmax(zoomed, axis=0) + ZOOM_MARGIN
     inside = {
@@ -153,7 +184,6 @@ def plot_movement(
 def plot_trial(
     subfig: SubFigure,
     truth: pd.DataFrame,
-    predicted: pd.DataFrame,
     time: np.ndarray,
     trace: np.ndarray,
     colors: np.ndarray,
@@ -162,37 +192,57 @@ def plot_trial(
     t_start = time[0] if T_START is None else T_START
     t_end = (time[-1] if T_END is None else T_END) - t_start
     time = time - t_start
-    truth, predicted = (
-        df.assign(onset_s=df["onset_s"] - t_start, offset_s=df["offset_s"] - t_start) for df in (truth, predicted)
-    )
+    truth = truth.assign(onset_s=truth["onset_s"] - t_start, offset_s=truth["offset_s"] - t_start)
+    truth = truth[(truth["offset_s"] > 0) & (truth["onset_s"] < t_end)].sort_values("onset_s")
+    if len(truth) != len(LABEL_LETTERS):
+        raise ValueError(f"{len(truth)} labels on the plotted axis but {len(LABEL_LETTERS)} LABEL_LETTERS")
+    truth = truth.assign(letter=LABEL_LETTERS)
 
-    axs = subfig.subplots(4, 1, sharex=True, gridspec_kw={"height_ratios": [1, 1, 2, 0.5]})
-    plot_label_segments(axs[0], truth, mapping)
-    plot_label_segments(axs[1], predicted, mapping)
+    # The fourth row is a spacer between the full-range rows and the zoom.
+    axs = subfig.subplots(6, 1, gridspec_kw={"height_ratios": [1, 2, 0.5, 0.4, 1, 8]})
+    label_ax, trace_ax, strip_ax, spacer_ax, zoom_label_ax, zoom_ax = axs
+    spacer_ax.set_axis_off()
+    draw_labels(label_ax, truth)
+    movement_id = next(k for k, v in mapping.items() if v["name"] == MOVEMENT)
+    movement = truth[truth["labels"] == movement_id]
+    draw_labels(zoom_label_ax, movement)
 
     # One segment per frame, coloured by the frame it starts on.
     points = np.column_stack([time, trace])
     segments = np.stack([points[:-1], points[1:]], axis=1)
     valid = np.isfinite(segments).all(axis=(1, 2)) & np.isfinite(colors[:-1]).all(axis=1)
-    axs[2].add_collection(LineCollection(segments[valid], colors=colors[:-1][valid], linewidths=1.2))
+    trace_ax.add_collection(LineCollection(segments[valid], colors=colors[:-1][valid], linewidths=1.2))
     shown = trace[(time >= 0) & (time <= t_end)]
-    axs[2].set_ylim(np.nanmin(shown), np.nanmax(shown) * 1.05)
+    trace_ax.set_ylim(np.nanmin(shown), np.nanmax(shown) * 1.05)
 
     strip = np.where(np.isfinite(colors), colors, 1.0)[np.newaxis]
-    axs[3].imshow(strip, aspect="auto", extent=(time[0], time[-1], 0, 1), interpolation="nearest")
+    strip_ax.imshow(strip, aspect="auto", extent=(time[0], time[-1], 0, 1), interpolation="nearest")
 
-    for ax in axs:
+    zoom_ax.add_collection(LineCollection(segments[valid], colors=colors[:-1][valid], linewidths=1.5))
+    zoomed = trace[(time >= ZOOM_S[0]) & (time <= ZOOM_S[1])]
+    zoom_ax.set_ylim(np.nanmin(zoomed), np.nanmax(zoomed) * 1.05)
+
+    # Dotted drops from the zoomed label's edges down to where the curve is at that time.
+    finite = np.isfinite(trace)
+    for edge in movement[["onset_s", "offset_s"]].to_numpy().ravel():
+        drop = ConnectionPatch(
+            xyA=(edge, 0),
+            coordsA=zoom_label_ax.get_xaxis_transform(),
+            xyB=(edge, np.interp(edge, time[finite], trace[finite])),
+            coordsB=zoom_ax.transData,
+            linestyle=":",
+            linewidth=1.5,
+            color="black",
+        )
+        subfig.add_artist(drop)
+
+    for ax in (label_ax, trace_ax, strip_ax, zoom_label_ax, zoom_ax):
         ax.set_yticks([])
-        ax.tick_params(left=False, bottom=ax is axs[-1])
+        with_axis = ax in (strip_ax, zoom_ax)
+        ax.tick_params(left=False, bottom=with_axis, labelbottom=with_axis)
         for spine in ax.spines.values():
             spine.set_visible(False)
-        ax.set_xlim(0, t_end)
-
-
-def in_labels(time: np.ndarray, labels: pd.DataFrame) -> np.ndarray:
-    """Which of *time* fall inside any of *labels*' intervals."""
-    onsets, offsets = labels["onset_s"].to_numpy(), labels["offset_s"].to_numpy()
-    return ((time[:, np.newaxis] >= onsets) & (time[:, np.newaxis] <= offsets)).any(axis=1)
+        ax.set_xlim(*(ZOOM_S if ax in (zoom_label_ax, zoom_ax) else (0, t_end)))
 
 
 def keypoint_window(ds: xr.Dataset, var: str, keypoint: str, t0: float, t1: float) -> tuple[np.ndarray, np.ndarray]:
@@ -204,8 +254,6 @@ def keypoint_window(ds: xr.Dataset, var: str, keypoint: str, t0: float, t1: floa
 
 
 def main() -> None:
-    tsv = newest_predictions(ROOT)
-    print(f"Predictions: {tsv}")
     mapping = load_label_mapping(MAPPING)
 
     ground_truth = load_labels_tsv(labels_tsv_path(SESSION))
@@ -220,34 +268,26 @@ def main() -> None:
 
     t0, t1 = movement_interval(truth, mapping)
     print(f"{MOVEMENT}: {t0:.3f}-{t1:.3f} s")
-    w0, w1 = t0 - CONTEXT_S, t1 + CONTEXT_S
-    window_time, _ = keypoint_window(ds, "position", next(iter(TRAJECTORIES)), w0, w1)
-    in_movement = (window_time >= t0) & (window_time <= t1)
-    positions = {k: keypoint_window(ds, "position", k, w0, w1)[1] for k in TRAJECTORIES}
-    movement_colors = {
-        k: np.where(in_movement[:, np.newaxis], keypoint_window(ds, COLOR_VAR, k, w0, w1)[1], CONTEXT_COLOR)
-        for k in TRAJECTORIES
-    }
+    positions = {k: keypoint_window(ds, "position", k, t0, t1)[1] for k in TRAJECTORIES}
+    movement_colors = {k: keypoint_window(ds, COLOR_VAR, k, t0, t1)[1] for k in TRAJECTORIES}
 
-    predicted = state_rows(load_labels_tsv(tsv), trial)
     out_dir = ROOT / "azimuths"
     out_dir.mkdir(exist_ok=True)
     for azim in sorted(AZIMUTHS):
-        fig = plt.figure(figsize=(15, 8))
-        top, bottom = fig.subfigures(2, 1, height_ratios=[1.2, 1])
+        fig = plt.figure(figsize=(15, 13))
+        top, bottom = fig.subfigures(2, 1, height_ratios=[1.2, 2.1])
         plot_movement(top, positions, movement_colors, azim)
         plot_trial(
             bottom,
             truth,
-            predicted,
             time,
             np.asarray(trace, dtype=np.float64),
-            np.where(in_labels(time, truth)[:, np.newaxis], np.asarray(colors, dtype=np.float64), CONTEXT_COLOR),
+            np.asarray(colors, dtype=np.float64),
             mapping,
         )
-        for ext in ("pdf", "png"):
-            fig.savefig(out_dir / f"figure1_trial{trial}_azim{azim}.{ext}", dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        stem = out_dir / f"figure1_trial{trial}_azim{azim}"
+        fig.savefig(stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
+        save_pdf(fig, stem.with_suffix(".pdf"))
         print(f"Wrote azimuth {azim}")
 
 

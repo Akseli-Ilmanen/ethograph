@@ -129,7 +129,7 @@ def bind_global_shortcuts(meta_widget):
         checkbox.setChecked(not checkbox.isChecked())
 
     bind("Ctrl+B", toggle_changepoint_correction)
-    bind("Ctrl+R", data_widget.refresh_lineplot)
+    bind("Ctrl+R", meta_widget.reset_panels)
 
     def _change_spacing(delta: float):
         pc = plot_container

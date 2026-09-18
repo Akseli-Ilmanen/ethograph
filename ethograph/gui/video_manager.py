@@ -537,6 +537,16 @@ class VideoManager:
             # overlay has to be drawn again, scaled to it.
             self._video_reloaded_callback()
 
+    def unload_videos(self) -> None:
+        """Close every camera view's decoder, so the next load builds a fresh
+        ``PlotVideo`` instead of reusing the loaded one (see
+        ``CameraView.set_video``). The views and their docks stay; still-image
+        views have no decoder and are left alone."""
+        self._cleanup_primary_video()
+        for view in self.extra_widgets.values():
+            if not getattr(view, "static_image_path", None):
+                view.clear()
+
     def _reload_primary(self) -> None:
         frame = max(0, int(getattr(self.app_state, "current_frame", 0) or 0))
         self._cleanup_primary_video()

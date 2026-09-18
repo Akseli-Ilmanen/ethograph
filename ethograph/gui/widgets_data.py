@@ -1686,10 +1686,6 @@ class DataWidget(QWidget):
     # Combo / checkbox handlers
     # ------------------------------------------------------------------
 
-    def refresh_lineplot(self):
-        xmin, xmax = self.plot_container.get_current_xlim()
-        self.update_main_plot(t0=xmin, t1=xmax)
-
     def _update_confidence_overlay(self):
         """Each prediction panel draws its own file's confidence curve for the current trial.
 
