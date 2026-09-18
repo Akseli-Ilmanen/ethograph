@@ -127,3 +127,65 @@ body[data-hide-sidebar="true"] .bd-main {
   padding-top: 1.5em;
   border-top: 1px solid var(--pst-color-border, #e0e0e0);
 }
+
+/* A flowchart fills the column but is never blown up past a readable size. */
+.mermaid-container > pre > svg {
+    max-height: 1000px;
+}
+
+/* Pan/zoom controls on mermaid diagrams (js/mermaid_zoom.js). */
+.mermaid-zoom-host {
+    position: relative;
+}
+.mermaid-zoom-host > svg.is-zoomed {
+    cursor: grab;
+}
+.mermaid-zoom-host > svg.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+.mermaid-zoom-bar {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+}
+.mermaid-zoom-bar button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font: 16px/1 var(--pst-font-family-base, sans-serif);
+    color: var(--pst-color-text-base, #333);
+    background: var(--pst-color-background, #fff);
+    border: 1px solid var(--pst-color-border, #ccc);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.mermaid-zoom-bar button:hover {
+    border-color: var(--pst-color-primary, #0a7);
+    color: var(--pst-color-primary, #0a7);
+}
+.mermaid-zoom-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+.mermaid-zoom-hint.visible {
+    opacity: 1;
+}
+@media (pointer: coarse) {
+    .mermaid-zoom-hint {
+        display: none;
+    }
+}

@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=17f663f2" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
@@ -53,11 +53,11 @@
 
 const initStyles = () => {
     const defaultStyle = document.createElement('style');
-    defaultStyle.textContent = "pre.mermaid {\n    /* Same as .mermaid-container > pre */\n    display: block;\n    width: 100%;\n}\n\npre.mermaid > svg {\n    /* Same as .mermaid-container > pre > svg */\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}";
+    defaultStyle.textContent = "pre.mermaid {\n    /* Same as .mermaid-container > pre */\n    display: block;\n    width: 100%;\n}\n\npre.mermaid > svg {\n    /* Same as .mermaid-container > pre > svg */\n    height: auto;\n    width: 100%;\n    max-width: 100% !important;\n}";
     document.head.appendChild(defaultStyle);
 
     const fullscreenStyle = document.createElement('style');
-    fullscreenStyle.textContent = ".mermaid-container {\n    position: relative;\n    display: flex;\n    flex-direction: row;\n    width: 100%;\n}\n\n.mermaid-container > pre {\n    display: block;\n    width: 100%;\n}\n\n.mermaid-container > pre > svg {\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}\n\n.mermaid-fullscreen-btn {\n    position: absolute;\n    width: 28px;\n    height: 28px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    border-radius: 4px;\n    cursor: pointer;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    transition: all 0.2s;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);\n    font-size: 14px;\n    line-height: 1;\n    padding: 0;\n    color: #333;\n}\n\n.mermaid-fullscreen-btn:hover {\n    opacity: 100% !important;\n    background: rgba(255, 255, 255, 1);\n    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-btn.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.3);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-btn.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal {\n    display: none;\n    position: fixed !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 95vw;\n    height: 100vh;\n    background: rgba(255, 255, 255, 0.98);\n    z-index: 9999;\n    padding: 20px;\n    overflow: auto;\n}\n\n.mermaid-fullscreen-modal.dark-theme {\n    background: rgba(0, 0, 0, 0.98);\n}\n\n.mermaid-fullscreen-modal.active {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen {\n    position: relative;\n    width: 95vw;\n    height: 90vh;\n    max-width: 95vw;\n    max-height: 90vh;\n    background: white;\n    border-radius: 8px;\n    padding: 20px;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n    overflow: auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen.dark-theme {\n    background: #1a1a1a;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);\n}\n\n.mermaid-container-fullscreen pre.mermaid {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen .mermaid svg {\n    height: 100% !important;\n    width: 100% !important;\n    cursor: grab;\n}\n\n.mermaid-fullscreen-close {\n    position: fixed !important;\n    top: 20px !important;\n    right: 20px !important;\n    width: 40px;\n    height: 40px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 50%;\n    cursor: pointer;\n    z-index: 10000;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n    font-size: 24px;\n    line-height: 1;\n    color: #333;\n}\n\n.mermaid-fullscreen-close:hover {\n    background: white;\n    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-close.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.2);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-close.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal .mermaid-fullscreen-btn {\n    display: none !important;\n}";
+    fullscreenStyle.textContent = ".mermaid-container {\n    position: relative;\n    display: flex;\n    flex-direction: row;\n    width: 100%;\n}\n\n.mermaid-container > pre {\n    display: block;\n    width: 100%;\n}\n\n.mermaid-container > pre > svg {\n    height: auto;\n    width: 100%;\n    max-width: 100% !important;\n}\n\n.mermaid-fullscreen-btn {\n    position: absolute;\n    width: 28px;\n    height: 28px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    border-radius: 4px;\n    cursor: pointer;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    transition: all 0.2s;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);\n    font-size: 14px;\n    line-height: 1;\n    padding: 0;\n    color: #333;\n}\n\n.mermaid-fullscreen-btn:hover {\n    opacity: 100% !important;\n    background: rgba(255, 255, 255, 1);\n    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-btn.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.3);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-btn.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal {\n    display: none;\n    position: fixed !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 95vw;\n    height: 100vh;\n    background: rgba(255, 255, 255, 0.98);\n    z-index: 9999;\n    padding: 20px;\n    overflow: auto;\n}\n\n.mermaid-fullscreen-modal.dark-theme {\n    background: rgba(0, 0, 0, 0.98);\n}\n\n.mermaid-fullscreen-modal.active {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen {\n    position: relative;\n    width: 95vw;\n    height: 90vh;\n    max-width: 95vw;\n    max-height: 90vh;\n    background: white;\n    border-radius: 8px;\n    padding: 20px;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n    overflow: auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen.dark-theme {\n    background: #1a1a1a;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);\n}\n\n.mermaid-container-fullscreen pre.mermaid {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen .mermaid svg {\n    height: 100% !important;\n    width: 100% !important;\n    cursor: grab;\n}\n\n.mermaid-fullscreen-close {\n    position: fixed !important;\n    top: 20px !important;\n    right: 20px !important;\n    width: 40px;\n    height: 40px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 50%;\n    cursor: pointer;\n    z-index: 10000;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n    font-size: 24px;\n    line-height: 1;\n    color: #333;\n}\n\n.mermaid-fullscreen-close:hover {\n    background: white;\n    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-close.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.2);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-close.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal .mermaid-fullscreen-btn {\n    display: none !important;\n}";
     document.head.appendChild(fullscreenStyle);
 }
 
@@ -405,6 +405,7 @@ window.addEventListener("load", load);
 window.runMermaid = runMermaid;</script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/index';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/index.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -607,10 +608,6 @@ window.runMermaid = runMermaid;</script>
     </div>
   
 
-  
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
-      <span class="fa-solid fa-outdent"></span>
-    </button>
   
 </div>
 
@@ -819,29 +816,21 @@ you then curate what it predicted. Which model depends on <strong>whether you ha
 GPU</strong>, on <strong>the shape of the label</strong>, and on <strong>what the model sees</strong>.</p>
 <pre  class="mermaid">
         flowchart TD
-    start([Hand-labelled trials]) --&gt; gpu{Do you have a GPU?}
+    gpu{Do you have&lt;br/&gt;a GPU?}
+    gpu --&gt;|No| lgbm[&lt;b&gt;LightGBM&lt;/b&gt;&lt;br/&gt;point events, CPU&lt;br/&gt;&lt;i&gt;Model ▸ LightGBM&lt;/i&gt;]
+    gpu --&gt;|Yes| shape{What kind&lt;br/&gt;of label?}
 
-    gpu --&gt;|No| lgbm[LightGBM model&lt;br/&gt;&lt;i&gt;point events only&lt;/i&gt;&lt;br/&gt;&lt;i&gt;CPU, GUI native&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Model ▸ LightGBM: Train… / Predict…&lt;/i&gt;]
-    gpu --&gt;|Yes| shape{What kind of label?}
+    shape --&gt;|&quot;Point event&lt;br/&gt;(one moment)&quot;| input{What does the&lt;br/&gt;model see?}
+    shape --&gt;|&quot;State event&lt;br/&gt;(onset + offset)&quot;| big{A large GPU&lt;br/&gt;or a cluster?}
 
-    shape --&gt;|&quot;Point event&lt;br/&gt;(one moment per trial)&quot;| input{What does the model see?}
-    shape --&gt;|&quot;State event&lt;br/&gt;(an interval: onset + offset)&quot;| big{A large GPU or&lt;br/&gt;a GPU cluster?}
+    input --&gt;|Video only| spot[&lt;b&gt;E2E-Spot&lt;/b&gt;&lt;br/&gt;&lt;code&gt;eto.spot&lt;/code&gt;]
+    input --&gt;|&quot;Video + pose, sensors,&lt;br/&gt;custom features…&quot;| spotfeat[&lt;b&gt;E2E-Spot&lt;/b&gt;&lt;br/&gt;+ features]
 
-    input --&gt;|Video only| spot[Event spotting: E2E-Spot&lt;br/&gt;&lt;code&gt;eto.spot&lt;/code&gt;]
-    input --&gt;|Video + pose| spotfeat[E2E-Spot + features]
-
-    big --&gt;|No| segment[Action segmentation&lt;br/&gt;&lt;code&gt;eto.segment&lt;/code&gt;&lt;br/&gt;&lt;i&gt;DLC2Action models + added architectures&lt;/i&gt;]
-    big --&gt;|Yes| sees{What does FERAL see?}
-    sees --&gt;|Video only| feral[FERAL alone&lt;br/&gt;&lt;i&gt;export labels.json, FERAL-native&lt;/i&gt;&lt;br/&gt;&lt;code&gt;eto.segment.export_feral&lt;/code&gt;]
-    sees --&gt;|&quot;Video + other features&lt;br/&gt;(pose, changepoints, sensors)&quot;| feralseg[FERAL embeddings&lt;br/&gt;as a video feature]
+    big --&gt;|Yes| sees{What does&lt;br/&gt;FERAL see?}
+    sees --&gt;|Video only| feral[&lt;b&gt;FERAL alone&lt;/b&gt;&lt;br/&gt;&lt;code&gt;export_feral&lt;/code&gt;]
+    sees --&gt;|&quot;Video + pose, sensors,&lt;br/&gt;custom features…&quot;| feralseg[&lt;b&gt;FERAL embeddings&lt;/b&gt;&lt;br/&gt;as a video feature]
+    big --&gt;|No| segment[&lt;b&gt;Action segmentation&lt;/b&gt;&lt;br/&gt;&lt;code&gt;eto.segment&lt;/code&gt;]
     feralseg --&gt; segment
-
-    segment --&gt; curate
-    lgbm --&gt; curate
-    spot --&gt; curate
-    spotfeat --&gt; curate
-    feral --&gt; curate
-    curate([Curate the predictions in the GUI]) --&gt; conf[Read and threshold confidence]
 
     click segment &quot;segment/index.html&quot;
     click lgbm &quot;onset_model.html&quot;
@@ -849,9 +838,58 @@ GPU</strong>, on <strong>the shape of the label</strong>, and on <strong>what th
     click spotfeat &quot;spot/multimodal.html&quot;
     click feral &quot;segment/feral.html&quot;
     click feralseg &quot;segment/feral.html&quot;
-    click curate &quot;curation.html&quot;
-    click conf &quot;confidence.html&quot;
-    </pre><section id="where-the-models-come-from">
+    </pre><p>Every box is a link. Whichever model you pick, its predictions come back to the
+GUI: <a class="reference internal" href="curation.html"><span class="doc">curate them</span></a>, then <a class="reference internal" href="confidence.html"><span class="doc">read and threshold their confidence</span></a>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Label</p></th>
+<th class="head"><p>Sees</p></th>
+<th class="head"><p>Needs</p></th>
+<th class="head"><p>Where</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="onset_model.html"><span class="doc">LightGBM</span></a></p></td>
+<td><p>point event</p></td>
+<td><p>session features</p></td>
+<td><p>CPU</p></td>
+<td><p>GUI: <em>Model ▸ LightGBM: Train… / Predict…</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="spot/index.html"><span class="doc">E2E-Spot</span></a></p></td>
+<td><p>point event</p></td>
+<td><p>video</p></td>
+<td><p>GPU</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="spot/multimodal.html"><span class="doc">E2E-Spot + features</span></a></p></td>
+<td><p>point event</p></td>
+<td><p>video + pose, sensors, custom features…</p></td>
+<td><p>GPU</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="segment/index.html"><span class="doc">Action segmentation</span></a></p></td>
+<td><p>state event</p></td>
+<td><p>pose, changepoints, sensors, video features</p></td>
+<td><p>GPU</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.segment</span></code> (DLC2Action models + added architectures)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="segment/feral.html"><span class="doc">FERAL embeddings</span></a></p></td>
+<td><p>state event</p></td>
+<td><p>video + pose, sensors, custom features…</p></td>
+<td><p>large GPU or cluster</p></td>
+<td><p>FERAL’s embedding as a video feature of <code class="docutils literal notranslate"><span class="pre">eto.segment</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="segment/feral.html"><span class="doc">FERAL alone</span></a></p></td>
+<td><p>state event</p></td>
+<td><p>video</p></td>
+<td><p>large GPU or cluster</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">eto.segment.export_feral</span></code> writes FERAL’s <code class="docutils literal notranslate"><span class="pre">labels.json</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="where-the-models-come-from">
 <h2>Where the models come from<a class="headerlink" href="#where-the-models-come-from" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p><strong>LightGBM</strong> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> — runs on a CPU and lives entirely in the GUI: no scripting, and no
@@ -908,36 +946,6 @@ whose per-frame embedding <code class="docutils literal notranslate"><span class
             </div>
             
             
-              
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-<div
-    id="pst-page-navigation-heading-2"
-    class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> On this page
-  </div>
-  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-models-come-from">Where the models come from</a></li>
-</ul>
-  </nav></div>
-
-  <div class="sidebar-secondary-item">
-
-  
-  <div class="tocsection sourcelink">
-    <a href="../_sources/models/index.md">
-      
-        <i class="fa-solid fa-file-lines"></i> Show Source
-      
-    </a>
-  </div>
-</div>
-
-</div></div>
               
             
           </div>
