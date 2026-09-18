@@ -656,7 +656,7 @@ uncompressed. Converting in bulk up front is faster for a whole project:</p>
 <section id="opening-tsv-label-files-in-excel">
 <h3>Opening <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> label files in Excel<a class="headerlink" href="#opening-tsv-label-files-in-excel" title="Link to this heading">#</a></h3>
 <p>Excel on Windows may not correctly parse <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> files when double-clicked due to regional delimiter settings.</p>
-<p><strong>Automatic fix:</strong> EthoGraph automatically registers <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> files to open correctly in Excel with tab delimiters the first time you run it. On Windows this writes to the current-user registry (no admin prompt); on macOS it uses <code class="docutils literal notranslate"><span class="pre">duti</span></code> if installed.</p>
+<p><strong>Automatic fix:</strong> Ethograph automatically registers <code class="docutils literal notranslate"><span class="pre">.tsv</span></code> files to open correctly in Excel with tab delimiters the first time you run it. On Windows this writes to the current-user registry (no admin prompt); on macOS it uses <code class="docutils literal notranslate"><span class="pre">duti</span></code> if installed.</p>
 <p>If the association is not working, you can re-run it manually:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.utils.download</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_default_configs</span>
 

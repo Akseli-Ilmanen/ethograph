@@ -12,14 +12,14 @@ Ephys is a **session-wide stream** — the raw recording file is selected in the
 ## Load it — drag & drop
 
 ```{tip}
-{doc}`Install EthoGraph <../installation>` if you haven't already, then launch via shortcut or:
+{doc}`Install Ethograph <../installation>` if you haven't already, then launch via shortcut or:
 `conda activate ethograph && ethograph launch`
 ```
 
 1. On the start page, drag your **ephys file** and/or **Kilosort folder** (and optionally a **video** and/or **audio** file) onto the **Drag & drop** zone.
 2. Click **Load**.
 
-EthoGraph recognises a Kilosort folder by the `spike_times.npy` inside it, and reads the sample rate and channel count from the file header or `params.py` automatically — no output path and no questions for known formats. Raw binary (`.dat` / `.bin` / `.raw`) has no header; drop it together with its Kilosort folder so the metadata comes from `params.py` (see below).
+Ethograph recognises a Kilosort folder by the `spike_times.npy` inside it, and reads the sample rate and channel count from the file header or `params.py` automatically — no output path and no questions for known formats. Raw binary (`.dat` / `.bin` / `.raw`) has no header; drop it together with its Kilosort folder so the metadata comes from `params.py` (see below).
 
 ---
 
@@ -40,7 +40,7 @@ The Phy-like viewer is inspired by [phy](https://github.com/cortex-lab/phy).
 (target-ephys-formats)=
 ## Supported formats
 
-EthoGraph uses [Neo](https://neo.readthedocs.io) to read files with recognised headers — sample rate, channel count, and dtype are extracted automatically. Raw binary files have no header, so they are handled via phylib and require a Kilosort folder.
+Ethograph uses [Neo](https://neo.readthedocs.io) to read files with recognised headers — sample rate, channel count, and dtype are extracted automatically. Raw binary files have no header, so they are handled via phylib and require a Kilosort folder.
 
 ### Known formats (headers auto-detected)
 
@@ -67,7 +67,7 @@ When a format carries multiple signal streams (e.g. amplifier vs auxiliary chann
 
 ### Raw binary (`.dat` / `.bin` / `.raw`)
 
-Raw binary files produced by Kilosort carry no metadata. They are loaded via [phylib](https://github.com/cortex-lab/phylib) using `n_channels` and `sample_rate` read from `params.py`. Use the **Kilosort folder** picker rather than the ephys file browser — EthoGraph resolves the `.dat` path from `params.py` internally. This is what backs the {ref}`Phy-like viewer <target-ephys-viewers>`.
+Raw binary files produced by Kilosort carry no metadata. They are loaded via [phylib](https://github.com/cortex-lab/phylib) using `n_channels` and `sample_rate` read from `params.py`. Use the **Kilosort folder** picker rather than the ephys file browser — Ethograph resolves the `.dat` path from `params.py` internally. This is what backs the {ref}`Phy-like viewer <target-ephys-viewers>`.
 
 ---
 
@@ -75,7 +75,7 @@ Raw binary files produced by Kilosort carry no metadata. They are loaded via [ph
 
 Point the GUI at a Kilosort output folder via the **Kilosort folder** picker in the Ephys tab.
 
-**Auto-detection:** If a `kilosort4/` or `kilosort/` directory exists next to your ephys file, EthoGraph fills the field automatically on selection.
+**Auto-detection:** If a `kilosort4/` or `kilosort/` directory exists next to your ephys file, Ethograph fills the field automatically on selection.
 
 ### Expected files
 
@@ -100,7 +100,7 @@ sample_rate = 30000.0
 hp_filtered = False
 ```
 
-EthoGraph reads `dat_path`, `n_channels_dat`, and `sample_rate` from it. If the file is missing or `dat_path` no longer points to a valid file, a dialog prompts for the values and writes a new `params.py` so the step is not repeated.
+Ethograph reads `dat_path`, `n_channels_dat`, and `sample_rate` from it. If the file is missing or `dat_path` no longer points to a valid file, a dialog prompts for the values and writes a new `params.py` so the step is not repeated.
 
 
 ### What gets loaded

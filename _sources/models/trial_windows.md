@@ -1,7 +1,7 @@
 (target-trial-windows)=
 # Trial windows
 
-Every model in EthoGraph learns from and predicts over **trials**. A trial is
+Every model in Ethograph learns from and predicts over **trials**. A trial is
 one window of the session: the stretch of time you navigate to, curate, and
 that a model reads as one input. How to store and align trials is covered in
 {doc}`../getting_started/your_data/trials` and

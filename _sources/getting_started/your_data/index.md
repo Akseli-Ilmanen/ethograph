@@ -15,7 +15,7 @@ script.
 :link: dataset_schema
 :link-type: doc
 
-The variables, attributes and dimensions EthoGraph expects, per backend.
+The variables, attributes and dimensions Ethograph expects, per backend.
 :::
 
 :::{grid-item-card} {fas}`layer-group` 2. Trials
@@ -48,7 +48,7 @@ Session, project and home folders: what lives where and who writes it.
 
 ::::
 
-EthoGraph supports three backends. Pick the one matching your workflow; every
+Ethograph supports three backends. Pick the one matching your workflow; every
 page has a tab per backend where they differ.
 
 | Backend | Best for | Core object |
@@ -126,7 +126,7 @@ eto.pair_media(
 )
 ```
 
-Then launch EthoGraph, select `session.nc` in the **Custom set-up** card, and
+Then launch Ethograph, select `session.nc` in the **Custom set-up** card, and
 point the media folders at your video and pose directories.
 :::
 

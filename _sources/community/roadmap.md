@@ -1,6 +1,6 @@
 # Roadmap
 
-What EthoGraph already does, what is in progress, and what is still open. Grouped by theme; within each theme items run roughly in the order they were (or will be) tackled.
+What Ethograph already does, what is in progress, and what is still open. Grouped by theme; within each theme items run roughly in the order they were (or will be) tackled.
 
 **Legend:** ✅ done · 🚧 in progress · ⬜ not started
 

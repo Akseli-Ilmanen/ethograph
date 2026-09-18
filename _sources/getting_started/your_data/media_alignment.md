@@ -29,7 +29,7 @@ nothing but the notebook, so the notebook stays the one record of how a
 session was built; next session, change its first cell and run all.
 
 Two folders are involved and they need not be the same. The **session folder**
-is where EthoGraph writes: `.ethograph/alignment.nwb`, labels, settings and, if
+is where Ethograph writes: `.ethograph/alignment.nwb`, labels, settings and, if
 you have features, `session.nc`. The **media folders** are where your videos,
 pose files and audio already are, one per source, given as absolute paths. They
 can sit anywhere: on another drive, one folder per camera, or one folder for
@@ -181,7 +181,7 @@ start page. The recipes are
 neuroconv's own, from its
 [how-to on aligning external video](https://neuroconv--2037.org.readthedocs.build/en/2037/how_to/align_external_video.html);
 the walkthrough below follows one rig in the shape of the notebook the wizard
-writes, and only shows how the recipes meet EthoGraph.
+writes, and only shows how the recipes meet Ethograph.
 
 ```{tip}
 neuroconv is not part of the `ethograph` environment. Install it with
@@ -376,7 +376,7 @@ If your `NWB` files contains pose or spike times, you can visualize them for fre
 
 - **Pose.** neuroconv's `DeepLabCutInterface` (and the SLEAP and LightningPose
   ones) write ndx-pose into the same file. Give it the video as `source_video`
-  and EthoGraph pairs the pose to that camera. Or leave the pose file beside the
+  and Ethograph pairs the pose to that camera. Or leave the pose file beside the
   `.nwb` and pair it with {func}`~ethograph.pair_media`, as in step 6; both
   end up on the same overlay.
 - **Spike sorting.** `KiloSortSortingInterface` writes the units, which gives

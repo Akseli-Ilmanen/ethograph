@@ -13,7 +13,7 @@ Collaborations are welcome. Pull requests are welcome (see {doc}`contributing`).
 
 ## People who helped along the way
 
-EthoGraph would not be what it is without the generous input, code, and
+Ethograph would not be what it is without the generous input, code, and
 inspiration from the following people. Whether through direct contributions to
 the GUI, libraries that ethograph builds on, or invaluable feedback during
 development — thank you.

@@ -1,7 +1,7 @@
 (target-label-mapping)=
 # Label mapping (`mapping.txt`)
 
-EthoGraph uses **integer label IDs** , e.g. in the TSV file (`labels`
+Ethograph uses **integer label IDs** , e.g. in the TSV file (`labels`
 column). The `mapping.txt` contains a mapping from these integers to the label names. This is the same format as used in the [action-segmentation literature](https://github.com/nus-cvml/awesome-temporal-action-segmentation) where models predict a per-frame class index and a dataset-level `mapping.txt` lists the corresponding action names.
 
 One major benefit of this format is that if you rename a behaviour once in `mapping.txt`, it propagates everywhere (old backups, predictions, exports).
@@ -90,7 +90,7 @@ the default in `~/.ethograph/defaults/mapping.txt` is used.
 ## Importing labels from other formats
 
 You can also import labels from Crowsetta or pynapple / NWB `IntervalSet`
-files. These carry a label string (e.g. `grasp`) instead of EthoGraph's integer
+files. These carry a label string (e.g. `grasp`) instead of Ethograph's integer
 ID. On import, names already in `mapping.txt` keep their ID; new names are
 appended to the project's `mapping.txt` with the next free ID, and the GUI says
 which classes it added.

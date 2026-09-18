@@ -34,7 +34,7 @@ area or curate anything, and only then does the verdict start being saved
 (a line in the terminal says so). Loading another dataset disarms it again.
 
 Arming is also the one moment a metadata file appears. The `curated` column is
-EthoGraph's own bookkeeping, so it is never written into a recording or into
+Ethograph's own bookkeeping, so it is never written into a recording or into
 `.ethograph/alignment.nwb`: that write happens in place, and for a non-NWB
 dataset the alignment NWB is the only holder of your trial timing. Instead the
 metadata table you have loaded is copied to a sidecar `metadata.tsv`

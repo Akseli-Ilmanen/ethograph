@@ -467,13 +467,13 @@
   <section class="tex2jax_ignore mathjax_ignore" id="detect-optional-if-your-animals-wear-tags">
 <span id="target-detect"></span><h1>3. Detect — optional, if your animals wear tags<a class="headerlink" href="#detect-optional-if-your-animals-wear-tags" title="Link to this heading">#</a></h1>
 <p>A click and a tag detector produce the same kind of thing: a position read off
-the pixels of one specific frame. EthoGraph calls both <strong>observations</strong>, and the
+the pixels of one specific frame. Ethograph calls both <strong>observations</strong>, and the
 fill interpolates between them — so <strong>any detector composes with any fill
 backend</strong>. Five clicked frames becoming several hundred detected ones is what
 stops optical flow drifting and gives PosePAL far more to fit to.</p>
 <p>Through trial and error I settled on <strong>AprilTag <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code></strong>, which works very
 well on moving 5mm and 10mm wide tags.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> Two smaller families are
-offered alongside it, and EthoGraph <strong>prints exactly what it can read</strong> — a
+offered alongside it, and Ethograph <strong>prints exactly what it can read</strong> — a
 sheet of tags the detector cannot decode would be a trap.</p>
 <figure class="align-default" id="id3">
 <a class="reference internal image-reference" href="../../_images/apriltags.png"><img alt="Two example tags each from the tag16h5, tag25h9 and tag36h11 AprilTag families" src="../../_images/apriltags.png" style="width: 100%;" />
@@ -592,7 +592,7 @@ one step of margin.</p>
 <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code>.</p>
 <p><strong>Downscale</strong> (<code class="docutils literal notranslate"><span class="pre">quad_decimate</span></code>) is how far the frame is shrunk before tags are
 looked for — the real speed-against-size trade. <code class="docutils literal notranslate"><span class="pre">2.0</span></code> runs several times faster
-and needs tags <strong>twice as big</strong>, which is why EthoGraph defaults it to <code class="docutils literal notranslate"><span class="pre">1.0</span></code>
+and needs tags <strong>twice as big</strong>, which is why Ethograph defaults it to <code class="docutils literal notranslate"><span class="pre">1.0</span></code>
 while the underlying library ships <code class="docutils literal notranslate"><span class="pre">2.0</span></code>.</p>
 <p><strong>Sharpening</strong> (<code class="docutils literal notranslate"><span class="pre">decode_sharpening</span></code>, default <code class="docutils literal notranslate"><span class="pre">0.25</span></code>) is applied to the sampled
 bit pattern before it is read. Raise it for motion-blurred or slightly

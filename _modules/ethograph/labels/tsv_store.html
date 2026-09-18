@@ -777,7 +777,7 @@ window.runMermaid = runMermaid;</script>
                 <article class="bd-article">
                   
   <h1>Source code for ethograph.labels.tsv_store</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""TSV-based label storage for EthoGraph.</span>
+<span></span><span class="sd">"""TSV-based label storage for Ethograph.</span>
 
 <span class="sd">File format:</span>
 <span class="sd">    trial                   - trial identifier</span>
@@ -963,7 +963,7 @@ window.runMermaid = runMermaid;</script>
     <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">".xlsx"</span><span class="p">,</span> <span class="s2">".xls"</span><span class="p">):</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># comment="#": files saved while EthoGraph briefly wrote a leading</span>
+        <span class="c1"># comment="#": files saved while Ethograph briefly wrote a leading</span>
         <span class="c1"># "# time_basis:" line still read back as a normal table.</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8-sig"</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="s2">"#"</span><span class="p">)</span>
     <span class="n">validate_labels_tsv</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>

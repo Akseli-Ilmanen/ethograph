@@ -22,7 +22,7 @@ project.cross_validate()  # one fold per session: train on the rest, predict the
 The model is **E2E-Spot** {cite:p}`hong2022e2espot`: a RegNetY-008 backbone {cite:p}`radosavovic2020regnet`
 with Gate Shift Modules {cite:p}`sudhakaran2020gsn` for temporal mixing and a bi-GRU head emitting a
 per-frame softmax over `K + 1` classes. Upstream's
-code ships inside EthoGraph (`ethograph/spot/e2espot/`), in its own layout.
+code ships inside Ethograph (`ethograph/spot/e2espot/`), in its own layout.
 
 ## Three ways to spot a point event
 

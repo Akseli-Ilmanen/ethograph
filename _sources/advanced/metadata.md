@@ -91,7 +91,7 @@ an explicit trial scope — current, all, filtered or hidden trials — which
 defaults to the filtered ones.
 
 ```{important}
-**The trials table's filters are the one trial filter in EthoGraph, and they
+**The trials table's filters are the one trial filter in Ethograph, and they
 apply to everything.** Filter, say, `num_pellets` to `1, 2` (not `0`) in the
 trials table, and every operation from then on sees only those trials:
 navigation, label and sequence jumps, curation (Ctrl+C, inspect mode,
@@ -139,7 +139,7 @@ untouched either way. Nothing about the labels is ever modified.
 
 ### The `curated` column
 
-EthoGraph maintains one column itself: **`curated`** is `yes` when every label
+Ethograph maintains one column itself: **`curated`** is `yes` when every label
 of the trial is `manual` or `curated` and `no` while any is still a model's
 unreviewed `automated` output (see {doc}`../models/curation`) — text rather
 than `1`/`0`, so the funnel filter offers it as a yes/no checklist. It is

@@ -777,7 +777,7 @@ window.runMermaid = runMermaid;</script>
                 <article class="bd-article">
                   
   <h1>Source code for ethograph.labels.intervals</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Interval-based label representation and core primitives for EthoGraph.</span>
+<span></span><span class="sd">"""Interval-based label representation and core primitives for Ethograph.</span>
 
 <span class="sd">Labels are stored as a pandas DataFrame with columns:</span>
 <span class="sd">    onset_s        (float64) - start time in seconds</span>
@@ -944,7 +944,7 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    ``confidence``: a label written before methods existed is a hand-made one</span>
 <span class="sd">    unless a model scored it below :data:`HUMAN_CONFIDENCE`, in which case it</span>
 <span class="sd">    is automated output nobody has curated yet — the conservative reading, so</span>
-<span class="sd">    a file from an older EthoGraph never claims more review than it got.</span>
+<span class="sd">    a file from an older Ethograph never claims more review than it got.</span>
 <span class="sd">    """</span>
     <span class="n">ensure_confidence</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
     <span class="n">derived</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>

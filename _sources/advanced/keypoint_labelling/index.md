@@ -41,7 +41,7 @@ several hundred frames, train a network, and it then finds the keypoints in
 videos it has never seen. The cost is paid once and amortised over the whole
 project — provided your videos are similar enough that one model covers them.
 
-EthoGraph's keypoint labelling **tracks instead of trains**. You label a handful
+Ethograph's keypoint labelling **tracks instead of trains**. You label a handful
 of frames in *one* video and the tracker propagates them through *that* video.
 Nothing is learned that transfers to the next recording.
 

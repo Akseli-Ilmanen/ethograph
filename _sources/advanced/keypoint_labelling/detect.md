@@ -2,14 +2,14 @@
 # 3. Detect — optional, if your animals wear tags
 
 A click and a tag detector produce the same kind of thing: a position read off
-the pixels of one specific frame. EthoGraph calls both **observations**, and the
+the pixels of one specific frame. Ethograph calls both **observations**, and the
 fill interpolates between them — so **any detector composes with any fill
 backend**. Five clicked frames becoming several hundred detected ones is what
 stops optical flow drifting and gives PosePAL far more to fit to.
 
 Through trial and error I settled on **AprilTag `tag36h11`**, which works very
 well on moving 5mm and 10mm wide tags.[^apriltag] Two smaller families are
-offered alongside it, and EthoGraph **prints exactly what it can read** — a
+offered alongside it, and Ethograph **prints exactly what it can read** — a
 sheet of tags the detector cannot decode would be a trap.
 
 ```{figure} ../../_static/media/apriltags.png
@@ -84,7 +84,7 @@ one step of margin.
 
 **Downscale** (`quad_decimate`) is how far the frame is shrunk before tags are
 looked for — the real speed-against-size trade. `2.0` runs several times faster
-and needs tags **twice as big**, which is why EthoGraph defaults it to `1.0`
+and needs tags **twice as big**, which is why Ethograph defaults it to `1.0`
 while the underlying library ships `2.0`.
 
 **Sharpening** (`decode_sharpening`, default `0.25`) is applied to the sampled

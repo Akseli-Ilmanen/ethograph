@@ -497,7 +497,7 @@ its first cell, and any <code class="docutils literal notranslate"><span class="
 nothing but the notebook, so the notebook stays the one record of how a
 session was built; next session, change its first cell and run all.</p>
 <p>Two folders are involved and they need not be the same. The <strong>session folder</strong>
-is where EthoGraph writes: <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>, labels, settings and, if
+is where Ethograph writes: <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>, labels, settings and, if
 you have features, <code class="docutils literal notranslate"><span class="pre">session.nc</span></code>. The <strong>media folders</strong> are where your videos,
 pose files and audio already are, one per source, given as absolute paths. They
 can sit anywhere: on another drive, one folder per camera, or one folder for
@@ -635,7 +635,7 @@ start page. The recipes are
 neuroconv’s own, from its
 <a class="reference external" href="https://neuroconv--2037.org.readthedocs.build/en/2037/how_to/align_external_video.html">how-to on aligning external video</a>;
 the walkthrough below follows one rig in the shape of the notebook the wizard
-writes, and only shows how the recipes meet EthoGraph.</p></li>
+writes, and only shows how the recipes meet Ethograph.</p></li>
 </ol>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -841,7 +841,7 @@ via <code class="docutils literal notranslate"><span class="pre">app_state.nwb_a
 <ul class="simple">
 <li><p><strong>Pose.</strong> neuroconv’s <code class="docutils literal notranslate"><span class="pre">DeepLabCutInterface</span></code> (and the SLEAP and LightningPose
 ones) write ndx-pose into the same file. Give it the video as <code class="docutils literal notranslate"><span class="pre">source_video</span></code>
-and EthoGraph pairs the pose to that camera. Or leave the pose file beside the
+and Ethograph pairs the pose to that camera. Or leave the pose file beside the
 <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> and pair it with <code class="xref py py-func docutils literal notranslate"><span class="pre">pair_media()</span></code>, as in step 6; both
 end up on the same overlay.</p></li>
 <li><p><strong>Spike sorting.</strong> <code class="docutils literal notranslate"><span class="pre">KiloSortSortingInterface</span></code> writes the units, which gives

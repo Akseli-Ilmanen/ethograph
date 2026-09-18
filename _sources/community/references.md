@@ -4,7 +4,7 @@
 Every paper, dataset and tool cited in these docs. A citation on any page
 links to its entry here.
 
-## Software EthoGraph builds on
+## Software Ethograph builds on
 
 ```{bibliography}
 :filter: keywords % "software"

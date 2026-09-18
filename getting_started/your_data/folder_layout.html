@@ -478,7 +478,7 @@ you:</p>
 </tr>
 <tr class="row-odd"><td><p><strong>Project folder</strong> — one per research project</p></td>
 <td><p>You, on the start page.</p></td>
-<td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag &amp; drop. Your session folders can live here too, but don’t have to — EthoGraph never copies data into it.</p></td>
+<td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag &amp; drop. Your session folders can live here too, but don’t have to — Ethograph never copies data into it.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">~/.ethograph/</span></code></p></td>
 <td><p>The GUI.</p></td>
@@ -512,7 +512,7 @@ folder holds what you build on top of them:</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p><strong>One session folder, one <code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</strong> A second <code class="docutils literal notranslate"><span class="pre">.nc</span></code> at the root is an old version,
-and EthoGraph refuses to guess which one is current — in the GUI and in a
+and Ethograph refuses to guess which one is current — in the GUI and in a
 <code class="docutils literal notranslate"><span class="pre">segment</span></code> or <code class="docutils literal notranslate"><span class="pre">spot</span></code> run alike. Tell the project which files to skip, once, in
 <code class="docutils literal notranslate"><span class="pre">project.yaml</span></code>:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">ignore</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Trial_data.nc</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"*_old.nc"</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># file names or globs, matched in every session folder</span>

@@ -470,14 +470,14 @@
 <h2>Load it — drag &amp; drop<a class="headerlink" href="#load-it-drag-drop" title="Link to this heading">#</a></h2>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p><a class="reference internal" href="../installation.html"><span class="doc">Install EthoGraph</span></a> if you haven’t already, then launch via shortcut or:
+<p><a class="reference internal" href="../installation.html"><span class="doc">Install Ethograph</span></a> if you haven’t already, then launch via shortcut or:
 <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">ethograph</span> <span class="pre">&amp;&amp;</span> <span class="pre">ethograph</span> <span class="pre">launch</span></code></p>
 </div>
 <ol class="arabic simple">
 <li><p>On the start page, drag your <strong>ephys file</strong> and/or <strong>Kilosort folder</strong> (and optionally a <strong>video</strong> and/or <strong>audio</strong> file) onto the <strong>Drag &amp; drop</strong> zone.</p></li>
 <li><p>Click <strong>Load</strong>.</p></li>
 </ol>
-<p>EthoGraph recognises a Kilosort folder by the <code class="docutils literal notranslate"><span class="pre">spike_times.npy</span></code> inside it, and reads the sample rate and channel count from the file header or <code class="docutils literal notranslate"><span class="pre">params.py</span></code> automatically — no output path and no questions for known formats. Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>) has no header; drop it together with its Kilosort folder so the metadata comes from <code class="docutils literal notranslate"><span class="pre">params.py</span></code> (see below).</p>
+<p>Ethograph recognises a Kilosort folder by the <code class="docutils literal notranslate"><span class="pre">spike_times.npy</span></code> inside it, and reads the sample rate and channel count from the file header or <code class="docutils literal notranslate"><span class="pre">params.py</span></code> automatically — no output path and no questions for known formats. Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>) has no header; drop it together with its Kilosort folder so the metadata comes from <code class="docutils literal notranslate"><span class="pre">params.py</span></code> (see below).</p>
 <hr class="docutils" />
 </section>
 <section id="two-ephys-trace-viewers">
@@ -507,7 +507,7 @@
 </section>
 <section id="supported-formats">
 <span id="target-ephys-formats"></span><h2>Supported formats<a class="headerlink" href="#supported-formats" title="Link to this heading">#</a></h2>
-<p>EthoGraph uses <a class="reference external" href="https://neo.readthedocs.io">Neo</a> to read files with recognised headers — sample rate, channel count, and dtype are extracted automatically. Raw binary files have no header, so they are handled via phylib and require a Kilosort folder.</p>
+<p>Ethograph uses <a class="reference external" href="https://neo.readthedocs.io">Neo</a> to read files with recognised headers — sample rate, channel count, and dtype are extracted automatically. Raw binary files have no header, so they are handled via phylib and require a Kilosort folder.</p>
 <section id="known-formats-headers-auto-detected">
 <h3>Known formats (headers auto-detected)<a class="headerlink" href="#known-formats-headers-auto-detected" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -572,14 +572,14 @@
 </section>
 <section id="raw-binary-dat-bin-raw">
 <h3>Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>)<a class="headerlink" href="#raw-binary-dat-bin-raw" title="Link to this heading">#</a></h3>
-<p>Raw binary files produced by Kilosort carry no metadata. They are loaded via <a class="reference external" href="https://github.com/cortex-lab/phylib">phylib</a> using <code class="docutils literal notranslate"><span class="pre">n_channels</span></code> and <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code> read from <code class="docutils literal notranslate"><span class="pre">params.py</span></code>. Use the <strong>Kilosort folder</strong> picker rather than the ephys file browser — EthoGraph resolves the <code class="docutils literal notranslate"><span class="pre">.dat</span></code> path from <code class="docutils literal notranslate"><span class="pre">params.py</span></code> internally. This is what backs the <a class="reference internal" href="#target-ephys-viewers"><span class="std std-ref">Phy-like viewer</span></a>.</p>
+<p>Raw binary files produced by Kilosort carry no metadata. They are loaded via <a class="reference external" href="https://github.com/cortex-lab/phylib">phylib</a> using <code class="docutils literal notranslate"><span class="pre">n_channels</span></code> and <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code> read from <code class="docutils literal notranslate"><span class="pre">params.py</span></code>. Use the <strong>Kilosort folder</strong> picker rather than the ephys file browser — Ethograph resolves the <code class="docutils literal notranslate"><span class="pre">.dat</span></code> path from <code class="docutils literal notranslate"><span class="pre">params.py</span></code> internally. This is what backs the <a class="reference internal" href="#target-ephys-viewers"><span class="std std-ref">Phy-like viewer</span></a>.</p>
 </section>
 </section>
 <hr class="docutils" />
 <section id="kilosort-spike-sorting-output">
 <h2>Kilosort spike sorting output<a class="headerlink" href="#kilosort-spike-sorting-output" title="Link to this heading">#</a></h2>
 <p>Point the GUI at a Kilosort output folder via the <strong>Kilosort folder</strong> picker in the Ephys tab.</p>
-<p><strong>Auto-detection:</strong> If a <code class="docutils literal notranslate"><span class="pre">kilosort4/</span></code> or <code class="docutils literal notranslate"><span class="pre">kilosort/</span></code> directory exists next to your ephys file, EthoGraph fills the field automatically on selection.</p>
+<p><strong>Auto-detection:</strong> If a <code class="docutils literal notranslate"><span class="pre">kilosort4/</span></code> or <code class="docutils literal notranslate"><span class="pre">kilosort/</span></code> directory exists next to your ephys file, Ethograph fills the field automatically on selection.</p>
 <section id="expected-files">
 <h3>Expected files<a class="headerlink" href="#expected-files" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -628,7 +628,7 @@
 <span class="n">hp_filtered</span> <span class="o">=</span> <span class="kc">False</span>
 </pre></div>
 </div>
-<p>EthoGraph reads <code class="docutils literal notranslate"><span class="pre">dat_path</span></code>, <code class="docutils literal notranslate"><span class="pre">n_channels_dat</span></code>, and <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code> from it. If the file is missing or <code class="docutils literal notranslate"><span class="pre">dat_path</span></code> no longer points to a valid file, a dialog prompts for the values and writes a new <code class="docutils literal notranslate"><span class="pre">params.py</span></code> so the step is not repeated.</p>
+<p>Ethograph reads <code class="docutils literal notranslate"><span class="pre">dat_path</span></code>, <code class="docutils literal notranslate"><span class="pre">n_channels_dat</span></code>, and <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code> from it. If the file is missing or <code class="docutils literal notranslate"><span class="pre">dat_path</span></code> no longer points to a valid file, a dialog prompts for the values and writes a new <code class="docutils literal notranslate"><span class="pre">params.py</span></code> so the step is not repeated.</p>
 </section>
 <section id="what-gets-loaded">
 <h3>What gets loaded<a class="headerlink" href="#what-gets-loaded" title="Link to this heading">#</a></h3>

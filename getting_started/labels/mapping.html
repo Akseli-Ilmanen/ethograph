@@ -462,7 +462,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="label-mapping-mapping-txt">
 <span id="target-label-mapping"></span><h1>Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)<a class="headerlink" href="#label-mapping-mapping-txt" title="Link to this heading">#</a></h1>
-<p>EthoGraph uses <strong>integer label IDs</strong> , e.g. in the TSV file (<code class="docutils literal notranslate"><span class="pre">labels</span></code>
+<p>Ethograph uses <strong>integer label IDs</strong> , e.g. in the TSV file (<code class="docutils literal notranslate"><span class="pre">labels</span></code>
 column). The <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> contains a mapping from these integers to the label names. This is the same format as used in the <a class="reference external" href="https://github.com/nus-cvml/awesome-temporal-action-segmentation">action-segmentation literature</a> where models predict a per-frame class index and a dataset-level <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> lists the corresponding action names.</p>
 <p>One major benefit of this format is that if you rename a behaviour once in <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>, it propagates everywhere (old backups, predictions, exports).</p>
 <hr class="docutils" />
@@ -538,7 +538,7 @@ the default in <code class="docutils literal notranslate"><span class="pre">~/.e
 <section id="importing-labels-from-other-formats">
 <span id="target-auto-mapping"></span><h2>Importing labels from other formats<a class="headerlink" href="#importing-labels-from-other-formats" title="Link to this heading">#</a></h2>
 <p>You can also import labels from Crowsetta or pynapple / NWB <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code>
-files. These carry a label string (e.g. <code class="docutils literal notranslate"><span class="pre">grasp</span></code>) instead of EthoGraph’s integer
+files. These carry a label string (e.g. <code class="docutils literal notranslate"><span class="pre">grasp</span></code>) instead of Ethograph’s integer
 ID. On import, names already in <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their ID; new names are
 appended to the project’s <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> with the next free ID, and the GUI says
 which classes it added.</p>
