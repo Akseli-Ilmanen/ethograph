@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>FERAL as a video feature &#8212; ethograph</title>
+    <title>FERAL &#8212; ethograph</title>
   
   
   
@@ -385,7 +385,7 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_features.html">Video features</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">FERAL as a video feature</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">FERAL</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -443,7 +443,7 @@
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Segmentation pipeline</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">FERAL as a video feature</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">FERAL</span></li>
   </ul>
 </nav>
 </div>
@@ -460,98 +460,85 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="feral-as-a-video-feature">
-<span id="target-segment-feral"></span><h1>FERAL as a video feature<a class="headerlink" href="#feral-as-a-video-feature" title="Link to this heading">#</a></h1>
-<p>FERAL <span class="bibtex-citation" id="id1">[]</span> fine-tunes a video foundation model
+  <section class="tex2jax_ignore mathjax_ignore" id="feral">
+<span id="target-segment-feral"></span><h1>FERAL<a class="headerlink" href="#feral" title="Link to this heading">#</a></h1>
+<p>FERAL <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id412" title="Peter Skovorodnikov, Jacopo Razzauti, Blair R. Costelloe, Friederike Buck, Vikram Chandra, Dominic D. Frank, Tomas Kay, Benjamin Koger, Orli Snir, Janet Zhao, Iain D. Couzin, Daniel J. C. Kronauer, and Leslie B. Vosshall. FERAL: a supervised video-understanding system for direct video-to-behavior mapping. bioRxiv, 2025. URL: https://www.biorxiv.org/content/10.1101/2025.11.16.688666v2, doi:10.1101/2025.11.16.688666.">Skovorodnikov <em>et al.</em>, 2025</a>]</span> fine-tunes a video foundation model
 (V-JEPA 2) to predict a class per frame from the pixels alone: no pose, no
-features. It is a strong <em>what</em> detector; where it is weaker is the exact
-frame a behaviour starts and stops, because its 64-frame chunk covers a
-fraction of a second at high frame rates and the attention pooling averages
-over it. Here it is a <strong>video feature</strong>, like S3D or DINOv2 in
-<a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>: its per-frame embedding becomes a variable <code class="docutils literal notranslate"><span class="pre">feral</span></code>
-on every trial, which a segmentation model reads next to the changepoint
-and kinematic columns that know <em>where</em>.</p>
+features. There are two ways to use it from ethograph, and both start the
+same way: the labels you curate in the GUI become FERAL’s <code class="docutils literal notranslate"><span class="pre">labels.json</span></code>,
+without the chunking, class-name and split bookkeeping being done by hand.</p>
+<ol class="arabic simple">
+<li><p><strong><a class="reference internal" href="#target-feral-labels"><span class="std std-ref">FERAL’s labels</span></a></strong> — the simple one. Label
+in ethograph → export → train and predict in FERAL → import its
+predicted segments → curate them in the GUI. No segmentation model, no
+features; the released FERAL is enough.</p></li>
+<li><p><strong><a class="reference internal" href="#target-feral-feature"><span class="std std-ref">FERAL as a video feature</span></a></strong> — label in
+ethograph → export → train FERAL and save its per-frame <strong>embeddings</strong> →
+they attach to every trial as a variable <code class="docutils literal notranslate"><span class="pre">feral</span></code>, optionally next to
+pose, changepoint or sensor columns → train a segmentation model on them
+→ curate its predictions in the GUI.</p></li>
+</ol>
+<p>Why the second, for two reasons:</p>
+<ul class="simple">
+<li><p><strong>Other features join the video.</strong> Exported as an embedding, FERAL is one
+input among several: pose, IMU or any other session variable sits next to
+it in the segmentation model.</p></li>
+<li><p><strong>Temporal context without losing temporal precision.</strong> A FERAL chunk is
+always 64 frames: either 64 consecutive ones, or with <code class="docutils literal notranslate"><span class="pre">chunk_step</span></code> &gt; 1
+every n-th frame over a longer span, which gives up temporal precision.
+On high-frame-rate video of behaviours that need a long context, one
+solution is to export at a stride of 1: FERAL learns short-context
+embeddings on every frame, and the segmentation model bridges the longer
+context.</p></li>
+</ul>
+<p>Start with the first; move to the second when either applies.</p>
+<section id="the-two-environments">
+<h2>The two environments<a class="headerlink" href="#the-two-environments" title="Link to this heading">#</a></h2>
 <p>FERAL runs in its own environment: its dependency pins clash with the GUI’s,
 so it is never installed alongside ethograph. What crosses is files. The
 project writes FERAL’s inputs into <code class="docutils literal notranslate"><span class="pre">{root}/feral/</span></code>; you train and infer
-there with FERAL’s own commands; the embeddings it writes attach to every
-session the next time it opens under this config.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Exporting embeddings needs FERAL’s <code class="docutils literal notranslate"><span class="pre">--save_embeddings</span></code> option, which is a
-<a class="reference external" href="https://github.com/Akseli-Ilmanen/feral/pull/1">pull request</a> against
-FERAL at the time of writing. Until it is merged, install FERAL from that
-branch (below). Without it FERAL still trains and predicts — and its
-predictions still score in <code class="docutils literal notranslate"><span class="pre">feral/answers/</span></code> — but nothing comes back into
-the project.</p>
-</div>
-<section id="the-two-environments">
-<h2>The two environments<a class="headerlink" href="#the-two-environments" title="Link to this heading">#</a></h2>
+there with FERAL’s own commands; what FERAL writes is read back from the
+same folder.</p>
 <p><strong>FERAL’s</strong>, once, following <a class="reference external" href="https://github.com/Skovorp/feral">FERAL’s own README</a>
 (a CUDA GPU of compute capability 8.0 or newer, PyTorch 2.5 or later):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>feral<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>feral
 pip<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>torchvision<span class="w">          </span><span class="c1"># a CUDA build; see FERAL's README for the version table</span>
-pip<span class="w"> </span>install<span class="w"> </span>feral<span class="w">                      </span><span class="c1"># release</span>
-pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/Akseli-Ilmanen/feral@export-embeddings<span class="w">   </span><span class="c1"># or: with --save_embeddings</span>
+pip<span class="w"> </span>install<span class="w"> </span>feral
 </pre></div>
 </div>
 <p><strong>ethograph’s</strong> is where everything else happens: the config, the export,
-the segmentation model, cross-validation, the GUI.</p>
+the import, the GUI — and, for the second workflow, the segmentation model.</p>
 </section>
-<section id="one-config-one-extra-key">
-<h2>One config, one extra key<a class="headerlink" href="#one-config-one-extra-key" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">video_features.extractor:</span> <span class="pre">feral</span></code> selects it. Two settings are FERAL’s own
-and are refused with any other extractor:</p>
+<section id="workflow-1-ferals-labels">
+<span id="target-feral-labels"></span><h2>Workflow 1: FERAL’s labels<a class="headerlink" href="#workflow-1-ferals-labels" title="Link to this heading">#</a></h2>
+<p><strong>1. A config</strong>, naming the sessions, the labels and the camera:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\behav</span>
 <span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\videos</span><span class="w">          </span><span class="c1"># if the alignment names the files without a folder</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-02\behav</span>
 <span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-02\videos</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-03\behav</span>
-<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-03\videos</span>
-
-<span class="nt">individual</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Freddy</span><span class="w">                               </span><span class="c1"># one animal per video — see below</span>
-
+<span class="nt">individual</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bird1</span><span class="w">                                </span><span class="c1"># a FERAL video is one trial of one animal</span>
+<span class="nt">features</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">columns</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}}</span><span class="w">                           </span><span class="c1"># never materialised here; a config names at least one column</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">mapping</span><span class="p">:</span><span class="w"> </span><span class="nv">../mapping.txt</span><span class="p p-Indicator">,</span><span class="nt"> branch</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
 <span class="nt">video_features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">extractor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">feral</span>
 <span class="w">  </span><span class="nt">camera</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cam-1</span><span class="w">                                  </span><span class="c1"># which camera's file, when the alignment holds several</span>
-<span class="w">  </span><span class="nt">context_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.64</span><span class="w">                                </span><span class="c1"># seconds one FERAL chunk spans; null = every frame</span>
+<span class="w">  </span><span class="nt">context_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">                                </span><span class="c1"># seconds one FERAL chunk spans; null = every frame</span>
 <span class="w">  </span><span class="nt">preset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lite</span><span class="w">                                   </span><span class="c1"># FERAL's recipe: lite, max, rare; null = its default</span>
-
-<span class="nt">features</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">feral_dims</span><span class="p">:</span><span class="w"> </span><span class="nv">0..767</span><span class="p p-Indicator">}</span><span class="w">                  </span><span class="c1"># the embedding, once FERAL has written it</span>
-<span class="w">    </span><span class="nt">speed_changepoints_prox</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                  </span><span class="c1"># ... next to whatever else the session holds</span>
-<span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">mapping</span><span class="p">:</span><span class="w"> </span><span class="nv">../mapping.txt</span><span class="p p-Indicator">,</span><span class="nt"> branch</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
-
 <span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">run_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">feral_c2f</span>
-<span class="w">  </span><span class="nt">split</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">D</span><span class="p p-Indicator">:</span><span class="nv">\data\ses-03\behav</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># the true test set — see Leakage</span>
+<span class="w">  </span><span class="nt">run_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">crows</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">context_s</span></code> is the one temporal setting, in seconds. FERAL’s chunk is 64
-frames spread <code class="docutils literal notranslate"><span class="pre">chunk_step</span></code> frames apart; the export reads each video’s rate
-and resolves the stride so that the chunk spans <code class="docutils literal notranslate"><span class="pre">context_s</span></code>, then scales
-FERAL’s chunk shifts by the same stride so overlapping chunks keep
-predicting the same frames. <code class="docutils literal notranslate"><span class="pre">null</span></code> is FERAL’s own chunk (every frame),
-whatever the rate. On a 200 fps recording of 0.2 s behaviours, 0.64 s
-(every second frame) placed boundaries far better than 2 s did; on 25–30
-fps video, <code class="docutils literal notranslate"><span class="pre">null</span></code> is FERAL’s published setting.</p>
-<p><code class="docutils literal notranslate"><span class="pre">preset</span></code> is FERAL’s <code class="docutils literal notranslate"><span class="pre">--mode</span></code>: <code class="docutils literal notranslate"><span class="pre">lite</span></code> is its smallest backbone fully
-fine-tuned, <code class="docutils literal notranslate"><span class="pre">max</span></code> its published CalMS21 recipe, <code class="docutils literal notranslate"><span class="pre">rare</span></code> its rare-class
-recipe. The config ethograph writes is FERAL’s packaged default with the
-preset laid over it, exactly as <code class="docutils literal notranslate"><span class="pre">feral</span> <span class="pre">train</span> <span class="pre">--mode</span></code> does, so anything you
-want to change further you change in <code class="docutils literal notranslate"><span class="pre">feral/config.yaml</span></code> — it is FERAL’s
-file, and FERAL reads it verbatim.</p>
-</section>
-<section id="the-round-trip">
-<h2>The round trip<a class="headerlink" href="#the-round-trip" title="Link to this heading">#</a></h2>
-<p><strong>1. Export, in ethograph.</strong> With labels curated in the GUI:</p>
+<p><code class="docutils literal notranslate"><span class="pre">context_s</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code> set FERAL’s own parameters (<code class="docutils literal notranslate"><span class="pre">chunk_step</span></code> and
+<code class="docutils literal notranslate"><span class="pre">--mode</span></code>); <a class="reference external" href="https://www.getferal.ai/#config-docs">FERAL’s config documentation</a>
+explains them and every other one, and <a class="reference internal" href="#target-feral-tuning"><span class="std std-ref">Tuning FERAL</span></a> says where
+to change them.</p>
+<p><strong>2. Export, in ethograph.</strong> With labels curated in the GUI:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
-<span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"config/segment.yaml"</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">()</span>  <span class="c1"># for extractor: feral, this is the export</span>
+<span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"config/feral.yaml"</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">export_feral</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>writes <code class="docutils literal notranslate"><span class="pre">{root}/feral/</span></code>:</p>
@@ -568,26 +555,99 @@ rasterised on its own video’s frames through the alignment (trial = video</p>
 <ul class="simple">
 <li><p>offset), so the label list is exactly as long as the video. The
 <code class="docutils literal notranslate"><span class="pre">train</span></code> / <code class="docutils literal notranslate"><span class="pre">val</span></code> / <code class="docutils literal notranslate"><span class="pre">test</span></code> roles are drawn by whole trial from
-<code class="docutils literal notranslate"><span class="pre">train.split</span></code>, the same draw <code class="docutils literal notranslate"><span class="pre">train()</span></code> makes; <code class="docutils literal notranslate"><span class="pre">inference</span></code> is every video,
-because the embeddings are what the project trains on. A class no
-training video holds is background for FERAL (its inverse-frequency class
-weight would otherwise swamp the loss) and <code class="docutils literal notranslate"><span class="pre">export.yaml</span></code> lists it.</p></li>
+<code class="docutils literal notranslate"><span class="pre">train.split</span></code>; <code class="docutils literal notranslate"><span class="pre">inference</span></code> is every video. A class no training video holds
+is background for FERAL (its inverse-frequency class weight would otherwise
+swamp the loss) and <code class="docutils literal notranslate"><span class="pre">export.yaml</span></code> lists it.</p></li>
 </ul>
-<p><strong>2. Train and infer, in FERAL’s environment.</strong> The log prints these with
+<p><strong>3. Train and predict, in FERAL’s environment.</strong> The log prints these with
 your paths filled in:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>feral
 feral<span class="w"> </span>train-config<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>onfig.yaml
-feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\f</span>eral_c2f_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-01<span class="se">\v</span>ideos<span class="w"> </span>--save_embeddings<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\e</span>mbeddings
-feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\f</span>eral_c2f_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-02<span class="se">\v</span>ideos<span class="w"> </span>--save_embeddings<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\e</span>mbeddings
-feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\f</span>eral_c2f_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-03<span class="se">\v</span>ideos<span class="w"> </span>--save_embeddings<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\e</span>mbeddings
+feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\c</span>rows_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-01<span class="se">\v</span>ideos<span class="w"> </span>--output<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\p</span>redictions<span class="se">\s</span>es-01__videos.json
+feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\c</span>rows_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-02<span class="se">\v</span>ideos<span class="w"> </span>--output<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\p</span>redictions<span class="se">\s</span>es-02__videos.json
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">feral</span> <span class="pre">infer</span></code> takes one flat folder of videos, so it runs once per video
-folder; every call adds <code class="docutils literal notranslate"><span class="pre">{video</span> <span class="pre">stem}.npy</span></code> files to the same
-<code class="docutils literal notranslate"><span class="pre">feral/embeddings/</span></code>. FERAL’s own scores on its <code class="docutils literal notranslate"><span class="pre">val</span></code> and <code class="docutils literal notranslate"><span class="pre">test</span></code> splits are
-in <code class="docutils literal notranslate"><span class="pre">feral/answers/</span></code> — that is FERAL alone, with no features, and worth a
-look before going on.</p>
-<p><strong>3. Back in ethograph</strong>, nothing to import: a session opened under this
+folder, each writing its own JSON into <code class="docutils literal notranslate"><span class="pre">feral/predictions/</span></code>. Copy the
+<code class="docutils literal notranslate"><span class="pre">--output</span></code> paths from the log: the import looks for exactly those names.
+FERAL’s own scores on its <code class="docutils literal notranslate"><span class="pre">val</span></code> and <code class="docutils literal notranslate"><span class="pre">test</span></code> splits are in <code class="docutils literal notranslate"><span class="pre">feral/answers/</span></code>.</p>
+<p><strong>4. Import, back in ethograph:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span><span class="o">.</span><span class="n">import_feral_predictions</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Every video’s per-frame probabilities are placed on its trial’s clock
+through the alignment (frames outside the trial are dropped), the most
+probable class per frame becomes intervals with the project’s own label
+ids, and <code class="docutils literal notranslate"><span class="pre">infer.postprocess</span></code> (minimum duration, stitching, snapping to
+changepoints — all off unless you set them) runs over them as it does for
+any model. Each session gets a prediction set
+<code class="docutils literal notranslate"><span class="pre">labels/predictions_feral_{run_name}_{timestamp}/</span></code>, in the GUI’s labels
+format with <code class="docutils literal notranslate"><span class="pre">labeling_method=automated</span></code>, FERAL’s probabilities beside it
+for the confidence overlay.</p>
+<p><strong>5. Curate in the GUI.</strong> Open the session and use <strong>File → Import
+predictions → Import as Labels…</strong> on that folder; the predictions draw
+dotted until you accept or edit them
+(<a class="reference internal" href="../../getting_started/labels/importing.html"><span class="doc">Importing labels</span></a>). Curated labels are training
+targets for the next export.</p>
+</section>
+<section id="workflow-2-feral-as-a-video-feature">
+<span id="target-feral-feature"></span><h2>Workflow 2: FERAL as a video feature<a class="headerlink" href="#workflow-2-feral-as-a-video-feature" title="Link to this heading">#</a></h2>
+<p>Here FERAL is a video feature like S3D or DINOv2 in <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>:
+its per-frame embedding becomes the variable <code class="docutils literal notranslate"><span class="pre">feral</span></code> on every trial, and a
+segmentation model reads it.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Exporting embeddings needs FERAL’s <code class="docutils literal notranslate"><span class="pre">--save_embeddings</span></code> option, which is a
+<a class="reference external" href="https://github.com/Akseli-Ilmanen/feral/pull/1">pull request</a> against
+FERAL at the time of writing. Until it is merged, install FERAL from that
+branch instead of the release:
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">git+https://github.com/Akseli-Ilmanen/feral&#64;export-embeddings</span></code>.</p>
+</div>
+<p><strong>1. The config</strong> is the same one, with the columns the segmentation model
+reads and the sessions to hold out:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\behav</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\videos</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-02\behav</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-02\videos</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-03\behav</span>
+<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-03\videos</span>
+
+<span class="nt">individual</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bird1</span>
+
+<span class="nt">video_features</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">extractor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">feral</span>
+<span class="w">  </span><span class="nt">camera</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cam-1</span>
+<span class="w">  </span><span class="nt">context_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.64</span>
+<span class="w">  </span><span class="nt">preset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lite</span>
+
+<span class="nt">features</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">feral_dims</span><span class="p">:</span><span class="w"> </span><span class="nv">0..767</span><span class="p p-Indicator">}</span><span class="w">                  </span><span class="c1"># the embedding, once FERAL has written it</span>
+<span class="w">    </span><span class="nt">speed_changepoints_prox</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                  </span><span class="c1"># ... next to whatever else the session holds</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">mapping</span><span class="p">:</span><span class="w"> </span><span class="nv">../mapping.txt</span><span class="p p-Indicator">,</span><span class="nt"> branch</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
+
+<span class="nt">train</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">run_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">feral_c2f</span>
+<span class="w">  </span><span class="nt">split</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">D</span><span class="p p-Indicator">:</span><span class="nv">\data\ses-03\behav</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># the true test set — see Leakage</span>
+</pre></div>
+</div>
+<p><strong>2. Export</strong> as above; <code class="docutils literal notranslate"><span class="pre">project.video_features()</span></code> is the same export for
+<code class="docutils literal notranslate"><span class="pre">extractor:</span> <span class="pre">feral</span></code>.</p>
+<p><strong>3. Train and infer in FERAL’s environment</strong>, adding <code class="docutils literal notranslate"><span class="pre">--save_embeddings</span></code>
+to every <code class="docutils literal notranslate"><span class="pre">feral</span> <span class="pre">infer</span></code> (the log names the folder):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>feral
+feral<span class="w"> </span>train-config<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>onfig.yaml
+feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\f</span>eral_c2f_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-01<span class="se">\v</span>ideos<span class="w"> </span>--output<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\p</span>redictions<span class="se">\s</span>es-01__videos.json<span class="w"> </span>--save_embeddings<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\e</span>mbeddings
+feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\f</span>eral_c2f_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-02<span class="se">\v</span>ideos<span class="w"> </span>--output<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\p</span>redictions<span class="se">\s</span>es-02__videos.json<span class="w"> </span>--save_embeddings<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\e</span>mbeddings
+feral<span class="w"> </span>infer<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\c</span>heckpoints<span class="se">\f</span>eral_c2f_best_checkpoint.pt<span class="w"> </span>D:<span class="se">\d</span>ata<span class="se">\s</span>es-03<span class="se">\v</span>ideos<span class="w"> </span>--output<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\p</span>redictions<span class="se">\s</span>es-03__videos.json<span class="w"> </span>--save_embeddings<span class="w"> </span>D:<span class="se">\p</span>roject<span class="se">\f</span>eral<span class="se">\e</span>mbeddings
+</pre></div>
+</div>
+<p>Every call adds <code class="docutils literal notranslate"><span class="pre">{video</span> <span class="pre">stem}.npy</span></code> files to the same <code class="docutils literal notranslate"><span class="pre">feral/embeddings/</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">--output</span></code> JSONs still import as in workflow 1: FERAL alone, the
+video-only baseline to compare the segmentation model against.</p>
+<p><strong>4. Back in ethograph</strong>, nothing to import: a session opened under this
 config finds its videos’ files in <code class="docutils literal notranslate"><span class="pre">feral/embeddings/</span></code> and carries the
 variable <code class="docutils literal notranslate"><span class="pre">feral</span></code> (a <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">feral_dims)</span></code> array, memory-mapped and sampled
 onto the trial clock the way every video feature is). Then the pipeline is
@@ -595,75 +655,47 @@ the usual one:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>  <span class="c1"># feral + changepoint columns → the materialised dataset</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># holdout_sessions is the test set</span>
 <span class="n">project</span><span class="o">.</span><span class="n">compare</span><span class="p">()</span>
+<span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">()</span>  <span class="c1"># a prediction set beside every session</span>
 </pre></div>
 </div>
-<p>Drop <code class="docutils literal notranslate"><span class="pre">feral/embeddings/</span></code> onto the GUI window to see the embedding as a
-heatmap under the video, exactly as <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a> describes for any
-folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code> files.</p>
-</section>
+<p><strong>5. Curate in the GUI</strong>, as in workflow 1. Drop <code class="docutils literal notranslate"><span class="pre">feral/embeddings/</span></code> onto
+the GUI window to see the embedding as a heatmap under the video, exactly
+as <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a> describes for any folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code> files.</p>
 <section id="leakage-which-sessions-feral-may-see">
-<h2>Leakage: which sessions FERAL may see<a class="headerlink" href="#leakage-which-sessions-feral-may-see" title="Link to this heading">#</a></h2>
+<h3>Leakage: which sessions FERAL may see<a class="headerlink" href="#leakage-which-sessions-feral-may-see" title="Link to this heading">#</a></h3>
 <p>A FERAL fine-tuned on a session’s labels embeds that session better than
-one it never saw — it has, in effect, been shown the answers. A
-segmentation model trained on those embeddings then learns to trust them
-more than it should, and scores that session too well. <strong>Any downstream
-score on a session FERAL trained on is inflated</strong>, and <code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code>
-over FERAL features warns about exactly this: every fold but one holds out
-a session FERAL has seen.</p>
-<p><code class="docutils literal notranslate"><span class="pre">train.split.holdout_sessions</span></code> is the guard, and it does double duty. The
-sessions it names are FERAL’s <code class="docutils literal notranslate"><span class="pre">test</span></code> and <code class="docutils literal notranslate"><span class="pre">inference</span></code> only — never <code class="docutils literal notranslate"><span class="pre">train</span></code>
-or <code class="docutils literal notranslate"><span class="pre">val</span></code> — so their embeddings come from a model that never saw their
-labels; and downstream they are the test set, as they always were. Name
-your true test sessions there <strong>before</strong> exporting, and <code class="docutils literal notranslate"><span class="pre">train()</span></code>’s test
-score is a number you can report. FERAL’s own test score in
-<code class="docutils literal notranslate"><span class="pre">feral/answers/</span></code> is then the video-only baseline on the same sessions.</p>
-<p>Cross-validation over FERAL features is still useful for <em>comparing</em>
-feature sets on the same inflated footing (with and without changepoints,
-say); it is not a held-out score. A clean cross-validation would need one
-FERAL per fold, each exported from a model that never saw its fold — that
-is K exports and K FERAL trainings, and the project does not do it for
-you.</p>
+one it never saw, so <strong>any downstream score on a session FERAL trained on
+is inflated</strong>. <code class="docutils literal notranslate"><span class="pre">train.split.holdout_sessions</span></code> is the guard: the sessions it
+names are FERAL’s <code class="docutils literal notranslate"><span class="pre">test</span></code> and <code class="docutils literal notranslate"><span class="pre">inference</span></code> only, never <code class="docutils literal notranslate"><span class="pre">train</span></code> or <code class="docutils literal notranslate"><span class="pre">val</span></code>, and
+downstream they are the test set. Name them <strong>before</strong> exporting, and
+<code class="docutils literal notranslate"><span class="pre">train()</span></code>’s test score is one you can report, with FERAL’s own score in
+<code class="docutils literal notranslate"><span class="pre">feral/answers/</span></code> as the video-only baseline on the same sessions.
+<code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code> over FERAL features warns about this: it still compares
+feature sets on the same inflated footing, but it is not a held-out score
+(that would take one FERAL training and export per fold, which the project
+does not do for you).</p>
 </section>
-<section id="without-ethographs-models">
-<h2>Without ethograph’s models<a class="headerlink" href="#without-ethographs-models" title="Link to this heading">#</a></h2>
-<p>If you only want FERAL — no changepoints, no segmentation model — the
-export is the whole story: a minimal config with the sessions, the labels
-and the camera, and <code class="docutils literal notranslate"><span class="pre">eto.segment.export_feral</span></code> writes <code class="docutils literal notranslate"><span class="pre">feral/</span></code> for it. The
-labels you curate in the GUI become FERAL’s <code class="docutils literal notranslate"><span class="pre">labels.json</span></code> without the
-chunking, class-name and split bookkeeping being done by hand.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\behav</span>
-<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\videos</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-02\behav</span>
-<span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-02\videos</span>
-<span class="nt">individual</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Freddy</span>
-<span class="nt">features</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">columns</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}}</span><span class="w">                           </span><span class="c1"># never materialised; a config names at least one column</span>
-<span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">mapping</span><span class="p">:</span><span class="w"> </span><span class="nv">../mapping.txt</span><span class="p p-Indicator">,</span><span class="nt"> branch</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
-<span class="nt">video_features</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">extractor</span><span class="p">:</span><span class="w"> </span><span class="nv">feral</span><span class="p p-Indicator">,</span><span class="nt"> camera</span><span class="p">:</span><span class="w"> </span><span class="nv">cam-1</span><span class="p p-Indicator">,</span><span class="nt"> preset</span><span class="p">:</span><span class="w"> </span><span class="nv">lite</span><span class="p p-Indicator">}</span>
-</pre></div>
-</div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
-
-<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">export_feral</span><span class="p">(</span><span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">load_config</span><span class="p">(</span><span class="s2">"config/feral_only.yaml"</span><span class="p">))</span>
-</pre></div>
-</div>
 </section>
-<section id="what-a-feral-video-is">
-<h2>What a FERAL video is<a class="headerlink" href="#what-a-feral-video-is" title="Link to this heading">#</a></h2>
-<p><strong>One trial of one individual.</strong> FERAL labels the whole frame with one
-class, so a session with several animals in one camera needs one cropped
-video per animal first (a <code class="docutils literal notranslate"><span class="pre">video_dir</span></code> per individual, and one config per
-individual with <code class="docutils literal notranslate"><span class="pre">individual:</span></code> set); an export with more than one
-individual is refused naming this.</p>
-<p>The video may start before its trial or run past it — the frames outside
-the trial are labelled background and <code class="docutils literal notranslate"><span class="pre">videos.tsv</span></code> counts them — but a
-file holding several trials is refused once more than half its frames lie
-outside the trial, since FERAL would learn the neighbours’ behaviour as
-background. Cut such recordings into one clip per trial first.</p>
-<p>All videos share one frame rate: a FERAL config has one chunk stride.
-Videos on different drives are refused too, since FERAL reads everything
-under one folder prefix.</p>
+<section id="tuning-feral">
+<span id="target-feral-tuning"></span><h2>Tuning FERAL<a class="headerlink" href="#tuning-feral" title="Link to this heading">#</a></h2>
+<p>FERAL’s parameters are FERAL’s, and
+<a class="reference external" href="https://www.getferal.ai/#config-docs">its config documentation</a> is where
+they are explained. <code class="docutils literal notranslate"><span class="pre">export_feral()</span></code> writes <code class="docutils literal notranslate"><span class="pre">feral/config.yaml</span></code> as a complete FERAL
+config: its packaged default, with only the paths, the run name and the two
+settings below filled in. Edit that file as you see fit before
+<code class="docutils literal notranslate"><span class="pre">feral</span> <span class="pre">train-config</span></code>; FERAL reads it verbatim, and the import does not
+depend on anything in it. Exporting again rewrites it, so keep a copy of
+your edits.</p>
+<p>The ethograph config sets two of FERAL’s parameters, both refused with any
+other extractor:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">video_features.preset</span></code> is FERAL’s <code class="docutils literal notranslate"><span class="pre">--mode</span></code> (<code class="docutils literal notranslate"><span class="pre">lite</span></code>, <code class="docutils literal notranslate"><span class="pre">max</span></code>, <code class="docutils literal notranslate"><span class="pre">rare</span></code>;
+<code class="docutils literal notranslate"><span class="pre">null</span></code> = its default), laid over the default as <code class="docutils literal notranslate"><span class="pre">feral</span> <span class="pre">train</span> <span class="pre">--mode</span></code> does.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">video_features.context_s</span></code> is the seconds one chunk spans. The export
+reads the videos’ rate, resolves FERAL’s <code class="docutils literal notranslate"><span class="pre">chunk_step</span></code> from it and scales
+the chunk shifts by the same stride; <code class="docutils literal notranslate"><span class="pre">null</span></code> is every frame
+(<code class="docutils literal notranslate"><span class="pre">chunk_step:</span> <span class="pre">1</span></code>), whatever the rate.</p></li>
+</ul>
 </section>
 </section>
 
@@ -715,11 +747,12 @@ under one folder prefix.</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-environments">The two environments</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-config-one-extra-key">One config, one extra key</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-round-trip">The round trip</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leakage-which-sessions-feral-may-see">Leakage: which sessions FERAL may see</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#without-ethographs-models">Without ethograph’s models</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-feral-video-is">What a FERAL video is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#workflow-1-ferals-labels">Workflow 1: FERAL’s labels</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#workflow-2-feral-as-a-video-feature">Workflow 2: FERAL as a video feature</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#leakage-which-sessions-feral-may-see">Leakage: which sessions FERAL may see</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning-feral">Tuning FERAL</a></li>
 </ul>
   </nav></div>
 

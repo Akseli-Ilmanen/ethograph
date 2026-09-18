@@ -54,7 +54,7 @@ train:
     holdout_sessions: [ses-03]       # every trial of this session is `test`
 ```
 
-Three things worth knowing about it:
+Four things worth knowing about it:
 
 - **`labels_path` is left out** because it defaults to `{stem}_labels.tsv`
   beside the source, which is where the GUI writes it.
@@ -63,6 +63,11 @@ Three things worth knowing about it:
   fine as your GPU's memory allows. Both are durations and are converted using
   each video's own frame rate, so the same file works at 60 fps and at 200 fps.
   See {ref}`target-spot-seconds`.
+- **No `individual:` key.** Every predicted label names the session's one
+  individual, so it lands on the same track as the labels you drew. With
+  several individuals in a session, say whose events these are
+  (`individual: crow_1`). The GUI draws a label only for the individual it
+  names, and inference stops with an error rather than guess.
 - **No `features:` section.** That is what makes this option 2 in
   {doc}`index`: pixels in, events out.
 
@@ -108,6 +113,11 @@ model hesitated. See {doc}`../curation`.
 
 ## Where to go from here
 
+- **Tune the clip first**: `clip.context_s`, `clip.resolution_ms` and
+  `clip.positive_window_ms` are the three settings that matter most — how much
+  video the model sees at once, the grid a label can land on, and how wide a
+  labelled event counts as positive. Fit them to how fast your events are
+  before changing anything else. See {ref}`spot-config-clip`.
 - **A wider temporal aperture**: `model.architecture=rny008_msagsm`, then
   `project.compare()` shows the two runs side by side (see {doc}`index`).
 - **You have pose**: list pose variables under `features:` and the model reads

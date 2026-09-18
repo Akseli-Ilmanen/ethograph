@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/segment/video_features.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="FERAL as a video feature" href="feral.html" />
+    <link rel="next" title="FERAL" href="feral.html" />
     <link rel="prev" title="Config reference" href="config.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -385,7 +385,7 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Video features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="feral.html">FERAL as a video feature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feral.html">FERAL</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -462,10 +462,14 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="video-features">
 <h1>Video features<a class="headerlink" href="#video-features" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Still in development — the API below may change.</p>
+</div>
 <p>A pretrained network turns each frame of a video into a vector: what the
 animal <em>looks like it is doing</em>, which pose keypoints alone do not capture.
-The network is an <strong>extractor</strong>, chosen by name; every extractor writes the
-same kind of file, and downstream nothing cares which one made it.</p>
+For a worked example from a session to a ranked subset of S3D dimensions, see
+<a class="reference internal" href="../../examples/segement_s3d_features.html"><span class="doc">S3D video features: extract, rank, inspect</span></a>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">extractor</span></code></p></th>
@@ -482,47 +486,35 @@ same kind of file, and downstream nothing cares which one made it.</p>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code></p></td>
 <td><p>frame-wise</p></td>
-<td><p>the frame on its own, embedded by an image backbone — DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id409" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> ViT-B/14 (<code class="docutils literal notranslate"><span class="pre">vit_base_patch14_reg4_dinov2.lvd142m</span></code>) unless <code class="docutils literal notranslate"><span class="pre">model_name</span></code> says otherwise; needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code></p></td>
+<td><p>the frame on its own, embedded by an image backbone — DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id409" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> ViT-B/14 unless <code class="docutils literal notranslate"><span class="pre">model_name</span></code> says otherwise; needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code></p></td>
 <td><p><a class="reference external" href="https://v-iashin.github.io/video_features/models/timm/">video_features › timm</a></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <p>Both follow the recipes of
-<a class="reference external" href="https://v-iashin.github.io/video_features/">v-iashin/video_features</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id411" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span>, which
-documents each network and links on to its weights; our config exposes only
-what changes the <em>features</em>, so read there for the rest.</p>
-<p>A frame-wise feature carries no motion; the temporal model downstream reads
-it off the sequence. A clip-wise feature carries the window’s motion but
-needs the window to be long enough for the network. Which is better for a
-given behaviour is an empirical question — the point of one registry is that
-the comparison is a config line and a <code class="docutils literal notranslate"><span class="pre">compare_runs</span></code>.</p>
-<p>They are expensive — a forward pass per frame — so they are computed once
-into a sidecar file per video and merged into your sessions afterwards.</p>
+<a class="reference external" href="https://v-iashin.github.io/video_features/">v-iashin/video_features</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id411" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span>.
+Extraction is a forward pass per frame, so it runs once into a sidecar file per
+video, which is then merged into your sessions.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>Every temporal setting is in <strong>seconds</strong> and resolved against each video’s own
-rate. <code class="docutils literal notranslate"><span class="pre">analysis_fps</span></code> says how many frames per second the network sees (frames
-are skipped, never interpolated up); it is the one cost lever, and at 200 fps
-you will want it. S3D’s <code class="docutils literal notranslate"><span class="pre">stack_s</span></code> needs at least <strong>13 frames</strong> at that rate,
-so its 0.5 s default works down to 26 fps but <em>fails</em> below it — the error
-names the shortest window that works.</p>
+<p>Every temporal setting is in <strong>seconds</strong>, resolved against each video’s own
+rate. <code class="docutils literal notranslate"><span class="pre">analysis_fps</span></code> is how many frames per second the network sees (frames
+are skipped, never interpolated) and is the main cost lever. S3D’s <code class="docutils literal notranslate"><span class="pre">stack_s</span></code>
+needs at least <strong>13 frames</strong> at that rate; the error names the shortest window
+that works.</p>
 </div>
-<section id="starting-from-a-folder-of-videos">
-<h2>Starting from a folder of videos<a class="headerlink" href="#starting-from-a-folder-of-videos" title="Link to this heading">#</a></h2>
-<p>No config, no session, no alignment — just videos in, sidecars out:</p>
+<section id="extracting-from-a-folder-of-videos">
+<h2>Extracting from a folder of videos<a class="headerlink" href="#extracting-from-a-folder-of-videos" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
-<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>  <span class="c1"># S3D (default)</span>
-<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">extractor</span><span class="o">=</span><span class="s2">"timm"</span><span class="p">,</span> <span class="n">analysis_fps</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>  <span class="c1"># timm / DINOv2</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>  <span class="c1"># S3D</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">extractor</span><span class="o">=</span><span class="s2">"timm"</span><span class="p">,</span> <span class="n">analysis_fps</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The first argument takes any mix of files, folders (searched recursively) and
-globs. Each video becomes <code class="docutils literal notranslate"><span class="pre">/data/features/{video</span> <span class="pre">stem}_{extractor}.nc</span></code>,
-holding a <code class="docutils literal notranslate"><span class="pre">(time_video,</span> <span class="pre">{extractor}_dims)</span></code> array <strong>on the video’s own clock</strong>
-(frame 0 at t=0), with the resolved plan and the model in its attrs. The
-written paths are returned. Videos that already have a sidecar are skipped
-unless you pass <code class="docutils literal notranslate"><span class="pre">overwrite=True</span></code>, so re-running after adding footage is cheap.</p>
+<p>Each video becomes <code class="docutils literal notranslate"><span class="pre">/data/features/{video</span> <span class="pre">stem}_{extractor}.nc</span></code>, a
+<code class="docutils literal notranslate"><span class="pre">(time_video,</span> <span class="pre">{extractor}_dims)</span></code> array on the video’s own clock. Videos that
+already have a sidecar are skipped unless <code class="docutils literal notranslate"><span class="pre">overwrite=True</span></code>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
@@ -534,276 +526,101 @@ unless you pass <code class="docutils literal notranslate"><span class="pre">ove
 <td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">timm</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model_name</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code> only: any timm model with pretrained weights <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id410" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span> — valid names are the <a class="reference external" href="https://huggingface.co/docs/timm/models">timm model list</a> (or <code class="docutils literal notranslate"><span class="pre">timm.list_models(pretrained=True)</span></code>). <code class="docutils literal notranslate"><span class="pre">None</span></code> = DINOv2 ViT-B/14.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code> only: any timm model with pretrained weights <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id410" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span>. <code class="docutils literal notranslate"><span class="pre">None</span></code> = DINOv2 ViT-B/14.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stack_s</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> only: window length in seconds. Must be ≥ 13 frames at the effective rate.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> only: window length in seconds.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">analysis_fps</span></code></p></td>
 <td><p>Rate the network sees; <code class="docutils literal notranslate"><span class="pre">None</span></code> = every frame.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">crop</span></code></p></td>
-<td><p>A pixel box cut from every frame before the network sees it (<code class="docutils literal notranslate"><span class="pre">{x0,</span> <span class="pre">y0,</span> <span class="pre">x1,</span> <span class="pre">y1}</span></code>, the crop tool’s numbers).</p></td>
+<td><p>Pixel box <code class="docutils literal notranslate"><span class="pre">{x0,</span> <span class="pre">y0,</span> <span class="pre">x1,</span> <span class="pre">y1}</span></code> cut from every frame, as reported by <em>Tools ▸ Video: Pick a crop for a config…</em>. Draw it square: the network takes a square input, and a non-square box loses its long side.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">include</span></code></p></td>
-<td><p>Regular expressions; keep only videos whose path matches one.</p></td>
+<td><p>Regular expressions matched against the path, e.g. <code class="docutils literal notranslate"><span class="pre">[&quot;cam-1&quot;]</span></code> to extract one camera only.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">overwrite</span></code></p></td>
-<td><p>Re-extract videos that already have a sidecar (default <code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></td>
+<td><p>Re-extract videos that already have a sidecar.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>A setting that belongs to the other extractor is refused by name — <code class="docutils literal notranslate"><span class="pre">stack_s</span></code>
-means nothing to a frame-wise model, <code class="docutils literal notranslate"><span class="pre">model_name</span></code> nothing to S3D — rather than
-silently ignored. Those are the only settings that change the features. Batch
-size, decode chunk, <code class="docutils literal notranslate"><span class="pre">fp16</span></code> and the device live on the extractor’s own config
-(<code class="xref py py-class docutils literal notranslate"><span class="pre">S3DConfig</span></code>,
-<code class="xref py py-class docutils literal notranslate"><span class="pre">TimmConfig</span></code>).</p>
-<section id="cropping-to-the-animal">
-<h3>Cropping to the animal<a class="headerlink" href="#cropping-to-the-animal" title="Link to this heading">#</a></h3>
-<p>Resolution on the animal matters more than resolution on the arena. <code class="docutils literal notranslate"><span class="pre">crop</span></code>
-cuts one rectangle from every decoded frame before the resize, in the same
-numbers the GUI’s crop tool reports (<em>Tools ▸ Video: Pick a crop for a config…</em>), so they
-copy straight across:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">video_features</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">crop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">x0</span><span class="p">:</span><span class="w"> </span><span class="nv">240</span><span class="p p-Indicator">,</span><span class="nt"> y0</span><span class="p">:</span><span class="w"> </span><span class="nv">80</span><span class="p p-Indicator">,</span><span class="nt"> x1</span><span class="p">:</span><span class="w"> </span><span class="nv">880</span><span class="p p-Indicator">,</span><span class="nt"> y1</span><span class="p">:</span><span class="w"> </span><span class="nv">720</span><span class="p p-Indicator">}</span>
-</pre></div>
-</div>
-<p><strong>The network takes a square, and you choose which one.</strong> Every extractor
-has a fixed square input — 224×224 for S3D, the model’s own side for a timm
-backbone (518 for DINOv2) — and gets there by scaling the box’s shorter side
-to it and taking the centre square, the Kinetics / ImageNet evaluation
-transform. So:</p>
-<ul class="simple">
-<li><p><strong>No <code class="docutils literal notranslate"><span class="pre">crop</span></code></strong>: the centre square of the full frame, scaled. The default,
-and fine when the animal sits mid-frame.</p></li>
-<li><p><strong>A square <code class="docutils literal notranslate"><span class="pre">crop</span></code></strong>: exactly what you drew, only scaled. The crop tool’s
-<em>Square</em> option (ticked by default) grows the dragged rectangle to a square
-about its centre, so the numbers it prints are the numbers the network
-sees. Draw it 224×224 for S3D and there is no resampling at all.</p></li>
-<li><p><strong>A non-square <code class="docutils literal notranslate"><span class="pre">crop</span></code></strong>: the long side is cut off — a 203×164 box loses
-19 % of its width. The extraction logs a warning saying how much; it does
-not refuse.</p></li>
-</ul>
-<p>One box per video, applied to every trial’s video alike. A box that follows an
-individual — the per-individual feature a multi-animal recording needs — is
-the planned extension; the sidecar already records the crop in its attrs so
-that step needs no new format.</p>
+<p>A setting belonging to the other extractor is refused by name, not ignored.</p>
 </section>
-<section id="taking-one-camera-out-of-a-folder">
-<h3>Taking one camera out of a folder<a class="headerlink" href="#taking-one-camera-out-of-a-folder" title="Link to this heading">#</a></h3>
-<p>Two cameras pointed at the same arena give nearly identical features, so
-extracting both is an hour of GPU time for nothing. <code class="docutils literal notranslate"><span class="pre">include</span></code> narrows what is
-found:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">extract_videos</span><span class="p">([</span><span class="s2">"/data/videos"</span><span class="p">],</span> <span class="s2">"/data/features"</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s2">"cam-1"</span><span class="p">])</span>
-</pre></div>
-</div>
-<p>Each pattern is a regular expression matched against the <strong>whole path</strong> with
-<code class="docutils literal notranslate"><span class="pre">re.search</span></code>, so a plain substring works, and it finds the camera wherever it
-sits in the layout — <code class="docutils literal notranslate"><span class="pre">cam-1/trial003.mp4</span></code> and <code class="docutils literal notranslate"><span class="pre">trial003_cam-1.mp4</span></code> alike.
-Several patterns are a union (<code class="docutils literal notranslate"><span class="pre">[&quot;cam-1&quot;,</span> <span class="pre">&quot;cam-3&quot;]</span></code>).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>A filter that matches nothing raises rather than extracting zero videos —
-silently doing nothing looks too much like success. The message says how many
-videos were found and shows a few, so you can see what to match against.</p>
-</div>
-<p>Working from a config instead? Use <code class="docutils literal notranslate"><span class="pre">video_features.camera</span></code> — the alignment
-already knows which stream is which, so there is nothing to pattern-match.</p>
-</section>
-</section>
-<section id="starting-from-a-config">
-<h2>Starting from a config<a class="headerlink" href="#starting-from-a-config" title="Link to this heading">#</a></h2>
-<p>If your sessions already have an alignment naming each trial’s video, name
-each session’s <code class="docutils literal notranslate"><span class="pre">video_dir</span></code> and let the alignment resolve the file within it:</p>
+<section id="extracting-and-merging-from-a-config">
+<h2>Extracting and merging from a config<a class="headerlink" href="#extracting-and-merging-from-a-config" title="Link to this heading">#</a></h2>
+<p>With an alignment naming each trial’s video, name each session’s <code class="docutils literal notranslate"><span class="pre">video_dir</span></code>:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav</span>
-<span class="w">    </span><span class="nt">labels_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../sub-01/ses-01/behav/Trial_data_labels.tsv</span>
 <span class="w">    </span><span class="nt">video_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/videos</span>
 
 <span class="nt">video_features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">extractor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">s3d</span><span class="w">                  </span><span class="c1"># or timm</span>
 <span class="w">  </span><span class="nt">analysis_fps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25</span>
-<span class="w">  </span><span class="nt">camera</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cam-1</span><span class="w">                   </span><span class="c1"># regex pattern so video features only for camera 1</span>
+<span class="w">  </span><span class="nt">camera</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cam-1</span>
 </pre></div>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span>
-
-<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">()</span>  <span class="c1"># extract only</span>
-<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">(</span><span class="n">merge</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># extract, then merge into the sessions</span>
-</pre></div>
-</div>
-<p>Sidecars go to <code class="docutils literal notranslate"><span class="pre">{root}/video_features/</span></code>; the paths written are returned, and
-<code class="docutils literal notranslate"><span class="pre">overwrite=True</span></code> re-extracts. Any setting can also be overridden without
-editing the file:
-<code class="docutils literal notranslate"><span class="pre">eto.segment.Project(&quot;project.yaml&quot;,</span> <span class="pre">&quot;video_features.extractor=timm&quot;,</span> <span class="pre">&quot;video_features.analysis_fps=25&quot;)</span></code>.</p>
-</section>
-<section id="merging-into-a-session">
-<h2>Merging into a session<a class="headerlink" href="#merging-into-a-session" title="Link to this heading">#</a></h2>
-<p>Extraction alone does not make the embedding a <em>feature</em> — the sidecar is on
-the video’s clock, and the pipeline reads features from the session. Merging
-samples the sidecar onto each trial’s own time axis (nearest neighbour,
-applying that trial’s video offset) and writes a session copy carrying a
-variable named after the extractor, <code class="docutils literal notranslate"><span class="pre">s3d</span> <span class="pre">(time,</span> <span class="pre">s3d_dims)</span></code> or
-<code class="docutils literal notranslate"><span class="pre">timm</span> <span class="pre">(time,</span> <span class="pre">timm_dims)</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">(</span><span class="n">merge</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">video_features</span><span class="p">(</span><span class="n">merge</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="c1"># → /data/sub-01/ses-01/behav/Trial_data_s3d.nc</span>
 </pre></div>
 </div>
-<p>The merge <strong>never overwrites your session file</strong>: it writes a sibling
-<code class="docutils literal notranslate"><span class="pre">{stem}_{extractor}.nc</span></code> and logs the path — point your config’s <code class="docutils literal notranslate"><span class="pre">sessions:</span></code> at
-it (or call <code class="xref py py-func docutils literal notranslate"><span class="pre">merge_video_features()</span></code>
-yourself with <code class="docutils literal notranslate"><span class="pre">in_place=True</span></code> if you would rather overwrite). Merging is
-xarray-only; for pynapple and NWB sessions the sidecar exists but you carry it
-in yourself. Sidecars written before the registry existed (<code class="docutils literal notranslate"><span class="pre">time_s3d</span></code>) still
-merge: the time dim is found by name.</p>
-<p>Then name it like any other feature:</p>
+<p>Sidecars go to <code class="docutils literal notranslate"><span class="pre">{root}/video_features/</span></code>. Merging samples each sidecar onto its
+trial’s time axis (applying the trial’s video offset) and writes a sibling
+<code class="docutils literal notranslate"><span class="pre">{stem}_{extractor}.nc</span></code> carrying an <code class="docutils literal notranslate"><span class="pre">s3d</span></code> or <code class="docutils literal notranslate"><span class="pre">timm</span></code> variable — your session
+file is never overwritten. Point <code class="docutils literal notranslate"><span class="pre">sessions:</span></code> at the new file and name the
+feature like any other:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">s3d</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">s3d_dims</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">]}</span><span class="w">      </span><span class="c1"># or a shortlist you selected</span>
-<span class="w">    </span><span class="nt">speed</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">]}</span>
 </pre></div>
 </div>
+<p>Merging is xarray-only; for pynapple and NWB sessions carry the sidecar in
+yourself.</p>
 </section>
-<section id="video-features-from-files-a-folder-of-npy">
-<h2>Video features from files: a folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code><a class="headerlink" href="#video-features-from-files-a-folder-of-npy" title="Link to this heading">#</a></h2>
-<p>A network run outside ethograph — FERAL, DINO, anything that writes one
-<code class="docutils literal notranslate"><span class="pre">(frames,</span> <span class="pre">D)</span></code> array per video — leaves a folder of <code class="docutils literal notranslate"><span class="pre">{video</span> <span class="pre">stem}.npy</span></code>.
-Those are video features like any other, and they need no merging.</p>
-<p><strong>In the GUI</strong>, open the add-panel popup (➕ or Shift+N) and pick
-<strong>Video features — browse a folder of .npy…</strong>, or drop the folder (or a
-selection of <code class="docutils literal notranslate"><span class="pre">.npy</span></code> files) anywhere on the window. Each folder becomes one
-feature named after it and opens as a heatmap; loose files together become
-one feature named after their folder. Files are matched to the session’s
-videos by name, the camera whose names they follow is detected, and the log
-says how many videos matched:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Added</span> <span class="n">video</span> <span class="n">features</span> <span class="s1">'feral_cfgA'</span> <span class="p">(</span><span class="mi">768</span> <span class="n">columns</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">D</span><span class="p">:</span>\<span class="n">emb</span>\<span class="n">cfgA</span><span class="p">:</span> <span class="mi">120</span> <span class="n">of</span> <span class="mi">136</span> <span class="n">videos</span> <span class="n">matched</span> <span class="p">(</span><span class="mi">88</span><span class="o">%</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>A video without a file is fine — features computed on a subset are still
-features; its trial reads NaN. Files matching <em>no</em> video are an error. Two
-exports of one model with different settings live side by side: the
-add-panel popup lists them under <strong>Video features</strong>, each with the path it
-came from, so <code class="docutils literal notranslate"><span class="pre">feral_cfgA</span> <span class="pre">(D:\emb\cfgA)</span></code> and <code class="docutils literal notranslate"><span class="pre">feral_cfgB</span> <span class="pre">(D:\emb\cfgB)</span></code> are
-never confused.</p>
-<p><strong>In a config</strong>, a session names its folders, and <code class="docutils literal notranslate"><span class="pre">open_session</span></code> attaches
-them the same way, so <code class="docutils literal notranslate"><span class="pre">materialise</span></code> and <code class="docutils literal notranslate"><span class="pre">inference</span></code> see the variable:</p>
+<section id="features-from-a-folder-of-npy">
+<h2>Features from a folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code><a class="headerlink" href="#features-from-a-folder-of-npy" title="Link to this heading">#</a></h2>
+<p>A network run outside ethograph (FERAL, DINO, …) that writes one
+<code class="docutils literal notranslate"><span class="pre">(frames,</span> <span class="pre">D)</span></code> array per video as <code class="docutils literal notranslate"><span class="pre">{video</span> <span class="pre">stem}.npy</span></code> needs no merging.</p>
+<p><strong>In the GUI</strong>, pick <strong>Video features — browse a folder of .npy…</strong> in the
+add-panel popup (➕ / Shift+N), or drop the folder on the window. Files are
+matched to the session’s videos by name; a video without a file reads NaN.</p>
+<p><strong>In a config</strong>, name the folder per session:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01ehav</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\behav</span>
 <span class="w">    </span><span class="nt">video_feature_folders</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\emb\ses-01</span><span class="w">          </span><span class="c1"># one {video stem}.npy per trial's camera file</span>
+<span class="w">      </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\emb\ses-01</span>
 <span class="nt">features</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">feral</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">feral_dims</span><span class="p">:</span><span class="w"> </span><span class="nv">0..767</span><span class="p p-Indicator">}</span>
 </pre></div>
 </div>
-<p>Either way the arrays are memory-mapped and sampled onto the trial clock
-exactly as a merged sidecar is (trial = video + offset, nearest frame, the
-video’s own rate). Nothing is copied or declared beside the session: the
-file stays as it was, and <a class="reference internal" href="../../api/trialtree.html#ethograph.io.trialtree.TrialTree.save" title="ethograph.io.trialtree.TrialTree.save"><code class="xref py py-meth docutils literal notranslate"><span class="pre">save()</span></code></a>
-never writes the variable back (it carries <code class="docutils literal notranslate"><span class="pre">attrs[&quot;attached_from&quot;]</span></code>).</p>
-<p>A script attaches the same way, on the tree the GUI would open:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.video_feature_files</span><span class="w"> </span><span class="kn">import</span> <span class="n">VideoFeatureFiles</span><span class="p">,</span> <span class="n">attach_video_features</span>
-
-<span class="n">attach_video_features</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">alignment</span><span class="p">,</span> <span class="n">VideoFeatureFiles</span><span class="o">.</span><span class="n">from_paths</span><span class="p">(</span><span class="s2">"feral_cfgA"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"D:/emb/cfgA"</span><span class="p">]))</span>
-</pre></div>
-</div>
-<p>Merging stays the path for the extractors ethograph runs itself, whose
-sidecars carry the plan and model in their attrs.</p>
-<p>FERAL is the one such network the project handles end to end: <code class="docutils literal notranslate"><span class="pre">extractor:</span> <span class="pre">feral</span></code> writes its inputs from the sessions’ curated labels, and its
-embeddings attach from <code class="docutils literal notranslate"><span class="pre">{root}/feral/embeddings/</span></code> without listing a folder
-per session — <a class="reference internal" href="feral.html"><span class="doc">FERAL as a video feature</span></a>.</p>
+<p>The arrays are attached in memory, never written back to the session file.
+FERAL is handled end to end by the project — <a class="reference internal" href="feral.html"><span class="doc">FERAL</span></a>.</p>
 </section>
 <section id="choosing-which-dimensions-to-keep">
 <h2>Choosing which dimensions to keep<a class="headerlink" href="#choosing-which-dimensions-to-keep" title="Link to this heading">#</a></h2>
-<p>1024 (S3D) or 768 (DINOv2 ViT-B) columns is a lot next to a handful of
-kinematic ones, and they dominate the input — in practice a small, well-chosen
-subset does <em>better</em> than all of them. That holds for a network trained on
-Kinetics or ImageNet, whose channels mostly describe things your animal never
-does. An embedding fine-tuned on your own labels (<a class="reference internal" href="feral.html"><span class="doc">FERAL as a video feature</span></a>) is the
-exception: every channel was shaped for the task, so feed it whole and
-z-scored. Two tools, both leaning on <code class="docutils literal notranslate"><span class="pre">kind=&quot;video_feature&quot;</span></code>, which every
-extractor stamps for you.</p>
-<p><strong>Is the whole group pulling its weight?</strong> That is a question about the
-trained model, so it takes two runs — the same materialised dataset, one
-extra fit:</p>
+<p>1024 (S3D) or 768 (DINOv2) columns dominate a handful of kinematic ones, and a
+well-chosen subset often does better. To check whether the video columns help
+at all, train with and without them and compare:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">,</span> <span class="s2">"train.run_name=full"</span><span class="p">)</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
-<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span>
-    <span class="s2">"project.yaml"</span><span class="p">,</span>
-    <span class="s2">"train.run_name=no_video"</span><span class="p">,</span>
-    <span class="s2">"train.drop_kinds=[video_feature]"</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
-
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">,</span> <span class="s2">"train.run_name=no_video"</span><span class="p">,</span> <span class="s2">"train.drop_kinds=[video_feature]"</span><span class="p">)</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">compare</span><span class="p">())</span>
 </pre></div>
 </div>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p><code class="docutils literal notranslate"><span class="pre">compare()</span></code> reads each run’s <code class="docutils literal notranslate"><span class="pre">test_metrics.yaml</span></code>, which is written only when
-the split leaves something in <code class="docutils literal notranslate"><span class="pre">test</span></code>. With <code class="docutils literal notranslate"><span class="pre">train.split.test_fraction:</span> <span class="pre">0</span></code> the
-table comes back empty — and an ablation judged on a random trial split is
-flattered anyway, so the honest version of this benchmark is
-<code class="docutils literal notranslate"><span class="pre">cross_validate()</span></code> with and without the video columns.</p>
-</div>
-<p><strong>Which extractor?</strong> The same two-run shape: merge both sidecars into the
-session, list one or the other under <code class="docutils literal notranslate"><span class="pre">features.columns</span></code>, compare.</p>
-<p><strong>Which individual features are stereotypic?</strong> Rank them by Cohen’s d: for
-each feature and each behaviour class, how far apart the feature’s
-distribution is <em>during</em> that behaviour versus outside it, in pooled standard
-deviations. A feature with a large d for some class is one the model can act
-on; a feature with a small d everywhere is noise the model has to learn to
-ignore.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ranking</span><span class="p">,</span> <span class="n">names</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">rank_video_features</span><span class="p">()</span>
-<span class="c1"># the 20 most discriminating dims</span>
-<span class="nb">print</span><span class="p">([</span><span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ranking</span><span class="o">.</span><span class="n">top</span><span class="p">(</span><span class="mi">20</span><span class="p">)])</span>
-</pre></div>
-</div>
-<p>This reads the <strong>materialised dataset</strong>, so it ranks exactly the columns a
-model would see and costs no re-extraction. It picks them out by
-<code class="docutils literal notranslate"><span class="pre">kind=&quot;video_feature&quot;</span></code>, and raises if no column declares it — describe your
-features when you build the session (<code class="xref py py-func docutils literal notranslate"><span class="pre">describe()</span></code>),
-then materialise again. <code class="docutils literal notranslate"><span class="pre">min_frames</span></code> drops a class that barely occurs in a
-trial.</p>
-<p>The library call underneath takes the trials directly, for a bank that is not
-in a project yet:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.video_features</span><span class="w"> </span><span class="kn">import</span> <span class="n">rank_features</span>
-
-<span class="n">ranking</span> <span class="o">=</span> <span class="n">rank_features</span><span class="p">(</span><span class="n">trials</span><span class="p">)</span>  <span class="c1"># [(values (T, F), labels (T,)), ...]</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">labels</span></code> are dense per-frame class ids with 0 = background; background is
-excluded from the comparison by default (<code class="docutils literal notranslate"><span class="pre">background=0</span></code>). Scores are averaged
-over trials.</p>
-<p>In the GUI the same ranking is a heatmap — <strong>Model ▸ Video features: rank by
-Cohen’s d…</strong> — of classes against the top-k features, so you can see which
-behaviours each feature actually separates, and copy the top-k straight into
-your config as a <code class="docutils literal notranslate"><span class="pre">features.columns</span></code> line, keyed by the feature and its own
-dim:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">features</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">columns</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">s3d</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">s3d_dims</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">492</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">734</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">671</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">640</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">585</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]}</span>
-</pre></div>
-</div>
-</section>
-<section id="one-video-no-ethograph-at-all">
-<h2>One video, no ethograph at all<a class="headerlink" href="#one-video-no-ethograph-at-all" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.video_features</span><span class="w"> </span><span class="kn">import</span> <span class="n">S3DConfig</span><span class="p">,</span> <span class="n">build_extractor</span><span class="p">,</span> <span class="n">extract_s3d</span>
-
-<span class="n">da</span> <span class="o">=</span> <span class="n">extract_s3d</span><span class="p">(</span><span class="s2">"clip.mp4"</span><span class="p">,</span> <span class="n">S3DConfig</span><span class="p">(</span><span class="n">stack_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">))</span>  <span class="c1"># (time_video, s3d_dims)</span>
-<span class="n">da</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"clip_s3d.nc"</span><span class="p">)</span>
-
-<span class="n">da</span> <span class="o">=</span> <span class="n">build_extractor</span><span class="p">(</span><span class="s2">"timm"</span><span class="p">)</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="s2">"clip.mp4"</span><span class="p">)</span>  <span class="c1"># (time_video, timm_dims)</span>
-</pre></div>
-</div>
+<p>To pick individual dimensions, rank them by Cohen’s d against your curated
+labels — <code class="xref py py-meth docutils literal notranslate"><span class="pre">rank_video_features()</span></code> on a
+materialised project, or <code class="xref py py-func docutils literal notranslate"><span class="pre">rank_features()</span></code> on
+your own trials. The <a class="reference internal" href="../../examples/segement_s3d_features.html"><span class="doc">example notebook</span></a>
+walks through it, including a classes × dimensions heatmap. Rank on training
+sessions only, or the selection leaks the test set.</p>
 </section>
 <section id="adding-an-extractor">
 <h2>Adding an extractor<a class="headerlink" href="#adding-an-extractor" title="Link to this heading">#</a></h2>
-<p>An extractor is an entry in <code class="docutils literal notranslate"><span class="pre">ethograph.video_features.EXTRACTORS</span></code> — a name
-mapped to a class with <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">plan(video_fps)</span></code> and <code class="docutils literal notranslate"><span class="pre">extract(video)</span></code> — whose
-<code class="docutils literal notranslate"><span class="pre">extract</span></code> returns <code class="docutils literal notranslate"><span class="pre">to_dataarray(...)</span></code>. Its package is pip-installed, never
-copied into the tree; if the package cannot share the GUI
-environment, the extractor runs it by subprocess and reads the file back.</p>
+<p>An extractor is an entry in <code class="docutils literal notranslate"><span class="pre">ethograph.video_features.EXTRACTORS</span></code> — a class
+with <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">plan(video_fps)</span></code> and <code class="docutils literal notranslate"><span class="pre">extract(video)</span></code> returning
+<code class="docutils literal notranslate"><span class="pre">to_dataarray(...)</span></code>. Its package is pip-installed, never vendored.</p>
 </section>
 </section>
 
@@ -831,7 +648,7 @@ environment, the extractor runs it by subprocess and reads the file back.</p>
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">FERAL as a video feature</p>
+        <p class="prev-next-title">FERAL</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -854,16 +671,10 @@ environment, the extractor runs it by subprocess and reads the file back.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-from-a-folder-of-videos">Starting from a folder of videos</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cropping-to-the-animal">Cropping to the animal</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#taking-one-camera-out-of-a-folder">Taking one camera out of a folder</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-from-a-config">Starting from a config</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#merging-into-a-session">Merging into a session</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#video-features-from-files-a-folder-of-npy">Video features from files: a folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extracting-from-a-folder-of-videos">Extracting from a folder of videos</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extracting-and-merging-from-a-config">Extracting and merging from a config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features-from-a-folder-of-npy">Features from a folder of <code class="docutils literal notranslate"><span class="pre">.npy</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-which-dimensions-to-keep">Choosing which dimensions to keep</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-video-no-ethograph-at-all">One video, no ethograph at all</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-an-extractor">Adding an extractor</a></li>
 </ul>
   </nav></div>

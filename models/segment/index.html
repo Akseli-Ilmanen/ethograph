@@ -385,7 +385,7 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_features.html">Video features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="feral.html">FERAL as a video feature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feral.html">FERAL</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -534,25 +534,22 @@ in that session and compare your ground truth labels with predictions visually.<
 <h3>The stages themselves<a class="headerlink" href="#the-stages-themselves" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
-<col style="width: 18.0%" />
-<col style="width: 42.0%" />
-<col style="width: 40.0%" />
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Stage</p></th>
-<th class="head"><p>What it does</p></th>
-<th class="head"><p>Writes</p></th>
+<th class="head"><p>What it does, and what it writes</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong>Feature engineering</strong></p>
+<tr class="row-even"><td><p><strong>Feature creation</strong></p>
 <p><code class="docutils literal notranslate"><span class="pre">project.materialise()</span></code></p>
 </td>
 <td><p>Selects every configured <em>feature column</em> of every <em>sample</em> (one
 trial × one individual), applies the fixed preprocessing chain, encodes
-the branch’s curated labels per frame.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{root}/data/{name}/</span></code></p>
-<p>the materialised dataset</p>
+the branch’s curated labels per frame.</p>
+<p><strong>Writes</strong> <code class="docutils literal notranslate"><span class="pre">{root}/data/{name}/</span></code>, the materialised dataset.</p>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>Train</strong></p>
@@ -561,9 +558,8 @@ the branch’s curated labels per frame.</p></td>
 <td><p>Fits an <em>architecture</em> on the training samples, validates every few
 epochs, keeps the best checkpoint, evaluates the test samples once (raw
 and post-processed). Materialises first if needed. Returns a <code class="docutils literal notranslate"><span class="pre">RunResult</span></code>
-(<code class="docutils literal notranslate"><span class="pre">run_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">best_epoch</span></code>, <code class="docutils literal notranslate"><span class="pre">best_score</span></code>, <code class="docutils literal notranslate"><span class="pre">test_metrics</span></code>).</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{root}/runs/{run}/</span></code></p>
-<p>config, layout, stats, weights, metrics</p>
+(<code class="docutils literal notranslate"><span class="pre">run_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">best_epoch</span></code>, <code class="docutils literal notranslate"><span class="pre">best_score</span></code>, <code class="docutils literal notranslate"><span class="pre">test_metrics</span></code>).</p>
+<p><strong>Writes</strong> <code class="docutils literal notranslate"><span class="pre">{root}/runs/{run}/</span></code>: config, layout, stats, weights, metrics.</p>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>Search</strong></p>
@@ -571,18 +567,18 @@ and post-processed). Materialises first if needed. Returns a <code class="docuti
 </td>
 <td><p>Optuna over <code class="docutils literal notranslate"><span class="pre">search.params</span></code>: each trial is a training run, scored by
 <code class="docutils literal notranslate"><span class="pre">train.select_on</span></code> <strong>on the validation trials</strong>. Resumable — the study
-lives in a SQLite file. Returns a <code class="docutils literal notranslate"><span class="pre">SearchResult</span></code>.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{root}/searches/{name}/</span></code></p>
-<p><code class="docutils literal notranslate"><span class="pre">study.db</span></code>, <code class="docutils literal notranslate"><span class="pre">trials.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">best.yaml</span></code></p>
+lives in a SQLite file. Returns a <code class="docutils literal notranslate"><span class="pre">SearchResult</span></code>.</p>
+<p><strong>Writes</strong> <code class="docutils literal notranslate"><span class="pre">{root}/searches/{name}/</span></code>: <code class="docutils literal notranslate"><span class="pre">study.db</span></code>, <code class="docutils literal notranslate"><span class="pre">trials.tsv</span></code>,
+<code class="docutils literal notranslate"><span class="pre">best.yaml</span></code>.</p>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>Cross-validate</strong></p>
 <p><code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code></p>
 </td>
 <td><p>One fold per session: train on the rest, predict the held-out one.
-<code class="docutils literal notranslate"><span class="pre">folds=</span></code> runs only some of them. Returns one DataFrame row per fold.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{root}/cross_validation/{name}/folds.tsv</span></code></p>
-<p>plus a prediction set per held-out session</p>
+<code class="docutils literal notranslate"><span class="pre">folds=</span></code> runs only some of them. Returns one DataFrame row per fold.</p>
+<p><strong>Writes</strong> <code class="docutils literal notranslate"><span class="pre">{root}/cross_validation/{name}/folds.tsv</span></code>, plus a prediction
+set per held-out session.</p>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>Inference</strong></p>
@@ -590,9 +586,9 @@ lives in a SQLite file. Returns a <code class="docutils literal notranslate"><sp
 </td>
 <td><p>Runs a run over the sessions and post-processes the predictions (purge →
 stitch → snap to changepoints → purge). Returns the prediction paths;
-<code class="docutils literal notranslate"><span class="pre">run=</span></code> picks another run, <code class="docutils literal notranslate"><span class="pre">sessions=</span></code> narrows to a few.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{session</span> <span class="pre">folder}/labels/predictions_{run}_{timestamp}/{stem}_predictions.tsv</span></code></p>
-<p>plus <code class="docutils literal notranslate"><span class="pre">_probs.npz</span></code></p>
+<code class="docutils literal notranslate"><span class="pre">run=</span></code> picks another run, <code class="docutils literal notranslate"><span class="pre">sessions=</span></code> narrows to a few.</p>
+<p><strong>Writes</strong> <code class="docutils literal notranslate"><span class="pre">labels/predictions_{run}_{timestamp}/</span></code> in each session
+folder: <code class="docutils literal notranslate"><span class="pre">{stem}_predictions.tsv</span></code> plus <code class="docutils literal notranslate"><span class="pre">_probs.npz</span></code>.</p>
 </td>
 </tr>
 </tbody>
@@ -679,11 +675,11 @@ run once per video and cache. See <a class="reference internal" href="video_feat
 plottable in the GUI, and named in <code class="docutils literal notranslate"><span class="pre">features.columns</span></code> like anything else.</p>
 <p>A network that cannot run in this environment is a video feature too:
 <code class="docutils literal notranslate"><span class="pre">extractor:</span> <span class="pre">feral</span></code> exports the sessions’ videos and curated labels for
-FERAL <span class="bibtex-citation" id="id4">[]</span>, which fine-tunes in its own
+FERAL <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id412" title="Peter Skovorodnikov, Jacopo Razzauti, Blair R. Costelloe, Friederike Buck, Vikram Chandra, Dominic D. Frank, Tomas Kay, Benjamin Koger, Orli Snir, Janet Zhao, Iain D. Couzin, Daniel J. C. Kronauer, and Leslie B. Vosshall. FERAL: a supervised video-understanding system for direct video-to-behavior mapping. bioRxiv, 2025. URL: https://www.biorxiv.org/content/10.1101/2025.11.16.688666v2, doi:10.1101/2025.11.16.688666.">Skovorodnikov <em>et al.</em>, 2025</a>]</span>, which fine-tunes in its own
 environment, and its per-frame embeddings attach as the variable <code class="docutils literal notranslate"><span class="pre">feral</span></code>
 when they come back. Its sessions the model may not have seen are named
 in <code class="docutils literal notranslate"><span class="pre">train.split.holdout_sessions</span></code>, which is what keeps the test score
-honest — see <a class="reference internal" href="feral.html"><span class="doc">FERAL as a video feature</span></a>.</p>
+honest — see <a class="reference internal" href="feral.html"><span class="doc">FERAL</span></a>.</p>
 </section>
 <section id="a-config">
 <h2>A config<a class="headerlink" href="#a-config" title="Link to this heading">#</a></h2>
@@ -710,7 +706,7 @@ honest — see <a class="reference internal" href="feral.html"><span class="doc"
 <span class="w">    </span><span class="nt">speed_cp_sigma3</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">beakTip</span><span class="p p-Indicator">]}</span>
 <span class="w">    </span><span class="nt">inter_beak</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">{</span><span class="nt">other</span><span class="p">:</span><span class="w"> </span><span class="s">"*"</span><span class="p p-Indicator">}</span><span class="w">     </span><span class="c1"># a second individual dim: the others, in order</span>
 <span class="w">  </span><span class="nt">preprocess</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">likelihood_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.6</span><span class="w">      </span><span class="c1"># needs a `confidence` feature</span>
+<span class="w">    </span><span class="nt">likelihood_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.6</span><span class="w">      </span><span class="c1"># keypoint frames with `confidence` below this → NaN → interpolated</span>
 <span class="w">    </span><span class="nt">clip_percentiles</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">98</span><span class="p p-Indicator">]</span>
 <span class="w">    </span><span class="nt">zscore</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                   </span><span class="c1"># statistics from the training samples only</span>
 <span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
@@ -726,7 +722,6 @@ honest — see <a class="reference internal" href="feral.html"><span class="doc"
 <span class="w">  </span><span class="nt">epochs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
 <span class="w">  </span><span class="nt">eval_every</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
 <span class="w">  </span><span class="nt">select_on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">f1@50</span><span class="w">               </span><span class="c1"># what val is scored on, and what a search maximises</span>
-<span class="w">  </span><span class="nt">loss</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="nv">0.01</span><span class="p p-Indicator">}</span><span class="w">            </span><span class="c1"># only the keys you want to change</span>
 <span class="w">  </span><span class="nt">augment</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">noise_std</span><span class="p">:</span><span class="w"> </span><span class="nv">0.05</span><span class="p p-Indicator">,</span><span class="nt"> stretch</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1.2</span><span class="p p-Indicator">],</span><span class="nt"> mirror</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> rotate_deg</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">}</span>
 <span class="w">  </span><span class="c1"># the three ratios, drawn by whole trial across every session; they must sum to 1</span>
 <span class="w">  </span><span class="nt">split</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.6</span><span class="p p-Indicator">,</span><span class="nt"> val_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="nt"> test_fraction</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">}</span>
@@ -734,18 +729,15 @@ honest — see <a class="reference internal" href="feral.html"><span class="doc"
 <span class="nt">search</span><span class="p">:</span><span class="w">                          </span><span class="c1"># stage 1 — keys are the same dotted paths an override uses</span>
 <span class="w">  </span><span class="nt">n_trials</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
 <span class="w">  </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">train.learning_rate</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-5</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-2</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
-<span class="w">    </span><span class="nt">train.loss.alpha</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">0.0</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">0.5</span><span class="p p-Indicator">}</span>
-<span class="w">    </span><span class="nt">model.params.num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">256</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">train.loss.alpha</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-5</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-2</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">train.loss.focal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">train.loss.weights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dataset_inverse_weights</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">model.params.num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
 
 <span class="nt">infer</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">postprocess</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">min_duration_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
-<span class="w">    </span><span class="nt">stitch_gap_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.015</span>
-<span class="w">    </span><span class="nt">changepoint_correction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="w">    </span><span class="nt">changepoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">keypoint</span><span class="p">:</span><span class="w"> </span><span class="nv">beakTip</span><span class="p p-Indicator">}</span>
-<span class="w">    </span><span class="nt">max_expansion_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
-<span class="w">    </span><span class="nt">max_shrink_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">min_duration_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span><span class="w">           </span><span class="c1"># drop predicted labels shorter than this (0 = off)</span>
+<span class="w">    </span><span class="nt">stitch_gap_s</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span><span class="w">              </span><span class="c1"># merge same-label predictions separated by less than this (0 = off)</span>
 </pre></div>
 </div>
 <p>Every key is documented in <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>. Two conveniences: <code class="docutils literal notranslate"><span class="pre">base:</span> <span class="pre">other.yaml</span></code>
@@ -937,20 +929,80 @@ logits.</p>
 </section>
 <section id="stage-1-find-the-settings">
 <h2>Stage 1: find the settings<a class="headerlink" href="#stage-1-find-the-settings" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">project.search()</span></code> runs an Optuna study over
-<code class="docutils literal notranslate"><span class="pre">search.params</span></code>. Every trial is a full training run, and its score is
-<code class="docutils literal notranslate"><span class="pre">train.select_on</span></code> measured on the <strong>validation</strong> trials — the one thing
-validation is for. <code class="docutils literal notranslate"><span class="pre">test</span></code> is never read, so it is still an honest number at
-the end.</p>
+<p><code class="docutils literal notranslate"><span class="pre">project.search()</span></code> tries <code class="docutils literal notranslate"><span class="pre">search.n_trials</span></code> settings. Each one is a full
+training run, scored by <code class="docutils literal notranslate"><span class="pre">train.select_on</span></code> on the <strong>validation</strong> trials; the
+test trials are never read, so they still give an honest number at the end.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">search</span><span class="p">()</span>  <span class="c1"># or search(n_trials=50)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best_params</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best_score</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">trials</span><span class="p">)</span>  <span class="c1"># one row per trial</span>
 </pre></div>
 </div>
-<p>A parameter is keyed by the same dotted path an override uses, so there is one
-spelling for “learning rate” and it works in the file, in an override and in a
-search space alike. Three kinds of space, mirroring Optuna’s three suggest
-calls:</p>
+<p>The winner is written to <code class="docutils literal notranslate"><span class="pre">searches/{name}/best.yaml</span></code> (your config with the
+winning values pinned), which is what stage 2 reads. Calling <code class="docutils literal notranslate"><span class="pre">search()</span></code> again
+<strong>adds</strong> trials to the same study rather than starting over.</p>
+<p>The one choice you make is what goes under <code class="docutils literal notranslate"><span class="pre">search.params</span></code>, the ranges to
+search over. A parameter is named by its dotted config path, as in an
+override.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Default search (recommended)</label><div class="sd-tab-content docutils">
+<p>We search a subset of DLC2Action’s default parameter search
+(<code class="docutils literal notranslate"><span class="pre">dlc2action.options.model_hyperparameters</span></code>), with its ranges: the weight of
+the consistency term (<code class="docutils literal notranslate"><span class="pre">alpha</span></code>), focal or plain cross-entropy (<code class="docutils literal notranslate"><span class="pre">focal</span></code>),
+unweighted or inverse-frequency class weights (<code class="docutils literal notranslate"><span class="pre">weights</span></code>) — all three
+described under <a class="reference internal" href="config.html#segment-config-train-loss"><span class="std std-ref">train.loss</span></a> — and the
+network’s width, <code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>, under
+<a class="reference internal" href="config.html#segment-config-model-params"><span class="std std-ref">model.params</span></a>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">search</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">n_trials</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">  </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">train.loss.alpha</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-5</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-2</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">train.loss.focal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">train.loss.weights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dataset_inverse_weights</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">model.params.num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="nt"> low</span><span class="p">:</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="nt"> high</span><span class="p">:</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="nt"> log</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span><span class="w">  </span><span class="c1"># c2f_tcn</span>
+</pre></div>
+</div>
+<p>The last line depends on the architecture. Swap in the row for yours:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Architecture</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">model.params</span></code> ranges</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>: int 32–128, log</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">c2f_transformer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>: [32, 64, 128]; <code class="docutils literal notranslate"><span class="pre">heads</span></code>: [1, 2, 4, 8]</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mstcn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>: int 32–128, log; <code class="docutils literal notranslate"><span class="pre">num_layers_PG</span></code>: 5–20; <code class="docutils literal notranslate"><span class="pre">num_layers_R</span></code>: 5–10; <code class="docutils literal notranslate"><span class="pre">shared_weights</span></code>: [true, false]</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">asformer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>: [32, 64, 128]; <code class="docutils literal notranslate"><span class="pre">num_decoders</span></code>: 1–4; <code class="docutils literal notranslate"><span class="pre">num_layers</span></code>: 5–10; <code class="docutils literal notranslate"><span class="pre">channel_masking_rate</span></code>: 0.2–0.4</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mp_transformer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">N</span></code>: 5–12; <code class="docutils literal notranslate"><span class="pre">heads</span></code>: [1, 2, 4, 8]; <code class="docutils literal notranslate"><span class="pre">num_pool</span></code>: 0–4</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mlp</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dropout_rates</span></code>: 0.3–0.6</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">edtcn</span></code></p></td>
+<td><p>loss settings only</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>DLC2Action also searches <code class="docutils literal notranslate"><span class="pre">len_segment</span></code> and <code class="docutils literal notranslate"><span class="pre">temporal_subsampling_size</span></code>.
+They are left out because a sample here is a whole trial rather than a
+fixed-length window.</p>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+Custom search</label><div class="sd-tab-content docutils">
+<p>Pick the parameters and ranges yourself. There are three kinds of range,
+matching Optuna’s three <code class="docutils literal notranslate"><span class="pre">suggest</span></code> calls:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">search</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">n_trials</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
 <span class="w">  </span><span class="nt">params</span><span class="p">:</span>
@@ -959,82 +1011,47 @@ calls:</p>
 <span class="w">    </span><span class="nt">train.augment.mirror</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> choices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">]}</span>
 </pre></div>
 </div>
-<p>The winner is written to <code class="docutils literal notranslate"><span class="pre">searches/{name}/best.yaml</span></code> — a config that inherits
-yours and pins the parameters that won, which is what stage 2 reads:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../../project.yaml</span>
-<span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">learning_rate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.00043</span>
-<span class="w">  </span><span class="nt">loss</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="nv">0.087</span><span class="p p-Indicator">}</span>
-</pre></div>
+<p><code class="docutils literal notranslate"><span class="pre">eto.segment.tunable_params(name)</span></code> lists what each architecture accepts.</p>
 </div>
-<p>The study itself lives in <code class="docutils literal notranslate"><span class="pre">searches/{name}/study.db</span></code>, so calling <code class="docutils literal notranslate"><span class="pre">search()</span></code>
-again <strong>adds</strong> trials rather than starting over — stop a study, look at
-<code class="docutils literal notranslate"><span class="pre">trials.tsv</span></code>, continue it. Trials that fall behind the running median are
-abandoned early (<code class="docutils literal notranslate"><span class="pre">search.prune</span></code>), and only the winning trial keeps its weights
-(<code class="docutils literal notranslate"><span class="pre">search.keep_weights</span></code>); every trial’s config, split and metrics are kept
-either way.</p>
-<section id="sweeping-several-architectures">
-<h3>Sweeping several architectures<a class="headerlink" href="#sweeping-several-architectures" title="Link to this heading">#</a></h3>
-<p>Searching more than one architecture is a loop of searches, not one search
-with <code class="docutils literal notranslate"><span class="pre">model.architecture</span></code> in the space — because the architectures share
-almost no hyperparameter names (<code class="docutils literal notranslate"><span class="pre">mlp</span></code> takes <code class="docutils literal notranslate"><span class="pre">f_maps_list</span></code>, <code class="docutils literal notranslate"><span class="pre">mstcn</span></code> takes
-<code class="docutils literal notranslate"><span class="pre">num_f_maps</span></code>), so each needs its own space. <code class="docutils literal notranslate"><span class="pre">eto.segment.tunable_params(name)</span></code>
-lists what each one accepts.</p>
-<p>Give each its own <code class="docutils literal notranslate"><span class="pre">train.run_name</span></code>: that names the study as well, and without
-it every architecture would pool incomparable trials into one <code class="docutils literal notranslate"><span class="pre">study.db</span></code>.</p>
+<input id="sd-tab-item-2" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-2">
+Compare architectures</label><div class="sd-tab-content docutils">
+<p>Architectures share almost no parameter names, so each one gets its own
+search, in a loop. Give each its own <code class="docutils literal notranslate"><span class="pre">train.run_name</span></code>, because that also
+names its study. Then cross-validate only the winner.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
-<span class="n">SHARED</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># keys that mean the same thing to every architecture</span>
+<span class="n">SHARED</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># means the same thing to every architecture</span>
     <span class="s2">"train.learning_rate"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mf">1.0e-5</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mf">1.0e-2</span><span class="p">,</span> <span class="s2">"log"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
     <span class="s2">"train.loss.alpha"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"float"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
 <span class="p">}</span>
-<span class="n">VARIANTS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"asformer_enc"</span><span class="p">:</span> <span class="p">{</span>  <span class="c1"># ASFormer, encoder only</span>
-        <span class="s2">"architecture"</span><span class="p">:</span> <span class="s2">"asformer"</span><span class="p">,</span>
-        <span class="s2">"params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_decoders"</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>  <span class="c1"># pinned</span>
-        <span class="s2">"space"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_f_maps"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"categorical"</span><span class="p">,</span> <span class="s2">"choices"</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">]}},</span>
-    <span class="p">},</span>
-    <span class="s2">"asformer_dec"</span><span class="p">:</span> <span class="p">{</span>  <span class="c1"># ASFormer as published: does refinement pay?</span>
-        <span class="s2">"architecture"</span><span class="p">:</span> <span class="s2">"asformer"</span><span class="p">,</span>
-        <span class="s2">"params"</span><span class="p">:</span> <span class="p">{},</span>
-        <span class="s2">"space"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_decoders"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
-    <span class="p">},</span>
-    <span class="s2">"mstcn"</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">"architecture"</span><span class="p">:</span> <span class="s2">"mstcn"</span><span class="p">,</span>
-        <span class="s2">"params"</span><span class="p">:</span> <span class="p">{},</span>
-        <span class="s2">"space"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_R"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
-    <span class="p">},</span>
+<span class="n">SPACES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"asformer"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_decoders"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
+    <span class="s2">"mstcn"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"model.params.num_R"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
 <span class="p">}</span>
 
-<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>  <span class="c1"># once, for every variant</span>
+<span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>  <span class="c1"># once, shared by every search</span>
 
 <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">variant</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">VARIANTS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="k">for</span> <span class="n">architecture</span><span class="p">,</span> <span class="n">space</span> <span class="ow">in</span> <span class="n">SPACES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
     <span class="n">overrides</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">as_overrides</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">"model.architecture"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"architecture"</span><span class="p">],</span>
-            <span class="s2">"train.run_name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">variant</span><span class="si">}</span><span class="s2">_kin"</span><span class="p">,</span>  <span class="c1"># → searches/search_{variant}_kin/</span>
-            <span class="s2">"model.params"</span><span class="p">:</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"params"</span><span class="p">],</span>
-            <span class="s2">"search.params"</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="n">SHARED</span><span class="p">,</span> <span class="o">**</span><span class="n">spec</span><span class="p">[</span><span class="s2">"space"</span><span class="p">]},</span>
+            <span class="s2">"model.architecture"</span><span class="p">:</span> <span class="n">architecture</span><span class="p">,</span>
+            <span class="s2">"train.run_name"</span><span class="p">:</span> <span class="n">architecture</span><span class="p">,</span>  <span class="c1"># → searches/search_{architecture}/</span>
+            <span class="s2">"search.params"</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="n">SHARED</span><span class="p">,</span> <span class="o">**</span><span class="n">space</span><span class="p">},</span>
         <span class="p">}</span>
     <span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">,</span> <span class="o">*</span><span class="n">overrides</span><span class="p">)</span><span class="o">.</span><span class="n">search</span><span class="p">()</span>
-    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">result</span><span class="o">.</span><span class="n">best_score</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">config_path</span><span class="p">))</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">result</span><span class="o">.</span><span class="n">best_score</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">config_path</span><span class="p">))</span>
 
-<span class="n">best_score</span><span class="p">,</span> <span class="n">best_variant</span><span class="p">,</span> <span class="n">best_config</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="n">best_score</span><span class="p">,</span> <span class="n">best_config</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">best_config</span><span class="p">)</span><span class="o">.</span><span class="n">cross_validate</span><span class="p">()</span>  <span class="c1"># stage 2 on the winner only</span>
 </pre></div>
 </div>
-<p>Two entries may share an architecture and differ only in what is pinned versus
-searched — the two ASFormers above ask “does refinement earn its cost here?”,
-which one study cannot answer cleanly because a pinned <code class="docutils literal notranslate"><span class="pre">num_decoders:</span> <span class="pre">0</span></code> and a
-searched <code class="docutils literal notranslate"><span class="pre">1..3</span></code> are different questions.</p>
-<p><code class="docutils literal notranslate"><span class="pre">eto.segment.as_overrides({...})</span></code> turns a dict into the dotted <code class="docutils literal notranslate"><span class="pre">key=value</span></code>
-strings <code class="docutils literal notranslate"><span class="pre">Project</span></code> takes, through YAML — so a nested dict or a float in
-exponent form survives, where an f-string would hand over Python’s <code class="docutils literal notranslate"><span class="pre">repr</span></code>.</p>
-<p>Cross-validate the <strong>winner only</strong>: a fold is a training run per session, so
-it is not something to spend on the variants that already lost.</p>
-</section>
+<p><code class="docutils literal notranslate"><span class="pre">eto.segment.as_overrides</span></code> turns a dict into the <code class="docutils literal notranslate"><span class="pre">key=value</span></code> strings
+<code class="docutils literal notranslate"><span class="pre">Project</span></code> takes, so nested dicts and floats like <code class="docutils literal notranslate"><span class="pre">1.0e-5</span></code> survive intact.</p>
+</div>
+</div>
 </section>
 <section id="stage-2-cross-validate-and-look-at-the-mistakes">
 <h2>Stage 2: cross-validate, and look at the mistakes<a class="headerlink" href="#stage-2-cross-validate-and-look-at-the-mistakes" title="Link to this heading">#</a></h2>
@@ -1184,10 +1201,7 @@ becomes <em>which</em> class, <em>which</em> trials and <em>how far off</em> the
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-sample-is">What a sample is</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-materialised-dataset">The materialised dataset</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architectures">Architectures</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-1-find-the-settings">Stage 1: find the settings</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sweeping-several-architectures">Sweeping several architectures</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-1-find-the-settings">Stage 1: find the settings</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-2-cross-validate-and-look-at-the-mistakes">Stage 2: cross-validate, and look at the mistakes</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-session-fold-by-trial">One session: fold by trial</a></li>
 </ul>

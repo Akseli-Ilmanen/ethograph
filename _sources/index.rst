@@ -370,7 +370,7 @@ Quickstart
          +importNote();
      }
      return '<div class="dcres next"><h4>You need a session file</h4>'+tags()
-       +'<p>Your data has a trial structure. If it is one device with one file per trial, drag &amp; '
+       +'<p>Your data has a trial structure. If it is one device (camera, mic, ...) with one file per trial, drag &amp; '
        +'drop still works: choose <strong>Several trials of one device (natural sort)</strong> on the '
        +'start page. Otherwise click <strong>Data wizard &mdash; prepare my data</strong> on the start '
        +'page to build the session and alignment files, then open them in <strong>Custom set-up</strong> '
@@ -431,12 +431,11 @@ Support
 
 .. image:: _static/media/opensource.png
    :alt: Open-source projects EthoGraph depends on
-   :align: left
-   :width: 60%
+   :width: 100%
 
 EthoGraph is built on top of a number of open-source projects:
-`PyAV <https://pyav.org/docs/stable/>`_ :cite:p:`pyav`,
-`audioio <https://github.com/bendalab/audioio>`_ :cite:p:`audioio`,
+`PyAV <https://pyav.org/docs/stable/>`_,
+`audioio <https://github.com/bendalab/audioio>`_,
 `Neo <https://neo.readthedocs.io>`_ :cite:p:`garcia2014neo`,
 `crowsetta <https://github.com/vocalpy/crowsetta>`_ :cite:p:`nicholson2023crowsetta`,
 `Neurodata Without Borders <https://www.nwb.org/>`_ :cite:p:`rubel2022nwb`,
@@ -444,7 +443,11 @@ EthoGraph is built on top of a number of open-source projects:
 `pynapple <https://pynapple.org/index.html>`_ :cite:p:`viejo2023pynapple`,
 `movement <https://movement.neuroinformatics.dev/>`_ :cite:p:`sirmpilatze_movement`,
 `phy <https://github.com/cortex-lab/phy>`_ :cite:p:`rossant2016phy`,
-`PyQtGraph <https://www.pyqtgraph.org/>`_ :cite:p:`pyqtgraph`, and
+`PyQtGraph <https://www.pyqtgraph.org/>`_, and
 `pygfx <https://pygfx.org/>`_ :cite:p:`klein_pygfx` (via
-`pynaviz <https://github.com/pynapple-org/pynaviz>`_ :cite:p:`pynaviz`).
+`pynaviz <https://github.com/pynapple-org/pynaviz>`_).
+The :doc:`models <models/index>` that segment behaviour build on
+`DLC2Action <https://github.com/amathislab/DLC2Action>`_ :cite:p:`kozlova2025dlc2action`,
+`FERAL <https://github.com/Skovorp/feral>`_ :cite:p:`skovorodnikov2025feral` and
+`E2E-Spot <https://github.com/jhong93/spot>`_ :cite:p:`hong2022e2espot`.
 The full list is on the :doc:`references page <community/references>`.

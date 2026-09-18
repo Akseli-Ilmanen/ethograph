@@ -385,7 +385,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL as a video feature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -509,7 +509,7 @@ machine, add <code class="docutils literal notranslate"><span class="pre">video_
 <span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ses-03</span><span class="p p-Indicator">]</span><span class="w">       </span><span class="c1"># every trial of this session is `test`</span>
 </pre></div>
 </div>
-<p>Three things worth knowing about it:</p>
+<p>Four things worth knowing about it:</p>
 <ul class="simple">
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">labels_path</span></code> is left out</strong> because it defaults to <code class="docutils literal notranslate"><span class="pre">{stem}_labels.tsv</span></code>
 beside the source, which is where the GUI writes it.</p></li>
@@ -518,6 +518,11 @@ beside the source, which is where the GUI writes it.</p></li>
 fine as your GPU’s memory allows. Both are durations and are converted using
 each video’s own frame rate, so the same file works at 60 fps and at 200 fps.
 See <a class="reference internal" href="index.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.</p></li>
+<li><p><strong>No <code class="docutils literal notranslate"><span class="pre">individual:</span></code> key.</strong> Every predicted label names the session’s one
+individual, so it lands on the same track as the labels you drew. With
+several individuals in a session, say whose events these are
+(<code class="docutils literal notranslate"><span class="pre">individual:</span> <span class="pre">crow_1</span></code>). The GUI draws a label only for the individual it
+names, and inference stops with an error rather than guess.</p></li>
 <li><p><strong>No <code class="docutils literal notranslate"><span class="pre">features:</span></code> section.</strong> That is what makes this option 2 in
 <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>: pixels in, events out.</p></li>
 </ul>
@@ -563,6 +568,11 @@ model hesitated. See <a class="reference internal" href="../curation.html"><span
 <section id="where-to-go-from-here">
 <h2>Where to go from here<a class="headerlink" href="#where-to-go-from-here" title="Link to this heading">#</a></h2>
 <ul class="simple">
+<li><p><strong>Tune the clip first</strong>: <code class="docutils literal notranslate"><span class="pre">clip.context_s</span></code>, <code class="docutils literal notranslate"><span class="pre">clip.resolution_ms</span></code> and
+<code class="docutils literal notranslate"><span class="pre">clip.positive_window_ms</span></code> are the three settings that matter most — how much
+video the model sees at once, the grid a label can land on, and how wide a
+labelled event counts as positive. Fit them to how fast your events are
+before changing anything else. See <a class="reference internal" href="config.html#spot-config-clip"><span class="std std-ref">clip</span></a>.</p></li>
 <li><p><strong>A wider temporal aperture</strong>: <code class="docutils literal notranslate"><span class="pre">model.architecture=rny008_msagsm</span></code>, then
 <code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> shows the two runs side by side (see <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>).</p></li>
 <li><p><strong>You have pose</strong>: list pose variables under <code class="docutils literal notranslate"><span class="pre">features:</span></code> and the model reads
