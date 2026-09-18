@@ -844,47 +844,29 @@ GUI: <a class="reference internal" href="curation.html"><span class="doc">curate
 <thead>
 <tr class="row-odd"><th class="head"><p>Model</p></th>
 <th class="head"><p>Label</p></th>
-<th class="head"><p>Sees</p></th>
-<th class="head"><p>Needs</p></th>
-<th class="head"><p>Where</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><a class="reference internal" href="onset_model.html"><span class="doc">LightGBM</span></a></p></td>
 <td><p>point event</p></td>
-<td><p>session features</p></td>
-<td><p>CPU</p></td>
-<td><p>GUI: <em>Model ▸ LightGBM: Train… / Predict…</em></p></td>
+<td><p>Simple to use, in the GUI, on a CPU. Fed a few hand-crafted time-series features.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="spot/index.html"><span class="doc">E2E-Spot</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="spot/index.html"><span class="doc">E2E-Spot</span></a> (<code class="docutils literal notranslate"><span class="pre">eto.spot</span></code>)</p></td>
 <td><p>point event</p></td>
-<td><p>video</p></td>
-<td><p>GPU</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code></p></td>
+<td><p>Simple to use: it learns end to end from the video, on a GPU. For when you want a few alignment points per trial — the frame a beak touches the tool, a lever press, the first step of a reach.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="spot/multimodal.html"><span class="doc">E2E-Spot + features</span></a></p></td>
-<td><p>point event</p></td>
-<td><p>video + pose, sensors, custom features…</p></td>
-<td><p>GPU</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">eto.spot</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="segment/index.html"><span class="doc">Action segmentation</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="segment/index.html"><span class="doc">Action segmentation</span></a> (<code class="docutils literal notranslate"><span class="pre">eto.segment</span></code>)</p></td>
 <td><p>state event</p></td>
-<td><p>pose, changepoints, sensors, video features</p></td>
-<td><p>GPU</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">eto.segment</span></code> (DLC2Action models + added architectures)</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="segment/feral.html"><span class="doc">FERAL embeddings</span></a></p></td>
-<td><p>state event</p></td>
-<td><p>video + pose, sensors, custom features…</p></td>
-<td><p>large GPU or cluster</p></td>
-<td><p>FERAL’s embedding as a video feature of <code class="docutils literal notranslate"><span class="pre">eto.segment</span></code></p></td>
+<td><p>For action intervals — a bout of grooming, sniffing or tool use movement, each with an onset and an offset — and have pose data. Good in a lab environment, where a calibrated camera setup gives robust features.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="segment/feral.html"><span class="doc">FERAL alone</span></a></p></td>
 <td><p>state event</p></td>
-<td><p>video</p></td>
-<td><p>large GPU or cluster</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">eto.segment.export_feral</span></code> writes FERAL’s <code class="docutils literal notranslate"><span class="pre">labels.json</span></code></p></td>
+<td><p>Fine-tunes the V-JEPA 2 video foundation model. Can learn individual and collective behaviours directly from video, even in naturalistic setups. Requires a heavy GPU.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="segment/feral.html"><span class="doc">FERAL embeddings</span></a></p></td>
+<td><p>state event</p></td>
+<td><p>The best of two above: FERAL’s embedding of the video, read by <code class="docutils literal notranslate"><span class="pre">eto.segment</span></code> beside your pose features.</p></td>
 </tr>
 </tbody>
 </table>

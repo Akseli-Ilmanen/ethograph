@@ -39,14 +39,13 @@ Every box is a link. Whichever model you pick, its predictions come back to the
 GUI: {doc}`curate them <curation>`, then {doc}`read and threshold their
 confidence <confidence>`.
 
-| Model | Label | Sees | Needs | Where |
-|---|---|---|---|---|
-| {doc}`LightGBM <onset_model>` | point event | session features | CPU | GUI: *Model ▸ LightGBM: Train… / Predict…* |
-| {doc}`E2E-Spot <spot/index>` | point event | video | GPU | `eto.spot` |
-| {doc}`E2E-Spot + features <spot/multimodal>` | point event | video + pose, sensors, custom features… | GPU | `eto.spot` |
-| {doc}`Action segmentation <segment/index>` | state event | pose, changepoints, sensors, video features | GPU | `eto.segment` (DLC2Action models + added architectures) |
-| {doc}`FERAL embeddings <segment/feral>` | state event | video + pose, sensors, custom features… | large GPU or cluster | FERAL's embedding as a video feature of `eto.segment` |
-| {doc}`FERAL alone <segment/feral>` | state event | video | large GPU or cluster | `eto.segment.export_feral` writes FERAL's `labels.json` |
+| Model | Label | Description |
+|---|---|---|
+| {doc}`LightGBM <onset_model>` | point event | Simple to use, in the GUI, on a CPU. Fed a few hand-crafted time-series features. |
+| {doc}`E2E-Spot <spot/index>` (`eto.spot`) | point event | Simple to use: it learns end to end from the video, on a GPU. For when you want a few alignment points per trial — the frame a beak touches the tool, a lever press, the first step of a reach. |
+| {doc}`Action segmentation <segment/index>` (`eto.segment`) | state event | For action intervals — a bout of grooming, sniffing or tool use movement, each with an onset and an offset — and have pose data. Good in a lab environment, where a calibrated camera setup gives robust features. |
+| {doc}`FERAL alone <segment/feral>` | state event | Fine-tunes the V-JEPA 2 video foundation model. Can learn individual and collective behaviours directly from video, even in naturalistic setups. Requires a heavy GPU. |
+| {doc}`FERAL embeddings <segment/feral>` | state event | The best of two above: FERAL's embedding of the video, read by `eto.segment` beside your pose features. |
 
 ## Where the models come from
 
