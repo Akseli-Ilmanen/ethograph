@@ -144,7 +144,7 @@ def to_labels_frame(
     events: list[SpottedEvent],
     trials: dict[str, tuple[int | str, float]],
     source: str,
-    individual: str | None = None,
+    individual: str,
 ) -> pd.DataFrame:
     """Predicted events as label rows, on the **trial-relative** clock.
 
@@ -153,11 +153,10 @@ def to_labels_frame(
     time becomes a trial time by adding it. Getting this backwards shifts
     every prediction by the offset and is invisible in the result.
 
-    *individual* is ``config.individual``, stamped into every row alike —
-    ``None`` writes :data:`~ethograph.labels.intervals.NO_RECIPIENT` (``""``),
-    as before.
+    *individual* is stamped into every row alike. It is never blank: a labels
+    TSV with a blank actor is refused on load, and the GUI draws a label only
+    on the panels of the individual it names.
     """
-    individual = individual if individual is not None else NO_RECIPIENT
     rows = []
     for event in events:
         trial, offset = trials[event.video_id]

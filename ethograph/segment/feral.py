@@ -17,8 +17,12 @@ layout, under ``{root}/feral/``:
   results back; ``export.yaml`` — the FERAL class → label id mapping, the
   rate, the sessions FERAL never trains on.
 
-The other half — FERAL's ``(frames, D)`` embeddings attaching to every
-session as the variable ``feral`` from ``{root}/feral/embeddings/`` — is
+Two things come back. FERAL's own per-frame predictions (``feral infer
+--output`` → ``{root}/feral/predictions/``) become one prediction set per
+session, in the GUI's labels format, through
+:func:`import_feral_predictions` — FERAL alone, no segmentation model. And
+its ``(frames, D)`` embeddings attach to every session as the variable
+``feral`` from ``{root}/feral/embeddings/`` —
 :func:`ethograph.segment.sessions.attach_feral_embeddings`, run when a
 session opens under a config whose extractor is ``feral``.
 
@@ -44,6 +48,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -52,9 +57,12 @@ import pandas as pd
 import yaml
 
 from ethograph.io.video_probe import probe_video
-from ethograph.segment.config import FERAL, FERAL_EMBEDDINGS_DIR, SegmentConfig
-from ethograph.segment.samples import ClassTable, class_table, dense_targets
-from ethograph.segment.sessions import Session, filter_trials, open_session
+from ethograph.labels.ml import dense_to_intervals
+from ethograph.segment.config import FERAL, FERAL_EMBEDDINGS_DIR, SegmentConfig, config_to_dict
+from ethograph.segment.inference import label_rows, prediction_run_dir, write_prediction_set
+from ethograph.segment.postprocess import postprocess_intervals
+from ethograph.segment.samples import ClassTable, class_table, dense_targets, sample_key
+from ethograph.segment.sessions import Session, changepoint_times, filter_trials, open_session
 from ethograph.segment.train import assign_roles
 from ethograph.utils.logging import log_to_file
 from ethograph.utils.xr_utils import get_time_coord
@@ -72,6 +80,8 @@ VIDEOS_TSV = "videos.tsv"
 EXPORT_YAML = "export.yaml"
 #: Where ``feral infer --save_embeddings`` is told to write, under ``feral_dir``.
 EMBEDDINGS_DIR = FERAL_EMBEDDINGS_DIR
+#: Where ``feral infer --output`` is told to write, under ``feral_dir``: one JSON per video folder.
+PREDICTIONS_DIR = "predictions"
 #: The variable FERAL's embeddings become on every trial (the extractor's name).
 VARIABLE = FERAL
 #: FERAL's name for class 0.
@@ -88,14 +98,17 @@ __all__ = [
     "EXPORT_YAML",
     "FERAL_VERSION",
     "LABELS_JSON",
+    "PREDICTIONS_DIR",
     "VARIABLE",
     "VIDEOS_TSV",
     "FeralExport",
     "VideoRecord",
     "export_feral",
     "feral_config",
+    "import_feral_predictions",
     "load_defaults",
     "plan_videos",
+    "predictions_file",
     "resolve_chunk_step",
 ]
 
@@ -479,12 +492,128 @@ def _log_summary(
             "embeddings is inflated. Name the sessions to hold out for a number you can report."
         )
     checkpoint = result.folder / "checkpoints" / f"{config.train.run_name or 'feral'}_best_checkpoint.pt"
-    folders = sorted({str(r.video.parent) for r in records})
+    folders = sorted({r.video.parent for r in records})
     infer = "\n".join(
-        f"  feral infer {checkpoint} {f} --save_embeddings {result.folder / EMBEDDINGS_DIR}" for f in folders
+        f"  feral infer {checkpoint} {f} --output {predictions_file(result.folder, result.prefix, f)}" for f in folders
     )
     logger.info(
-        "In the FERAL environment:\n  feral train-config %s\n%s\nthen back here: project.materialise()",
+        "In the FERAL environment:\n  feral train-config %s\n%s\n"
+        "then back here: project.import_feral_predictions() for FERAL's labels. For its embeddings as a video "
+        "feature, add to every feral infer:  --save_embeddings %s  — then project.materialise()",
         result.folder / CONFIG_YAML,
         infer,
+        result.folder / EMBEDDINGS_DIR,
     )
+
+
+# ---------------------------------------------------------------------------
+# FERAL's predictions, back as labels
+# ---------------------------------------------------------------------------
+
+
+def predictions_file(folder: Path, prefix: Path, video_folder: Path) -> Path:
+    """Where ``feral infer --output`` writes for one video folder.
+
+    ``feral infer`` keys its predictions by bare file name, so two sessions
+    may both hold a ``trial1.mp4``; one JSON per video folder, named after
+    the folder's path under the export's prefix, keeps them apart.
+    """
+    rel = video_folder.relative_to(prefix)
+    name = "__".join(rel.parts) if rel.parts else prefix.name
+    return folder / PREDICTIONS_DIR / f"{name}.json"
+
+
+def import_feral_predictions(config: SegmentConfig, sessions: list[Session] | None = None) -> list[Path]:
+    """FERAL's per-frame predictions → one prediction set per session; returns the written TSVs.
+
+    Reads the JSON files ``feral infer --output`` wrote under
+    ``{feral_dir}/predictions/`` (the export's log names the commands),
+    places every video's frames on its trial's clock through the alignment,
+    takes the most probable class per frame, and runs the intervals through
+    ``infer.postprocess`` — the same steps a segmentation run's predictions
+    take. Frames outside the trial are dropped. The sets are written beside
+    each session's labels like every model's, ``labeling_method=automated``.
+    """
+    folder = config.feral_dir
+    if not (folder / EXPORT_YAML).is_file():
+        raise FileNotFoundError(f"No FERAL export in {folder} — run export_feral first")
+    with log_to_file(folder / "import.log"):
+        return _import_predictions(config, folder, sessions)
+
+
+def _import_predictions(config: SegmentConfig, folder: Path, sessions: list[Session] | None) -> list[Path]:
+    info = yaml.safe_load((folder / EXPORT_YAML).read_text(encoding="utf-8"))
+    prefix, fps = Path(info["prefix"]), float(info["video_fps"])
+    label_ids = np.asarray(info["class_label_ids"], dtype=int)
+    videos = pd.read_csv(folder / VIDEOS_TSV, sep="\t", dtype={"trial": str})
+    videos["json"] = [predictions_file(folder, prefix, (prefix / v).parent) for v in videos["video"]]
+    found = {path: path.is_file() for path in videos["json"].unique()}
+    if not any(found.values()):
+        raise FileNotFoundError(
+            f"None of FERAL's prediction files exist: {[str(p) for p in found]} — run the feral infer "
+            f"commands in {folder / 'export.log'} first"
+        )
+    for path, exists in found.items():
+        if not exists:
+            logger.warning("No predictions at %s — its videos are skipped", path)
+
+    if sessions is None:
+        sessions = [open_session(spec, None, expand_changepoints=False) for spec in config.sessions]
+    by_source = {str(session.source): session for session in sessions}
+    name = f"{VARIABLE}_{config.train.run_name}" if config.train.run_name else VARIABLE
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pcfg = config.infer.postprocess
+    written = []
+    for source, group in videos[videos["json"].map(found)].groupby("source", sort=False):
+        if source not in by_source:
+            raise ValueError(f"{VIDEOS_TSV} names session {source}, which this config no longer holds — export again")
+        session = by_source[source]
+        device = session.video_device(config.video_features.camera)
+        alignment = session.result.nwb_alignment
+        trial_of = {str(t): t for t in session.result.trial_ids}
+        rows: list[dict] = []
+        arrays: dict[str, np.ndarray] = {}
+        for path, of_json in group.groupby("json", sort=False):
+            preds = json.loads(Path(path).read_text(encoding="utf-8"))["preds"]
+            for record in of_json.itertuples(index=False):
+                video = Path(record.video).name
+                if video not in preds:
+                    raise KeyError(f"{path} holds no predictions for {video} — it was written for another folder")
+                probs = np.asarray(preds[video], dtype=float)
+                if probs.shape != (record.n_frames, len(label_ids)):
+                    raise ValueError(
+                        f"{video}: predictions of shape {probs.shape}, the export has {record.n_frames} frames and "
+                        f"{len(label_ids)} classes — the checkpoint was trained on another export"
+                    )
+                trial = trial_of[record.trial]
+                offset = float(alignment.stream_offset_for_trial(trial, "video", device))
+                time = offset + np.arange(record.n_frames, dtype=float) / fps
+                t0, t1 = _trial_extent(session, trial)
+                inside = (time >= t0 - 0.5 / fps) & (time <= t1 + 0.5 / fps)
+                time, probs = time[inside], probs[inside]
+                key = sample_key(session.id, trial, record.individual)
+                arrays[key] = probs.astype(np.float16)
+                arrays[f"{key}_time"] = time
+                raw = dense_to_intervals(label_ids[probs.argmax(axis=1)], [record.individual], time_coord=time)
+                cp = changepoint_times(session, trial, {**pcfg.changepoints}) if pcfg.changepoint_correction else None
+                intervals = postprocess_intervals(raw, pcfg, cp)
+                curves = {int(lid): probs[:, i] for i, lid in enumerate(label_ids) if lid != 0}
+                corrected = bool(pcfg.changepoint_correction and cp is not None and len(cp) > 0)
+                rows.extend(label_rows(intervals, curves, time, trial, record.individual, name, corrected))
+        tsv, _ = write_prediction_set(
+            prediction_run_dir(session.source, name, timestamp),
+            session.stem,
+            rows,
+            arrays,
+            model_config=folder / CONFIG_YAML,
+            inference_note={
+                "model": VARIABLE,
+                "run": name,
+                "run_dir": str(folder),
+                "session": str(session.source),
+                "infer": config_to_dict(config)["infer"],
+            },
+        )
+        logger.info("%s: %d labels from FERAL → %s", session.id, len(rows), tsv)
+        written.append(tsv)
+    return written

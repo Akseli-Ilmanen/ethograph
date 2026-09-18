@@ -1257,11 +1257,11 @@ class PlotSettingsWidget(QWidget):
     def _on_heatmap_sort_now_clicked(self):
         if not self.plot_container:
             return
-        heatmaps = self.plot_container.heatmap_plots
-        if not heatmaps:
+        heatmap = self.plot_container.heatmap_plot
+        if heatmap is None:
             notify("Open a heatmap panel first", "warning")
             return
-        if not any(heatmap.sort_by_visible_window() for heatmap in heatmaps):
+        if not heatmap.sort_by_visible_window():
             notify("No heatmap data in the visible window", "warning")
 
     def _on_heatmap_colormap_changed(self, colormap_name: str):

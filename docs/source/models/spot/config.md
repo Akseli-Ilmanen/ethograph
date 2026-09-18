@@ -25,7 +25,7 @@ video's own rate at run time, so a config moved between a 200 fps rig and a
 | `root` | the config's folder | Project directory: `dataset/`, `features/`, `runs/` and `cross_validation/` live here. |
 | `sessions` | required | List of sessions — see below. |
 | `frames` | `{root}/frames` | Where decoded frames go, or a folder another project decoded. One folder whatever the crop: each trial's `export.json` records the size and crop it was decoded at, and a trial whose record disagrees with the config is decoded again in place. |
-| `individual` | `null` | Stamped into every predicted row's `individual` column; `null` writes the empty recipient, as before. |
+| `individual` | `null` = the session's own | Whose events these are, stamped into every predicted row's `individual` column. The GUI draws a label only on the panels of the individual it names, so it must match a name the session uses. Unset, it is read from the session: its declared individuals, else the dataset's individual dim, else the actor its labels name. A session naming several (or none) is refused until you set it. |
 | `features` | `{}` | The pose side, optional — see {ref}`below <spot-config-features>`. |
 
 ### `sessions`
@@ -56,6 +56,7 @@ session has no role; `train.split` gives every trial one.
 | `crop` | `null` | `{x0, y0, x1, y1}` in source pixels, cut from the decoded frame **before** the resize, so a tight crop spends the model's pixels on less scene. Must fit inside every trial's video for the camera — checked at materialise time. The GUI writes it: Tools ▸ *Video: Pick a crop for a config…*. |
 | `frame_height` | `224` | Height the (cropped) frame is resized to; width follows the aspect ratio. E2E-Spot's own {cite:p}`hong2022e2espot`. |
 
+(spot-config-clip)=
 ## `clip`
 
 The three durations everything else is derived from
@@ -73,18 +74,6 @@ dilate_len = round(positive_window_ms / 1000 * fps / stride)
 | `resolution_ms` | `null` = as fine as fits | Milliseconds one model frame spans — the grid a label can land on. Unset, the stride is the smallest that fits `context_s` into the card's frame budget: every frame on a 25 fps video, every second frame for 2 s of 200 fps on a 10 GB card. Spell it to pin the grid across machines — a bigger card would otherwise pick a finer one. Buying context by coarsening it stopped paying at about 10 ms on the rig this was measured on. |
 | `positive_window_ms` | `10` | ± this around the labelled event counts as positive during training. A duration, so dilation is not confounded with resolution when the latter changes. |
 
-The **frame budget** — frames per loader batch the card holds — scales
-with the card present: 200 was measured on a 10 GB card (`MAX_FRAMES_PER_BATCH`,
-the one measured point), so a 24 GB card gets ~480 and an 8 GB one ~160
-(`frame_budget()`); with no CUDA device the measured card is assumed, so a
-config resolves the same on every machine without one. A spelled
-`resolution_ms` whose clip would exceed the budget is refused, naming the
-durations to change rather than the frame counts you never wrote; a clip
-shorter than `MIN_CLIP_LEN` (8 model frames — below that the GRU has nothing
-to integrate over) likewise. A trained run records its stride in
-`config.json` and is read back from there, so a session predicted on another
-card uses the run's stride. A strided prediction is read back at the
-**centre** of its bin, `bin * k + (k - 1) / 2`.
 
 ## `model`
 

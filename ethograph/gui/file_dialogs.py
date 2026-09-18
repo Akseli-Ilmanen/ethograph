@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qtpy.QtWidgets import QFileDialog, QWidget
+from qtpy.QtWidgets import QAbstractItemView, QFileDialog, QListView, QTreeView, QWidget
 
 ALL_FILES = "All files (*)"
 
@@ -80,6 +80,31 @@ def browse_open_dir(
     )
     remember_browse_dir(app_state, path)
     return path
+
+
+def browse_open_dirs(
+    parent: QWidget | None,
+    app_state,
+    caption: str,
+    preferred_dir: str | Path | None = None,
+) -> list[str]:
+    """Pick one or more existing folders. Returns ``[]`` when the user cancels.
+
+    Native dialogs pick a single folder only, so this is Qt's own dialog
+    with its file views switched to extended selection (Ctrl/Shift-click).
+    """
+    dialog = QFileDialog(parent, caption, browse_start_dir(app_state, preferred_dir))
+    dialog.setFileMode(QFileDialog.FileMode.Directory)
+    dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+    dialog.setOption(QFileDialog.Option.ShowDirsOnly, True)
+    for view in dialog.findChildren(QListView) + dialog.findChildren(QTreeView):
+        view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+    if not dialog.exec():
+        return []
+    folders = [f for f in dialog.selectedFiles() if Path(f).is_dir()]
+    if folders:
+        remember_browse_dir(app_state, folders[0])
+    return folders
 
 
 def browse_save_file(

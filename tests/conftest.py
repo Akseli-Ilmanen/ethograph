@@ -37,7 +37,6 @@ requires_gui = pytest.mark.skipif(not GUI_AVAILABLE, reason="Qt/pygfx not instal
 # Files whose modules import an optional extra at collection time; skipped when it is absent.
 _OPTIONAL_TEST_FILES = {
     "torch": [
-        "test_unit/test_dialog_video_feature_rank.py",
         "test_unit/test_discover_columns.py",
         "test_unit/test_s3d_*.py",
         "test_unit/test_segment_changepoint_features.py",

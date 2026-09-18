@@ -3,12 +3,14 @@ own ``config/losses.yaml``.
 
 Nothing on our side reimplements it, so these tests cover the seam: the
 defaults come from the vendored YAML, the two keys a config file cannot carry
-are filled in, upstream's `dataset_inverse_weights` sentinel is refused rather
-than guessed at, an unknown key is refused, and padded frames cost nothing.
+are filled in, upstream's `dataset_inverse_weights` sentinel is resolved by
+upstream's formula from the training targets, an unknown key is refused, and
+padded frames cost nothing.
 """
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -17,8 +19,10 @@ from ethograph.segment.dataset import PAD_TARGET  # noqa: E402
 from ethograph.segment.dlc2action.loss import MS_TCN_Loss  # noqa: E402
 from ethograph.segment.losses import (  # noqa: E402
     DATASET_INVERSE_WEIGHTS,
+    DATASET_PROPORTIONAL_WEIGHTS,
     DEFAULT_TAU,
     build_loss,
+    class_weights,
     upstream_defaults,
 )
 
@@ -66,10 +70,46 @@ def test_an_unknown_loss_key_is_refused() -> None:
         build_loss({"smoothing": 0.15}, N_CLASSES)
 
 
-def test_the_dataset_weights_sentinel_is_refused_not_guessed() -> None:
-    """Resolving it needs DLC2Action's dataset layer, which is not vendored."""
-    with pytest.raises(ValueError, match="not vendored"):
-        build_loss({"weights": DATASET_INVERSE_WEIGHTS}, N_CLASSES)
+class TestDatasetWeights:
+    """Upstream's ``BehaviorDataset.class_weights``: ``numerator / (frames + 1e-7)``."""
+
+    # Two samples; 12 frames of class 0, 6 of class 1, 2 of class 2.
+    TARGETS = [np.array([0] * 8 + [1] * 2), np.array([0] * 4 + [1] * 4 + [2] * 2)]
+
+    def test_inverse_weights_are_samples_over_frames(self) -> None:
+        weights = class_weights(self.TARGETS, N_CLASSES)
+        assert weights == pytest.approx([2 / 12, 2 / 6, 2 / 2])
+
+    def test_proportional_weights_are_relative_to_the_commonest_class(self) -> None:
+        weights = class_weights(self.TARGETS, N_CLASSES, proportional=True)
+        assert weights == pytest.approx([1.0, 2.0, 6.0])
+
+    def test_a_multilabel_target_weighs_absent_and_present_frames_per_channel(self) -> None:
+        y = np.array([[1, 1, 0, 0], [0, 0, 0, 1]])
+        weights = class_weights([y, y], 2, exclusive=False)
+        assert weights[0] == pytest.approx([2 / 4, 2 / 6])
+        assert weights[1] == pytest.approx([2 / 4, 2 / 2])
+
+    def test_the_sentinel_resolves_to_numbers_the_loss_trains_with(self) -> None:
+        criterion, settings = build_loss({"weights": DATASET_INVERSE_WEIGHTS}, N_CLASSES, train_targets=self.TARGETS)
+        assert settings["weights"] == pytest.approx([2 / 12, 2 / 6, 2 / 2])
+        logits, target = _batch()
+        assert torch.isfinite(criterion(logits, target))
+
+    def test_a_class_without_training_frames_still_trains(self) -> None:
+        criterion, _ = build_loss(
+            {"weights": DATASET_PROPORTIONAL_WEIGHTS}, N_CLASSES, train_targets=[np.array([0, 0, 1])]
+        )
+        logits, target = _batch()
+        assert torch.isfinite(criterion(logits, target.clamp(max=1)))
+
+    def test_a_sentinel_without_training_targets_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="none were given"):
+            build_loss({"weights": DATASET_INVERSE_WEIGHTS}, N_CLASSES)
+
+    def test_an_unknown_weights_string_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="expected one of"):
+            build_loss({"weights": "balanced"}, N_CLASSES, train_targets=self.TARGETS)
 
 
 def test_explicit_weights_are_passed_through() -> None:

@@ -137,7 +137,6 @@ class TopBarBuilder:
         #: tree and point-event classes reflect the currently loaded session.
         self._onset_train_dialog = None
         self._onset_predict_dialog = None
-        self._video_feature_rank_dialog = None
         self._label_inconsistency_dialog = None
         self._spot_crop_dialog = None
         self._bulk_labels_dialog = None
@@ -222,11 +221,6 @@ class TopBarBuilder:
         that don't carry them yet, each with the model's own confidence.
         Documented in ``docs/source/models/onset_model.md``.
 
-        The third entry fits nothing: it ranks a video-feature bank's
-        dimensions by how well each separates a behaviour class from the rest
-        (``ethograph/video_features/select.py``), so a segment config can name
-        a useful subset instead of all 1024.
-
         The last is the routine around the model rather than the model: a
         saved sequence of curation steps (``dialog_curation_workflow.py``),
         replayed instead of set up by hand each session.
@@ -234,7 +228,6 @@ class TopBarBuilder:
         menu = menu_bar.addMenu("&Model")
         menu.addAction("LightGBM: Train…", self._open_onset_train)
         menu.addAction("LightGBM: Predict…", self._open_onset_predict)
-        menu.addAction("Video features: rank by Cohen's d…", self._open_video_feature_rank)
         menu.addSeparator()
         menu.addAction("Curation workflows…", self._open_curation_workflows)
 
@@ -268,16 +261,6 @@ class TopBarBuilder:
         if panel is None:
             return
         panel.open_workflows()
-
-    def _open_video_feature_rank(self):
-        from .dialog_video_feature_rank import VideoFeatureRankDialog
-
-        # Rebuilt when reopened so the feature list reflects the loaded session.
-        if self._video_feature_rank_dialog is None or not self._video_feature_rank_dialog.isVisible():
-            self._video_feature_rank_dialog = VideoFeatureRankDialog(self.meta, parent=self.shell)
-        self._video_feature_rank_dialog.show()
-        self._video_feature_rank_dialog.raise_()
-        self._video_feature_rank_dialog.activateWindow()
 
     def _open_label_inconsistencies(self):
         """Filter the trials table by what the labels do (Tools)."""

@@ -1189,6 +1189,7 @@ class DataWidget(QWidget):
         self.app_state.prediction_sets = []
         self.app_state.pred_labels_df = None
         self.app_state.pred_store = None
+        self.app_state.labels_pred_store = None
         self.catalog = None
         self.app_state.ready = False
 
@@ -1693,8 +1694,10 @@ class DataWidget(QWidget):
         """Each prediction panel draws its own file's confidence curve for the current trial.
 
         Only a run folder has one (its ``.npz``); a plain ``.tsv`` panel has
-        nothing to draw. The curve lives in the panel, never on a feature
-        plot, so a comparison of several runs reads panel by panel.
+        nothing to draw. An overlay set's curve lives in its panel, never on
+        a feature plot, so a comparison of several runs reads panel by panel.
+        A run imported *as labels* has no panel: its curve goes on the
+        feature plots, dashed, where the labels it became are drawn.
         """
         if not self.app_state.ready or self.plot_container is None:
             return
@@ -1711,6 +1714,16 @@ class DataWidget(QWidget):
                 continue
             time, confidence = curve
             panel.set_confidence(time + self.app_state.to_display(trial, 0.0), confidence)
+
+        labels_store = self.app_state.labels_pred_store
+        curve = None
+        if show and labels_store is not None:
+            curve = labels_store.get_confidence_curve(trial, self.app_state.dt, individual)
+        if curve is None:
+            self.plot_container.hide_confidence_plot()
+            return
+        time, confidence = curve
+        self.plot_container.show_confidence_plot(time + self.app_state.to_display(trial, 0.0), confidence)
 
     def cycle_neural_view(self):
         if not hasattr(self, "neural_view_combo") or not self.neural_view_combo.isVisible():

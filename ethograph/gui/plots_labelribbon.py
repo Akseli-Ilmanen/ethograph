@@ -34,6 +34,19 @@ class LabelRibbonPlot(BasePlot):
         self.plot_item.hideAxis("left")
         self.vb.setYRange(0.0, 1.0, padding=0)
         self.vb.setMouseEnabled(x=True, y=False)
+        # A confidence curve fits the ribbon's own 0–1 axis: a prediction
+        # panel draws its file's, a label timeline the run imported as labels.
+        self._confidence_item = pg.PlotCurveItem(pen=pg.mkPen(color="k", width=2, style=Qt.PenStyle.DashLine))
+        self._confidence_item.setZValue(5)
+        self.plot_item.addItem(self._confidence_item)
+
+    def set_confidence(self, time: np.ndarray, confidence: np.ndarray) -> None:
+        """Draw *confidence* over *time* (display clock, values in 0–1)."""
+        self._confidence_item.setData(np.asarray(time, dtype=np.float64), np.asarray(confidence, dtype=np.float64))
+        self._confidence_item.show()
+
+    def clear_confidence(self) -> None:
+        self._confidence_item.hide()
 
     def update_plot_content(self, t0: Optional[float] = None, t1: Optional[float] = None):
         """Nothing to render — the label overlay is drawn by the container."""
@@ -67,14 +80,3 @@ class PredictionPanelPlot(LabelRibbonPlot):
         # labels and the curve fill the whole panel.
         self.plot_item.hideAxis("bottom")
         self.plot_item.layout.setContentsMargins(0, 0, 0, 0)
-        self._confidence_item = pg.PlotCurveItem(pen=pg.mkPen(color="k", width=2, style=Qt.PenStyle.DashLine))
-        self._confidence_item.setZValue(5)
-        self.plot_item.addItem(self._confidence_item)
-
-    def set_confidence(self, time: np.ndarray, confidence: np.ndarray) -> None:
-        """Draw *confidence* over *time* (display clock, values in 0–1)."""
-        self._confidence_item.setData(np.asarray(time, dtype=np.float64), np.asarray(confidence, dtype=np.float64))
-        self._confidence_item.show()
-
-    def clear_confidence(self) -> None:
-        self._confidence_item.hide()

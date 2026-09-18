@@ -1,6 +1,7 @@
 
-
+projects/paper/figure1/*
 projects/paper/feral/*
+projects/paper/changepoint/*
 projects/*/runs/
 projects/*/sessions/
 projects/*/cross_validation/

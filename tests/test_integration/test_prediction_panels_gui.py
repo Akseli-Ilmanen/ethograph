@@ -102,3 +102,69 @@ def test_prediction_panel_is_a_strip_without_a_time_axis(moll2025_gui):
     (panel,) = meta.plot_container.prediction_panels()
     assert not panel.plot_item.getAxis("bottom").isVisible()
     assert panel.vb.viewRange()[1] == [0.0, 1.0]
+
+
+def _write_run(folder: Path, rows) -> Path:
+    folder.mkdir(parents=True)
+    rows.to_csv(folder / "moll_predictions.tsv", sep="	", index=False)
+    return folder
+
+
+def test_several_run_folders_each_become_a_set(moll2025_gui, tmp_path):
+    """Picking several folders at once loads each as its own overlay set."""
+    _viewer, meta = moll2025_gui
+    labels = meta.labels_widget
+    labels.io_widget.pred_load_mode = lambda: "overlay"
+    rows = meta.app_state._all_labels_df.copy()
+    run_a = _write_run(tmp_path / "predictions_a", rows)
+    run_b = _write_run(tmp_path / "predictions_b", rows)
+    (tmp_path / "empty").mkdir()  # no TSV: reported and skipped, never aborts the others
+
+    labels._import_prediction_folders([str(run_a), str(tmp_path / "empty"), str(run_b)])
+    QApplication.processEvents()
+
+    assert [s.path.parent.name for s in meta.app_state.prediction_sets] == ["predictions_a", "predictions_b"]
+    assert len(meta.plot_container.prediction_panels()) == 2
+
+
+def test_several_run_folders_as_labels_import_all_runs(moll2025_gui, tmp_path):
+    """ "Import as labels" with several runs concatenates them, so no run replaces another."""
+    _viewer, meta = moll2025_gui
+    labels = meta.labels_widget
+    labels.io_widget.pred_load_mode = lambda: "labels"
+    labels.io_widget.pred_merge_checkbox.setChecked(False)
+    rows = meta.app_state._all_labels_df.copy()
+    run_a = _write_run(tmp_path / "predictions_a", rows.iloc[: len(rows) // 2])
+    run_b = _write_run(tmp_path / "predictions_b", rows.iloc[len(rows) // 2 :])
+
+    labels._import_prediction_folders([str(run_a), str(run_b)])
+
+    assert len(meta.app_state._all_labels_df) == len(rows)
+    assert meta.app_state.prediction_sets == []
+
+
+def test_run_imported_as_labels_draws_its_curve_on_the_feature_plot(moll2025_gui):
+    """ "Import as labels" opens no panel, so the run's curve goes on the feature plots."""
+    _viewer, meta = moll2025_gui
+    pc = meta.plot_container
+    labels = meta.labels_widget
+    labels.io_widget.pred_load_mode = lambda: "labels"
+    labels.io_widget.pred_merge_checkbox.setChecked(False)
+    rows = meta.app_state._all_labels_df.copy()
+    store = _Store(np.linspace(0.0, 1.0, 20), np.full(20, 0.5))
+
+    labels._finish_predictions_import(rows, store, Path("labels/predictions_run_a/moll_predictions.tsv"))
+    QApplication.processEvents()
+
+    assert pc.prediction_panels() == []
+    assert meta.app_state.labels_pred_store is store
+    assert "confidence" in pc.overlay_manager._entries
+
+    # A label timeline opened afterwards carries the same curve.
+    ribbon = pc.add_panel("labels")
+    pc.labels_redraw_needed.emit()
+    QApplication.processEvents()
+    assert ribbon._confidence_item.isVisible()
+    meta.data_widget.show_confidence_checkbox.setChecked(False)
+    assert "confidence" not in pc.overlay_manager._entries
+    assert not ribbon._confidence_item.isVisible()

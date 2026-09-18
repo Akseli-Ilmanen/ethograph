@@ -383,7 +383,8 @@ class SpotConfig:
     #: The individual these events belong to — this pipeline predicts one
     #: event stream per trial, not per individual (there is no individual dim
     #: in a pixel model's sample), so this single value is stamped into every
-    #: exported label row's ``individual`` column. ``None`` leaves it blank.
+    #: exported label row's ``individual`` column. ``None`` reads the one
+    #: individual each session names (``inference.prediction_individual``).
     individual: str | None = None
     #: Where exported frames live, when not ``{root}/frames``. Decoding is the
     #: expensive stage, so a folder another project already filled is reused —

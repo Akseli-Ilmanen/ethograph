@@ -531,6 +531,13 @@ class IOWidget(QWidget):
             "Select a segmentation run's prediction folder (labels/predictions_{run}_{timestamp}/)"
         )
         self.import_predictions_menu.addAction(self.import_predictions_from_folder_action)
+        self.import_predictions_from_folders_action = QAction(
+            "From several folders (compare runs)…", self.import_predictions_menu
+        )
+        self.import_predictions_from_folders_action.setToolTip(
+            "Ctrl/Shift-click several run folders to load each as its own prediction set"
+        )
+        self.import_predictions_menu.addAction(self.import_predictions_from_folders_action)
         self.import_predictions_from_tsv_action = QAction("From .tsv file…", self.import_predictions_menu)
         self.import_predictions_from_tsv_action.setToolTip(
             "Load a plain labels TSV as predictions — e.g. a second annotator's labels, for comparison"
@@ -1737,6 +1744,9 @@ class IOWidget(QWidget):
         self.browse_mapping_btn.clicked.connect(self.labels_widget._browse_mapping_file)
         self.temp_labels_button.clicked.connect(self.labels_widget._create_temporary_labels)
         self.import_predictions_from_folder_action.triggered.connect(self.labels_widget._import_predictions_from_folder)
+        self.import_predictions_from_folders_action.triggered.connect(
+            self.labels_widget._import_predictions_from_folders
+        )
         self.import_predictions_from_tsv_action.triggered.connect(self.labels_widget._import_predictions_from_tsv)
         self.pred_confidence_pdf_btn.clicked.connect(self.labels_widget._plot_confidence_pdf)
         self.remove_predictions_btn.clicked.connect(self.labels_widget._remove_selected_prediction_set)

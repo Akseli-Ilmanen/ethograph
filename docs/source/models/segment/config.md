@@ -274,7 +274,7 @@ Baked in at `materialise` (session-level, order below):
 
 | Key | Default | Meaning |
 |---|---|---|
-| `likelihood_threshold` | `null` | Keypoint columns whose `likelihood_feature` is below this become NaN. |
+| `likelihood_threshold` | `null` | Masks low-confidence tracking frame by frame; no column is ever dropped. A column holds exactly one keypoint, and the frames where that keypoint's `likelihood_feature` (of the sample's individual) is below this become NaN, and `interpolate` then bridges them. Columns without a keypoint are untouched; set without the feature in the session, it is an error. `null` = off. |
 | `likelihood_feature` | `confidence` | The per-keypoint confidence feature. |
 | `interpolate` | `true` | Linear interpolation over NaNs. |
 | `clip_percentiles` | `[2, 98]` | Pull outliers in to this percentile range (`null` = off). Columns already on a fixed scale — unit vectors, angles, flags, changepoint features — are left alone. |
@@ -299,6 +299,7 @@ model:
   params: {num_f_maps: 64}     # only this one changes; the rest keep their defaults
 ```
 
+(segment-config-model-params)=
 ### What you can put in `params`
 
 Anything the architecture accepts. To see the full list of keys for a given
@@ -372,6 +373,7 @@ can be traced to the term that stopped moving.
 
 `frame_weight: 0` is a `ValueError` ("nothing to train on").
 
+(segment-config-train-loss)=
 ### `train.loss`
 
 Cross-entropy per frame, plus a consistency term that penalises the
@@ -385,7 +387,7 @@ stops the output flickering between classes mid-behaviour.
 | `tau` | `4` | How large a frame-to-frame jump in log-probability that term still penalises; beyond `tau` it is truncated, so a genuine class change is not punished without limit. Ours, not a key of a config file upstream: DLC2Action writes MS-TCN's `tau` of 4 into the arithmetic as `clamp(..., max=16)`. Both it and `alpha` were tuned in the literature at 15–30 fps, so at a high sampling rate they are worth re-tuning together. |
 | `focal` | `true` | Focus the loss on frames the model still gets wrong, instead of ones it already has right. |
 | `gamma` | `2` | How sharply `focal` does that. Higher = more focus on hard frames. No effect when `focal: false`. |
-| `weights` | `null` | Per-class multipliers on the cross-entropy, as a list one entry per class (background first). `null` treats every class alike.
+| `weights` | `null` | Per-class multipliers on the cross-entropy. `null` treats every class alike. `dataset_inverse_weights` counts them from the run's training samples by DLC2Action's formula, `n_samples / n_frames` of each class, so a rare class counts for more; `dataset_proportional_weights` is the same relative to the most common class, whose weight is then 1. Or an explicit list, one entry per class (background first). The resolved numbers are logged and saved with the run. DLC2Action's own default is `dataset_inverse_weights`; here it is opt-in. |
 | `hard_negative_weight` | `1` | Multi-label only (upstream's weight on frames marked as hard negatives — nothing here marks any, so it has no effect). |
 | `exclusive` | follows the target | `true` (softmax cross-entropy) for a `labels.branch` target, `false` (a sigmoid per channel, `BCEWithLogits`) for `labels.branches` / `subjects: all`. Not a knob: spelling it against the target is refused. |
 

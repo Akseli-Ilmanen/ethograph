@@ -106,6 +106,8 @@ DATASETS: dict[str, dict] = {
                 "13 eat\n"
                 "14 reachRightCorner\n"
                 "15 nodding\n"
+                "31 pelletStickFirstContact 1 point\n"
+                "32 pelletStickLastContact 1 point\n"
             ),
             "local_settings.yaml": (
                 "colors_sel: None\n"

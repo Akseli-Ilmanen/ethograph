@@ -1,19 +1,18 @@
 """The heatmap applies the peak-window order: on demand for the visible window,
 automatically per trial in trial mode, and drops it in "none" mode."""
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
 pytest.importorskip("qtpy")
 
 from ethograph.gui.plots_heatmap import HeatmapPlot  # noqa: E402
+from ethograph.gui.widgets_plot_settings import PlotSettingsWidget  # noqa: E402
 
 
-@pytest.fixture
-def heatmap(qtbot, app_state, monkeypatch):
-    app_state.heatmap_normalization = "none"
-    app_state.heatmap_sort_window_s = 1.0
-    app_state.heatmap_sort_overlap = 0.5
+def _make_heatmap(qtbot, app_state, monkeypatch) -> HeatmapPlot:
     plot = HeatmapPlot(app_state)
     qtbot.addWidget(plot)
     # No loader in this test: the buffer filled below stands in for the data.
@@ -21,6 +20,14 @@ def heatmap(qtbot, app_state, monkeypatch):
     monkeypatch.setattr(plot, "_effective_feature", lambda: "speed")
     monkeypatch.setattr(plot, "_get_selections_hash", lambda: "")
     return plot
+
+
+@pytest.fixture
+def heatmap(qtbot, app_state, monkeypatch):
+    app_state.heatmap_normalization = "none"
+    app_state.heatmap_sort_window_s = 1.0
+    app_state.heatmap_sort_overlap = 0.5
+    return _make_heatmap(qtbot, app_state, monkeypatch)
 
 
 def _fill_buffer(plot, peaks_at: list[float], t_end: float = 10.0):
@@ -84,3 +91,24 @@ def test_row_window_takes_neighbours_in_sorted_order(heatmap, app_state):
     heatmap.refresh_row_window()
     assert heatmap._last_visible_labels == ["ch2", "ch0"]
     assert heatmap.image_item.image.shape[1] == 2
+
+
+def test_sort_button_sorts_only_the_active_heatmap(heatmap, qtbot, app_state, monkeypatch):
+    other = _make_heatmap(qtbot, app_state, monkeypatch)
+    _fill_buffer(heatmap, peaks_at=[8.0, 1.0, 5.0])
+    _fill_buffer(other, peaks_at=[1.0, 5.0, 8.0])
+    for plot in (heatmap, other):
+        plot.plot_item.setXRange(0.0, 10.0, padding=0)
+    container = SimpleNamespace(heatmap_plots=[heatmap, other], heatmap_plot=heatmap)
+    settings = SimpleNamespace(plot_container=container)
+
+    PlotSettingsWidget._on_heatmap_sort_now_clicked(settings)
+    assert heatmap._sort_order.tolist() == [1, 2, 0]
+    assert other._sort_order is None
+
+    # Sorting the next panel leaves the first one's order alone.
+    _fill_buffer(heatmap, peaks_at=[1.0, 5.0, 8.0])
+    container.heatmap_plot = other
+    PlotSettingsWidget._on_heatmap_sort_now_clicked(settings)
+    assert other._sort_order.tolist() == [0, 1, 2]
+    assert heatmap._sort_order.tolist() == [1, 2, 0]

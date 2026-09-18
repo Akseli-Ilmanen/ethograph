@@ -154,6 +154,16 @@ class Project:
 
         return export_feral(self._config)
 
+    def import_feral_predictions(self) -> list[Path]:
+        """FERAL's own predictions (``feral infer --output``) → one prediction set per session.
+
+        The labels-only round trip: no embeddings, no segmentation model.
+        See :func:`ethograph.segment.feral.import_feral_predictions`.
+        """
+        from ethograph.segment.feral import import_feral_predictions
+
+        return import_feral_predictions(self._config)
+
     def materialise(self) -> Path:
         """Feature engineering: write the materialised dataset, and return its path."""
         from ethograph.segment.materialise import materialise

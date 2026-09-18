@@ -22,7 +22,7 @@ import yaml
 import ethograph as eto
 from ethograph.io.nwb_alignment import alignment_from_trials_ep
 from ethograph.labels.intervals import LABELING_MANUAL
-from ethograph.labels.tsv_store import save_labels_tsv
+from ethograph.labels.tsv_store import load_labels_tsv, save_labels_tsv
 from ethograph.segment.config import VideoFeaturesConfig, load_config
 from ethograph.segment.feral import (
     CONFIG_YAML,
@@ -31,7 +31,9 @@ from ethograph.segment.feral import (
     LABELS_JSON,
     VIDEOS_TSV,
     export_feral,
+    import_feral_predictions,
     load_defaults,
+    predictions_file,
     resolve_chunk_step,
 )
 from ethograph.segment.project import Project
@@ -264,6 +266,59 @@ def test_a_video_mostly_outside_its_trial_is_refused(tmp_path: Path, project: Pa
     )
     with pytest.raises(ValueError, match="one clip per trial"):
         export_feral(cfg)
+
+
+# ---------------------------------------------------------------------------
+# Predictions coming back
+# ---------------------------------------------------------------------------
+
+
+def _write_predictions(project: Path, result) -> None:
+    """``feral infer --output`` for every video folder, predicting the exported labels exactly."""
+    labels = json.loads((result.folder / LABELS_JSON).read_text(encoding="utf-8"))
+    n_classes = len(labels["class_names"])
+    by_json: dict[Path, dict[str, list]] = {}
+    for video, per_frame in labels["labels"].items():
+        path = predictions_file(result.folder, result.prefix, (result.prefix / video).parent)
+        by_json.setdefault(path, {})[Path(video).name] = np.eye(n_classes)[per_frame].tolist()
+    for path, preds in by_json.items():
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(json.dumps({"preds": preds}), encoding="utf-8")
+
+
+def test_predictions_come_back_as_the_labels_feral_was_given(project: Path):
+    cfg = load_config(project / "config.yaml")
+    result = export_feral(cfg)
+    _write_predictions(project, result)
+
+    written = import_feral_predictions(cfg)
+    assert len(written) == 2  # the two sessions share file-name patterns but never a JSON
+    s1 = load_labels_tsv(next(p for p in written if p.name == "s1_predictions.tsv"))
+    assert set(s1["labeling_method"]) == {"automated"} and set(s1["prediction_source"]) == {"feral_crow"}
+    # FERAL's class ids are compact; what comes back are the project's label ids
+    flap = s1[(s1["trial"].astype(str) == "1") & (s1["labels"] == 3)]
+    assert len(flap) == 1
+    assert flap["onset_s"].iloc[0] == pytest.approx(0.5, abs=1 / FPS)
+    assert flap["offset_s"].iloc[0] == pytest.approx(1.5, abs=1 / FPS)
+    assert set(s1["labels"]) == set(result.label_ids) - {0}  # a class FERAL never trained on stays background
+
+
+def test_predictions_from_another_export_are_refused(project: Path):
+    cfg = load_config(project / "config.yaml")
+    result = export_feral(cfg)
+    _write_predictions(project, result)
+    path = next((result.folder / "predictions").glob("*.json"))
+    preds = json.loads(path.read_text(encoding="utf-8"))
+    path.write_text(json.dumps({"preds": {k: v[:-1] for k, v in preds["preds"].items()}}), encoding="utf-8")
+    with pytest.raises(ValueError, match="another export"):
+        import_feral_predictions(cfg)
+
+
+def test_import_without_predictions_names_the_commands(project: Path):
+    cfg = load_config(project / "config.yaml")
+    export_feral(cfg)
+    with pytest.raises(FileNotFoundError, match="feral infer"):
+        import_feral_predictions(cfg)
 
 
 # ---------------------------------------------------------------------------

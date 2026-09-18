@@ -999,6 +999,8 @@ class MetaWidget(GridSectionContainer):
             return
         self.data_widget.update_label_plot()
         self.data_widget.update_trials_combo()
+        # A panel opened after an import gets the curve too.
+        self.data_widget._update_confidence_overlay()
 
     def update_changepoints_widget_title(self):
         if hasattr(self, "collapsible_widgets") and len(self.collapsible_widgets) > 5:

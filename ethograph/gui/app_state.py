@@ -191,6 +191,9 @@ class AppStateSpec:
         "prediction_sets": (list, [], False),
         "pred_labels_df": (pd.DataFrame | None, None, False),
         "pred_store": (object | None, None, False),
+        # The run folder whose predictions were imported *as labels*: it has no
+        # panel, so its confidence curve is drawn on the feature plots instead.
+        "labels_pred_store": (object | None, None, False),
         "pred_confidence_threshold": (float, 0.75, True),
         "pred_segment_confidence_threshold": (float, 0.6, True),
         # Import Predictions panel's "Load as" combo — "overlay" or "labels".

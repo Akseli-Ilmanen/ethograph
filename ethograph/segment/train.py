@@ -384,7 +384,9 @@ def _train_run(
     exclusive = not is_multilabel(store.classes)
     threshold = None if exclusive else float(config.infer.threshold)
     model = build_model(config.model.architecture, config.model.params, layout.n_features, n_outputs).to(device)
-    objective, loss_settings = build_objective(config, n_outputs, layout=store.layout, exclusive=exclusive)
+    objective, loss_settings = build_objective(
+        config, n_outputs, layout=store.layout, exclusive=exclusive, train_targets=[y for _, y in train_raw]
+    )
     objective = objective.to(device)
     logger.info("Objective: %s", yaml.safe_dump(loss_settings, sort_keys=False, default_flow_style=True).strip())
     # Constant learning rate, as upstream trains these models. A schedule would

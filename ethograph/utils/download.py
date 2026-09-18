@@ -46,8 +46,8 @@ def _fetch(url: str, attempts: int = _DOWNLOAD_ATTEMPTS) -> bytes:
         try:
             with urlopen(url, timeout=_DOWNLOAD_TIMEOUT_S) as resp:  # noqa: S310
                 return resp.read()
-        except HTTPError:
-            raise
+        except HTTPError as exc:
+            raise HTTPError(url, exc.code, f"{exc.reason} ({url})", exc.headers, None) from exc
         except (URLError, TimeoutError, OSError) as exc:
             last_error = exc
             logger.warning("Download attempt %d/%d failed for %s: %s", attempt, attempts, url, exc)

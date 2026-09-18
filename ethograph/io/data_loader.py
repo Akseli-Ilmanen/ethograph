@@ -55,6 +55,7 @@ from ethograph.io.validation import validate_datatree
 from ethograph.labels.converters import (
     PynappleLabelConverter,
     resolve_labels_tsv,
+    trials_df_from_intervalset,
 )
 from ethograph.labels.tsv_store import init_empty_labels
 
@@ -233,6 +234,12 @@ def _load_pynapple_dataset(
         )
 
     sio = make_nwb_alignment(nwb_path)
+    # Trials detected in the pynapple source (a ``trials`` IntervalSet) are the
+    # only timing available when no alignment NWB carries a trials table.
+    # Without this the alignment reports no stop_time, so every trial falls
+    # back to the session union range and trial restriction does nothing.
+    if sio.trials_df.empty and trials_ep is not None:
+        sio = TableAlignment(trials_df_from_intervalset(trials_ep))
 
     trials_ep = sio.trials_ep
     if trials_ep is not None and len(trials_ep) == 0:

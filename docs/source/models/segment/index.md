@@ -67,20 +67,18 @@ in that session and compare your ground truth labels with predictions visually.
 
 ```{list-table}
 :header-rows: 1
-:widths: 18 42 40
+:widths: 25 75
 
 * - Stage
-  - What it does
-  - Writes
-* - **Feature engineering**
+  - What it does, and what it writes
+* - **Feature creation**
 
     `project.materialise()`
   - Selects every configured *feature column* of every *sample* (one
     trial × one individual), applies the fixed preprocessing chain, encodes
     the branch's curated labels per frame.
-  - `{root}/data/{name}/`
 
-    the materialised dataset
+    **Writes** `{root}/data/{name}/`, the materialised dataset.
 * - **Train**
 
     `project.train()`
@@ -88,35 +86,34 @@ in that session and compare your ground truth labels with predictions visually.
     epochs, keeps the best checkpoint, evaluates the test samples once (raw
     and post-processed). Materialises first if needed. Returns a `RunResult`
     (`run_dir`, `best_epoch`, `best_score`, `test_metrics`).
-  - `{root}/runs/{run}/`
 
-    config, layout, stats, weights, metrics
+    **Writes** `{root}/runs/{run}/`: config, layout, stats, weights, metrics.
 * - **Search**
 
     `project.search()`
   - Optuna over `search.params`: each trial is a training run, scored by
     `train.select_on` **on the validation trials**. Resumable — the study
     lives in a SQLite file. Returns a `SearchResult`.
-  - `{root}/searches/{name}/`
 
-    `study.db`, `trials.tsv`, `best.yaml`
+    **Writes** `{root}/searches/{name}/`: `study.db`, `trials.tsv`,
+    `best.yaml`.
 * - **Cross-validate**
 
     `project.cross_validate()`
   - One fold per session: train on the rest, predict the held-out one.
     `folds=` runs only some of them. Returns one DataFrame row per fold.
-  - `{root}/cross_validation/{name}/folds.tsv`
 
-    plus a prediction set per held-out session
+    **Writes** `{root}/cross_validation/{name}/folds.tsv`, plus a prediction
+    set per held-out session.
 * - **Inference**
 
     `project.inference()`
   - Runs a run over the sessions and post-processes the predictions (purge →
     stitch → snap to changepoints → purge). Returns the prediction paths;
     `run=` picks another run, `sessions=` narrows to a few.
-  - `{session folder}/labels/predictions_{run}_{timestamp}/{stem}_predictions.tsv`
 
-    plus `_probs.npz`
+    **Writes** `labels/predictions_{run}_{timestamp}/` in each session
+    folder: `{stem}_predictions.tsv` plus `_probs.npz`.
 ```
 
 `project.config` is the resolved config and `project.root` the project
@@ -222,7 +219,7 @@ features:
     speed_cp_sigma3: {keypoint: [beakTip]}
     inter_beak:   {other: "*"}     # a second individual dim: the others, in order
   preprocess:
-    likelihood_threshold: 0.6      # needs a `confidence` feature
+    likelihood_threshold: 0.6      # keypoint frames with `confidence` below this → NaN → interpolated
     clip_percentiles: [2, 98]
     zscore: true                   # statistics from the training samples only
   labels:
@@ -238,7 +235,6 @@ train:
   epochs: 100
   eval_every: 5
   select_on: f1@50               # what val is scored on, and what a search maximises
-  loss: {alpha: 0.01}            # only the keys you want to change
   augment: {noise_std: 0.05, stretch: [0.8, 1.2], mirror: false, rotate_deg: 0}
   # the three ratios, drawn by whole trial across every session; they must sum to 1
   split: {train_fraction: 0.6, val_fraction: 0.2, test_fraction: 0.2}
@@ -246,18 +242,15 @@ train:
 search:                          # stage 1 — keys are the same dotted paths an override uses
   n_trials: 30
   params:
-    train.learning_rate: {type: float, low: 1.0e-5, high: 1.0e-2, log: true}
-    train.loss.alpha: {type: float, low: 0.0, high: 0.5}
-    model.params.num_f_maps: {type: categorical, choices: [64, 128, 256]}
+    train.loss.alpha: {type: float, low: 1.0e-5, high: 1.0e-2, log: true}
+    train.loss.focal: {type: categorical, choices: [true, false]}
+    train.loss.weights: {type: categorical, choices: [null, dataset_inverse_weights]}
+    model.params.num_f_maps: {type: int, low: 32, high: 128, log: true}
 
 infer:
   postprocess:
-    min_duration_s: 0.05
-    stitch_gap_s: 0.015
-    changepoint_correction: true
-    changepoints: {keypoint: beakTip}
-    max_expansion_s: 0.05
-    max_shrink_s: 0.05
+    min_duration_s: 0.05           # drop predicted labels shorter than this (0 = off)
+    stitch_gap_s: 0.0              # merge same-label predictions separated by less than this (0 = off)
 ```
 
 Every key is documented in {doc}`config`. Two conveniences: `base: other.yaml`
@@ -423,22 +416,66 @@ logits.
 
 ## Stage 1: find the settings
 
-`project.search()` runs an Optuna study over
-`search.params`. Every trial is a full training run, and its score is
-`train.select_on` measured on the **validation** trials — the one thing
-validation is for. `test` is never read, so it is still an honest number at
-the end.
+`project.search()` tries `search.n_trials` settings. Each one is a full
+training run, scored by `train.select_on` on the **validation** trials; the
+test trials are never read, so they still give an honest number at the end.
 
 ```python
 result = project.search()  # or search(n_trials=50)
 print(result.best_params, result.best_score)
-print(result.trials)  # one row per trial
 ```
 
-A parameter is keyed by the same dotted path an override uses, so there is one
-spelling for "learning rate" and it works in the file, in an override and in a
-search space alike. Three kinds of space, mirroring Optuna's three suggest
-calls:
+The winner is written to `searches/{name}/best.yaml` (your config with the
+winning values pinned), which is what stage 2 reads. Calling `search()` again
+**adds** trials to the same study rather than starting over.
+
+The one choice you make is what goes under `search.params`, the ranges to
+search over. A parameter is named by its dotted config path, as in an
+override.
+
+::::{tab-set}
+
+:::{tab-item} Default search (recommended)
+
+We search a subset of DLC2Action's default parameter search
+(`dlc2action.options.model_hyperparameters`), with its ranges: the weight of
+the consistency term (`alpha`), focal or plain cross-entropy (`focal`),
+unweighted or inverse-frequency class weights (`weights`) — all three
+described under {ref}`train.loss <segment-config-train-loss>` — and the
+network's width, `num_f_maps`, under
+{ref}`model.params <segment-config-model-params>`:
+
+```yaml
+search:
+  n_trials: 30
+  params:
+    train.loss.alpha: {type: float, low: 1.0e-5, high: 1.0e-2, log: true}
+    train.loss.focal: {type: categorical, choices: [true, false]}
+    train.loss.weights: {type: categorical, choices: [null, dataset_inverse_weights]}
+    model.params.num_f_maps: {type: int, low: 32, high: 128, log: true}  # c2f_tcn
+```
+
+The last line depends on the architecture. Swap in the row for yours:
+
+| Architecture | `model.params` ranges |
+|---|---|
+| `c2f_tcn` | `num_f_maps`: int 32–128, log |
+| `c2f_transformer` | `num_f_maps`: [32, 64, 128]; `heads`: [1, 2, 4, 8] |
+| `mstcn` | `num_f_maps`: int 32–128, log; `num_layers_PG`: 5–20; `num_layers_R`: 5–10; `shared_weights`: [true, false] |
+| `asformer` | `num_f_maps`: [32, 64, 128]; `num_decoders`: 1–4; `num_layers`: 5–10; `channel_masking_rate`: 0.2–0.4 |
+| `mp_transformer` | `N`: 5–12; `heads`: [1, 2, 4, 8]; `num_pool`: 0–4 |
+| `mlp` | `dropout_rates`: 0.3–0.6 |
+| `edtcn` | loss settings only |
+
+DLC2Action also searches `len_segment` and `temporal_subsampling_size`.
+They are left out because a sample here is a whole trial rather than a
+fixed-length window.
+:::
+
+:::{tab-item} Custom search
+
+Pick the parameters and ranges yourself. There are three kinds of range,
+matching Optuna's three `suggest` calls:
 
 ```yaml
 search:
@@ -449,89 +486,50 @@ search:
     train.augment.mirror:    {type: categorical, choices: [true, false]}
 ```
 
-The winner is written to `searches/{name}/best.yaml` — a config that inherits
-yours and pins the parameters that won, which is what stage 2 reads:
+`eto.segment.tunable_params(name)` lists what each architecture accepts.
+:::
 
-```yaml
-base: ../../project.yaml
-train:
-  learning_rate: 0.00043
-  loss: {alpha: 0.087}
-```
+:::{tab-item} Compare architectures
 
-The study itself lives in `searches/{name}/study.db`, so calling `search()`
-again **adds** trials rather than starting over — stop a study, look at
-`trials.tsv`, continue it. Trials that fall behind the running median are
-abandoned early (`search.prune`), and only the winning trial keeps its weights
-(`search.keep_weights`); every trial's config, split and metrics are kept
-either way.
-
-### Sweeping several architectures
-
-Searching more than one architecture is a loop of searches, not one search
-with `model.architecture` in the space — because the architectures share
-almost no hyperparameter names (`mlp` takes `f_maps_list`, `mstcn` takes
-`num_f_maps`), so each needs its own space. `eto.segment.tunable_params(name)`
-lists what each one accepts.
-
-Give each its own `train.run_name`: that names the study as well, and without
-it every architecture would pool incomparable trials into one `study.db`.
+Architectures share almost no parameter names, so each one gets its own
+search, in a loop. Give each its own `train.run_name`, because that also
+names its study. Then cross-validate only the winner.
 
 ```python
 import ethograph as eto
 
-SHARED = {  # keys that mean the same thing to every architecture
+SHARED = {  # means the same thing to every architecture
     "train.learning_rate": {"type": "float", "low": 1.0e-5, "high": 1.0e-2, "log": True},
     "train.loss.alpha": {"type": "float", "low": 0.0, "high": 0.5},
 }
-VARIANTS = {
-    "asformer_enc": {  # ASFormer, encoder only
-        "architecture": "asformer",
-        "params": {"num_decoders": 0},  # pinned
-        "space": {"model.params.num_f_maps": {"type": "categorical", "choices": [64, 128, 256]}},
-    },
-    "asformer_dec": {  # ASFormer as published: does refinement pay?
-        "architecture": "asformer",
-        "params": {},
-        "space": {"model.params.num_decoders": {"type": "int", "low": 1, "high": 3}},
-    },
-    "mstcn": {
-        "architecture": "mstcn",
-        "params": {},
-        "space": {"model.params.num_R": {"type": "int", "low": 1, "high": 3}},
-    },
+SPACES = {
+    "asformer": {"model.params.num_decoders": {"type": "int", "low": 1, "high": 3}},
+    "mstcn": {"model.params.num_R": {"type": "int", "low": 1, "high": 3}},
 }
 
-eto.segment.Project("project.yaml").materialise()  # once, for every variant
+eto.segment.Project("project.yaml").materialise()  # once, shared by every search
 
 results = []
-for variant, spec in VARIANTS.items():
+for architecture, space in SPACES.items():
     overrides = eto.segment.as_overrides(
         {
-            "model.architecture": spec["architecture"],
-            "train.run_name": f"{variant}_kin",  # → searches/search_{variant}_kin/
-            "model.params": spec["params"],
-            "search.params": {**SHARED, **spec["space"]},
+            "model.architecture": architecture,
+            "train.run_name": architecture,  # → searches/search_{architecture}/
+            "search.params": {**SHARED, **space},
         }
     )
     result = eto.segment.Project("project.yaml", *overrides).search()
-    results.append((result.best_score, variant, result.config_path))
+    results.append((result.best_score, result.config_path))
 
-best_score, best_variant, best_config = max(results)
+best_score, best_config = max(results)
 eto.segment.Project(best_config).cross_validate()  # stage 2 on the winner only
 ```
 
-Two entries may share an architecture and differ only in what is pinned versus
-searched — the two ASFormers above ask "does refinement earn its cost here?",
-which one study cannot answer cleanly because a pinned `num_decoders: 0` and a
-searched `1..3` are different questions.
+`eto.segment.as_overrides` turns a dict into the `key=value` strings
+`Project` takes, so nested dicts and floats like `1.0e-5` survive intact.
+:::
 
-`eto.segment.as_overrides({...})` turns a dict into the dotted `key=value`
-strings `Project` takes, through YAML — so a nested dict or a float in
-exponent form survives, where an f-string would hand over Python's `repr`.
-
-Cross-validate the **winner only**: a fold is a training run per session, so
-it is not something to spend on the variants that already lost.
+::::
 
 ## Stage 2: cross-validate, and look at the mistakes
 

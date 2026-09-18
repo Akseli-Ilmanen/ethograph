@@ -108,6 +108,20 @@ class Session:
             )
         return actors
 
+    def label_individuals(self) -> list[str]:
+        """Who this session's labels can be about, read in the GUI's own order.
+
+        The session record's declared individuals, else the dataset's
+        individual dim, else the actors its labels name; ``[]`` when none says.
+        """
+        declared = [str(v) for v in self.result.nwb_alignment.individuals]
+        if declared:
+            return declared
+        dim = self.individual_dim
+        if dim is not None:
+            return [str(v) for v in self.result.catalog.combos[dim].values]
+        return sorted(set(self.result.all_labels_df["individual"].dropna().astype(str)))
+
     def trial_windows(self, trials: list[int | str]) -> Iterator[TrialWindow]:
         base = self.result.data_loader
         if base.backend == "xarray":

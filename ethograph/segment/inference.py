@@ -186,6 +186,73 @@ def _segment_confidence(conf: np.ndarray, time: np.ndarray, onset: float, offset
     return float(conf[m].mean()) if m.any() else float(conf.max())
 
 
+PREDICTION_COLUMNS = [
+    "trial",
+    "individual",
+    "individual_rec",
+    "labels",
+    "onset_s",
+    "offset_s",
+    "event_type",
+    "confidence",
+    "labeling_method",
+    "changepoint_corrected",
+    "prediction_source",
+    "n_samples",
+]
+
+
+def label_rows(
+    intervals: pd.DataFrame,
+    curves: dict[int, np.ndarray],
+    time: np.ndarray,
+    trial: int | str,
+    individual: str,
+    source: str,
+    corrected: bool,
+) -> list[dict]:
+    """One sample's decoded intervals as rows of a prediction set, whichever model decoded them."""
+    rows = []
+    for _, seg in intervals.iterrows():
+        onset, offset, lid = float(seg["onset_s"]), float(seg["offset_s"]), int(seg["labels"])
+        rows.append(
+            {
+                "trial": trial,
+                "individual": individual,
+                "individual_rec": NO_RECIPIENT,
+                "labels": lid,
+                "onset_s": onset,
+                "offset_s": offset,
+                "event_type": "state",
+                "confidence": _segment_confidence(curves[lid], time, onset, offset),
+                "labeling_method": LABELING_AUTOMATED,
+                "changepoint_corrected": int(corrected),
+                "prediction_source": source,
+                "n_samples": int(len(time)),
+            }
+        )
+    return rows
+
+
+def write_prediction_set(
+    out_dir: Path,
+    stem: str,
+    rows: list[dict],
+    arrays: dict[str, np.ndarray],
+    *,
+    model_config: Path | dict,
+    inference_note: dict,
+) -> tuple[Path, Path]:
+    """One session's prediction set in the layout the GUI reads; returns the TSV and the ``.npz``."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tsv_path = out_dir / f"{stem}_predictions.tsv"
+    npz_path = out_dir / f"{stem}_probs.npz"
+    save_labels_tsv(tsv_path, pd.DataFrame(rows) if rows else pd.DataFrame(columns=PREDICTION_COLUMNS))
+    np.savez_compressed(npz_path, **arrays)
+    write_provenance(out_dir, model_config=model_config, inference=inference_note)
+    return tsv_path, npz_path
+
+
 def infer_session(
     config: SegmentConfig,
     run: Run,
@@ -232,26 +299,8 @@ def _infer_trials(
             arrays[f"{key}_time"] = time.astype(np.float64)
             for raw, curves in decode_sample(run, probs, time, individual, float(config.infer.threshold)):
                 intervals = postprocess_intervals(raw, pcfg, cp)
-                for _, seg in intervals.iterrows():
-                    onset, offset, lid = float(seg["onset_s"]), float(seg["offset_s"]), int(seg["labels"])
-                    rows.append(
-                        {
-                            "trial": window.trial,
-                            "individual": individual,
-                            "individual_rec": NO_RECIPIENT,
-                            "labels": lid,
-                            "onset_s": onset,
-                            "offset_s": offset,
-                            "event_type": "state",
-                            "confidence": _segment_confidence(curves[lid], time, onset, offset),
-                            "labeling_method": LABELING_AUTOMATED,
-                            "changepoint_corrected": int(
-                                bool(pcfg.changepoint_correction and cp is not None and len(cp) > 0)
-                            ),
-                            "prediction_source": run.name,
-                            "n_samples": int(len(time)),
-                        }
-                    )
+                corrected = bool(pcfg.changepoint_correction and cp is not None and len(cp) > 0)
+                rows.extend(label_rows(intervals, curves, time, window.trial, individual, run.name, corrected))
     if trials_without_cp:
         logger.warning(
             "%s: changepoint_correction is on but %d/%d trials have no changepoints — those boundaries "
@@ -266,35 +315,13 @@ def _infer_trials(
         if out_dir is not None
         else prediction_run_dir(session.source, run.name, datetime.now().strftime("%Y%m%d_%H%M%S"))
     )
-    out_dir.mkdir(parents=True, exist_ok=True)
-    tsv_path = out_dir / f"{session.stem}_predictions.tsv"
-    npz_path = out_dir / f"{session.stem}_probs.npz"
-    df = (
-        pd.DataFrame(rows)
-        if rows
-        else pd.DataFrame(
-            columns=[
-                "trial",
-                "individual",
-                "individual_rec",
-                "labels",
-                "onset_s",
-                "offset_s",
-                "event_type",
-                "confidence",
-                "labeling_method",
-                "changepoint_corrected",
-                "prediction_source",
-                "n_samples",
-            ]
-        )
-    )
-    save_labels_tsv(tsv_path, df)
-    np.savez_compressed(npz_path, **arrays)
-    write_provenance(
+    tsv_path, npz_path = write_prediction_set(
         out_dir,
+        session.stem,
+        rows,
+        arrays,
         model_config=run.run_dir / "config.yaml",
-        inference={
+        inference_note={
             "model": "segment",
             "run": run.name,
             "run_dir": str(run.run_dir),

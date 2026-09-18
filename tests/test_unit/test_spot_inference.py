@@ -9,11 +9,19 @@ from __future__ import annotations
 
 import gzip
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from ethograph.spot.config import config_from_dict
-from ethograph.spot.inference import best_epoch, resolve_run_dir, run_clip, run_config_file, stage_checkpoint
+from ethograph.spot.inference import (
+    best_epoch,
+    prediction_individual,
+    resolve_run_dir,
+    run_clip,
+    run_config_file,
+    stage_checkpoint,
+)
 
 
 def _config(tmp_path):
@@ -63,13 +71,6 @@ class TestToLabelsFrame:
         from ethograph.spot.predict import SpottedEvent
 
         return SpottedEvent(video_id="v", label=31, frame=10.0, video_s=0.1, stats=CurveStats(0, 0.9, 0.9, 0.9))
-
-    def test_unset_writes_no_recipient(self):
-        from ethograph.labels.intervals import NO_RECIPIENT
-        from ethograph.spot.predict import to_labels_frame
-
-        df = to_labels_frame([self._event()], {"v": (1, 0.0)}, source="s")
-        assert df["individual"].tolist() == [NO_RECIPIENT]
 
     def test_configured_individual_is_stamped_on_every_row(self):
         from ethograph.spot.predict import to_labels_frame
@@ -170,3 +171,30 @@ class TestCurveLength:
         assert {k: v.shape for k, v in curves.items()} == {31: (500,), 32: (500,)}
         _, bare = spot_entry(entry, config, clip)
         assert bare[31].shape == (51,)  # without a length there is nothing better than the last candidate
+
+
+class TestPredictionIndividual:
+    """A predicted row always names an individual the session itself uses."""
+
+    def _session(self, named):
+        return SimpleNamespace(label_individuals=lambda: named, spec=SimpleNamespace(label="ses-01"))
+
+    def test_config_wins(self):
+        assert prediction_individual(SimpleNamespace(individual="A"), self._session(["B", "C"])) == "A"
+
+    def test_unset_reads_the_sessions_one_individual(self):
+        assert prediction_individual(SimpleNamespace(individual=None), self._session(["crow"])) == "crow"
+
+    @pytest.mark.parametrize("named", [[], ["A", "B"]])
+    def test_unset_and_ambiguous_is_refused(self, named):
+        with pytest.raises(ValueError, match="individual"):
+            prediction_individual(SimpleNamespace(individual=None), self._session(named))
+
+    def test_exported_rows_load_as_a_labels_tsv(self, tmp_path):
+        from ethograph.labels.tsv_store import load_labels_tsv, save_labels_tsv
+        from ethograph.spot.predict import to_labels_frame
+
+        event = TestToLabelsFrame()._event()
+        path = tmp_path / "ses_predictions.tsv"
+        save_labels_tsv(path, to_labels_frame([event], {"v": (1, 0.0)}, source="s", individual="crow"))
+        assert load_labels_tsv(path)["individual"].tolist() == ["crow"]

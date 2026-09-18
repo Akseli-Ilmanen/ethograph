@@ -58,7 +58,7 @@ recommend the
 
 ## Support
 
-<img src="docs/source/_static/media/opensource.png" alt="Open-source projects EthoGraph depends on" width="60%">
+<img src="docs/source/_static/media/opensource.png" alt="Open-source projects EthoGraph depends on" width="100%">
 
 EthoGraph is built on top of a number of open-source projects:
 [PyAV](https://pyav.org/docs/stable/),
@@ -73,6 +73,11 @@ EthoGraph is built on top of a number of open-source projects:
 [PyQtGraph](https://www.pyqtgraph.org/), and
 [pygfx](https://pygfx.org/) (via
 [pynaviz](https://github.com/pynapple-org/pynaviz)).
+The [models](https://akseli-ilmanen.github.io/ethograph/models/index.html)
+that segment behaviour build on
+[DLC2Action](https://github.com/amathislab/DLC2Action),
+[FERAL](https://github.com/Skovorp/feral) and
+[E2E-Spot](https://github.com/jhong93/spot).
 
 EthoGraph is GPL-3.0-or-later. The code it vendors or adapts from other
 projects, and each one's licence, is listed in

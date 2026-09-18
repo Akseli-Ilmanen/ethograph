@@ -276,6 +276,26 @@ def _curve_time(curve: np.ndarray, clip: ResolvedClip, offset: float) -> np.ndar
     return clip.to_frame(bins) / clip.fps + offset
 
 
+def prediction_individual(config: SpotConfig, session: Session) -> str:
+    """The individual a session's predictions are about.
+
+    ``config.individual`` when set; else the one individual the session
+    itself names. A pixel model predicts one event stream per trial, so a
+    session naming several cannot be resolved without the config saying whose
+    events these are.
+    """
+    if config.individual is not None:
+        return config.individual
+    named = session.label_individuals()
+    if len(named) != 1:
+        found = f"names {named}" if named else "names none"
+        raise ValueError(
+            f"{session.spec.label}: set `individual:` in the config — the session {found}, "
+            "and every predicted label needs one for the GUI to show it."
+        )
+    return named[0]
+
+
 def infer_session(
     config: SpotConfig,
     run_dir: Path,
@@ -292,6 +312,7 @@ def infer_session(
     run's model already in memory (:func:`~ethograph.spot.stream.load_run_model`),
     passed by :func:`inference` so one checkpoint read serves every session.
     """
+    individual = prediction_individual(config, session)
     records = dataset_stage.plan_session(session, config, require_events=False)
     if not records:
         raise ValueError(
@@ -343,7 +364,10 @@ def infer_session(
         events = flag_out_of_order(events, config)
     out_dir.mkdir(parents=True, exist_ok=True)
     df = to_labels_frame(
-        events, trials, source=f"{MODEL_NAME}:{run_label(run_dir)}@{epoch}", individual=config.individual
+        events,
+        trials,
+        source=f"{MODEL_NAME}:{run_label(run_dir)}@{epoch}",
+        individual=individual,
     )
     tsv_path = out_dir / f"{session.stem}_predictions.tsv"
     save_labels_tsv(tsv_path, df)

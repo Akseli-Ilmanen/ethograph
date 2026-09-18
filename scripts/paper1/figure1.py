@@ -35,7 +35,7 @@ TEST_SESSION = (
     r"C:\Users\aksel\Documents\AK_data\derivatives\sub-03_id-Freddy"
     r"\ses-000_date-20250526_01\behav\Trial_data3.nc"
 )
-SEL_TRIAL = None
+SEL_TRIAL = None # trial 33
 VAL_FRACTION = 0.0  # default hyperparameters: best.pt is the last epoch
 #: An already-trained fold to re-plot from, skipping training entirely.
 #: ``None`` trains the fold now — its path is printed and goes here.

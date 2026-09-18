@@ -126,8 +126,9 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
     def sort_by_visible_window(self) -> bool:
         """Order rows by their peak window inside the visible x-range; keep it."""
         t0, t1 = self.get_current_xlim()
-        if self._buffered_data is None:
-            self._render_heatmap(t0, t1)
+        # Render first: a pan still waiting on its debounce, or a feature/trial
+        # change, leaves a buffer that does not hold what is on screen.
+        self._render_heatmap(t0, t1)
         order = self._order_for_range(t0, t1)
         if order is None:
             return False

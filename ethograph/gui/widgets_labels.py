@@ -98,7 +98,7 @@ from .app_constants import (  # noqa: E402
     LABELS_TABLE_ROW_HEIGHT,
     LABELS_WIDGET_SIZE_HINT_HEIGHT,
 )
-from .file_dialogs import browse_open_dir, browse_open_file  # noqa: E402
+from .file_dialogs import browse_open_dir, browse_open_dirs, browse_open_file  # noqa: E402
 from .widgets_curation import CurationPanel, drag_label_ids  # noqa: E402
 
 
@@ -861,15 +861,48 @@ class LabelsWidget(QWidget):
         )
         if not folder:
             return
+        self._import_prediction_folders([folder])
+
+    def _import_predictions_from_folders(self):
+        """Several runs at once — each becomes its own prediction set and panel."""
+        folders = browse_open_dirs(
+            self,
+            self.app_state,
+            "Select predictions folders (Ctrl/Shift-click for several)",
+            preferred_dir=self.app_state.nc_file_path,
+        )
+        if folders:
+            self._import_prediction_folders(folders)
+
+    def _import_prediction_folders(self, folders: list[str]) -> None:
+        """Load every folder, then import: as overlays one by one, as labels all in one go.
+
+        "Import as labels" with several runs concatenates them before the
+        single import, so an unticked merge box replaces the working labels
+        with all of the runs rather than only the last one picked. A folder
+        that fails to load is reported and skipped; the others still load.
+        """
+        loaded: list[tuple[str, PredictionsStore, pd.DataFrame]] = []
         individual = self.app_state.selected_individual() or "default"
-        try:
-            store = PredictionsStore(folder)
-            labels_df, _confidence_levels = store.load_all(self.app_state.dt, individual)
-        except (FileNotFoundError, ValueError, AssertionError) as e:
-            notify(str(e), severity="error")
+        for folder in folders:
+            try:
+                store = PredictionsStore(folder)
+                labels_df, _confidence_levels = store.load_all(self.app_state.dt, individual)
+            except (FileNotFoundError, ValueError, AssertionError) as e:
+                notify(str(e), severity="error")
+                continue
+            loaded.append((folder, store, labels_df))
+        if not loaded:
             return
-        self._pin_curve_run(folder)
-        self._finish_predictions_import(labels_df, store, store.tsv_path)
+        if self.io_widget.pred_load_mode() == "labels" and len(loaded) > 1:
+            combined = pd.concat([df for _, _, df in loaded], ignore_index=True)
+            names = ", ".join(Path(folder).name for folder, _, _ in loaded)
+            # Several runs have several curves; none of them is "the" one to draw.
+            self._import_predictions_as_labels(combined, names, None)
+            return
+        for folder, store, labels_df in loaded:
+            self._pin_curve_run(folder)
+            self._finish_predictions_import(labels_df, store, store.tsv_path)
 
     def _pin_curve_run(self, folder: str) -> None:
         """A folder picked here by hand is the frame-review confidence source too.
@@ -916,7 +949,7 @@ class LabelsWidget(QWidget):
         ``app_state.prediction_sets`` and gets its own panel, one per file.
         """
         if self.io_widget.pred_load_mode() == "labels":
-            self._import_predictions_as_labels(labels_df, str(path))
+            self._import_predictions_as_labels(labels_df, str(path), store)
             return
         threshold = self.io_widget.pred_confidence_threshold_spin.value()
         self.app_state.prediction_sets = add_prediction_set(
@@ -965,8 +998,13 @@ class LabelsWidget(QWidget):
                 self.data_widget.plot_container.labels_redraw_needed.emit()
         self.refresh_labels_shapes_layer()
 
-    def _import_predictions_as_labels(self, predicted_df, source_text: str) -> None:
+    def _import_predictions_as_labels(self, predicted_df, source_text: str, store) -> None:
         """Write a loaded prediction set straight into the working labels.
+
+        *store* is the run folder the rows came from (``None`` for a plain
+        ``.tsv``): its confidence curve keeps drawing on the feature plots
+        (``app_state.labels_pred_store``), since the labels get no panel of
+        their own. Merging a curveless file on top keeps the previous curve.
 
         Merge (the panel's checkbox) keeps every existing row and only adds
         predictions for (trial, class, individual) pairs the current labels
@@ -984,6 +1022,8 @@ class LabelsWidget(QWidget):
         merge = has_existing and self.io_widget.pred_merge_checkbox.isChecked()
         merged = merge_as_labels(existing, predicted_df) if merge else predicted_df
         self.app_state._all_labels_df = merged
+        if store is not None or not merge:
+            self.app_state.labels_pred_store = store
         self.app_state.clear_label_history()
         self.app_state.changes_saved = False
         current = getattr(self.app_state, "trials_sel", None)
@@ -992,12 +1032,15 @@ class LabelsWidget(QWidget):
         if self.data_widget:
             self.data_widget.refresh_individual_choices()
             self.data_widget.update_main_plot(preserve_x_range=True)
+            self.data_widget._update_confidence_overlay()
             if self.data_widget.plot_container:
                 self.data_widget.plot_container.labels_redraw_needed.emit()
         self.refresh_labels_shapes_layer()
         self.curation_panel.note_labels_edited()
         verb = "Merged" if merge else "Imported"
-        notify(f"{verb} {len(predicted_df)} prediction row(s) from {Path(source_text).name} as labels. Save with Ctrl+S.")
+        notify(
+            f"{verb} {len(predicted_df)} prediction row(s) from {Path(source_text).name} as labels. Save with Ctrl+S."
+        )
 
     def _on_confidence_threshold_changed(self, _value):
         self.app_state.pred_confidence_threshold = self.io_widget.pred_confidence_threshold_spin.value()

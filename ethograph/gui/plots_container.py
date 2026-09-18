@@ -1582,6 +1582,37 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             return plot.time_marker.value()
         return 0.0
 
+    # --- Confidence of the run imported as labels ---
+
+    def label_ribbons(self) -> list:
+        """Every open label timeline (never a prediction panel)."""
+        return [p for p in self._dyn_panels if type(p) is LabelRibbonPlot]
+
+    def show_confidence_plot(self, time: np.ndarray, confidence: np.ndarray) -> None:
+        """One dashed curve on the open feature panel (scaled on a right axis) and on every label timeline."""
+        self.hide_confidence_plot()
+        if len(time) == 0:
+            return
+        for ribbon in self.label_ribbons():
+            ribbon.set_confidence(time, confidence)
+        host = self.overlay_host()
+        if host is None or isinstance(host, LabelRibbonPlot):
+            return
+        item = pg.PlotCurveItem(pen=pg.mkPen(color="k", width=2, style=Qt.PenStyle.DashLine))
+        self.overlay_manager.add_scaled_overlay(
+            "confidence",
+            host,
+            item,
+            np.asarray(time, dtype=np.float64),
+            np.asarray(confidence, dtype=np.float64),
+            tick_format="{:.2f}",
+        )
+
+    def hide_confidence_plot(self) -> None:
+        self.overlay_manager.remove_overlay("confidence")
+        for ribbon in self.label_ribbons():
+            ribbon.clear_confidence()
+
     # --- Onset-model probability curves ---
 
     def show_onset_curves(self, time, curves: dict, colors: dict | None = None) -> int:
