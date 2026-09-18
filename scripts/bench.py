@@ -80,10 +80,10 @@ import yaml
 import ethograph as eto
 from ethograph.io.schema import CHANGEPOINT_FEATURE, KINEMATIC_FEATURE, VIDEO_FEATURE
 from ethograph.segment.crossval import cross_validation_name_for
-from ethograph.segment.inference import PREDICTIONS_PREFIX, prediction_run_dir
 from ethograph.segment.materialise import COLUMNS_FILE, read_layout
 from ethograph.segment.metrics import EVAL_ARRAYS_FILE, TEST_METRICS_FILE
 from ethograph.segment.plotting import FactorCell, load_run_eval, write_factorial_pdf
+from ethograph.segment.prediction_sets import PREDICTIONS_PREFIX, prediction_run_dir
 from ethograph.segment.samples import ClassTable
 from ethograph.utils.paths import session_id
 
@@ -432,10 +432,7 @@ def draw_report() -> None:
     select_on = eto.segment.Project(CONFIG_DIR / f"{INDIVIDUALS[0]}.yaml").config.train.select_on
     column = f"postprocessed.{select_on}"
     summary = (
-        table.groupby(["individual", "architecture", "arm"])[column]
-        .mean()
-        .unstack("arm")
-        .reindex(columns=list(ARMS))
+        table.groupby(["individual", "architecture", "arm"])[column].mean().unstack("arm").reindex(columns=list(ARMS))
     )
     print(f"\nMean post-processed {select_on} over held-out sessions:\n{summary.round(1).to_string()}\n")
 

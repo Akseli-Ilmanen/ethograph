@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 import pandas as pd
-from movement.io.load import get_supported_source_software
+from movement.io.load import SourceSoftware
 
 if TYPE_CHECKING:
     from ethograph.gui.wizard_media_files import FilePattern
 
 #: Pose software movement can load, DeepLabCut first (the wizard's default).
-AVAILABLE_SOFTWARES: list[str] = sorted(get_supported_source_software(), key=lambda s: (s != "DeepLabCut", s))
+#: ``SourceSoftware`` is a plain ``Literal`` up to movement 0.15 (the newest on
+#: Python 3.11) and a ``type`` alias, read through ``__value__``, after it.
+AVAILABLE_SOFTWARES: list[str] = sorted(
+    get_args(getattr(SourceSoftware, "__value__", SourceSoftware)),
+    key=lambda s: (s != "DeepLabCut", s),
+)
 
 #: The three modes of page 0.
 MODES = ("pair", "free_running", "triggered")

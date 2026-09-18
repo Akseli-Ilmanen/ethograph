@@ -572,7 +572,7 @@ class TestSplit:
 
     def test_no_trial_is_in_two_roles_and_the_seed_pins_the_draw(self, project: Path):
         from ethograph.segment.materialise import materialise, read_index
-        from ethograph.segment.train import assign_roles
+        from ethograph.segment.roles import assign_roles
 
         cfg = load_config(project / "config.yaml")
         index = read_index(materialise(cfg))

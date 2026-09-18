@@ -35,7 +35,7 @@ TEST_SESSION = (
     r"C:\Users\aksel\Documents\AK_data\derivatives\sub-03_id-Freddy"
     r"\ses-000_date-20250526_01\behav\Trial_data3.nc"
 )
-SEL_TRIAL = None # trial 33
+SEL_TRIAL = None  # trial 33
 VAL_FRACTION = 0.0  # default hyperparameters: best.pt is the last epoch
 #: An already-trained fold to re-plot from, skipping training entirely.
 #: ``None`` trains the fold now — its path is printed and goes here.
@@ -155,7 +155,6 @@ def plot_trial(
         ax.set_yticks([])
         ax.set_xticks([])
         ax.set_xlim(time[0], time[-1])
-
 
     fig.savefig(path, bbox_inches="tight")
     plt.close(fig)  # a figure per trial, never left open

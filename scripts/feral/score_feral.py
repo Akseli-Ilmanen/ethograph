@@ -35,11 +35,11 @@ from ethograph.labels.ml import dense_to_intervals
 from ethograph.labels.onset_curves import write_provenance
 from ethograph.labels.tsv_store import save_labels_tsv
 from ethograph.segment.config import load_config
-from ethograph.segment.inference import prediction_run_dir
 from ethograph.segment.materialise import load_sample, read_classes, read_index
 from ethograph.segment.metrics import save_eval_arrays, scalar_metrics
 from ethograph.segment.plotting import write_eval_pdf
 from ethograph.segment.postprocess import postprocess_dense, postprocess_intervals
+from ethograph.segment.prediction_sets import prediction_run_dir
 from ethograph.segment.train import EVAL_ARRAYS_FILE, TEST_METRICS_FILE, compare_runs, evaluate_dense
 
 PREDICTION_COLUMNS = [

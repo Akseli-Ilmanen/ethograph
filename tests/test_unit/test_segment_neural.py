@@ -509,7 +509,7 @@ class TestTrialFolds:
 
     def test_holdout_trials_become_test(self, project):
         from ethograph.segment.materialise import read_index
-        from ethograph.segment.train import assign_roles
+        from ethograph.segment.roles import assign_roles
 
         index = read_index(project.materialise())
         project.update(
@@ -521,7 +521,7 @@ class TestTrialFolds:
 
     def test_a_holdout_trial_nobody_has_is_refused(self, project):
         from ethograph.segment.materialise import read_index
-        from ethograph.segment.train import assign_roles
+        from ethograph.segment.roles import assign_roles
 
         index = read_index(project.materialise())
         project.update("train.split.holdout_trials=[99]")

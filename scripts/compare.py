@@ -45,7 +45,7 @@ from ethograph.segment.metrics import EVAL_ARRAYS_FILE
 from ethograph.segment.plotting import RunEval, load_run_eval, write_model_report_pdf
 from ethograph.segment.samples import ClassTable
 
-CONFIG =  Path(r"D:\Akseli\Code\ethograph\data\project.yaml")
+CONFIG = Path(r"D:\Akseli\Code\ethograph\data\project.yaml")
 
 #: Which runs to consider, as paths relative to ``runs/`` — a run trained by
 #: hand is one level deep (``asformer_kin_v1_20260824_1200``), a search trial

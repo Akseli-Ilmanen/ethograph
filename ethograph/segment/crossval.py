@@ -53,9 +53,10 @@ from ethograph.segment.config import (
     config_from_dict,
     config_to_dict,
 )
-from ethograph.segment.inference import inference, merge_prediction_sets, prediction_run_dir
+from ethograph.segment.inference import inference, merge_prediction_sets
 from ethograph.segment.materialise import COLUMNS_FILE, materialise, read_index, read_target_table
 from ethograph.segment.metrics import EVAL_ARRAYS_FILE
+from ethograph.segment.prediction_sets import prediction_run_dir
 from ethograph.segment.train import RunResult, run_name_for, train
 from ethograph.utils.logging import log_to_file
 from ethograph.utils.paths import session_id

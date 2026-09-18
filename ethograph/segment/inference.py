@@ -29,14 +29,18 @@ import pandas as pd
 import torch
 import yaml
 
-from ethograph.labels.intervals import LABELING_AUTOMATED, NO_RECIPIENT
 from ethograph.labels.ml import dense_to_intervals
-from ethograph.labels.onset_curves import labels_dir, write_provenance
+from ethograph.labels.onset_curves import write_provenance
 from ethograph.labels.tsv_store import load_labels_tsv, save_labels_tsv
 from ethograph.segment.config import SegmentConfig, config_to_dict, load_config
 from ethograph.segment.materialise import COLUMNS_FILE, read_target_table
 from ethograph.segment.models import as_output, build_model
 from ethograph.segment.postprocess import postprocess_intervals
+from ethograph.segment.prediction_sets import (
+    label_rows,
+    prediction_run_dir,
+    write_prediction_set,
+)
 from ethograph.segment.preprocess import NormStats
 from ethograph.segment.samples import (
     SELF_TOKEN,
@@ -54,17 +58,6 @@ from ethograph.utils.device import resolve_device
 from ethograph.utils.logging import log_to_file
 
 logger = logging.getLogger(__name__)
-
-PREDICTIONS_PREFIX = "predictions"
-
-
-def prediction_run_dir(session_path: Path, run_name: str, timestamp: str) -> Path:
-    """Where one inference run's outputs for one session are written.
-
-    One folder per call, so cross-validation folds and repeated ad-hoc
-    ``infer()`` calls never overwrite each other's predictions.
-    """
-    return labels_dir(session_path) / f"{PREDICTIONS_PREFIX}_{run_name}_{timestamp}"
 
 
 @dataclass
@@ -179,78 +172,6 @@ def decode_sample(
         curves = {classes.channels[c].label_id: probs[:, c] for c in track.channels}
         out.append((dense_to_intervals(ids, [individual], time_coord=time), curves))
     return out
-
-
-def _segment_confidence(conf: np.ndarray, time: np.ndarray, onset: float, offset: float) -> float:
-    m = (time >= onset) & (time <= offset)
-    return float(conf[m].mean()) if m.any() else float(conf.max())
-
-
-PREDICTION_COLUMNS = [
-    "trial",
-    "individual",
-    "individual_rec",
-    "labels",
-    "onset_s",
-    "offset_s",
-    "event_type",
-    "confidence",
-    "labeling_method",
-    "changepoint_corrected",
-    "prediction_source",
-    "n_samples",
-]
-
-
-def label_rows(
-    intervals: pd.DataFrame,
-    curves: dict[int, np.ndarray],
-    time: np.ndarray,
-    trial: int | str,
-    individual: str,
-    source: str,
-    corrected: bool,
-) -> list[dict]:
-    """One sample's decoded intervals as rows of a prediction set, whichever model decoded them."""
-    rows = []
-    for _, seg in intervals.iterrows():
-        onset, offset, lid = float(seg["onset_s"]), float(seg["offset_s"]), int(seg["labels"])
-        rows.append(
-            {
-                "trial": trial,
-                "individual": individual,
-                "individual_rec": NO_RECIPIENT,
-                "labels": lid,
-                "onset_s": onset,
-                "offset_s": offset,
-                "event_type": "state",
-                "confidence": _segment_confidence(curves[lid], time, onset, offset),
-                "labeling_method": LABELING_AUTOMATED,
-                "changepoint_corrected": int(corrected),
-                "prediction_source": source,
-                "n_samples": int(len(time)),
-            }
-        )
-    return rows
-
-
-def write_prediction_set(
-    out_dir: Path,
-    stem: str,
-    rows: list[dict],
-    arrays: dict[str, np.ndarray],
-    *,
-    model_config: Path | dict,
-    inference_note: dict,
-) -> tuple[Path, Path]:
-    """One session's prediction set in the layout the GUI reads; returns the TSV and the ``.npz``."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    tsv_path = out_dir / f"{stem}_predictions.tsv"
-    npz_path = out_dir / f"{stem}_probs.npz"
-    save_labels_tsv(tsv_path, pd.DataFrame(rows) if rows else pd.DataFrame(columns=PREDICTION_COLUMNS))
-    np.savez_compressed(npz_path, **arrays)
-    write_provenance(out_dir, model_config=model_config, inference=inference_note)
-    return tsv_path, npz_path
 
 
 def infer_session(

@@ -76,8 +76,16 @@ def plot(df: pd.DataFrame) -> plt.Figure:
                     continue
                 sem = scores.std(ddof=1) / np.sqrt(scores.size) if scores.size > 1 else 0.0
                 ax.bar(
-                    pos, scores.mean(), bar_w, yerr=sem, capsize=2, color=COLORS[no_cp],
-                    edgecolor="black", linewidth=0.5, label=label, error_kw={"linewidth": 0.8},
+                    pos,
+                    scores.mean(),
+                    bar_w,
+                    yerr=sem,
+                    capsize=2,
+                    color=COLORS[no_cp],
+                    edgecolor="black",
+                    linewidth=0.5,
+                    label=label,
+                    error_kw={"linewidth": 0.8},
                 )
                 jitter = rng.uniform(-bar_w * 0.2, bar_w * 0.2, scores.size)
                 ax.scatter(pos + jitter, scores, s=8, color="black", zorder=3, linewidths=0)
@@ -90,8 +98,14 @@ def plot(df: pd.DataFrame) -> plt.Figure:
     ax.set_xticks(metric_ticks, metric_labels, fontsize=10)
     for centre, arch in zip(arch_centres, archs, strict=True):
         ax.annotate(
-            ARCH_NAMES.get(arch, arch), xy=(centre, 0), xycoords=("data", "axes fraction"),
-            xytext=(0, -26), textcoords="offset points", ha="center", va="top", fontsize=12,
+            ARCH_NAMES.get(arch, arch),
+            xy=(centre, 0),
+            xycoords=("data", "axes fraction"),
+            xytext=(0, -26),
+            textcoords="offset points",
+            ha="center",
+            va="top",
+            fontsize=12,
         )
     ax.set_ylabel("segmental F1 (%)", fontsize=13)
     ax.tick_params(axis="y", labelsize=12)
@@ -101,8 +115,13 @@ def plot(df: pd.DataFrame) -> plt.Figure:
     handles, labels = ax.get_legend_handles_labels()
     unique = dict(zip(labels, handles, strict=True))
     ax.legend(
-        unique.values(), unique.keys(), frameon=False, loc="lower center",
-        bbox_to_anchor=(0.5, 1.0), ncols=2, fontsize=12,
+        unique.values(),
+        unique.keys(),
+        frameon=False,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.0),
+        ncols=2,
+        fontsize=12,
     )
     fig.tight_layout()
     return fig

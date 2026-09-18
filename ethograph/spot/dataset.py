@@ -47,8 +47,8 @@ from ethograph.io.video_decode import iter_rgb_frames
 from ethograph.labels.intervals import LABELING_AUTOMATED
 from ethograph.labels.tsv_store import get_trial_from_tsv
 from ethograph.segment.config import SessionSpec
+from ethograph.segment.roles import assign_roles
 from ethograph.segment.sessions import Session, filter_trials, open_session
-from ethograph.segment.train import assign_roles
 from ethograph.spot.config import SpotConfig
 
 logger = logging.getLogger(__name__)

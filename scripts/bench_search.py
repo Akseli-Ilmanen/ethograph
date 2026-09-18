@@ -330,9 +330,7 @@ def main() -> None:
                 **params,
             }
         )
-        logger.info(
-            "%s: best val %s = %.4f, %.0f s %s", variant, select_on, score, train_seconds, params
-        )
+        logger.info("%s: best val %s = %.4f, %.0f s %s", variant, select_on, score, train_seconds, params)
 
     table = pd.DataFrame(rows).sort_values("val_score", ascending=False)
     table.to_csv(CONFIG.with_name("architecture_search.tsv"), sep="\t", index=False)

@@ -39,9 +39,7 @@ def main(argv: list[str]) -> None:
     parser.add_argument("stages", nargs="+", choices=STAGES, help="which stages, in this order — see the recipes above")
     parser.add_argument("--limit", type=int, default=None, help="first N trials per session (a smoke run)")
     parser.add_argument("--sessions", nargs="*", default=None, help="sessions to predict into (default: all)")
-    parser.add_argument(
-        "--run", default=None, help="run to predict with, a name under runs/ (default: the newest)"
-    )
+    parser.add_argument("--run", default=None, help="run to predict with, a name under runs/ (default: the newest)")
     parser.add_argument("--force", action="store_true", help="rerun stages that look finished")
     parser.add_argument(
         "--workers",

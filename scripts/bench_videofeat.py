@@ -26,13 +26,17 @@ print(f"{len(videos)} videos, ~{frames_seen:.0f} frames at {ANALYSIS_FPS} fps, d
 
 # warm-up: weights download + CUDA init, on one short clip into a throwaway folder
 for extractor in ("s3d", "timm"):
-    eto.segment.extract_videos([videos[0]], OUT / "_warmup", extractor=extractor, analysis_fps=ANALYSIS_FPS, crop=CROP, overwrite=True)
+    eto.segment.extract_videos(
+        [videos[0]], OUT / "_warmup", extractor=extractor, analysis_fps=ANALYSIS_FPS, crop=CROP, overwrite=True
+    )
 
 results = {}
 for extractor in ("s3d", "timm"):
     torch.cuda.synchronize() if torch.cuda.is_available() else None
     t0 = time.perf_counter()
-    eto.segment.extract_videos(videos, OUT / extractor, extractor=extractor, analysis_fps=ANALYSIS_FPS, crop=CROP, overwrite=True)
+    eto.segment.extract_videos(
+        videos, OUT / extractor, extractor=extractor, analysis_fps=ANALYSIS_FPS, crop=CROP, overwrite=True
+    )
     torch.cuda.synchronize() if torch.cuda.is_available() else None
     results[extractor] = time.perf_counter() - t0
 

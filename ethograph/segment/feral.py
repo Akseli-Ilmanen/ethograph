@@ -59,11 +59,11 @@ import yaml
 from ethograph.io.video_probe import probe_video
 from ethograph.labels.ml import dense_to_intervals
 from ethograph.segment.config import FERAL, FERAL_EMBEDDINGS_DIR, SegmentConfig, config_to_dict
-from ethograph.segment.inference import label_rows, prediction_run_dir, write_prediction_set
 from ethograph.segment.postprocess import postprocess_intervals
+from ethograph.segment.prediction_sets import label_rows, prediction_run_dir, write_prediction_set
+from ethograph.segment.roles import assign_roles
 from ethograph.segment.samples import ClassTable, class_table, dense_targets, sample_key
 from ethograph.segment.sessions import Session, changepoint_times, filter_trials, open_session
-from ethograph.segment.train import assign_roles
 from ethograph.utils.logging import log_to_file
 from ethograph.utils.xr_utils import get_time_coord
 
