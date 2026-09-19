@@ -432,6 +432,31 @@ def default_config_dir(data_dir: Path | str | None = None) -> Path:
     return defaults_dir()
 
 
+def global_setting(key: str, default=None):
+    """One value from ``~/.ethograph/gui_settings.yaml``, without Qt or an app state.
+
+    The GUI owns that file; a scripted ``segment`` / ``spot`` run only *reads* it,
+    for the handful of answers that are the user's rather than the config's —
+    today just ``ignore_files``, the datasets a session folder never loads. A
+    missing or unreadable file means "no answer", never an error: a run must not
+    die because a GUI has never been opened on this machine.
+    """
+    import yaml
+
+    path = ethograph_home() / "gui_settings.yaml"
+    if not path.is_file():
+        return default
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        logger.warning("Could not read %s; falling back to the default for %r", path, key)
+        return default
+    if not isinstance(raw, dict):
+        return default
+    value = raw.get(key, default)
+    return default if value is None else value
+
+
 def find_mapping_file(data_dir: Path | str | None = None, project_dir: Path | str | None = None) -> Path | None:
     """Find mapping.txt. Convenience wrapper around :func:`find_config`."""
     return find_config("mapping.txt", data_dir, project_dir)

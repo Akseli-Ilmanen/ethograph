@@ -140,6 +140,9 @@ def _build_nwb_file(
         else:
             stream_rates["audio"] = float(state.audio.audio_sr)
 
+    # Building a session's own alignment, not annotating somebody's NWB: written
+    # whole, so re-running the wizard or re-dropping a folder converges instead of
+    # colliding with the columns the last run added.
     pair_media(
         trial_table=with_media_paths(trial_table, state),
         stream_rates=stream_rates,
@@ -147,6 +150,7 @@ def _build_nwb_file(
         output_path=nwb_path,
         pose_fps=fps,
         individuals=state.individuals or None,
+        on_existing="replace",
     )
 
     return nwb_path

@@ -285,7 +285,7 @@ class BorisImportDialog(QDialog):
                 logger.warning("No pose files matched any video in %s", pose_folder)
 
         nwb_out = ethograph_dir / "alignment.nwb"
-        pair_media(pairing, stream_rates=stream_rates, output_path=nwb_out)
+        pair_media(pairing, stream_rates=stream_rates, output_path=nwb_out, on_existing="replace")
 
         labels_df = extract_intervals(observation, name_to_id)
         keep_cols = [c for c in TSV_COLUMNS if c in labels_df.columns]

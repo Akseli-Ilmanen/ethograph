@@ -3,13 +3,12 @@
 Reorganises actions that previously lived on the right sidebar into a
 conventional application menu bar:
 
-    File | Changepoints | Tools | Model | Window | Docs | Help
+    File | Changepoints | Tools | Model | Docs | Help
 
-**Window** lists every open dialog. Dialogs are owned by the main window, so
-on Windows and macOS they never get a taskbar / Dock entry of their own and
-are easy to lose behind the shell or on a disconnected screen; the menu is
-the one place to find and raise them, and *Gather all windows* pulls each
-one back onto the main window's screen.
+Dialogs are owned by the main window, so on Windows and macOS they never get a
+taskbar / Dock entry of their own and are easy to lose behind the shell or on a
+disconnected screen; *Gather all windows onto this screen* in **Help** pulls
+them back.
 
 **Docs** holds only external links (browser); **Help** holds only in-app
 diagnostic/recovery actions — no nested submenus in either.
@@ -153,7 +152,6 @@ class TopBarBuilder:
         self._build_changepoints_menu(menu_bar)
         self._build_tools_menu(menu_bar)
         self._build_model_menu(menu_bar)
-        self._build_window_menu(menu_bar)
         self._build_docs_menu(menu_bar)
         self._build_help_menu(menu_bar)
         self._add_sidebar_toggle_button(menu_bar)
@@ -433,12 +431,12 @@ class TopBarBuilder:
     def _build_settings_menu(self, menu_bar):
         """Settings menu — the study's own decisions, plus the two settings folders.
 
-        The label vocabulary, the individuals and the skeleton are the project's,
-        not one session's: each opens a dialog that writes ``mapping.txt`` or
-        ``project.yaml`` and then drives the GUI as a user's own edit would.
+        None of these belong to one session: each opens a dialog that writes
+        ``mapping.txt``, the skeleton library or the global settings, and then
+        drives the GUI as a user's own edit would.
         """
         menu = menu_bar.addMenu("&Settings")
-        menu.addAction("Create / edit label mapping…", self._open_label_mapping)
+        menu.addAction("Create / edit label mapping.txt…", self._open_label_mapping)
         menu.addAction("Create / edit individuals…", self._open_individuals)
         menu.addAction("Edit skeleton…", self._open_skeleton_settings)
         menu.addSeparator()
@@ -454,18 +452,22 @@ class TopBarBuilder:
         LabelMappingDialog(self.app_state, getattr(self.meta, "labels_widget", None), parent=self.shell).exec_()
 
     def _open_individuals(self):
-        from .dialog_settings import IndividualsDialog, require_project
+        from .dialog_settings import IndividualsDialog
 
-        if require_project(self.app_state, self.shell) is None:
-            return
         IndividualsDialog(self.app_state, on_changed=self._refresh_individuals, parent=self.shell).exec_()
 
     def _refresh_individuals(self):
-        """Re-populate the sidebar's one individual combo from the new answer."""
+        """Re-populate the sidebar's one individual combo from the new answer.
+
+        The Labels tab's gate asks the same question, so it is refreshed here too.
+        """
         dw = getattr(self.meta, "data_widget", None)
         refresh = getattr(dw, "refresh_individual_choices", None)
         if refresh is not None:
             refresh()
+        labels = getattr(self.meta, "labels_widget", None)
+        if labels is not None:
+            labels.refresh_gate()
 
     def _open_skeleton_settings(self):
         from .dialog_settings import SkeletonSettingsDialog, require_project
@@ -543,28 +545,6 @@ class TopBarBuilder:
             lambda: self._popup_section("cp", "Changepoint correction", cp),
         )
 
-    # ------------------------------------------------------------------
-    # Window menu
-    # ------------------------------------------------------------------
-
-    def _build_window_menu(self, menu_bar):
-        """Rebuilt on every open: one action per open dialog, which raises it."""
-        menu = menu_bar.addMenu("&Window")
-        menu.aboutToShow.connect(lambda: self._populate_window_menu(menu))
-        self._window_menu = menu
-
-    def _populate_window_menu(self, menu):
-        menu.clear()
-        menu.addAction("Gather all windows onto this screen", self._gather_windows)
-        menu.addSeparator()
-        windows = open_dialog_windows(self.shell)
-        if not windows:
-            none = menu.addAction("No open windows")
-            none.setEnabled(False)
-            return
-        for w in windows:
-            menu.addAction(w.windowTitle(), lambda _=False, w=w: raise_window(w))
-
     def _gather_windows(self):
         """Move every open dialog onto the main window's screen and raise it."""
         for w in open_dialog_windows(self.shell):
@@ -596,6 +576,8 @@ class TopBarBuilder:
             menu.addAction("Visualize data alignment", show_align)
 
         menu.addSeparator()
+        gather = menu.addAction("Gather all windows onto this screen", self._gather_windows)
+        gather.setToolTip("A dialog on a disconnected screen, or lost behind the main window")
         menu.addAction("Reset panels (Ctrl+R)", self.meta.reset_panels)
         menu.addAction("Reset local settings (this dataset)", self._reset_local_settings)
         reset_gui = self._first_method(getattr(self.meta, "io_widget", None), "_on_reset_gui_clicked")

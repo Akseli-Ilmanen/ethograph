@@ -60,6 +60,9 @@ class _State:
     def record_label_edit(self, description, trial=None):
         self.edits.append(description)
 
+    def label_individuals(self):
+        return ["bird"]
+
     def selected_individual(self):
         return "bird"
 
@@ -84,6 +87,9 @@ class _Labels:
     """LabelsWidget's placement logic without the Qt widget."""
 
     activate_label = LabelsWidget.activate_label
+    can_label = LabelsWidget.can_label
+    has_individuals = LabelsWidget.has_individuals
+    has_labels = LabelsWidget.has_labels
     frame_labelling = LabelsWidget.frame_labelling
     current_display_time = LabelsWidget.current_display_time
     _place_at_current_frame = LabelsWidget._place_at_current_frame

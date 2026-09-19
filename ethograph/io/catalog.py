@@ -322,6 +322,21 @@ def _selections_for_var(selections: dict[str, str], var: xr.DataArray) -> dict:
     return out
 
 
+def _selectable(var: xr.DataArray, selections: dict) -> bool:
+    """Whether every labelled selection names a value *var* actually has.
+
+    An individual the project declares but the dataset's ``individual`` dim never
+    had (``extra_individuals``) is labellable but has no data:
+    this feature draws nothing for it, which is the honest answer and the one
+    ``select()`` already gives for a feature it does not hold.
+    """
+    for dim, value in selections.items():
+        coord = var.coords.get(dim)
+        if coord is not None and value not in set(coord.values.tolist()):
+            return False
+    return True
+
+
 class XarrayLoader(_CatalogMixin):
     """Feature access from an ``xr.Dataset``.  Uses ``sel_valid`` for selection.
 
@@ -401,6 +416,8 @@ class XarrayLoader(_CatalogMixin):
 
         time = eto.get_time_coord(var).values
         _sel = _selections_for_var(selections, var)
+        if not _selectable(var, _sel):
+            return None
         data, filt_kwargs = eto.sel_valid(var, _sel)
         var_sel = var.sel(**filt_kwargs)
 

@@ -1320,6 +1320,43 @@ def read_individuals(nwbfile) -> list[str]:
     return [str(v) for v in nwbfile.scratch[INDIVIDUALS_TABLE].to_dataframe()["individual"]]
 
 
+def alignment_extras(path: str | Path) -> list[str]:
+    """What an existing alignment holds that re-pairing its media cannot rebuild.
+
+    Media filenames and trial timing come back from the files themselves, so
+    rebuilding them costs nothing. Anything *else* was put there by a person — the
+    individuals they declared, the metadata columns they typed into the trials
+    table — and a rebuild would drop it silently. Returns one human-readable phrase
+    per finding, so a caller can name them in a confirmation; ``[]`` when a rebuild
+    loses nothing.
+    """
+    from ethograph.io.metadata_table import is_media_column
+
+    path = Path(path)
+    if not path.is_file():
+        return []
+    found: list[str] = []
+    try:
+        with NWBHDF5IO(str(path), "r", load_namespaces=True) as io:
+            nwbfile = io.read()
+            if read_individuals(nwbfile):
+                found.append(f"the individuals it declares ({', '.join(read_individuals(nwbfile))})")
+            table = nwbfile.trials
+            if table is not None:
+                extra = [
+                    c
+                    for c in table.colnames
+                    if c not in ("start_time", "stop_time", "trial") and not is_media_column(str(c))
+                ]
+                if extra:
+                    found.append(f"trial metadata ({', '.join(extra)})")
+    except (OSError, RuntimeError, ValueError):
+        # Unreadable is not the same as empty: say so, so a caller still asks.
+        logger.warning("Could not inspect %s; treating it as holding work worth asking about", path)
+        return ["contents this drop could not read"]
+    return found
+
+
 def set_individuals(nwb_path: str | Path, individuals: Sequence[str]) -> None:
     """Edit the individuals list of an existing session record in place."""
     with edit_nwb(nwb_path) as nwbfile:

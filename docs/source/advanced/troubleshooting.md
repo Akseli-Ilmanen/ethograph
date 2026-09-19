@@ -17,6 +17,7 @@ Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issue
 | Unexpected error in the GUI | Save labels (`Ctrl + S`), then restart the GUI. Save semi-regularly! |
 | Error with user settings | In the top bar, first try **Help ▸ Reset local settings (this dataset)**. If that does not help, use **Help ▸ Reset global settings (gui_settings.yaml)**. |
 | Video, audio or ephys drift apart — the alignment looks off | **Help ▸ Visualize data alignment** draws every stream on its own clock, so you can see which one disagrees. It is usually a mis-specified `alignment.nwb`: a trial's timing, a stream offset or a media path pointing at the wrong file. |
+| A dialog you opened is nowhere to be seen | It is behind the main window or on a screen you have since unplugged — dialogs belong to the main window, so they get no taskbar entry of their own. **Help ▸ Gather all windows onto this screen** pulls every one back and raises it; **Window** lists them by name. |
 | Plots are squeezed to thin strips or seem missing | The saved layout holds more panels than fit. Close the extras with their ✕, or use **Help ▸ Reset local settings (this dataset)**: it rebuilds the default panels immediately. |
 
 ---

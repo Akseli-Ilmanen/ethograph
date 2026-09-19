@@ -61,3 +61,21 @@ def test_label_individuals_prefers_the_session_record(app_state, tmp_path: Path)
 
     app_state.nwb_alignment = _Alignment()
     assert app_state.label_individuals() == ["crow1", "crow2"]
+
+
+def test_a_feature_draws_nothing_for_an_individual_its_dim_lacks():
+    """``individuals_mode: define``/``both`` can name someone the data never tracked.
+
+    That name must stay labellable, so the loader answers "nothing to draw" the
+    way it does for any feature it does not hold — never a KeyError from ``.sel``.
+    """
+    from ethograph.io.catalog import XarrayLoader
+
+    n = 10
+    ds = xr.Dataset(
+        {"speed": (("time", "individual"), np.ones((n, 1)))},
+        coords={"time": np.arange(n) / 10.0, "individual": ["crow1"]},
+    )
+    loader = XarrayLoader(ds)
+    assert loader.select("speed", {"individual": "crow1"}, 0.0, 1.0) is not None
+    assert loader.select("speed", {"individual": "crow2"}, 0.0, 1.0) is None

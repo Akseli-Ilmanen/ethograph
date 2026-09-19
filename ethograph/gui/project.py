@@ -7,16 +7,19 @@ Qt-free. A drag & drop makes a session out of the folder the files came from
 project keeps a registry of the session folders dropped while it was open, so
 the cover page can list and reopen them.
 
-The project also holds ``project.yaml``: the study's defaults for what recurs
-across its sessions (who the individuals are and how they are decided, which
-pose software, the skeleton to draw — written inline, not in a file of its own).
-A session's own record or dataset overrides them; they are defaults, never
-claims about a session. File paths never go in it.
+**The project folder holds files, never a settings file.** ``mapping.txt``, the
+pipeline configs under ``config/``, the skeleton library, the runs — each is read
+from its own path. What used to be ``project.yaml`` is gone: the individuals and
+the ignored-file globs are the user's (``gui_settings.yaml``, so they follow the
+person rather than a folder that may be copied between machines), the skeleton is
+one YAML per skeleton, and the rest were defaults the GUI remembers by itself.
+:func:`migrate_project_yaml` folds an old file's lists into the global settings.
 
 Layout::
 
     my_study/
-    ├── project.yaml                  # ProjectSettings
+    ├── mapping.txt                   # the label vocabulary
+    ├── config/skeleton/*.yaml        # the skeleton library
     └── sessions.txt                  # one session folder per line, oldest first
 
     D:/rig/2026-09-06/                # the dropped folder, now a session
@@ -29,6 +32,7 @@ Layout::
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -37,8 +41,9 @@ import yaml
 
 from ethograph.utils.paths import SETTINGS_DIR
 
+logger = logging.getLogger(__name__)
+
 SESSIONS_REGISTRY_FILENAME = "sessions.txt"
-PROJECT_SETTINGS_FILENAME = "project.yaml"
 DROP_RECORD_FILENAME = "drop.yaml"
 _STAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
@@ -69,129 +74,48 @@ def project_dir_of(app_state) -> Path | None:
     return path if path.is_dir() else None
 
 
-#: How a session decides who can be labelled. ``"inherit"`` takes the data's own
-#: individual dim, ``"define"`` takes ``project.yaml``'s list, ``"both"`` is the
-#: data's plus that list. ``"both"`` is never a default: the user picks it.
-INDIVIDUALS_MODES = ("inherit", "define", "both")
-DEFAULT_INDIVIDUALS_MODE = "inherit"
+#: The settings file older versions kept in the project folder. Nothing reads it
+#: any more: individuals and ignored files are the user's (``gui_settings.yaml``),
+#: the skeleton is a file of its own, and ``rig`` / ``pose.source_software`` were
+#: defaults the GUI now remembers by itself. :func:`migrate_project_yaml` folds an
+#: existing one into the global settings once, so no study loses its lists.
+LEGACY_SETTINGS_FILENAME = "project.yaml"
 
 
-@dataclass(frozen=True)
-class ProjectSettings:
-    """The study-level defaults ``project.yaml`` holds. Every field optional; empty means "no default"."""
+def migrate_project_yaml(app_state) -> list[str]:
+    """Fold a legacy ``project.yaml``'s lists into the global settings, once.
 
-    individuals: tuple[str, ...] = ()
-    #: One of :data:`INDIVIDUALS_MODES`. Data that names its individuals wins by
-    #: default; a session with none falls through to ``individuals`` either way.
-    individuals_mode: str = DEFAULT_INDIVIDUALS_MODE
-    rig: str | None = None  # default rig notebook name under wizard/
-    pose_software: str | None = None  # default tracking tool, e.g. "DeepLabCut"
-    skeleton: dict | None = None  # the skeleton itself: {keypoints: [...], connections: [{start, end, ...}]}
-    #: File-name globs never read from a session folder's root — old versions of a
-    #: dataset (``Trial_data.nc`` beside ``Trial_data3.nc``). A file named explicitly
-    #: by ``source:`` is still loaded.
-    ignore: tuple[str, ...] = ()
-
-
-_PROJECT_KEYS = {"individuals", "individuals_mode", "rig", "pose", "ignore"}
-_POSE_KEYS = {"source_software", "skeleton"}
-
-
-def load_project_settings(project: Path | str | None) -> ProjectSettings:
-    """Read ``{project}/project.yaml``; no project or no file gives the defaults.
-
-    An unknown key is a typo, not a preference, and is refused by name.
+    Returns the names of the settings that gained entries, so the caller can say
+    so; ``[]`` when there is nothing to migrate. The file is left on disk — it is
+    the user's, and deleting something we no longer own is not our call.
     """
+    project = project_dir_of(app_state)
     if project is None:
-        return ProjectSettings()
-    path = Path(project) / PROJECT_SETTINGS_FILENAME
+        return []
+    path = project / LEGACY_SETTINGS_FILENAME
     if not path.is_file():
-        return ProjectSettings()
-    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return []
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        logger.warning("Could not read the legacy %s; nothing migrated", path)
+        return []
     if not isinstance(raw, dict):
-        raise ValueError(f"{path} must be a mapping of settings, got {type(raw).__name__}")
-    unknown = sorted(set(raw) - _PROJECT_KEYS)
-    if unknown:
-        raise ValueError(f"{path}: unknown keys {unknown}; known: {sorted(_PROJECT_KEYS)}")
-    pose = raw.get("pose") or {}
-    if not isinstance(pose, dict):
-        raise ValueError(f"{path}: 'pose' must be a mapping with {sorted(_POSE_KEYS)}")
-    unknown_pose = sorted(set(pose) - _POSE_KEYS)
-    if unknown_pose:
-        raise ValueError(f"{path}: unknown pose keys {unknown_pose}; known: {sorted(_POSE_KEYS)}")
-    skeleton = pose.get("skeleton")
-    if skeleton is not None and not (isinstance(skeleton, dict) and "connections" in skeleton):
-        raise ValueError(f"{path}: 'pose.skeleton' is the skeleton itself, a mapping with 'connections'")
-    mode = str(raw.get("individuals_mode") or DEFAULT_INDIVIDUALS_MODE)
-    if mode not in INDIVIDUALS_MODES:
-        raise ValueError(f"{path}: 'individuals_mode' must be one of {list(INDIVIDUALS_MODES)}, got {mode!r}")
-    return ProjectSettings(
-        individuals=_names(raw.get("individuals"), path, "individuals"),
-        individuals_mode=mode,
-        rig=str(raw["rig"]) if raw.get("rig") else None,
-        pose_software=str(pose["source_software"]) if pose.get("source_software") else None,
-        skeleton=dict(skeleton) if skeleton else None,
-        ignore=_names(raw.get("ignore"), path, "ignore"),
-    )
+        return []
 
-
-def _names(value, path: Path, key: str) -> tuple[str, ...]:
-    if value is None:
-        return ()
-    if not isinstance(value, list) or not all(isinstance(v, (str, int)) for v in value):
-        raise ValueError(f"{path}: '{key}' must be a list of names")
-    names = tuple(str(v) for v in value)
-    if len(set(names)) != len(names):
-        raise ValueError(f"{path}: '{key}' repeats a name: {list(names)}")
-    return names
-
-
-def project_settings_of(app_state) -> ProjectSettings:
-    """The chosen project's settings, or the defaults when no project is set."""
-    return load_project_settings(project_dir_of(app_state))
-
-
-def find_project_dir(start: Path | str) -> Path | None:
-    """The nearest folder at or above *start* holding ``project.yaml`` — how a pipeline finds its project."""
-    here = Path(start).resolve()
-    for folder in (here, *here.parents):
-        if (folder / PROJECT_SETTINGS_FILENAME).is_file():
-            return folder
-    return None
-
-
-def update_project_settings(project: Path | str, **updates) -> Path:
-    """Merge *updates* into ``{project}/project.yaml``, creating it if needed.
-
-    The file is the user's too, so keys it already holds and this call does not
-    name are left exactly as they are. A key set to ``None`` is removed.
-    """
-    path = Path(project) / PROJECT_SETTINGS_FILENAME
-    raw = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else None
-    raw = dict(raw or {})
-    for key, value in updates.items():
-        if key not in _PROJECT_KEYS:
-            raise ValueError(f"unknown project setting {key!r}; known: {sorted(_PROJECT_KEYS)}")
-        if value is None:
-            raw.pop(key, None)
-        else:
-            raw[key] = value
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=True), encoding="utf-8")
-    return path
-
-
-def add_ignore(project: Path | str, name: str) -> Path:
-    """Append *name* to the project's ``ignore`` list, creating ``project.yaml`` if needed."""
-    path = Path(project) / PROJECT_SETTINGS_FILENAME
-    raw = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else None
-    raw = dict(raw or {})
-    names = [str(n) for n in raw.get("ignore") or []]
-    if name and name not in names:
-        names.append(name)
-    raw["ignore"] = names
-    path.write_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=True), encoding="utf-8")
-    return path
+    moved: list[str] = []
+    for key, setting in (("individuals", "extra_individuals"), ("ignore", "ignore_files")):
+        values = raw.get(key)
+        if not isinstance(values, list):
+            continue
+        current = [str(v) for v in app_state.get_with_default(setting)]
+        added = [str(v) for v in values if str(v) not in current]
+        if added:
+            setattr(app_state, setting, current + added)
+            moved.append(setting)
+    if moved:
+        logger.info("Migrated %s from %s into the global settings", moved, path)
+    return moved
 
 
 def drop_record_path(session_dir: Path | str) -> Path:
@@ -199,12 +123,13 @@ def drop_record_path(session_dir: Path | str) -> Path:
 
 
 def is_foreign_session(folder: Path | str) -> bool:
-    """Whether *folder* is a session someone made on purpose, which a drop must not overwrite.
+    """Whether *folder* is a session someone made on purpose, which a drop must ask about.
 
     A folder with ``.ethograph/alignment.nwb`` but no drop record was set up by the
     wizard, a notebook or by hand; a drop re-pairing into it would replace their
-    alignment. A folder whose alignment came from a drop is regenerable and fair
-    game, and a bare ``.ethograph/`` (settings only) makes nothing a session.
+    alignment, so the cover page asks first. A folder whose alignment came from a
+    drop is regenerable and replaced silently, and a bare ``.ethograph/`` (settings
+    only) makes nothing a session.
     """
     folder = Path(folder)
     return (folder / SETTINGS_DIR / "alignment.nwb").is_file() and not drop_record_path(folder).is_file()

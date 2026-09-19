@@ -89,6 +89,11 @@ def check_type(value, type_hint) -> bool:
     return True
 
 
+#: Global settings a reset keeps: the individuals a user named are their own data,
+#: not a preference (``widgets_io._on_reset_gui_clicked``).
+PRESERVED_ON_RESET: tuple[str, ...] = ("extra_individuals",)
+
+
 class AppStateSpec:
     SCOPE_GLOBAL = "global"
     SCOPE_LOCAL = "local"
@@ -357,6 +362,9 @@ class AppStateSpec:
         "playback_mic_key": (str | None, None, False),
         "pose_path": (str | None, None, False),
         "source_software": (str | None, None, True, SCOPE_LOCAL),
+        # The tracking tool this person uses, remembered from the last time they
+        # answered the drop card's question — a habit, not a property of a study.
+        "pose_software_default": (str | None, None, True),
         "image_paths": (list[str], [], True, SCOPE_LOCAL),
         "nwb_pose_keys": (list[str], [], True, SCOPE_LOCAL),
         "pose_hide_threshold": (float, 0.9, True),
@@ -388,10 +396,13 @@ class AppStateSpec:
         "skeleton_use_base": (bool, True, True),
         "skeleton_base_color": (str | None, "#00CC66", True),
         "skeleton_config_override": (dict | None, None, True),
-        # Which skeleton wins when the data carries one AND project.yaml does:
-        # "nwb" (the data's, the default) or "project". A preference, so global —
+        # Which skeleton wins when the data carries one AND the library holds one:
+        # "nwb" (the data's, the default) or "library". A preference, so global —
         # it is how the user works, not a property of one session.
         "skeleton_source": (str, "nwb", True),
+        # Which file of the skeleton library is drawn (its stem). None means "the
+        # only one there is", which is the common case — see skeleton/library.py.
+        "skeleton_name": (str | None, None, True),
         # Keypoint labelling: the schema being labelled and the chosen fill
         # backend. The labelled coordinates themselves are project data and go
         # to a sidecar next to the video, never here.
@@ -498,6 +509,12 @@ class AppStateSpec:
         # The subject a new label lands on, announced for the bottom bar.
         # Computed by selected_individual(); never saved.
         "labelling_subject": (str | None, None, False),
+        # Individuals the *data* does not name, and file globs no session folder
+        # should read. Both are additive and both follow the user, not the study:
+        # naming two crows must not require a project folder (see
+        # `label_individuals` / `ignored_files`).
+        "extra_individuals": (list[str], [], True),
+        "ignore_files": (list[str], [], True),
         # Audio processing
         "audio_cp_hop_length_ms": (float, 5.0, True),
         "audio_cp_min_level_db": (float, -70.0, True),
@@ -1207,39 +1224,48 @@ class ObservableAppState(QObject):
     def label_individuals(self) -> list[str]:
         """Every individual that can act or receive, backend-agnostic.
 
-        What the data declares is the session record's list (``alignment.individuals``)
-        or, failing that, the dataset's individual dim (whatever its spelling).
-        ``project.yaml``'s ``individuals_mode`` says what to do with it:
-        ``"inherit"`` (the default) takes the declaration and falls back to the
-        project's list, ``"define"`` takes the project's list outright, ``"both"``
-        is the declaration plus the list. With neither, the names the labels
-        themselves use — a session with no individual dimension still labels
-        *somebody*. Falls back to a single ``"default"`` so the selector is never
-        empty.
-        """
-        from ethograph.gui.project import project_settings_of
+        **The data names its individuals; your own list only adds to them.** First
+        the session record (``alignment.individuals``) or the dataset's individual
+        dim (whatever its spelling), then ``extra_individuals`` from
+        ``gui_settings.yaml``. There is no mode and no override — a name is never
+        hidden by another source, so the answer is always a superset of what the
+        data declares.
 
-        settings = project_settings_of(self)
-        declared = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
-        if not declared:
-            loader = getattr(self, "data_loader", None)
-            catalog = getattr(loader, "catalog", None)
-            if catalog is not None and catalog.individual_combo:
-                declared = [str(v) for v in catalog.combo_values(catalog.individual_combo)]
-        listed = list(settings.individuals)
-        if settings.individuals_mode == "define" and listed:
-            return listed
-        if settings.individuals_mode == "both":
-            return declared + [name for name in listed if name not in declared]
-        if declared:
-            return declared
-        if listed:
-            return listed
+        With no source at all, the names the labels themselves use — a session with
+        no individual dimension still labels *somebody* — and finally a single
+        ``"default"`` so the selector is never empty.
+        """
         names: list[str] = []
+        for name in (*self.declared_individuals(), *self.get_with_default("extra_individuals")):
+            if str(name) not in names:
+                names.append(str(name))
+        if names:
+            return names
+
         df = self._all_labels_df
         if df is not None and not df.empty and "individual" in df.columns:
             names = [str(v) for v in pd.unique(df["individual"].dropna())]
         return names or ["default"]
+
+    def declared_individuals(self) -> list[str]:
+        """Only the names the loaded data itself declares — what the dialog greys out."""
+        declared = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
+        if declared:
+            return declared
+        catalog = getattr(getattr(self, "data_loader", None), "catalog", None)
+        if catalog is not None and catalog.individual_combo:
+            return [str(v) for v in catalog.combo_values(catalog.individual_combo)]
+        return []
+
+    def ignored_files(self) -> tuple[str, ...]:
+        """File-name globs never read from a session folder's root.
+
+        The user's own list (``gui_settings.yaml``): a project folder can be copied
+        from one machine to the next, but which of two ``.nc`` files is the current
+        one is answered by the person sitting in front of it, so the answer follows
+        them and not the folder. Edited on the cover page (**Excluded files…**).
+        """
+        return tuple(str(g) for g in self.get_with_default("ignore_files"))
 
     def labels_name_our_individuals(self, df: pd.DataFrame | None) -> bool:
         """Whether *df* names individuals the way this dataset names its own.

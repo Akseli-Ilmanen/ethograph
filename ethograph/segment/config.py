@@ -28,7 +28,7 @@ import yaml
 from ethograph.features.label_inputs import check_branches_disjoint
 from ethograph.io.session_layout import adopt_legacy_files
 from ethograph.labels.tsv_store import labels_tsv_path
-from ethograph.utils.paths import defaults_dir, ethograph_home
+from ethograph.utils.paths import defaults_dir, ethograph_home, global_setting
 from ethograph.video_features.base import CropBox, Extractor, check_extractor_name, extractor_module
 
 logger = logging.getLogger(__name__)
@@ -198,8 +198,9 @@ class SessionSpec:
     #: keys, log lines. Defaults to the source's stem, which is fine until
     #: every session's file is called ``Trial_data.nc``.
     name: str | None = None
-    #: The project's ``ignore`` globs (``project.yaml`` nearest the config): root
-    #: files of the session folder never read. Filled by ``config_from_dict``.
+    #: The user's ``ignore_files`` globs (``gui_settings.yaml``, the list the GUI
+    #: writes): root files of the session folder never read. Filled by
+    #: ``config_from_dict``, so a run agrees with the GUI it was set in.
     ignore: tuple[str, ...] = ()
     #: Video features from files, ``{variable: folder}``: one ``{video stem}.npy``
     #: per trial's camera file, attached in memory when the session opens
@@ -214,18 +215,18 @@ class SessionSpec:
         return self.source.name if self.source.is_dir() else self.source.stem
 
 
-def project_ignore(start: Path) -> tuple[str, ...]:
-    """The ``ignore`` list of the ``project.yaml`` nearest *start* (a config file or folder); ``()`` without one."""
-    from ethograph.gui.project import find_project_dir, load_project_settings
+def user_ignore() -> tuple[str, ...]:
+    """File-name globs a session folder is never loaded from (``ignore_files``).
 
-    project = find_project_dir(start)
-    try:
-        return load_project_settings(project).ignore
-    except ValueError as exc:
-        # A pipeline config that was itself named project.yaml (older docs said so) is
-        # not project settings; a run must not die on it, only a GUI project may.
-        logger.warning("%s is not project settings, no ignore list applied: %s", project, exc)
+    The GUI's own list, read straight from ``gui_settings.yaml``: which of two
+    ``.nc`` files in a folder is the current one is the user's answer, and a run
+    must agree with the GUI they set it in. Empty when no GUI has run here.
+    """
+    globs = global_setting("ignore_files", [])
+    if not isinstance(globs, list):
+        logger.warning("ignore_files in gui_settings.yaml is not a list; ignoring it")
         return ()
+    return tuple(str(g) for g in globs)
 
 
 def name_colliding_sessions(specs: list[SessionSpec]) -> None:
@@ -1476,7 +1477,7 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
     cfg.config_path = config_path
     if not cfg.sessions:
         raise ValueError("config.sessions is empty — list at least one session")
-    ignore = project_ignore(config_path or base_dir)
+    ignore = user_ignore()
     for spec in cfg.sessions:
         spec.ignore = ignore
         if spec.labels_path is None:

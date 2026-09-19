@@ -20,6 +20,12 @@ class _AppState:
     audio_folder = ""
     pose_folder = ""
     nwb_alignment = None
+    #: The wizard seeds itself from these, as the real app state does.
+    extra_individuals: list[str] = []
+    pose_software_default = None
+
+    def get_with_default(self, name):
+        return getattr(self, name)
 
 
 class _Edit:

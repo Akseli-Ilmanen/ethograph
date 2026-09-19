@@ -1,6 +1,6 @@
-"""Window menu: every titled open dialog is listed and can be pulled back onto
-the main window's screen. Dialogs are owned windows with no taskbar entry, so
-this menu is the only way to find one that was dragged away."""
+"""Gather windows: every titled open dialog can be pulled back onto the main
+window's screen. Dialogs are owned windows with no taskbar entry, so this is
+the only way to recover one that was dragged away."""
 
 from __future__ import annotations
 

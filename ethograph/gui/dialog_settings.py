@@ -9,15 +9,15 @@ instead of in a text editor:
   :func:`~ethograph.utils.paths.find_mapping_file` resolved (a session's own, the
   project's, or the home defaults); a save goes to the project's ``mapping.txt``
   unless the loaded file is the session's, which stays the session's.
-* **Individuals** — ``project.yaml``'s ``individuals`` and ``individuals_mode``,
-  the one answer to who can be labelled (:meth:`AppState.label_individuals`), so
-  a video-only session can label somebody without any pose data at all.
+* **Individuals** — the names the data does not declare, kept in
+  ``gui_settings.yaml`` (``extra_individuals``) and *added* to the data's own, so
+  a video-only session can label somebody with no pose data and no project folder.
 * **Skeleton** — ``project.yaml``'s ``pose.skeleton``, drawn with the same
   :class:`~ethograph.gui.dialog_skeleton_editor.SkeletonEditorDialog` as before,
   plus which source wins when the data carries a skeleton too.
 
-Every dialog needs a project folder, because its answer is the *study's*: with
-none chosen the dialog says so and opens nothing.
+The mapping and the skeleton are the *study's*, so they need a project folder and
+say so when there is none. The individuals are the *user's*, so they never do.
 """
 
 from __future__ import annotations
@@ -37,34 +37,19 @@ from qtpy.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
-    QRadioButton,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
 )
 
+from ethograph.gui.app_constants import MAX_LABEL_BRANCHES
 from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.notify import notify
-from ethograph.gui.project import (
-    INDIVIDUALS_MODES,
-    project_dir_of,
-    project_settings_of,
-    update_project_settings,
-)
-
-#: Branch count is a hard rule of the label renderer (``_BRANCH_POSITION``), not a
-#: preference: 0 draws full, 1 top1, 2 top2. The spin box says the same thing.
-from ethograph.gui.widgets_labels import MAX_LABEL_BRANCHES
+from ethograph.gui.project import project_dir_of
 from ethograph.io.session_layout import session_dir_of
 from ethograph.labels.intervals import EVENT_TYPE_POINT, EVENT_TYPE_STATE, load_label_mapping, save_label_mapping
 from ethograph.utils.paths import SETTINGS_DIR, find_mapping_file
-
-_MODE_LABELS = {
-    "inherit": "Inherit from the pose / feature data",
-    "define": "Define them here",
-    "both": "Inherit, plus the names below",
-}
 
 
 def require_project(app_state, parent) -> Path | None:
@@ -113,7 +98,7 @@ class LabelMappingDialog(QDialog):
 
         buttons_row = QHBoxLayout()
         add_btn = QPushButton("Add label")
-        add_btn.clicked.connect(self._add_row)
+        add_btn.clicked.connect(lambda: self._add_row())  # clicked passes `checked`, not an id
         remove_btn = QPushButton("Remove selected")
         remove_btn.clicked.connect(self._remove_selected)
         open_btn = QPushButton("Open mapping.txt…")
@@ -157,9 +142,9 @@ class LabelMappingDialog(QDialog):
 
     # -- rows ------------------------------------------------------------
 
-    def _add_row(self, label_id=None, name="", branch=0, event_type=None) -> None:
+    def _add_row(self, label_id: int | None = None, name="", branch=0, event_type=None) -> None:
         row = self.table.rowCount()
-        if label_id is None:  # a click on "Add label": the next free id
+        if label_id is None:  # "Add label" with no id of its own: the next free one
             label_id = 1 + max((self._row_id(r) for r in range(row)), default=-1)
             name = f"label{label_id}"
         self.table.insertRow(row)
@@ -240,73 +225,78 @@ class LabelMappingDialog(QDialog):
 
 
 class IndividualsDialog(QDialog):
-    """Who can be labelled: inherit from the data, define here, or both."""
+    """Who can be labelled: the data's names, plus your own.
+
+    Two lists, and the split is the whole design. The top one is what the loaded
+    data declares — read-only, because renaming it here would only disagree with
+    the file. The bottom one is yours, kept in ``gui_settings.yaml`` so it follows
+    you across projects and a video-only session needs no project folder to name
+    two crows. Additive, always: a name in one list never hides a name in the other.
+    """
 
     def __init__(self, app_state, on_changed=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Individuals")
         self.app_state = app_state
         self._on_changed = on_changed
-        settings = project_settings_of(app_state)
 
         layout = QVBoxLayout(self)
-        inherited = self._inherited()
-        layout.addWidget(
-            QLabel("The data declares: " + (", ".join(inherited) if inherited else "nothing — no individual dimension"))
+        declared = app_state.declared_individuals()
+        layout.addWidget(QLabel("From the data (read-only — it is what the file says):"))
+        self._declared = QPlainTextEdit(self)
+        self._declared.setPlainText(
+            "\n".join(declared) if declared else "nothing — this data has no individual dimension"
         )
+        self._declared.setReadOnly(True)
+        self._declared.setMaximumHeight(90)
+        self._declared.setStyleSheet("color: rgba(255,255,255,120);")
+        layout.addWidget(self._declared)
 
-        self._radios: dict[str, QRadioButton] = {}
-        for mode in INDIVIDUALS_MODES:
-            radio = QRadioButton(_MODE_LABELS[mode], self)
-            radio.setChecked(mode == settings.individuals_mode)
-            radio.toggled.connect(self._sync_enabled)
-            self._radios[mode] = radio
-            layout.addWidget(radio)
-        self._radios["inherit"].setToolTip("The default: data that names its individuals wins")
-        self._radios["both"].setToolTip("Never a default — the data's names plus the ones you add below")
-
-        layout.addWidget(QLabel("Names, one per line:"))
+        layout.addWidget(QLabel("Yours, one per line (added to the above, for every project):"))
         self._names = QPlainTextEdit(self)
-        self._names.setPlainText("\n".join(settings.individuals))
+        self._names.setPlainText("\n".join(app_state.get_with_default("extra_individuals")))
+        self._names.textChanged.connect(self._sync_effect)
         layout.addWidget(self._names)
+
+        #: The resolved answer, so the dialog says what it will do before it does it.
+        self._effect = QLabel("")
+        self._effect.setWordWrap(True)
+        self._effect.setStyleSheet("color: rgba(255,255,255,150);")
+        layout.addWidget(self._effect)
 
         box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, parent=self)
         box.accepted.connect(self._save)
         box.rejected.connect(self.reject)
         layout.addWidget(box)
-        self._sync_enabled()
-        self.resize(420, 400)
+        self._sync_effect()
+        self.resize(460, 460)
 
-    def _inherited(self) -> list[str]:
-        declared = [str(v) for v in getattr(getattr(self.app_state, "nwb_alignment", None), "individuals", [])]
-        if declared:
-            return declared
-        catalog = getattr(getattr(self.app_state, "data_loader", None), "catalog", None)
-        if catalog is not None and catalog.individual_combo:
-            return [str(v) for v in catalog.combo_values(catalog.individual_combo)]
-        return []
+    def _typed(self) -> list[str]:
+        return [line.strip() for line in self._names.toPlainText().splitlines() if line.strip()]
 
-    def _mode(self) -> str:
-        return next(mode for mode, radio in self._radios.items() if radio.isChecked())
+    def _resolved(self) -> list[str]:
+        """What :meth:`AppState.label_individuals` would answer with the list as typed."""
+        names: list[str] = []
+        for name in (*self.app_state.declared_individuals(), *self._typed()):
+            if name not in names:
+                names.append(name)
+        return names
 
-    def _sync_enabled(self) -> None:
-        self._names.setEnabled(self._mode() != "inherit")
+    def _sync_effect(self) -> None:
+        resolved = self._resolved()
+        self._effect.setText("You will be able to label: " + (", ".join(resolved) if resolved else "default"))
 
     def _save(self) -> None:
-        project = require_project(self.app_state, self)
-        if project is None:
-            return
-        names = [line.strip() for line in self._names.toPlainText().splitlines() if line.strip()]
+        names = self._typed()
         if len(set(names)) != len(names):
             notify("An individual is named twice — every name is one animal.", "warning")
             return
-        if self._mode() != "inherit" and not names:
-            notify(f"'{_MODE_LABELS[self._mode()]}' needs at least one name.", "warning")
-            return
-        update_project_settings(project, individuals=names, individuals_mode=self._mode())
-        self.app_state.refresh_labelling_subject()
+        self.app_state.extra_individuals = names
+        # Order matters: the sidebar's combos are repopulated first, so the subject
+        # re-announced after them is the one the user can now actually see.
         if self._on_changed is not None:
             self._on_changed()
+        self.app_state.refresh_labelling_subject()
         notify(f"{len(self.app_state.label_individuals())} individual(s) can be labelled")
         self.accept()
 
@@ -317,7 +307,7 @@ class IndividualsDialog(QDialog):
 
 
 class SkeletonSettingsDialog(QDialog):
-    """The project's skeleton, and which source wins when the data has one too."""
+    """The skeleton library: pick one, draw one, and say which source wins."""
 
     def __init__(self, app_state, pose_mgr=None, on_changed=None, parent=None):
         super().__init__(parent)
@@ -331,13 +321,21 @@ class SkeletonSettingsDialog(QDialog):
         self._summary.setWordWrap(True)
         layout.addWidget(self._summary)
 
+        pick_row = QHBoxLayout()
+        pick_row.addWidget(QLabel("Skeleton:"))
+        self._name = QComboBox(self)
+        self._name.setToolTip("One file per skeleton in config/skeleton/ — a study with two rigs has two")
+        self._name.currentIndexChanged.connect(lambda _i: self._refresh_connections())
+        pick_row.addWidget(self._name, stretch=1)
+        layout.addLayout(pick_row)
+
         source_row = QHBoxLayout()
-        source_row.addWidget(QLabel("When both exist, draw:"))
+        source_row.addWidget(QLabel("When the data has one too, draw:"))
         self._source = QComboBox(self)
         self._source.addItem("the data's skeleton", "nwb")
-        self._source.addItem("the project's skeleton", "project")
-        self._source.setCurrentIndex(1 if getattr(app_state, "skeleton_source", "nwb") == "project" else 0)
-        self._source.setToolTip("Pick the project's to edit the skeleton without touching the NWB file")
+        self._source.addItem("the one picked above", "library")
+        self._source.setCurrentIndex(1 if getattr(app_state, "skeleton_source", "nwb") == "library" else 0)
+        self._source.setToolTip("Pick the library's to edit a skeleton without touching an NWB file")
         source_row.addWidget(self._source)
         source_row.addStretch()
         layout.addLayout(source_row)
@@ -346,13 +344,14 @@ class SkeletonSettingsDialog(QDialog):
         layout.addWidget(self._connections)
 
         buttons_row = QHBoxLayout()
-        edit_btn = QPushButton("Edit skeleton…")
-        edit_btn.setToolTip("Draw connections on this trial's pose data; the result becomes the project's skeleton")
+        edit_btn = QPushButton("Draw / edit…")
+        edit_btn.setToolTip("Draw connections on this trial's pose data and save them under a name")
         edit_btn.clicked.connect(self._edit)
-        clear_btn = QPushButton("Clear project skeleton")
-        clear_btn.clicked.connect(self._clear)
+        delete_btn = QPushButton("Delete")
+        delete_btn.setToolTip("Remove the selected skeleton's file from the library")
+        delete_btn.clicked.connect(self._delete)
         buttons_row.addWidget(edit_btn)
-        buttons_row.addWidget(clear_btn)
+        buttons_row.addWidget(delete_btn)
         buttons_row.addStretch()
         layout.addLayout(buttons_row)
 
@@ -360,40 +359,52 @@ class SkeletonSettingsDialog(QDialog):
         box.accepted.connect(self._save)
         box.rejected.connect(self.reject)
         layout.addWidget(box)
-        self._refresh()
-        self.resize(480, 460)
+        self._reload_library()
+        self.resize(480, 480)
 
-    def _project_skeleton(self) -> dict | None:
-        return project_settings_of(self.app_state).skeleton
+    # -- the library -----------------------------------------------------
 
-    def _refresh(self) -> None:
-        skeleton = self._project_skeleton()
-        connections = list((skeleton or {}).get("connections") or [])
+    def _project(self) -> Path | None:
+        """The project whose library is written — ``None`` writes the user's own, which always works."""
+        return project_dir_of(self.app_state)
+
+    def _reload_library(self, select: str | None = None) -> None:
+        from ethograph.skeleton.library import load_skeletons
+
+        self._library = load_skeletons(self._project())
+        wanted = select or getattr(self.app_state, "skeleton_name", None)
+        self._name.blockSignals(True)
+        self._name.clear()
+        for name in sorted(self._library):
+            self._name.addItem(name, name)
+        index = self._name.findData(wanted)
+        self._name.setCurrentIndex(index if index >= 0 else 0)
+        self._name.blockSignals(False)
+        self._refresh_connections()
+
+    def _selected(self) -> str | None:
+        return self._name.currentData()
+
+    def _refresh_connections(self) -> None:
+        connections = list((self._library.get(self._selected() or "") or {}).get("connections") or [])
+        where = "this project's" if self._project() is not None else "your own"
         self._summary.setText(
-            f"The project draws {len(connections)} connection(s)."
-            if connections
-            else "The project has no skeleton — the data's own is drawn."
+            f"{len(connections)} connection(s) in {where} library ({len(self._library)} skeleton(s))."
+            if self._library
+            else f"No skeleton in {where} library yet — Draw / edit… makes one. The data's own is drawn."
         )
         self._connections.clear()
         for edge in connections:
             self._connections.addItem(f"{edge.get('start', '?')} → {edge.get('end', '?')}")
 
-    def _pose_block(self, skeleton: dict | None) -> dict | None:
-        """``project.yaml``'s ``pose:`` with *skeleton* swapped in, the software it already names kept."""
-        software = project_settings_of(self.app_state).pose_software
-        block = {}
-        if software:
-            block["source_software"] = software
-        if skeleton is not None:
-            block["skeleton"] = skeleton
-        return block or None
+    # -- actions ---------------------------------------------------------
 
     def _edit(self) -> None:
-        from ethograph.gui.dialog_skeleton_editor import SkeletonEditorDialog
+        from qtpy.QtWidgets import QInputDialog
 
-        project = require_project(self.app_state, self)
-        if project is None:
-            return
+        from ethograph.gui.dialog_skeleton_editor import SkeletonEditorDialog
+        from ethograph.skeleton.library import save_skeleton
+
         data = self.pose_mgr.primary_pose_for_editor() if self.pose_mgr is not None else None
         if data is None:
             notify("No pose data available for the current camera/trial to draw a skeleton on.", "warning")
@@ -402,25 +413,94 @@ class SkeletonSettingsDialog(QDialog):
         if positions.shape[0] == 0:
             notify("Pose data has no frames to edit.", "warning")
             return
-        dialog = SkeletonEditorDialog(keypoints, positions, existing_config=self._project_skeleton(), parent=self)
+        selected = self._selected()
+        dialog = SkeletonEditorDialog(
+            keypoints, positions, existing_config=self._library.get(selected or ""), parent=self
+        )
         if not dialog.exec_():
             return
-        update_project_settings(project, pose=self._pose_block(skeleton=dialog.get_config()))
-        # The project's skeleton is now the edited one; a stale per-session drawing
-        # would outrank it, so the edit replaces it rather than hiding behind it.
-        self.app_state.skeleton_config_override = None
-        self._refresh()
-
-    def _clear(self) -> None:
-        project = require_project(self.app_state, self)
-        if project is None:
+        name, ok = QInputDialog.getText(self, "Save skeleton as", "Name (one file):", text=selected or "skeleton")
+        if not ok or not name.strip():
             return
-        update_project_settings(project, pose=self._pose_block(skeleton=None))
+        try:
+            path = save_skeleton(name.strip(), dialog.get_config(), self._project())
+        except (OSError, ValueError) as exc:
+            notify(f"Could not save the skeleton: {exc}", "warning")
+            return
+        # The drawing is now a library file; a stale per-session override would
+        # outrank it, so the edit replaces it rather than hiding behind it.
         self.app_state.skeleton_config_override = None
-        self._refresh()
+        self.app_state.skeleton_name = name.strip()
+        notify(f"Saved {path}")
+        self._reload_library(select=name.strip())
+
+    def _delete(self) -> None:
+        from ethograph.skeleton.library import delete_skeleton
+
+        name = self._selected()
+        if not name:
+            return
+        if QMessageBox.question(self, "Delete skeleton", f"Delete {name}.yaml from the library?") != (
+            QMessageBox.StandardButton.Yes
+        ):
+            return
+        delete_skeleton(name, self._project())
+        if getattr(self.app_state, "skeleton_name", None) == name:
+            self.app_state.skeleton_name = None
+        self._reload_library()
 
     def _save(self) -> None:
         self.app_state.skeleton_source = self._source.currentData()
+        self.app_state.skeleton_name = self._selected()
         if self._on_changed is not None:
             self._on_changed()
+        self.accept()
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Ignored files
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class IgnoredFilesDialog(QDialog):
+    """The file-name globs no session folder's root is ever read from.
+
+    A folder holding two ``.nc`` files is refused rather than guessed
+    (``AmbiguousSessionError``); this list is how the old one is named, once, for
+    every folder. Like the individuals it is the user's (``gui_settings.yaml``):
+    a project folder may be copied from one machine to the next, but which file is
+    current is answered by whoever is sitting in front of it.
+    """
+
+    def __init__(self, app_state, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Excluded files")
+        self.app_state = app_state
+
+        layout = QVBoxLayout(self)
+        hint = QLabel(
+            "File names or globs never loaded from a session folder — an old version "
+            "of a dataset beside the current one. One per line, e.g. Trial_data.nc or *_old.nc."
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        self._globs = QPlainTextEdit(self)
+        self._globs.setPlainText("\n".join(app_state.get_with_default("ignore_files")))
+        layout.addWidget(self._globs)
+
+        box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, parent=self)
+        box.accepted.connect(self._save)
+        box.rejected.connect(self.reject)
+        layout.addWidget(box)
+        self.resize(460, 340)
+
+    def _save(self) -> None:
+        globs: list[str] = []
+        for line in self._globs.toPlainText().splitlines():
+            glob = line.strip()
+            if glob and glob not in globs:
+                globs.append(glob)
+        self.app_state.ignore_files = globs
+        notify(f"{len(self.app_state.ignored_files())} file pattern(s) excluded")
         self.accept()

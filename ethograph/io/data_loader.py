@@ -328,8 +328,9 @@ def _open_trialtree(file_path: str) -> TrialTree:
 class AmbiguousSessionError(ValueError):
     """A session folder holds several ``.nc`` files: versions of one dataset, and nobody said which.
 
-    The remedy is a line in the project's ``project.yaml``; the message spells it out and
-    ``candidates`` lets the GUI offer it as a button.
+    The remedy is a line in the user's ``ignore_files`` (``gui_settings.yaml``, on
+    the start page); the message spells it out and ``candidates`` lets the GUI
+    offer it as a button.
     """
 
     def __init__(self, folder: Path, candidates: list[Path]) -> None:
@@ -339,8 +340,8 @@ class AmbiguousSessionError(ValueError):
         oldest = min(candidates, key=lambda p: p.stat().st_mtime).name
         super().__init__(
             f"{folder} holds {names}. One session has one dataset, so these are versions of one file. "
-            f"Add the old ones to the project's project.yaml, e.g.   ignore: [{oldest}]   "
-            "(the GUI offers this per file), or name the one to use with source: the .nc file."
+            f"Exclude the old ones in gui_settings.yaml, e.g.   ignore_files: [{oldest}]   "
+            "(the start page's Excluded files… does it for you), or name the one to use with source:."
         )
 
 
@@ -429,9 +430,9 @@ def load_features_dataset(
         Optional explicit labels TSV. Overrides the session folder's
         ``labels.tsv`` — used for the user-specified "Import labels" path.
     ignore
-        File-name globs never read from a session folder's root (the project's
-        ``project.yaml`` ``ignore`` list): old versions of a dataset. A file
-        named explicitly as *file_path* is loaded regardless.
+        File-name globs never read from a session folder's root (the user's
+        ``ignore_files``): old versions of a dataset. A file named explicitly as
+        *file_path* is loaded regardless.
 
     Returns a :class:`LoadResult` with dt, labels, catalog, and metadata.
     """

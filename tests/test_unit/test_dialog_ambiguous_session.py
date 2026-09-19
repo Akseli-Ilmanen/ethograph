@@ -1,17 +1,26 @@
-"""The "which file?" dialog writes the project's ignore list; it never moves a file."""
+"""The "which file?" dialog writes the user's exclusion list; it never moves a file.
+
+The list is ``ignore_files`` in ``gui_settings.yaml``, not a project file: a
+project folder can be copied between machines, but which of two datasets in a
+folder is the current one is answered by whoever is sitting in front of it. So
+the dialog works with no project folder at all.
+"""
 
 from pathlib import Path
 
 from qtpy.QtWidgets import QPushButton
 
 from ethograph.gui.dialog_ambiguous_session import AmbiguousSessionDialog
-from ethograph.gui.project import load_project_settings
 from ethograph.io.data_loader import AmbiguousSessionError
 
 
 class _State:
-    def __init__(self, project: Path | None) -> None:
-        self.project_path = str(project) if project else None
+    def __init__(self) -> None:
+        self.project_path = None
+        self.ignore_files: list[str] = []
+
+    def get_with_default(self, name):
+        return getattr(self, name)
 
 
 def _error(tmp_path: Path) -> AmbiguousSessionError:
@@ -23,25 +32,23 @@ def _error(tmp_path: Path) -> AmbiguousSessionError:
     return AmbiguousSessionError(folder, [a, b])
 
 
-def _ignore_buttons(dlg: AmbiguousSessionDialog) -> list[QPushButton]:
-    return [b for b in dlg.findChildren(QPushButton) if b.text() == "Ignore in this project"]
+def _exclude_buttons(dlg: AmbiguousSessionDialog) -> list[QPushButton]:
+    return [b for b in dlg.findChildren(QPushButton) if b.text() == "Never load this"]
 
 
-def test_ignore_button_appends_to_project_yaml_and_moves_nothing(qapp, tmp_path: Path):
-    project = tmp_path / "study"
-    project.mkdir()
+def test_the_button_excludes_the_file_and_moves_nothing(qapp, tmp_path: Path):
+    state = _State()
     error = _error(tmp_path)
-    dlg = AmbiguousSessionDialog(error, _State(project))
-    buttons = _ignore_buttons(dlg)
-    assert len(buttons) == 2
+    dlg = AmbiguousSessionDialog(error, state)
+
+    buttons = _exclude_buttons(dlg)
+    assert len(buttons) == 2, "one per candidate, with no project folder anywhere"
+
     dlg._ignore("Trial_data.nc", buttons[0])
     assert dlg.ignored == ["Trial_data.nc"]
-    assert load_project_settings(project).ignore == ("Trial_data.nc",)
-    assert not buttons[0].isEnabled() and buttons[0].text() == "Ignored"
-    assert all(p.exists() for p in error.candidates)
+    assert state.ignore_files == ["Trial_data.nc"]
+    assert not buttons[0].isEnabled() and buttons[0].text() == "Excluded"
+    assert all(p.exists() for p in error.candidates), "the session folder is never touched"
 
-
-def test_without_a_project_nothing_can_be_ignored(qapp, tmp_path: Path):
-    dlg = AmbiguousSessionDialog(_error(tmp_path), _State(None))
-    assert dlg.project is None
-    assert all(not b.isEnabled() for b in _ignore_buttons(dlg))
+    dlg._ignore("Trial_data.nc", buttons[0])  # a second click adds nothing
+    assert state.ignore_files == ["Trial_data.nc"]

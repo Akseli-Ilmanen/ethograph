@@ -70,7 +70,6 @@ from ethograph.gui.project import (
     is_foreign_session,
     list_drops,
     project_dir_of,
-    project_settings_of,
     record_drop,
     register_session,
     restore_drop,
@@ -87,7 +86,7 @@ from ethograph.io.validation import (
     VIDEO_EXTENSIONS,
     movement_dataset_info,
 )
-from ethograph.utils.paths import SETTINGS_DIR
+from ethograph.utils.paths import SETTINGS_DIR, defaults_dir, seed_defaults
 
 # POSE_SOFTWARES is shared with the pose-overlay prompt in pose_render.
 from .app_constants import POSE_SOFTWARES
@@ -115,6 +114,10 @@ _ACCENTS = {
 # 1080 px-tall screen. On shorter screens (13" laptops, scaled displays) they
 # are multiplied by ``CoverPage._scale`` so the page still fits vertically.
 _REFERENCE_SCREEN_HEIGHT = 1080
+#: The docs page explaining the project folder — linked from the project bar,
+#: because "which folder?" is the one question this screen asks first.
+FOLDER_LAYOUT_URL = "https://Akseli-Ilmanen.github.io/ethograph/getting_started/your_data/folder_layout.html"
+
 _MIN_SCALE = 0.6
 
 
@@ -536,10 +539,18 @@ class CoverPage(QDialog):
         right.setSpacing(self._px(16))
         cards = QHBoxLayout()
         cards.setSpacing(self._px(16))
-        cards.addWidget(self._build_drop_card(), 2)
-        cards.addWidget(self._build_custom_card(), 5)
+        self._drop_card = self._build_drop_card()
+        self._custom_card = self._build_custom_card()
+        self._load_bar = self._build_load_bar()
+        cards.addWidget(self._drop_card, 2)
+        cards.addWidget(self._custom_card, 5)
         right.addLayout(cards, 1)
-        right.addWidget(self._build_load_bar())
+        right.addWidget(self._load_bar)
+        #: Every path that ends in a loaded session of the user's own — each needs a
+        #: project folder first, because the label vocabulary lives there and
+        #: discovering that *after* labelling has started is too late. Templates are
+        #: exempt: they bring their own folder (see :meth:`_on_template`).
+        self._needs_project = (self._drop_card, self._custom_card, self._load_bar)
         body.addLayout(right, 7)
         outer.addLayout(body)
 
@@ -557,7 +568,28 @@ class CoverPage(QDialog):
         # Small enough that the user can always shrink the window; the scroll
         # area takes over once the content no longer fits.
         self.setMinimumSize(min(700, avail.width()), min(420, avail.height()))
+        self._ensure_project_folder()
         self._refresh_project_ui()
+
+    def _ensure_project_folder(self) -> None:
+        """A fresh install already has a project: the starter one under ``~/.ethograph``.
+
+        Quick visualisation must work the moment the GUI opens, so nobody is asked
+        to invent a folder before they have seen anything. The starter project ships
+        a ``mapping.txt``, the example configs and the geometries, so every path is
+        live from the start; moving to a folder of one's own is what a real study
+        does, and the bar says so.
+        """
+        if project_dir_of(self.app_state) is not None:
+            return
+        seed_defaults()
+        starter = defaults_dir()
+        starter.mkdir(parents=True, exist_ok=True)
+        self.app_state.project_path = str(starter)
+
+    def _using_starter_project(self) -> bool:
+        project = self._project_dir()
+        return project is not None and project.resolve() == defaults_dir().resolve()
 
     def _px(self, value: float) -> int:
         """Scale a pixel size tuned for a 1080 px-tall screen to this screen."""
@@ -592,8 +624,20 @@ class CoverPage(QDialog):
         tools.setMenu(menu)
         self._tools_button = tools
         row.addWidget(tools)
+
+        # The exclusion list belongs on the only screen that loads data: a folder
+        # with two .nc files is refused *here*, so this is where you name the old one.
+        exclude = QPushButton("🚫  Excluded files…")
+        exclude.setToolTip("File names or globs never loaded from a session folder (e.g. *_old.nc)")
+        exclude.clicked.connect(self._open_excluded_files)
+        row.addWidget(exclude)
         row.addStretch()
         return row
+
+    def _open_excluded_files(self) -> None:
+        from ethograph.gui.dialog_settings import IgnoredFilesDialog
+
+        IgnoredFilesDialog(self.app_state, parent=self).exec_()
 
     def _open_tag_sheet(self) -> None:
         """Print-ready fiducial tags, with no video and no dataset in sight."""
@@ -635,8 +679,20 @@ class CoverPage(QDialog):
 
         self._project_edit = QLineEdit()
         self._project_edit.setReadOnly(True)
-        self._project_edit.setPlaceholderText("None — drops are throwaway until a folder is chosen")
+        self._project_edit.setPlaceholderText("Choose one to continue — your label names and configs live here")
         row.addWidget(self._project_edit, 1)
+
+        #: What the current folder means. The starter project makes the GUI work
+        #: immediately; a study of one's own wants a folder of its own, and this is
+        #: the only place that difference is visible.
+        self._project_hint = QLabel("")
+        self._project_hint.setWordWrap(True)
+        row.addWidget(self._project_hint)
+
+        docs = QLabel(f'<a href="{FOLDER_LAYOUT_URL}" style="color:#5DADE2;">What goes in it?</a>')
+        docs.setOpenExternalLinks(True)
+        docs.setToolTip("The folder layout page: what the project folder holds and what each file is for")
+        row.addWidget(docs)
 
         browse_btn = QPushButton("Browse…")
         browse_btn.clicked.connect(self._on_browse_project)
@@ -658,20 +714,42 @@ class CoverPage(QDialog):
         if not path:
             return
         self.app_state.project_path = str(Path(path))
+        self._migrate_legacy_project_settings()
         self._refresh_project_ui()
 
+    def _migrate_legacy_project_settings(self) -> None:
+        """Fold an older ``project.yaml``'s lists into the settings that replaced it."""
+        from ethograph.gui.project import migrate_project_yaml
+
+        moved = migrate_project_yaml(self.app_state)
+        if moved:
+            notify("Took the individuals / excluded files from this project's project.yaml into your settings.")
+
     def _on_clear_project(self) -> None:
+        """Back to the starter project — there is always one, so nothing is ever shut."""
         self.app_state.project_path = None
+        self._ensure_project_folder()
         self._refresh_project_ui()
 
     def _project_dir(self) -> Path | None:
         return project_dir_of(self.app_state)
 
     def _refresh_project_ui(self) -> None:
-        """Mirror ``app_state.project_path`` into the bar and the reopen list."""
+        """Mirror ``app_state.project_path`` into the bar, the reopen list and the gate."""
         project = self._project_dir()
         self._project_edit.setText(str(project) if project else "")
         self._project_clear_btn.setEnabled(project is not None)
+        for widget in getattr(self, "_needs_project", ()):
+            widget.setEnabled(project is not None)
+        if hasattr(self, "_project_hint"):
+            starter = self._using_starter_project()
+            self._project_hint.setText(
+                "starter project — fine for a quick look; choose your own folder before labelling a study"
+                if starter
+                else ("← choose a folder before loading your own data" if project is None else "")
+            )
+            self._project_hint.setStyleSheet("color: #E67E22;" if starter or project is None else "")
+            self._project_hint.setVisible(bool(self._project_hint.text()))
 
         combo = self._reopen_combo
         combo.blockSignals(True)
@@ -985,8 +1063,27 @@ class CoverPage(QDialog):
     # ------------------------------------------------------------------
 
     def _on_template(self):
+        """A template is exempt from the project gate: it brings its own folder.
+
+        The downloaded session folder becomes the project, because that is where the
+        template's own ``mapping.txt`` sits — so editing the label names edits *that*
+        file, next to the data it describes, instead of asking the user to pick a
+        folder before they have even seen the GUI.
+        """
         self.io_widget._on_select_template_clicked()
+        self._adopt_template_project()
         self._close_if_loaded()
+
+    def _adopt_template_project(self) -> None:
+        from ethograph.io.session_layout import session_dir_of
+
+        source = getattr(self.app_state, "nc_file_path", None) or getattr(self.app_state, "nwb_file_path", None)
+        if not source:
+            return
+        folder = session_dir_of(source)
+        if folder.is_dir():
+            self.app_state.project_path = str(folder)
+            self._refresh_project_ui()
 
     def _on_wizard(self):
         self.io_widget._on_create_nc_clicked()
@@ -1150,11 +1247,14 @@ class CoverPage(QDialog):
             audio_track_videos=audio_track_videos,
             extract_audio_default=not buckets["audio"],
             npy_sr_default=npy_sr_default,
-            pose_software_default=project_settings_of(self.app_state).pose_software,
+            pose_software_default=self.app_state.get_with_default("pose_software_default"),
             parent=self,
         )
         if not dlg.exec_():
             return None
+        # Remember the answer, so the question is pre-filled next time anywhere.
+        if dlg.source_software():
+            self.app_state.pose_software_default = dlg.source_software()
         return {
             "data_sr": dlg.data_sr(),
             "source_software": dlg.source_software(),
@@ -1720,9 +1820,11 @@ class CoverPage(QDialog):
 
         out_path = self._drop_session_dir / SETTINGS_DIR / "alignment.nwb"
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        if out_path.exists():
-            out_path.unlink()  # a previous drop's; _choose_session_dir refused anyone else's
-        pair_media(pairing, stream_rates=stream_rates, output_path=out_path)
+        # A drop states what the session is, so it writes the alignment whole:
+        # dropping the same folder twice must land where dropping it once did.
+        # Permission to discard one this drop did not make is asked for in
+        # `_choose_session_dir`, before anything is written.
+        pair_media(pairing, stream_rates=stream_rates, output_path=out_path, on_existing="replace")
         return out_path
 
     def _choose_session_dir(self, buckets: dict[str, list[str]]) -> Path:
@@ -1730,10 +1832,14 @@ class CoverPage(QDialog):
 
         Files from one folder: that folder, no question asked. From several: the
         user picks one (:func:`choose_session_folder`), preselected by kind and
-        by what they chose last time. Data never moves. A folder that is already
-        somebody's session — ``.ethograph/`` without a drop record — is refused
-        rather than have its alignment replaced; re-dropping into a folder a
-        drop made is fine, the files there are regenerable.
+        by what they chose last time. Data never moves.
+
+        An alignment a previous *drop* made is regenerable and is replaced without
+        asking. One somebody set up on purpose — ``.ethograph/`` with no drop
+        record, from the wizard, a notebook or the Custom set-up card — is theirs,
+        so the drop asks before replacing it instead of refusing: re-dropping a
+        folder's videos is a normal thing to do, and only the user knows whether
+        the old pairing still matters.
         """
         folders = source_folders(buckets)
         if not folders:
@@ -1741,13 +1847,45 @@ class CoverPage(QDialog):
         chosen = choose_session_folder(folders, self.app_state, self)
         if chosen is None:
             raise _DropCancelled
-        if is_foreign_session(chosen):
-            raise RuntimeError(
-                f"{chosen} is already a session (it has .ethograph/ but no drop record).\n"
-                "Open it from the Custom set-up card, or drop the files with another folder chosen."
-            )
+        if not self._confirm_overwrite_alignment(chosen):
+            raise _DropCancelled
         (chosen / SETTINGS_DIR).mkdir(parents=True, exist_ok=True)
         return chosen
+
+    def _confirm_overwrite_alignment(self, folder: Path) -> bool:
+        """Whether the drop may write this folder's alignment. Only a drop asks.
+
+        A drop rebuilds the alignment whole, so the question is what that would
+        throw away. Media filenames and trial timing come back from the files, so
+        replacing them is free and silent. Two things are not free: an alignment
+        somebody else set up (no drop record), and anything a person put inside one
+        — declared individuals, trial metadata typed into the table. Either is named
+        in the question, so nobody loses work they cannot see.
+        """
+        from qtpy.QtWidgets import QMessageBox
+
+        from ethograph.io.nwb_alignment import alignment_extras
+
+        alignment = folder / SETTINGS_DIR / "alignment.nwb"
+        if not alignment.is_file():
+            return True
+        reasons = alignment_extras(alignment)
+        if is_foreign_session(folder):
+            reasons.append("an alignment no drag &amp; drop made")
+        if not reasons:
+            return True  # a previous drop's, holding nothing but what a drop writes
+
+        listed = "".join(f"<li>{reason}</li>" for reason in reasons)
+        answer = QMessageBox.question(
+            self,
+            "Overwrite this alignment?",
+            f"<b>{folder.name}</b> already holds an <code>.ethograph/alignment.nwb</code> — "
+            f"do you want to overwrite it? Rebuilding it loses:<ul>{listed}</ul>"
+            "You can open this previous alignment from the <b>Custom set-up</b> card instead.",
+            QMessageBox.Yes | QMessageBox.Cancel,
+            QMessageBox.Cancel,
+        )
+        return answer == QMessageBox.Yes
 
     # ------------------------------------------------------------------
     # Loaded-state helpers

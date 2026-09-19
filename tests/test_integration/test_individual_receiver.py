@@ -7,6 +7,10 @@ at all.  The selector now sits above every context but the video's, and carries
 a second combo, the receiver of the next label: recorded on the label, shown
 as a tag on it, never a filter — one actor's labels exclude each other
 whoever they are directed at.
+
+The selector is shown in *every* context, the video and the label timeline
+included: a click on either places a label on whoever is selected, so hiding
+the answer would leave the user labelling blind.
 """
 
 from __future__ import annotations
@@ -28,16 +32,14 @@ def test_the_actor_combo_lives_above_the_contexts_not_among_the_coords(moll2025_
     assert dw.combos[key] is not None
 
 
-def test_every_context_but_the_video_gets_the_selector(moll2025_gui):
+def test_every_context_gets_the_selector(moll2025_gui):
+    """Including the video and a panel type the map does not name at all."""
     _, meta = moll2025_gui
     panel = meta.context_panel
 
-    for context in ("audiotrace", "lineplot", "heatmap", "spectrogram", "space", "radial", "ephys", "neo"):
+    for context in ("audiotrace", "lineplot", "heatmap", "spectrogram", "space", "radial", "ephys", "neo", "video", ""):
         panel.set_context(context)
         assert panel._individual.isVisibleTo(panel), f"{context} must say whose data it shows"
-
-    panel.set_context("video")
-    assert not panel._individual.isVisibleTo(panel)
 
 
 def test_the_receiver_is_a_tag_on_the_label_never_a_filter(moll2025_gui):
@@ -90,3 +92,24 @@ def test_labels_written_under_other_names_are_not_filtered_away(moll2025_gui):
 
     assert not state.labels_name_our_individuals(state.label_intervals)
     assert len(dw._subject_intervals(state.get_display_intervals())) == 1
+
+
+def test_the_combo_offers_whoever_you_add(moll2025_gui):
+    """Your own list names someone the dataset's dim never had.
+
+    The combo used to refuse to refill while the key was a catalog dim, so a name
+    added in Settings was unreachable — the labels of an animal with no tracked
+    data could not be placed at all.
+    """
+    _, meta = moll2025_gui
+    dw = meta.data_widget
+    key = dw._individual_actor_key()
+    combo = dw.combos[key]
+    declared = [str(combo.itemData(i)) for i in range(combo.count())]
+
+    meta.app_state.extra_individuals = ["ghost"]
+    dw.refresh_individual_choices()
+
+    offered = [str(combo.itemData(i)) for i in range(combo.count())]
+    assert offered == declared + ["ghost"]
+    assert meta.app_state.label_individuals() == offered

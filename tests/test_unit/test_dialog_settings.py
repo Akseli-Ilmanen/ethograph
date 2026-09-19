@@ -11,11 +11,11 @@ from pathlib import Path
 
 import pytest
 from qtpy.QtCore import QObject, Signal
+from qtpy.QtWidgets import QPushButton
 
 pytest.importorskip("qtpy")
 
 from ethograph.gui.dialog_settings import IndividualsDialog, LabelMappingDialog  # noqa: E402
-from ethograph.gui.project import load_project_settings  # noqa: E402
 from ethograph.labels.intervals import EVENT_TYPE_POINT, load_label_mapping  # noqa: E402
 
 
@@ -30,14 +30,28 @@ class _State(QObject):
         self.nwb_alignment = None
         self.data_loader = None
         self.labelling_subject = ""
+        self.extra_individuals: list[str] = []
+        self.ignore_files: list[str] = []
 
     def refresh_labelling_subject(self):
         self.labelling_subject = self.label_individuals()[0]
+
+    def get_with_default(self, name):
+        return getattr(self, name)
+
+    def declared_individuals(self):
+        from ethograph.gui.app_state import ObservableAppState
+
+        return ObservableAppState.declared_individuals(self)
 
     def label_individuals(self):
         from ethograph.gui.app_state import ObservableAppState
 
         return ObservableAppState.label_individuals(self)
+
+
+class _Alignment:
+    individuals = ["crow1"]
 
 
 def _project(tmp_path: Path) -> Path:
@@ -76,19 +90,52 @@ def test_a_name_with_a_space_is_refused_and_nothing_is_written(qapp, tmp_path):
     assert not (project / "mapping.txt").exists()
 
 
-def test_individuals_dialog_writes_the_mode_and_the_names(qapp, tmp_path):
-    project = _project(tmp_path)
-    state = _State(project)
+def test_the_dialog_greys_out_the_data_and_adds_to_it(qapp, tmp_path):
+    """Two lists: the file's names, read-only, and the user's own, editable."""
+    state = _State(_project(tmp_path))
+    state.nwb_alignment = _Alignment()  # the data names crow1
     dialog = IndividualsDialog(state)
 
-    assert dialog._mode() == "inherit"  # the default, and the names are not editable under it
-    assert not dialog._names.isEnabled()
+    assert dialog._declared.isReadOnly()
+    assert dialog._declared.toPlainText() == "crow1"
 
-    dialog._radios["define"].setChecked(True)
-    dialog._names.setPlainText("crow1\ncrow2\n")
-    assert dialog._names.isEnabled()
+    dialog._names.setPlainText("hi")
+    assert dialog._resolved() == ["crow1", "hi"]
+    assert "crow1, hi" in dialog._effect.text()
+
+
+def test_individuals_need_no_project_folder(qapp, tmp_path):
+    """Naming two crows must not require a project: the list is the user's, not the study's."""
+    state = _State(_project(tmp_path))
+    state.project_path = None
+    dialog = IndividualsDialog(state)
+    dialog._names.setPlainText("crow1\ncrow2")
     dialog._save()
 
-    settings = load_project_settings(project)
-    assert settings.individuals == ("crow1", "crow2") and settings.individuals_mode == "define"
+    assert state.extra_individuals == ["crow1", "crow2"]
     assert state.label_individuals() == ["crow1", "crow2"]
+    assert not (tmp_path / "study" / "project.yaml").exists()
+
+
+def test_a_name_given_twice_is_refused(qapp, tmp_path):
+    state = _State(_project(tmp_path))
+    dialog = IndividualsDialog(state)
+    dialog._names.setPlainText("crow1\ncrow1")
+    dialog._save()
+    assert state.extra_individuals == []
+
+
+def test_add_label_takes_the_next_id_not_qts_checked_flag(qapp, tmp_path):
+    """``clicked`` carries a bool; wired straight to ``_add_row`` it landed in ``label_id``.
+
+    The new row's id read "False", and every later row collided with it.
+    """
+    project = _project(tmp_path)
+    (project / "mapping.txt").write_text("0 background\n1 walk\n", encoding="utf-8")
+    dialog = LabelMappingDialog(_State(project))
+
+    add_btn = next(b for b in dialog.findChildren(QPushButton) if b.text() == "Add label")
+    add_btn.click()
+    add_btn.click()
+
+    assert [dialog._row_id(r) for r in range(dialog.table.rowCount())] == [0, 1, 2, 3]

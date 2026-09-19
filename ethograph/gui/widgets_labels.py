@@ -15,7 +15,6 @@ from qtpy.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
@@ -77,9 +76,9 @@ _EVENT_TYPE_GLYPH = {
 # always "top2". This is a hard rule — not user-configurable.
 _BRANCH_POSITION = {0: "main", 1: "top1", 2: "top2"}
 _BRANCH_POSITION_LABEL = {0: "Full", 1: "Top1", 2: "Top2"}
-MAX_LABEL_BRANCHES = 3
+
 from ethograph.gui.project import project_dir_of  # noqa: E402
-from ethograph.utils.paths import defaults_dir, find_mapping_file  # noqa: E402
+from ethograph.utils.paths import find_mapping_file  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +95,19 @@ from .app_constants import (  # noqa: E402
     LABELS_TABLE_ID_COLUMN_WIDTH,
     LABELS_TABLE_ROW_HEIGHT,
     LABELS_WIDGET_SIZE_HINT_HEIGHT,
+    MAX_LABEL_BRANCHES,
 )
 from .file_dialogs import browse_open_dir, browse_open_dirs, browse_open_file  # noqa: E402
 from .widgets_curation import CurationPanel, drag_label_ids  # noqa: E402
+
+#: The overlay combo's real modes, plus the entry that opens the per-type dialog.
+_OVERLAY_CHOICES = {
+    LABEL_OVERLAY_MODE_FULL: "Full plot",
+    LABEL_OVERLAY_MODE_BOTTOM: "Bottom strip",
+    LABEL_OVERLAY_MODE_NONE: "Hidden",
+}
+_OVERLAY_PER_PLOT = "per_plot"
+_OVERLAY_PER_PLOT_TEXT = "Per plot type…"
 
 
 class BranchTable(QTableWidget):
@@ -215,6 +224,7 @@ class LabelsWidget(QWidget):
         self.labels_table = None  # kept for backward compat; points to active branch table
         self._branch_sections: dict[int, dict] = {}  # branch_idx → {"label", "table", "widget", "checkbox"}
         self._branches_layout = None
+        self._body: QWidget | None = None
         self._mapping_file_path: str | None = None
         self._previous_active_branch: int | None = None
         self._label_table_dialog = None
@@ -228,6 +238,11 @@ class LabelsWidget(QWidget):
         self.app_state._active_branch = 0
         self.app_state._branch_shown = {0: True}
         self._populate_labels_table()
+        # Whose labels these are is answered outside this widget (the data, the
+        # project, the sidebar), so the gate follows that answer rather than
+        # being decided once at build time.
+        self.app_state.labelling_subject_changed.connect(lambda _name: self.refresh_gate())
+        self.refresh_gate()
 
     def refresh_mapping_for_data_dir(self, data_dir: Path | str):
         """Re-resolve mapping.txt now that a data directory is known.
@@ -240,6 +255,7 @@ class LabelsWidget(QWidget):
         project = project_dir_of(self.app_state)
         mapping_path = find_mapping_file(data_dir, project_dir=project)
         if mapping_path is None:
+            self.refresh_gate()
             return
         project_mapping = project / "mapping.txt" if project is not None else None
         if project_mapping is not None and project_mapping.is_file() and mapping_path != project_mapping:
@@ -248,12 +264,10 @@ class LabelsWidget(QWidget):
                     f"Using this session's own {mapping_path}, which differs from the project's {project_mapping}.",
                     severity="warning",
                 )
-        current_path = Path(self.io_widget.mapping_file_path_edit.text()) if self.io_widget else None
-        if current_path == mapping_path:
+        if self._mapping_file_path and Path(self._mapping_file_path) == mapping_path:
+            self.refresh_gate()  # the dataset changed even if its vocabulary did not
             return
         self._reload_mapping(str(mapping_path))
-        if self.io_widget:
-            self.io_widget.mapping_file_path_edit.setText(str(mapping_path))
 
     def set_data_widget(self, data_widget):
         """Set reference to the data widget for plot updates."""
@@ -301,32 +315,38 @@ class LabelsWidget(QWidget):
         """Add the video label-name overlay control to the video context group."""
         groupbox.layout().addWidget(self.hide_label_cb)
 
-    def attach_overlay_groupbox(self, groupbox, row_layout=None):
-        """Add the per-plot-type label control into the "Label overlay" groupbox.
-
-        Shares a row with the groupbox's existing toggles instead of taking a
-        row of its own, so the button costs no extra vertical space.
-        """
-        self.labels_per_plot_btn = QPushButton("Per-plot type…")
-        self.labels_per_plot_btn.setToolTip(
-            "Choose how label rectangles render on each plot type: full plot, bottom strip, or not at all"
-        )
-        self.labels_per_plot_btn.clicked.connect(self._show_labels_per_plot_dialog)
-        target = row_layout if row_layout is not None else groupbox.layout()
-        # Insert before the trailing stretch (if any) rather than appending after it.
-        insert_at = target.count()
-        if insert_at > 0 and target.itemAt(insert_at - 1).spacerItem() is not None:
-            insert_at -= 1
-        target.insertWidget(insert_at, self.labels_per_plot_btn)
-
-    def _show_labels_per_plot_dialog(self):
+    def _overlay_modes(self) -> dict[str, str]:
+        """The per-plot-type modes in force: the defaults, overridden by the user's."""
         modes = dict(DEFAULT_LABEL_OVERLAY_MODES)
         modes.update(self.app_state.label_overlay_modes or {})
-        dialog = LabelsPerPlotDialog(modes, self)
+        return modes
+
+    def _sync_overlay_combo(self) -> None:
+        """Show the one mode every plot type agrees on, else "Per plot type…"."""
+        in_force = set(self._overlay_modes().values())
+        mode = in_force.pop() if len(in_force) == 1 else _OVERLAY_PER_PLOT
+        index = self.label_overlay_combo.findData(mode)
+        self.label_overlay_combo.blockSignals(True)
+        self.label_overlay_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.label_overlay_combo.blockSignals(False)
+
+    def _on_label_overlay_chosen(self, _index: int) -> None:
+        """One mode for every plot type, or the per-type dialog."""
+        mode = self.label_overlay_combo.currentData()
+        if mode == _OVERLAY_PER_PLOT:
+            self._show_labels_per_plot_dialog()
+            return
+        self.app_state.label_overlay_modes = dict.fromkeys(LABEL_OVERLAY_PLOT_TYPES, mode)
+        if self.plot_container is not None:
+            self.plot_container.labels_redraw_needed.emit()
+
+    def _show_labels_per_plot_dialog(self):
+        dialog = LabelsPerPlotDialog(self._overlay_modes(), self)
         if dialog.exec_():
             self.app_state.label_overlay_modes = dialog.get_modes()
             if self.plot_container is not None:
                 self.plot_container.labels_redraw_needed.emit()
+        self._sync_overlay_combo()
 
     def open_label_table(self):
         """Open (or raise) the spreadsheet view of the whole label table."""
@@ -412,30 +432,131 @@ class LabelsWidget(QWidget):
     def sizeHint(self):
         return QSize(300, LABELS_WIDGET_SIZE_HINT_HEIGHT)
 
+    #: Shown instead of the labelling body until there is somebody to label and
+    #: something to label them with.
+    _GATE_TEXT = (
+        "Define the individuals and the labels before labelling.\n\n"
+        "Data that names its own individuals (a pose or feature file with an "
+        "individual dimension) fills the first in for you — you can still add more."
+    )
+
+    def _build_gate(self) -> QWidget:
+        self._gate = QWidget()
+        gate_layout = QVBoxLayout(self._gate)
+        gate_layout.setContentsMargins(6, 6, 6, 6)
+        gate_layout.setSpacing(6)
+        text = QLabel(self._GATE_TEXT)
+        text.setWordWrap(True)
+        gate_layout.addWidget(text)
+
+        self._gate_individuals_btn = QPushButton("Define individuals…")
+        self._gate_individuals_btn.clicked.connect(self.open_individuals_editor)
+        gate_layout.addWidget(self._gate_individuals_btn)
+
+        self._gate_labels_btn = QPushButton("Define labels…")
+        self._gate_labels_btn.clicked.connect(self.open_label_mapping_editor)
+        gate_layout.addWidget(self._gate_labels_btn)
+        gate_layout.addStretch()
+        return self._gate
+
+    def has_individuals(self) -> bool:
+        """Whether anybody is named — ``["default"]`` is the synthesised nobody."""
+        return self.app_state.label_individuals() != ["default"]
+
+    def has_labels(self) -> bool:
+        """Whether the mapping holds a class to place. Id 0 is background, never a label."""
+        return any(isinstance(lid, int) and lid != 0 for lid in self._mappings)
+
+    def can_label(self) -> bool:
+        """Whether a label can be placed at all: somebody to label, something to label them."""
+        return self.has_individuals() and self.has_labels()
+
+    def refresh_gate(self) -> None:
+        """Grey out the labelling body until there is somebody and something to label.
+
+        Greyed out rather than hidden: the tables stay on screen so it is clear
+        what will become available, and the gate above says what is missing. The
+        refusal is not cosmetic — :meth:`activate_label` checks the same rule.
+        """
+        if self._body is None:
+            return
+        missing_individuals, missing_labels = not self.has_individuals(), not self.has_labels()
+        ready = not (missing_individuals or missing_labels)
+        self._body.setEnabled(ready)
+        self._gate.setVisible(not ready)
+        if ready:
+            return
+        # Only offer what is actually missing, so the one button shown is the next step.
+        self._gate_individuals_btn.setVisible(missing_individuals)
+        self._gate_labels_btn.setVisible(missing_labels)
+
+    def open_label_mapping_editor(self) -> None:
+        """The one place a label class is created — Settings' dialog, opened from here too."""
+        from ethograph.gui.dialog_settings import LabelMappingDialog
+
+        LabelMappingDialog(self.app_state, self, parent=self).exec_()
+        self.refresh_gate()
+
+    def open_individuals_editor(self) -> None:
+        from ethograph.gui.dialog_settings import IndividualsDialog
+
+        IndividualsDialog(self.app_state, on_changed=self._individuals_changed, parent=self).exec_()
+
+    def _individuals_changed(self) -> None:
+        if self.data_widget is not None:
+            self.data_widget.refresh_individual_choices()
+        self.refresh_gate()
+
     def _setup_ui(self):
-        """Set up the user interface."""
-        layout = QVBoxLayout()
+        """Set up the user interface.
+
+        Two mutually exclusive faces: the gate (nothing to label yet — say what
+        is missing and open the dialog that fixes it) and the labelling body.
+        :meth:`refresh_gate` decides which is shown.
+        """
+        outer = QVBoxLayout()
+        outer.setSpacing(DEFAULT_LAYOUT_SPACING)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(outer)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        outer.addWidget(self._build_gate())
+
+        self._body = QWidget()
+        layout = QVBoxLayout(self._body)
         layout.setSpacing(DEFAULT_LAYOUT_SPACING)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        outer.addWidget(self._body, stretch=1)
 
-        # Where a new label's boundaries come from: a click on the plots, or
-        # the label key pressed at the frame on screen (see activate_label).
+        # The two questions every label answers, in one row: how a new label's
+        # boundaries are set, and how existing ones are drawn. Both are one-line
+        # choices, so they share the row instead of each taking a group.
         mode_row = QHBoxLayout()
-        mode_row.addWidget(QLabel("Labelling:"))
+        mode_row.addWidget(QLabel("Mode:"))
         self.labelling_mode_combo = QComboBox()
         for key, text in LABELLING_MODES.items():
             self.labelling_mode_combo.addItem(text, key)
         self.labelling_mode_combo.setToolTip(
-            "On the time series: press a label key, then click the plots (twice for a state event).\n"
-            "At the current frame: the label key itself places the boundary at the frame on screen — "
+            "Graph based labelling: press a label key, then click the plots (twice for a state event).\n"
+            "Frame by frame labelling: the label key itself places the boundary at the frame on screen — "
             "a point event on one press, a state event on two (start, then end after navigating)."
         )
         idx = self.labelling_mode_combo.findData(self.app_state.get_with_default("labelling_mode"))
         self.labelling_mode_combo.setCurrentIndex(max(0, idx))
         self.labelling_mode_combo.currentIndexChanged.connect(self._on_labelling_mode_changed)
         mode_row.addWidget(self.labelling_mode_combo, stretch=1)
+
+        mode_row.addWidget(QLabel("Overlay:"))
+        self.label_overlay_combo = QComboBox()
+        for mode, text in _OVERLAY_CHOICES.items():
+            self.label_overlay_combo.addItem(text, mode)
+        self.label_overlay_combo.addItem(_OVERLAY_PER_PLOT_TEXT, _OVERLAY_PER_PLOT)
+        self.label_overlay_combo.setToolTip(
+            "How label rectangles are drawn on every plot: over the whole plot, as a bottom strip, "
+            "or not at all. Per plot type… sets them one plot type at a time."
+        )
+        self._sync_overlay_combo()
+        self.label_overlay_combo.activated.connect(self._on_label_overlay_chosen)
+        mode_row.addWidget(self.label_overlay_combo, stretch=1)
         layout.addLayout(mode_row)
 
         self.ribbon_auto_cb = QCheckBox("Open a label timeline when no panel is shown")
@@ -481,18 +602,25 @@ class LabelsWidget(QWidget):
         scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         layout.addWidget(scroll, stretch=1)
 
-        # "+" button to add branches, and the raw table behind these classes.
+        # What you do with the tables above: read them, add a class, add a branch.
+        # "Add label" is the mapping editor — the one place a class is created.
         button_row = QHBoxLayout()
-        add_branch_btn = QPushButton("+")
-        add_branch_btn.setToolTip("Add a new label branch")
-        add_branch_btn.setFixedWidth(28)
-        add_branch_btn.clicked.connect(self._add_new_branch)
-        button_row.addWidget(add_branch_btn)
-
         table_btn = QPushButton("Label table…")
         table_btn.setToolTip("Inspect every trial's labels as a spreadsheet: filter, sort, edit cells, delete rows")
         table_btn.clicked.connect(self.open_label_table)
         button_row.addWidget(table_btn)
+
+        add_label_btn = QPushButton("+ Add label")
+        add_label_btn.setToolTip("Edit the project's mapping.txt: the label names, their branch and their event type")
+        add_label_btn.clicked.connect(self.open_label_mapping_editor)
+        button_row.addWidget(add_label_btn)
+
+        add_branch_btn = QPushButton("+ Add branch")
+        add_branch_btn.setToolTip(
+            f"A second set of labels drawn above the first (at most {MAX_LABEL_BRANCHES}: Full / Top1 / Top2)"
+        )
+        add_branch_btn.clicked.connect(self._add_new_branch)
+        button_row.addWidget(add_branch_btn)
         button_row.addStretch()
         layout.addLayout(button_row)
 
@@ -739,8 +867,6 @@ class LabelsWidget(QWidget):
     def _save_current_mapping(self):
         """Write the current mappings back to the loaded mapping.txt file."""
         path = self._mapping_file_path
-        if not path and self.io_widget:
-            path = self.io_widget.mapping_file_path_edit.text()
         if not path:
             logger.warning("_save_current_mapping: no path set, skipping save")
             return
@@ -759,20 +885,6 @@ class LabelsWidget(QWidget):
         """Push current active label IDs to plot container."""
         if self.plot_container:
             self.plot_container.set_active_label_ids(self.app_state.active_label_ids)
-
-    def _browse_mapping_file(self):
-        """Browse for a mapping.txt file and reload mappings."""
-        current = find_mapping_file(project_dir=project_dir_of(self.app_state))
-        start_dir = str(current.parent) if current else str(defaults_dir())
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select mapping.txt file",
-            start_dir,
-            "Text files (*.txt);;All Files (*)",
-        )
-        if file_path:
-            self.io_widget.mapping_file_path_edit.setText(file_path)
-            self._reload_mapping(file_path)
 
     def _reload_mapping(self, mapping_path: str):
         """Reload mappings from the specified path."""
@@ -810,6 +922,7 @@ class LabelsWidget(QWidget):
                 self._label_table_dialog.set_mappings(self._mappings)
             self._populate_labels_table()
             self._sync_active_label_ids()
+            self.refresh_gate()
             self.refresh_labels_shapes_layer()
             if self.data_widget:
                 self.data_widget.update_main_plot(preserve_x_range=True)
@@ -1228,6 +1341,9 @@ class LabelsWidget(QWidget):
         In the "at the current frame" mode the key does not arm a plot click —
         it *is* the placement (:meth:`_place_at_current_frame`).
         """
+        if not self.can_label():
+            notify("Define the individuals and the labels first (Labels tab).", severity="warning")
+            return
         _id = self.KEY_TO_labels.get(str(_key).lower(), _key)
         if _id not in self._mappings:
             return

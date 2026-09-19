@@ -196,15 +196,16 @@ class NCWizardDialog(QDialog):
         return self._page_patterns
 
     def _apply_project_defaults(self, state: WizardState) -> None:
-        """Seed the wizard with the study's ``project.yaml`` defaults; every page can still change them."""
-        from ethograph.gui.project import project_settings_of
+        """Seed the wizard with what the user already told us; every page can still change it.
 
-        settings = project_settings_of(self.app_state)
-        state.individuals = list(settings.individuals)
-        if settings.rig:
-            state.rig_name = settings.rig
-        if settings.pose_software:
-            state.pose.source_software = settings.pose_software
+        The individuals they named and the tracking tool they last picked. The rig
+        name is not among them: :meth:`RigPage.populate_from_state` names it after
+        the session folder, which is a better guess than a study-wide string.
+        """
+        state.individuals = list(self.app_state.get_with_default("extra_individuals"))
+        software = self.app_state.get_with_default("pose_software_default")
+        if software:
+            state.pose.source_software = software
 
     def _ensure_trials_page(self):
         from ethograph.gui.wizard_multi_trials import TrialsPage

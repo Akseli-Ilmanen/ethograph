@@ -38,8 +38,8 @@ from ethograph.segment.config import (
     build_dataclass,
     merge_label_input_columns,
     name_colliding_sessions,
-    project_ignore,
     read_yaml_chain,
+    user_ignore,
 )
 from ethograph.utils.paths import defaults_dir
 
@@ -547,7 +547,7 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
     duplicates = {c for c in cfg.labels.classes if cfg.labels.classes.count(c) > 1}
     if duplicates:
         raise ValueError(f"config.labels.classes lists {sorted(duplicates)} more than once")
-    ignore = project_ignore(config_path or base_dir)
+    ignore = user_ignore()
     for spec in cfg.sessions:
         spec.ignore = ignore
         if spec.labels_path is None:

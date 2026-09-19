@@ -289,3 +289,47 @@ def test_media_folders_come_from_the_recorded_paths(tmp_path: Path):
     out = tmp_path / ".ethograph" / "alignment.nwb"
     pair_media(table, stream_rates={"video": 30.0}, output_path=out)
     assert NWBAlignment(out).media_folders() == {"video": cam}
+
+
+class TestOnExisting:
+    """What an existing file means is the caller's decision, never the filesystem's.
+
+    Pairing used to pick between "add to this NWB" and "write a new one" by looking
+    at the disk, so re-dropping a folder hit the additive path and died on
+    ``column 'video_cam-1' already exists``.
+    """
+
+    def _table(self, tmp_path: Path, monkeypatch) -> pd.DataFrame:
+        from ethograph.utils import stream_durations
+
+        cam = tmp_path / "video"
+        cam.mkdir(exist_ok=True)
+        for i in (1, 2):
+            (cam / f"t{i}.mp4").touch()
+        monkeypatch.setattr(stream_durations, "get_video_duration", lambda path: 4.0)
+        return pd.DataFrame({"trial": [1, 2], "video_cam-1": [str(cam / "t1.mp4"), str(cam / "t2.mp4")]})
+
+    def test_replace_is_idempotent(self, tmp_path: Path, monkeypatch):
+        """Pairing the same folder twice lands where pairing it once did."""
+        table = self._table(tmp_path, monkeypatch)
+        out = tmp_path / "session" / ".ethograph" / "alignment.nwb"
+
+        pair_media(table, stream_rates={"video": 30.0}, output_path=out, on_existing="replace")
+        pair_media(table, stream_rates={"video": 30.0}, output_path=out, on_existing="replace")
+
+        align = NWBAlignment(out)
+        assert align.get_media(2, "video", "cam-1") == "t2.mp4"
+        assert align.cameras == ["cam-1"], "one camera, not one per run"
+
+    def test_extend_refuses_media_it_already_pairs_and_says_what_to_pass(self, tmp_path: Path, monkeypatch):
+        table = self._table(tmp_path, monkeypatch)
+        out = tmp_path / "session" / ".ethograph" / "alignment.nwb"
+        pair_media(table, stream_rates={"video": 30.0}, output_path=out)
+
+        with pytest.raises(ValueError, match=r"already pairs video_cam-1.*on_existing='replace'"):
+            pair_media(table, stream_rates={"video": 30.0}, output_path=out)
+
+    def test_an_unknown_mode_is_refused_by_name(self, tmp_path: Path, monkeypatch):
+        table = self._table(tmp_path, monkeypatch)
+        with pytest.raises(ValueError, match="on_existing must be"):
+            pair_media(table, output_path=tmp_path / "a.nwb", on_existing="overwrite")

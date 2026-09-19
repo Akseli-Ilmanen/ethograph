@@ -23,10 +23,13 @@ plot type     sections shown
 ``radial``    Radial-plot (feature + which value is up)
 ============  ==================================================
 
-The **Individual** group sits above all of them, outside the mapping: which
-animal (and, for dyadic behaviours, which receiver) is being shown and
-labelled is a question every panel answers — the sole exception is the video,
-whose overlays follow the pose settings instead.
+The **Individual** group sits above all of them, outside the mapping, and is
+always visible: which animal (and, for dyadic behaviours, which receiver) is
+being shown and labelled is a question every panel answers — a video and a
+label timeline included, since a click on either places a label on whoever is
+selected. It is also where the individuals from **Settings ▸ Create / edit
+individuals…** show up, so a session whose data names nobody can still pick a
+subject.
 
 The sidebar refreshes only when the clicked plot *type* changes (not on every
 click), and updates are skipped entirely in zen mode or when the Labels /
@@ -84,10 +87,6 @@ _CONTEXT_TITLE: dict[str, str] = {
 #: The active-panel green edge colour (see ``ActivePanelManager._EDGE_ON``).
 _ACTIVE_GREEN = "#2ecc71"
 
-#: Contexts that do NOT get the Individual selector. The video's own
-#: per-individual display is the pose overlay's business.
-_NO_INDIVIDUAL_CONTEXTS = frozenset({"video"})
-
 
 class RightContextPanel(QWidget):
     """Hosts all setting sections and shows only the clicked plot's subset."""
@@ -95,9 +94,9 @@ class RightContextPanel(QWidget):
     def __init__(self, sections: dict[str, QWidget | None], parent=None):
         super().__init__(parent)
         self._sections = {k: v for k, v in sections.items() if v is not None}
-        #: Shown above the caption for every context but the video's — it says
-        #: *whose* data and labels the panel below is about, so it is not one
-        #: of the per-plot-type sections.
+        #: Shown above the caption in every context — it says *whose* data and
+        #: labels are being shown and labelled, which is not a property of the
+        #: clicked panel, so it is not one of the per-plot-type sections.
         self._individual = self._sections.pop("individual", None)
         self._current: str | None = None
 
@@ -106,8 +105,8 @@ class RightContextPanel(QWidget):
         layout.setSpacing(4)
 
         if self._individual is not None:
+            # Never hidden: the label subject is not a property of the clicked panel.
             layout.addWidget(self._individual)
-            self._individual.setVisible(False)
 
         # Top caption naming the active plot type, coloured to match the
         # panel's green selection edge so the link is obvious to the user.
@@ -149,8 +148,6 @@ class RightContextPanel(QWidget):
             want.discard("pose")
             want.discard("bbox")
         self._placeholder.setVisible(not want)
-        if self._individual is not None:
-            self._individual.setVisible(bool(want) and plot_type not in _NO_INDIVIDUAL_CONTEXTS)
         for name, widget in self._sections.items():
             widget.setVisible(name in want)
         title = _CONTEXT_TITLE.get(plot_type, "")

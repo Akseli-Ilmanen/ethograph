@@ -84,6 +84,21 @@ session (the GUI warns when they disagree). Without a project `mapping.txt`,
 the default in `~/.ethograph/defaults/mapping.txt` is used.
 ```
 
+## Editing it from the GUI
+
+**Settings ▸ Create / edit label mapping.txt…** opens the file in use as a table:
+one row per label, with the ID read-only (it is the label's identity in
+`labels.tsv` — renaming a label keeps its rows, changing its ID would orphan
+them), and the name, branch and event type editable. *Add label* takes the next
+free ID; *Open mapping.txt…* loads a different file to edit.
+
+With no `mapping.txt` yet, the table starts from `~/.ethograph/defaults/`, and
+saving writes the project's own. Saving reloads the vocabulary everywhere at
+once — the branch sections, the plots and the label table.
+
+File ▸ Import labels only ever *reads* the mapping (and appends classes the
+imported file names, below); it is not a second place to define it.
+
 ---
 
 (target-auto-mapping)=

@@ -32,6 +32,10 @@ LABELS_OVERLAY_BOX_MARGIN = 5
 LABELS_OVERLAY_TEXT_SIZE = 18
 LABELS_OVERLAY_FALLBACK_SIZE = (100, 100)
 
+#: Fixed branch -> draw-position mapping: branch 0 renders "full" (main), 1
+#: "top1", 2 "top2". A hard rule of the renderer, not a preference.
+MAX_LABEL_BRANCHES = 3
+
 # Per-plot-type label rendering modes (label_drawing_mixin.py, widgets_labels.py)
 LABEL_OVERLAY_MODE_FULL = "full"
 LABEL_OVERLAY_MODE_BOTTOM = "bottom"
@@ -43,8 +47,8 @@ LABEL_OVERLAY_MODE_NONE = "none"
 LABELLING_MODE_PLOTS = "plots"
 LABELLING_MODE_FRAME = "frame"
 LABELLING_MODES = {
-    LABELLING_MODE_PLOTS: "On the time series (click the plots)",
-    LABELLING_MODE_FRAME: "At the current frame (the label key places it)",
+    LABELLING_MODE_FRAME: "Frame by frame labelling",
+    LABELLING_MODE_PLOTS: "Graph based labelling",
 }
 
 # type key -> display name shown in the "Show labels per plot type" dialog

@@ -228,6 +228,13 @@ def _pair_into_existing(
         if len(trial_table) != len(table):
             raise ValueError(f"trial_table has {len(trial_table)} rows but {path.name} has {len(table)} trials")
 
+        already = [c for c in media_cols if c in table.colnames]
+        if already:
+            raise ValueError(
+                f"{path.name} already pairs {', '.join(already)}. Pairing adds columns, so the same "
+                "media cannot be paired in twice; pass on_existing='replace' to rebuild the alignment "
+                "from this table instead."
+            )
         for col in media_cols:
             values = [_basename(v) for v in trial_table[col]]
             table.add_column(name=col, description=f"{col} filename", data=values)
@@ -348,48 +355,64 @@ def pair_media(
     output_path: str | Path | None = None,
     pose_fps: float | None = None,
     individuals: Sequence[str] | None = None,
+    on_existing: str = "extend",
 ) -> NWBFile:
     """Write ``.ethograph/alignment.nwb`` from a pairing table.
 
-    Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one
-    ``ImageSeries`` whose segments start at the trial starts; ``session_wide`` streams each get
-    one ``ImageSeries`` with a ``starting_time``.
-    ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media
-    files the table names.
+        Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one
+        ``ImageSeries`` whose segments start at the trial starts; ``session_wide`` streams each get
+        one ``ImageSeries`` with a ``starting_time``.
+        ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media
+        files the table names.
 
-    If ``output_path`` is an existing NWB that *already has a trials table* (a neuroconv-written
-    source), the streams are added to that file in place through
-    :func:`~ethograph.io.nwb_alignment.edit_nwb`, never rebuilt: per-trial columns from
-    *trial_table* are written as new trial columns (row count must equal the file's trials, else
-    ``ValueError``) and ``session_wide`` streams as acquisition ``ImageSeries``. Existing
-    acquisition names are left alone.
+    **What happens to a file that is already there is the caller's decision, never the
+    filesystem's** (``on_existing``). Annotating somebody's NWB and building a session's
+    own alignment are different jobs, and a function that guessed between them by
+    looking at the disk was eventually called from the path that wanted the other one.
 
-    Parameters
-    ----------
-    trial_table
-        ``trial`` + ``{stream}_{device}`` columns holding each file's full path (as
-        :func:`discover_media` returns); a bare filename is accepted when times are given.
-        The NWB trials table receives the basenames. ``start_time``/``stop_time`` optional.
-    stream_rates
-        Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``; a
-        ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
-    session_wide
-        ``{"{stream}_{device}": (file, rate_hz, starting_time_s)}`` for streams that are one
-        file spanning the whole session rather than one file per trial.
-    output_path
-        Where to write (or, for an existing NWB with a trials table, extend) the ``.nwb`` file.
-    pose_fps
-        Frame rate for probing pose files, when inferring times from a table whose only media
-        columns are ``pose_*``.
-    individuals
-        The individuals this session labels. Recorded in the session record, which is their
-        one home; a dataset's individual dim is checked against it on load.
+    ``on_existing="extend"`` (the default) adds to an existing NWB that *already has a
+    trials table* — a neuroconv-written source — in place through
+    :func:`~ethograph.io.nwb_alignment.edit_nwb`, never rebuilding it: per-trial columns
+    from *trial_table* become new trial columns (row count must equal the file's trials,
+    else ``ValueError``) and ``session_wide`` streams acquisition ``ImageSeries``;
+    existing acquisition names are left alone. ``on_existing="replace"`` deletes the file
+    and writes it afresh — what a *drop* or the wizard does, because an alignment built
+    from dropped files is derived data and rebuilding it must be idempotent.
 
-    Returns
-    -------
-    The in-memory :class:`~pynwb.NWBFile`.
+        Parameters
+        ----------
+        trial_table
+            ``trial`` + ``{stream}_{device}`` columns holding each file's full path (as
+            :func:`discover_media` returns); a bare filename is accepted when times are given.
+            The NWB trials table receives the basenames. ``start_time``/``stop_time`` optional.
+        stream_rates
+            Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``; a
+            ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
+        session_wide
+            ``{"{stream}_{device}": (file, rate_hz, starting_time_s)}`` for streams that are one
+            file spanning the whole session rather than one file per trial.
+        output_path
+            Where to write the ``.nwb`` file.
+        on_existing
+            What an existing *output_path* means: ``"extend"`` pairs into its trials table,
+            ``"replace"`` rebuilds it from scratch. Anything building a session's own
+            alignment passes ``"replace"``, so running it twice is the same as once.
+        pose_fps
+            Frame rate for probing pose files, when inferring times from a table whose only media
+            columns are ``pose_*``.
+        individuals
+            The individuals this session labels. Recorded in the session record, which is their
+            one home; a dataset's individual dim is checked against it on load.
+
+        Returns
+        -------
+        The in-memory :class:`~pynwb.NWBFile`.
     """
+    if on_existing not in ("extend", "replace"):
+        raise ValueError(f"on_existing must be 'extend' or 'replace', got {on_existing!r}")
     out = Path(output_path) if output_path is not None else None
+    if out is not None and out.exists() and on_existing == "replace":
+        out.unlink()  # derived data: rebuilt whole, so pairing twice is pairing once
     if out is not None and out.exists() and _existing_nwb_has_trials(out):
         return _pair_into_existing(
             out, trial_table, stream_rates=stream_rates, session_wide=session_wide, individuals=individuals

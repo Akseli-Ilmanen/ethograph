@@ -29,7 +29,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ethograph.gui.project import project_dir_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.io.metadata_table import metadata_tsv_path
 from ethograph.io.pynapple import label_intervalsets
@@ -38,11 +37,10 @@ from ethograph.io.validation import EPHYS_FILE_FILTER
 from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv
 from ethograph.utils.paths import (
     default_config_dir,
-    find_mapping_file,
 )
 from ethograph.utils.qt import populate_if_exists
 
-from .app_state import AppStateSpec
+from .app_state import PRESERVED_ON_RESET, AppStateSpec
 from .dialog_select_template import TemplateDialog
 from .file_dialogs import browse_open_dir, browse_open_file, browse_save_file
 from .notify import notify, notify_dialog
@@ -434,21 +432,18 @@ class IOWidget(QWidget):
             self.app_state.remote_backup_path = folder
 
     def _create_mapping_row(self, target_layout):
-        mapping_row = QWidget()
-        mapping_layout = QHBoxLayout()
-        mapping_layout.setContentsMargins(0, 0, 0, 0)
-        mapping_row.setLayout(mapping_layout)
+        """Where the label vocabulary is edited — not here.
 
-        self.mapping_file_path_edit = QLineEdit()
-        default_mapping = find_mapping_file(project_dir=project_dir_of(self.app_state))
-        self.mapping_file_path_edit.setText(str(default_mapping) if default_mapping else "")
-        self.mapping_file_path_edit.setToolTip("Path to mapping.txt file")
-        mapping_layout.addWidget(self.mapping_file_path_edit)
-
-        self.browse_mapping_btn = QPushButton("Browse")
-        mapping_layout.addWidget(self.browse_mapping_btn)
-
-        target_layout.addRow("Name mapping:", mapping_row)
+        The mapping is the *project's*, one answer for every session, so it has
+        one home: Settings. Importing labels only ever *reads* it (and extends it
+        with classes the imported file names).
+        """
+        hint = QLabel(
+            "Label names come from the project's mapping.txt — edit it in Settings ▸ Create / edit label mapping.txt…"
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: rgba(255,255,255,140);")
+        target_layout.addRow(hint)
 
     def _create_predictions_row(self, target_layout):
         self.pred_group = QGroupBox("Predictions")
@@ -992,14 +987,13 @@ class IOWidget(QWidget):
         """Name -> id for imported class *names*, adding the new ones to the mapping in use."""
         from ethograph.labels.converters import extend_mapping
 
-        active = self.mapping_file_path_edit.text().strip()
+        active = str(getattr(self.labels_widget, "_mapping_file_path", None) or "").strip()
         if not active:
             data_dir = session_dir_of(self.app_state.nc_file_path) if self.app_state.nc_file_path else None
             active = str(default_config_dir(data_dir) / "mapping.txt")
         name_to_id, added = extend_mapping(names, active)
         if added:
             notify(f"Added {len(added)} new label classes to {active}: {', '.join(added)}")
-        self.mapping_file_path_edit.setText(active)
         if self.labels_widget:
             self.labels_widget._reload_mapping(active)
         return name_to_id
@@ -1102,11 +1096,17 @@ class IOWidget(QWidget):
         self.import_labels_checkbox.setChecked(False)
         # Global scope only — Help ▸ "Reset local settings" owns the dataset's
         # local_settings.yaml.
+        # The individuals a user typed are the only *data* in this file — every
+        # other entry is a preference a reset is meant to throw away. Losing them
+        # would lose who their animals are, which no reset should do.
+        kept = {var: getattr(self.app_state, var) for var in PRESERVED_ON_RESET}
         self.app_state.delete_yaml(str(self.app_state._global_settings_path()))
 
         for var in AppStateSpec.VARS:
             default = AppStateSpec.get_default(var)
             setattr(self.app_state, var, default)
+        for var, value in kept.items():
+            setattr(self.app_state, var, value)
 
         for attr in list(dir(self.app_state)):
             if attr.endswith("_sel"):
@@ -1734,10 +1734,6 @@ class IOWidget(QWidget):
 
     def wire_label_signals(self):
         """Connect mapping/predictions UI to LabelsWidget methods."""
-        self.mapping_file_path_edit.returnPressed.connect(
-            lambda: self.labels_widget._reload_mapping(self.mapping_file_path_edit.text())
-        )
-        self.browse_mapping_btn.clicked.connect(self.labels_widget._browse_mapping_file)
         self.import_predictions_from_folder_action.triggered.connect(self.labels_widget._import_predictions_from_folder)
         self.import_predictions_from_folders_action.triggered.connect(
             self.labels_widget._import_predictions_from_folders

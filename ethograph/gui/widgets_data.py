@@ -35,7 +35,6 @@ import ethograph as eto
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.notify import notify, notify_dialog
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, individual_color_map
-from ethograph.gui.project import project_settings_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec
 from ethograph.io.data_loader import AmbiguousSessionError, load_features_dataset
 from ethograph.io.derived import DerivedLoader
@@ -337,6 +336,15 @@ class DataPanel(QWidget):
         )
         self.individual_rec_combo.addItem("None", "")
         self.individual_layout.addRow("Receiver:", self.individual_rec_combo)
+
+        # The combo offers who exists; this is where that list is changed. It sits
+        # with the selector because "my animal is not in here" is asked right here.
+        self.edit_individuals_btn = QPushButton("Edit individuals…")
+        self.edit_individuals_btn.setToolTip(
+            "Add the individuals your data does not name. Kept in gui_settings.yaml, "
+            "so they follow you across projects and are added to the data's own."
+        )
+        self.individual_layout.addRow("", self.edit_individuals_btn)
 
         parent_layout.addWidget(self.individual_groupbox)
 
@@ -787,6 +795,8 @@ class DataWidget(QWidget):
         self.coords_groupbox_layout = panel.coords_groupbox_layout
         self.individual_groupbox = panel.individual_groupbox
         self.individual_layout = panel.individual_layout
+        self.edit_individuals_btn = panel.edit_individuals_btn
+        self.edit_individuals_btn.clicked.connect(self.open_individuals_editor)
         self.individual_rec_combo = panel.individual_rec_combo
         panel.individual_rec_combo.currentIndexChanged.connect(self._on_receiver_changed)
         self.slot_groupbox = panel.slot_groupbox
@@ -1231,7 +1241,7 @@ class DataWidget(QWidget):
                 metadata_path=self.app_state.metadata_path,
                 alignment_path=getattr(self.app_state, "nwb_file_path", None),
                 labels_path=labels_path,
-                ignore=project_settings_of(self.app_state).ignore,
+                ignore=self.app_state.ignored_files(),
             )
         except AmbiguousSessionError:
             raise  # on_load_clicked turns this into the "which file?" dialog
@@ -2540,6 +2550,20 @@ class DataWidget(QWidget):
         catalog = self.catalog or getattr(self.app_state.data_loader, "catalog", None)
         return (catalog.individual_combo if catalog is not None else None) or INDIVIDUAL_DIMS[0]
 
+    def open_individuals_editor(self) -> None:
+        """The Individual group's own editor — the same dialog Settings opens."""
+        from ethograph.gui.dialog_settings import IndividualsDialog
+
+        dialog = IndividualsDialog(self.app_state, on_changed=self._individuals_changed, parent=self)
+        dialog.exec_()
+
+    def _individuals_changed(self) -> None:
+        """Re-offer who exists, here and in the Labels tab's gate."""
+        self.refresh_individual_choices()
+        labels = getattr(self.meta_widget, "labels_widget", None)
+        if labels is not None:
+            labels.refresh_gate()
+
     def refresh_individual_choices(self) -> None:
         """Point the Individual / Receiver combos at this session's individuals.
 
@@ -2550,21 +2574,22 @@ class DataWidget(QWidget):
         if getattr(self, "individual_rec_combo", None) is None:
             return
         key = self._individual_actor_key()
-        catalog = self.catalog or getattr(self.app_state.data_loader, "catalog", None)
-        is_dim = catalog is not None and key in catalog.combos
+        names = self.app_state.label_individuals()
         combo = self.combos.get(key)
         if combo is None:
-            combo = self._create_combo_widget(key, self.app_state.label_individuals())
-        elif not is_dim:
-            # Not a dim: the values are the individuals the labels name, which
-            # a dim combo must never be refilled with.
-            self._refill_combo(combo, self.app_state.label_individuals())
+            combo = self._create_combo_widget(key, names)
+        elif [str(combo.itemData(i)) for i in range(combo.count())] != [str(n) for n in names]:
+            # The combo offers exactly who can be labelled — including a name
+            # ``extra_individuals`` adds that the dataset's dim never had. A feature
+            # with no data for that individual draws nothing (the loader refuses
+            # the selection); the labels are the point of the name.
+            self._refill_combo(combo, names)
         self._set_combo_row_visible(key, True)
-        self.populate_bbox_colors(self.app_state.label_individuals())
+        self.populate_bbox_colors(names)
         # One animal: nothing to pin, so the control is not there to puzzle over.
         pin_btn = getattr(self, "individual_pin_button", None)
         if pin_btn is not None:
-            pin_btn.setVisible(len(self.app_state.label_individuals()) > 1)
+            pin_btn.setVisible(len(names) > 1)
         self.app_state.set_key_sel(key, get_combo_value(combo))
         # Exactly one spelling carries a value: a stale `individuals_sel` from
         # a previous dataset would answer `selected_individual()` first.

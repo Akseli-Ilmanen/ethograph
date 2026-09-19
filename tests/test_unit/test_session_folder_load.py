@@ -42,7 +42,7 @@ def test_a_folder_with_one_nc_loads_like_the_file(session: Path):
 
 def test_a_second_nc_is_an_old_version_and_refused_by_name(session: Path):
     _tree([1, 2], "speed").save(session / "speed_v2.nc")
-    with pytest.raises(AmbiguousSessionError, match=r"speed.nc, speed_v2.nc.*ignore: \[speed.nc\]") as info:
+    with pytest.raises(AmbiguousSessionError, match=r"speed.nc, speed_v2.nc.*ignore_files: \[speed.nc\]") as info:
         load_features_dataset(str(session))
     assert sorted(p.name for p in info.value.candidates) == ["speed.nc", "speed_v2.nc"]
 
@@ -103,16 +103,21 @@ def test_segment_session_opens_from_a_folder(session: Path):
     assert opened.stem == "sess"
 
 
-def test_a_pipeline_reads_the_ignore_list_from_the_nearest_project_yaml(session: Path, tmp_path: Path):
-    """segment/spot configs find project.yaml by walking up from the config file."""
-    from ethograph.segment.config import project_ignore
+def test_a_pipeline_reads_the_ignore_list_the_gui_wrote(session: Path, tmp_path: Path, monkeypatch):
+    """A run agrees with the GUI it was set in: both read ``ignore_files``.
+
+    The list is the user's, so a headless run reads ``gui_settings.yaml`` itself —
+    and a machine where no GUI has ever run must not raise, only ignore nothing.
+    """
+    from ethograph.segment.config import user_ignore
 
     _tree([1, 2], "speed").save(session / "speed_v2.nc")
-    (tmp_path / "project.yaml").write_text("ignore: [speed.nc]\n", encoding="utf-8")
-    config_path = tmp_path / "config" / "segment.yaml"
-    config_path.parent.mkdir()
-    assert project_ignore(config_path) == ("speed.nc",)
-    assert project_ignore(tmp_path / "elsewhere") == ("speed.nc",)  # walk-up stops at the first project.yaml
-    assert project_ignore(Path(tmp_path.anchor)) == ()
-    (tmp_path / "project.yaml").write_text("sessions: [a]\nfeatures: {}\n", encoding="utf-8")  # a config, misnamed
-    assert project_ignore(config_path) == ()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("ETHOGRAPH_HOME", str(home))
+
+    assert user_ignore() == ()  # no settings file yet
+    (home / "gui_settings.yaml").write_text("ignore_files: [speed.nc]\n", encoding="utf-8")
+    assert user_ignore() == ("speed.nc",)
+    (home / "gui_settings.yaml").write_text("ignore_files: nonsense\n", encoding="utf-8")
+    assert user_ignore() == ()  # a hand-edited value is refused, not raised on

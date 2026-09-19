@@ -561,7 +561,7 @@ def test_cover_page_borrows_and_returns_load_panel(gui, qtbot):
     assert io.isAncestorOf(io.load_panel)  # returned
 
 
-def test_cover_page_custom_load_accepts_page(gui, qtbot, monkeypatch):
+def test_cover_page_custom_load_accepts_page(gui, qtbot, monkeypatch, tmp_path):
     """Custom set-up path: clicking the shared Load bar's button closes
     (accepts) the cover page once the dataset is loaded — otherwise the
     modal dialog stays open forever and the main window never appears."""
@@ -571,6 +571,9 @@ def test_cover_page_custom_load_accepts_page(gui, qtbot, monkeypatch):
 
     shell, meta = gui
     io = meta.io_widget
+    project = tmp_path / "study"
+    project.mkdir()
+    meta.app_state.project_path = str(project)  # the custom path is gated on one
     page = CoverPage(shell, io)
     page.show()
     qtbot.waitExposed(page)
@@ -1193,3 +1196,142 @@ def test_reset_local_settings_survives_the_next_auto_save(moll2025_gui):
 
     assert len(pc._dyn_panels) == n_default
     assert len(meta.app_state.panel_layout["panels"]) == n_default
+
+
+def test_a_drop_asks_before_replacing_an_alignment_it_did_not_make(gui, tmp_path, monkeypatch):
+    """Re-dropping a folder's videos is normal; a foreign alignment is the user's call.
+
+    It used to raise, which left no way to re-pair a folder that had once been set
+    up by hand — the drop simply could not proceed.
+    """
+    from ethograph.gui.cover_page import CoverPage, _DropCancelled
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    rig = tmp_path / "rig"
+    (rig / ".ethograph").mkdir(parents=True)
+    (rig / ".ethograph" / "alignment.nwb").touch()  # somebody else's: no drop record
+    (rig / "clip.mp4").touch()
+    buckets = {"video": [str(rig / "clip.mp4")]}
+
+    asked: list[str] = []
+
+    def _answer(yes):
+        def _confirm(folder):
+            asked.append(folder.name)
+            return yes
+
+        return _confirm
+
+    monkeypatch.setattr(page, "_confirm_overwrite_alignment", _answer(False))
+    with pytest.raises(_DropCancelled):
+        page._choose_session_dir(buckets)
+    assert asked == ["rig"], "the user is asked, not refused"
+
+    monkeypatch.setattr(page, "_confirm_overwrite_alignment", _answer(True))
+    assert page._choose_session_dir(buckets) == rig
+
+
+def test_only_an_alignment_holding_work_is_asked_about(gui, tmp_path, monkeypatch):
+    """A drop rebuilds the alignment whole, so it asks exactly when that loses something.
+
+    Media filenames and trial timing come back from the files; declared individuals
+    and trial metadata do not. Without this the re-drop fix would have turned a loud
+    crash into silent data loss.
+    """
+    import pandas as pd
+    from qtpy.QtWidgets import QMessageBox
+
+    from ethograph.gui.cover_page import CoverPage
+    from ethograph.gui.project import record_drop
+    from ethograph.io.nwb_alignment import set_individuals
+    from ethograph.io.pairing import pair_media
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    asked: list[str] = []
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: asked.append(a[2]) or QMessageBox.Cancel)
+
+    rig = tmp_path / "rig"
+    rig.mkdir()
+    (rig / "clip.mp4").touch()
+    alignment = rig / ".ethograph" / "alignment.nwb"
+    alignment.parent.mkdir()
+    table = pd.DataFrame([{"trial": 1, "start_time": 0.0, "stop_time": 4.0, "video_cam-1": str(rig / "clip.mp4")}])
+    pair_media(table, stream_rates={"video": 30.0}, output_path=alignment, on_existing="replace")
+    record_drop(rig, [str(rig / "clip.mp4")], meta.app_state)
+
+    assert page._confirm_overwrite_alignment(rig) is True
+    assert asked == [], "a drop's own alignment holds only what a drop writes"
+
+    set_individuals(alignment, ["crow1", "crow2"])
+    assert page._confirm_overwrite_alignment(rig) is False  # the fake answers Cancel
+    assert len(asked) == 1 and "crow1, crow2" in asked[0], "the question names what would be lost"
+
+
+def test_a_fresh_install_starts_in_the_starter_project(gui, tmp_path, monkeypatch):
+    """Quick visualisation must work the moment the GUI opens.
+
+    Nobody is asked to invent a project folder before they have seen anything: the
+    starter project under ``~/.ethograph/defaults`` is adopted, which ships a
+    mapping.txt and the example configs, so every path on this page is live. The bar
+    says it is the starter one, because a real study wants its own folder.
+    """
+    from ethograph.gui.cover_page import CoverPage
+    from ethograph.utils.paths import defaults_dir
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("ETHOGRAPH_HOME", str(home))
+
+    shell, meta = gui
+    meta.app_state.project_path = None
+    page = CoverPage(shell, meta.io_widget)
+
+    assert page._project_dir() == defaults_dir()
+    assert (defaults_dir() / "mapping.txt").is_file(), "the starter project is seeded, not just named"
+    assert all(w.isEnabled() for w in page._needs_project), "nothing is shut: there is always a project"
+    assert "starter project" in page._project_hint.text()
+
+    project = tmp_path / "study"
+    project.mkdir()
+    meta.app_state.project_path = str(project)
+    page._refresh_project_ui()
+    assert not page._project_hint.isVisibleTo(page), "a folder of your own needs no warning"
+
+    page._on_clear_project()  # "Clear" means back to the starter, never to nothing
+    assert page._project_dir() == defaults_dir()
+
+
+def test_without_a_project_folder_your_own_data_is_shut_out(gui, tmp_path):
+    """The safety net behind the starter default: no project, no loading.
+
+    Unreachable in normal use — the starter project is adopted on construction —
+    but the label vocabulary lives in the project folder, so if there is somehow
+    none there is nowhere to put a label's name.
+    """
+    from ethograph.gui.cover_page import CoverPage
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    meta.app_state.project_path = None
+    page._refresh_project_ui()
+
+    assert not any(w.isEnabled() for w in page._needs_project)
+    assert "choose a folder" in page._project_hint.text()
+
+
+def test_a_template_adopts_its_own_download_folder(gui, tmp_path):
+    """Its mapping.txt sits beside its data, so that folder is the project."""
+    from ethograph.gui.cover_page import CoverPage
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    session = tmp_path / "moll2025"
+    session.mkdir()
+    (session / "session.nc").touch()
+
+    meta.app_state.project_path = None
+    meta.app_state.nc_file_path = str(session / "session.nc")
+    page._adopt_template_project()
+    assert page._project_dir() == session
