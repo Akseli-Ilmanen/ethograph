@@ -415,7 +415,8 @@ FPS = 200  # video frame rate (Hz)
 
 
 # prep pynapple derives position_stickTip, position_pellet, angles_stickTip, etc...
-# pairwise distances features (e.g. pellet_stickTip_dist) -> create those as needed, e.g. since we maybe do pre-processing (e.g. nan filling) before deriving these
+# pairwise distances features (e.g. pellet_stickTip_dist) -> create those as needed,
+# e.g. since we maybe do pre-processing (e.g. nan filling) before deriving these
 SIGNAL_NAMES = (
     "position",
     "velocity",
@@ -591,7 +592,7 @@ def load_session(
         backup_folders = [p for p in tsv_drive_folder.iterdir() if p.is_dir() and "backup" in p.name.lower()]
 
         # get most recently created folder
-        latest_backup_folder = max(backup_folders, key=lambda p: p.stat().st_ctime)
+        latest_backup_folder = max(backup_folders, key=lambda p: p.stat().st_ctime)  # noqa: F841 (pinned below)
         label_dir = Path(r"G:\My Drive\Crow lab\data\Akseli\backup_20260818")  # latest_backup_folder
         suffix = f"_{session.date_id}_{session.bird}"
     else:
@@ -1280,7 +1281,9 @@ def _date_prefix(session_date: str) -> int:
 def shift_and_relabel_units(
     tsgroup: nap.TsGroup, offset: float, session_date: str, bird: str = "", brain_region: str = ""
 ) -> nap.TsGroup:
-    new_id = lambda k: _date_prefix(session_date) * SESSION_ID_STRIDE + int(k)
+    def new_id(k):
+        return _date_prefix(session_date) * SESSION_ID_STRIDE + int(k)
+
     session_support = nap.IntervalSet(offset, offset + SESSION_DURATION)
     relabeled = nap.TsGroup(
         {new_id(k): nap.Ts(t=tsgroup[k].times() + offset, time_support=session_support) for k in tsgroup.keys()},
@@ -1297,10 +1300,6 @@ def shift_and_relabel_units(
 
     relabeled.set_info(info)
     return relabeled
-
-
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 def plot_grid(tensor, cols=5, plot_type="line"):

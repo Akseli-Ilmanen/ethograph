@@ -744,7 +744,10 @@ class CoverPage(QDialog):
         if hasattr(self, "_project_hint"):
             starter = self._using_starter_project()
             self._project_hint.setText(
-                "starter project — fine for a quick look; choose your own folder before labelling a study"
+                (
+                    "starter project — fine for a visualization only; choose your own folder "
+                    "if you plan to label behaviours or train a segmentation model"
+                )
                 if starter
                 else ("← choose a folder before loading your own data" if project is None else "")
             )
