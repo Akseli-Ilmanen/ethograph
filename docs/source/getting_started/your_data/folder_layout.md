@@ -20,7 +20,7 @@ folder holds what you build on top of them:
 my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
-    ├── project.yaml                   # study defaults: individuals, cameras, mics, rig, pose software, skeleton
+    ├── project.yaml                   # study defaults: individuals, rig, pose software, skeleton
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config
@@ -54,9 +54,8 @@ be committed and shared.
 
 ```yaml
 individuals: [crow1, crow2]
+individuals_mode: inherit      # inherit (default) | define | both — see below
 ignore: [Trial_data.nc]        # old dataset versions to skip in every session folder
-cameras: [cam-1, cam-2]
-mics: [mic-1]
 rig: CrowBench                 # the wizard notebook under wizard/ to start from
 pose:
   source_software: DeepLabCut
@@ -66,6 +65,43 @@ pose:
       - {start: beak, end: head}
       - {start: head, end: tail}
 ```
+
+You do not have to write this file by hand: the **Settings** menu edits the parts
+of it that decide what you can label.
+
+| Settings ▸ | Edits | What it decides |
+|---|---|---|
+| **Create / edit label mapping…** | `mapping.txt` | The label vocabulary as a table: the id (fixed — it is the label's identity in `labels.tsv`), the name, the branch and whether the label is a state or a point event. With no file yet the home defaults fill the table, and the first save writes the project's own. |
+| **Create / edit individuals…** | `individuals`, `individuals_mode` | Who can act or receive, so the individual selector is never empty — a video-only session labels somebody without any pose data at all. |
+| **Edit skeleton…** | `pose.skeleton` | The skeleton drawn over the pose, plus which source wins when the data carries one too. |
+
+`individuals_mode` is that middle question's answer:
+
+* `inherit` (the default) — the individuals the data names, falling back to
+  `individuals` when it names none.
+* `define` — `individuals`, whatever the data says.
+* `both` — the data's names plus `individuals`. Never a default; you choose it.
+
+"The individuals the data names" is, in order: the session record written by the
+wizard or a notebook, else the **`individual` dimension** of the loaded dataset —
+[movement](https://movement.neuroinformatics.dev)'s convention, and the spelling a
+pose file (DLC, SLEAP, …) or an `.nc` built from one carries:
+
+```
+position  (time, individual, keypoint, space)
+```
+
+Singular `individual` is the convention; the older plural `individuals` is read
+too, and Ethograph never assumes one spelling — it uses whichever your dataset
+has. A dataset with no such dimension (a plain feature `.nc`, a video-only drop)
+names nobody, so `individuals` in `project.yaml` is what you get, and **Settings ▸
+Create / edit individuals…** is how you write it.
+
+The skeleton has one more precedence step: a skeleton you drew for this session
+outranks both, then the data's own and the project's in the order **Settings ▸
+Edit skeleton…** asks for (the data's by default). Pick the project's to edit the
+skeleton without touching an NWB file; that choice is a preference, so it lives
+in `gui_settings.yaml`, not in the project.
 
 Without a project folder, `~/.ethograph/defaults/` stands in — it has the same
 shape and ships with a default `mapping.txt`, example configs and geometries.

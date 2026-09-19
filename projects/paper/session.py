@@ -1,30 +1,22 @@
+import math
+import pickle
+from collections import Counter, defaultdict
+from collections.abc import Iterable
 from datetime import datetime
-import os
-from sys import meta_path
+from pathlib import Path
 
-from narwhals import exclude
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pynapple as nap
+from matplotlib.backends.backend_pdf import PdfPages
+from neural.utils.paths import find_session_paths, paths
 
 from ethograph import get_project_root
 from ethograph.labels.intervals import load_label_mapping
-from neural.utils.paths import find_session_paths, paths
-import numpy as np
-import pynapple as nap
-import pandas as pd
-from collections import Counter, defaultdict
-import json
-import math
-from pathlib import Path
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
-import glob
-from matplotlib.backends.backend_pdf import PdfPages
-from collections.abc import Iterable
-import matplotlib as mpl
-import matplotlib.colors as mcolors
-import re
-import pickle
-
-
 
 user = "Akseli"
 STYLE_PATH = get_project_root() / "configs" / "style" / "style.mplstyle"
@@ -37,39 +29,67 @@ PLOT_DIR = get_project_root() / "plots"
 # 51 sessions
 # Sessions are split by whose data folder they live in (user_paths.json)
 AKSELI_SESSIONS: dict[str, list[str]] = {
-    "Poppy": [# "20260304_01","20260305_02", # exclude for glm as less clear 
-              "20260306_01", "20260307_01", # 
-              "20260308_01", "20260309_01", "20260310_01", "20260311_01",
-               "20260312_01", "20260313_01", "20260317_01"],
-    # "Poppy": ["20260308_01", "20260313_01"],      
-    "Ivy":   ["20260413_01", "20260414_01", "20260415_01", "20260416_01",
-              "20260417_01", 
-              "20260420_01", "20260421_01", # control
-              # "20260424_01" # stimulation
-            ]
+    "Poppy": [  # "20260304_01","20260305_02", # exclude for glm as less clear
+        "20260306_01",
+        "20260307_01",  #
+        "20260308_01",
+        "20260309_01",
+        "20260310_01",
+        "20260311_01",
+        "20260312_01",
+        "20260313_01",
+        "20260317_01",
+    ],
+    # "Poppy": ["20260308_01", "20260313_01"],
+    "Ivy": [
+        "20260413_01",
+        "20260414_01",
+        "20260415_01",
+        "20260416_01",
+        "20260417_01",
+        "20260420_01",
+        "20260421_01",  # control
+        # "20260424_01" # stimulation
+    ],
 }
 
 ALICE_SESSIONS: dict[str, list[str]] = {
     "Ivy": [
-        "20250306_01", "20250307_01",
-        "20250308_01", "20250309_01",
-        "20250503_02", "20250504_01", "20250505_01", "20250506_02",
-        "20250507_02", "20250507_03", "20250508_01", "20250508_02",
-        "20250509_01", "20250512_01", "20250513_01", "20250514_01",
-        "20250515_01", "20250516_01", "20250519_01", "20250521_01",
-        "20250522_01"
+        "20250306_01",
+        "20250307_01",
+        "20250308_01",
+        "20250309_01",
+        "20250503_02",
+        "20250504_01",
+        "20250505_01",
+        "20250506_02",
+        "20250507_02",
+        "20250507_03",
+        "20250508_01",
+        "20250508_02",
+        "20250509_01",
+        "20250512_01",
+        "20250513_01",
+        "20250514_01",
+        "20250515_01",
+        "20250516_01",
+        "20250519_01",
+        "20250521_01",
+        "20250522_01",
     ],
     "Freddy": [
-        "20250526_01", "20250526_02", "20250527_01", "20250527_02",
-        "20250528_01", "20250528_02", "20250529_01", 
+        "20250526_01",
+        "20250526_02",
+        "20250527_01",
+        "20250527_02",
+        "20250528_01",
+        "20250528_02",
+        "20250529_01",
         "20250530_01",
     ],
-    # "Ivy": ["20250308_01", "20250307_01"], 
+    # "Ivy": ["20250308_01", "20250307_01"],
     # "Freddy": ["20250529_01"] # , "20250528_02"]
 }
-
-
-
 
 
 # Brain region per recording set: Akseli → NCL, Alice → AId
@@ -80,12 +100,11 @@ SESSION_REGION: dict[str, str] = {
 
 BIRD_RELABEL: dict[str, dict[int, int]] = {
     "Freddy": {15: 4},
-    "Ivy":    {},
-    "Poppy":  {15:26, 4:15},
+    "Ivy": {},
+    "Poppy": {15: 26, 4: 15},
 }
 
 BIRD_NAMES = {"Freddy": "Crow #1", "Poppy": "Crow #2", "Ivy": "Crow #3"}
-
 
 
 # NOT USED anywhere currently
@@ -96,7 +115,6 @@ BIRD_NAMES = {"Freddy": "Crow #1", "Poppy": "Crow #2", "Ivy": "Crow #3"}
 # }
 
 SKIP_GAPS: list[tuple[int, int]] = [(1, 2), (9, 10), (10, 11)]
-
 
 
 # Master sequence per bird/side: the maximal sequence covering all possible
@@ -121,137 +139,208 @@ SKIP_GAPS: list[tuple[int, int]] = [(1, 2), (9, 10), (10, 11)]
 # }
 
 # for LABEL_MAPPING sorting
-# 21, 22, could place in teh middle for poppy, ends for now
+# 21, 22, could place in the middle for poppy, ends for now
 
 
 # for compatibility keep, but try to use BIRD_LABEL_MAPPING
 mapping_path = get_project_root() / "configs" / "mapping_order.txt"
-LABEL_MAPPING = load_label_mapping(mapping_path) # order=ORDER
+LABEL_MAPPING = load_label_mapping(mapping_path)  # order=ORDER
 
 
 BIRD_SEQUENCES: dict[str, dict[str, str]] = {
     "Poppy": {
-        "left pellet":  "1-2-3-15-26-5-23-24-9-10-11-12-13",
+        "left pellet": "1-2-3-15-26-5-23-24-9-10-11-12-13",
         "right pellet": "1-2-3-15-26-14-7-8-9-10-11-12-13",
         "zero pellets": "1-2-3-9-10",
         "order": [1, 2, 3, 15, 26, 5, 14, 23, 7, 24, 8, 9, 10, 11, 12, 13],
     },
-    "Ivy":    {
-        "left pellet":  "1-2-15-5-6-7-8-9-10-11-12-13-16-17",
+    "Ivy": {
+        "left pellet": "1-2-15-5-6-7-8-9-10-11-12-13-16-17",
         "right pellet": "1-2-15-14-7-8-9-10-11-12-13-16-17",
         "zero pellets": "1-2-9-10",
         "order": [1, 2, 15, 5, 6, 14, 7, 8, 9, 10, 11, 12, 13, 16, 17],
     },
     "Freddy": {
-        "left pellet":  "1-2-3-4-5-6-7-8-9-10-11-12-13",
+        "left pellet": "1-2-3-4-5-6-7-8-9-10-11-12-13",
         "right pellet": "1-2-3-4-14-7-8-9-10-11-12-13",
         "zero pellets": "1-2-3-9-10",
         "order": [1, 2, 3, 4, 5, 6, 14, 7, 8, 9, 10, 11, 12, 13],
     },
 }
 
-# Per Bird, these transitions occured more than 50x across sessions
+# Per Bird, these transitions occurred more than 50x across sessions
 BIRD_TRANSITIONS: dict[str, list[tuple[int, int]]] = {
     "Poppy": [
-        (15, 26), (10, 10), (1, 2),   (9, 10),  (3, 15),  (2, 3),
-        (10, 11), (11, 12), (12, 13), (9, 9),   (26, 14), (26, 5),
-        (3, 3),   (14, 7),  (7, 8),   (8, 9),   (5, 23),  (23, 24),
-        (24, 9),  (7, 7),   (23, 23), (13, 13), (15, 15), (11, 11),
-        (26, 15), (5, 9),   (26, 26), (8, 8),   (14, 9),
+        (15, 26),
+        (10, 10),
+        (1, 2),
+        (9, 10),
+        (3, 15),
+        (2, 3),
+        (10, 11),
+        (11, 12),
+        (12, 13),
+        (9, 9),
+        (26, 14),
+        (26, 5),
+        (3, 3),
+        (14, 7),
+        (7, 8),
+        (8, 9),
+        (5, 23),
+        (23, 24),
+        (24, 9),
+        (7, 7),
+        (23, 23),
+        (13, 13),
+        (15, 15),
+        (11, 11),
+        (26, 15),
+        (5, 9),
+        (26, 26),
+        (8, 8),
+        (14, 9),
     ],
     "Ivy": [
-        (7, 8),   (1, 2),   (9, 10),  (12, 13), (2, 15),  (11, 12),
-        (8, 9),   (10, 11), (9, 9),   (16, 17), (14, 7),  (13, 16),
-        (5, 6),   (15, 14), (6, 7),   (15, 5),  (10, 10), (6, 6),
-        (17, 17), (13, 9),  (13, 13), (10, 16), (8, 11),  (7, 7),
-        (17, 16), (8, 12),  (12, 12), (2, 14),  (15, 15), (8, 8),
-        (2, 5),   (8, 7),   (8, 14),  (16, 16), (1, 1),
+        (7, 8),
+        (1, 2),
+        (9, 10),
+        (12, 13),
+        (2, 15),
+        (11, 12),
+        (8, 9),
+        (10, 11),
+        (9, 9),
+        (16, 17),
+        (14, 7),
+        (13, 16),
+        (5, 6),
+        (15, 14),
+        (6, 7),
+        (15, 5),
+        (10, 10),
+        (6, 6),
+        (17, 17),
+        (13, 9),
+        (13, 13),
+        (10, 16),
+        (8, 11),
+        (7, 7),
+        (17, 16),
+        (8, 12),
+        (12, 12),
+        (2, 14),
+        (15, 15),
+        (8, 8),
+        (2, 5),
+        (8, 7),
+        (8, 14),
+        (16, 16),
+        (1, 1),
     ],
     "Freddy": [
-        (1, 2),   (2, 3),   (9, 10),  (3, 4),   (8, 9),   (7, 8),
-        (10, 11), (11, 12), (12, 13), (14, 7),  (5, 6),   (4, 5),
-        (4, 14),  (6, 7),   (3, 3),   (4, 4),   (7, 7),   (9, 9),
+        (1, 2),
+        (2, 3),
+        (9, 10),
+        (3, 4),
+        (8, 9),
+        (7, 8),
+        (10, 11),
+        (11, 12),
+        (12, 13),
+        (14, 7),
+        (5, 6),
+        (4, 5),
+        (4, 14),
+        (6, 7),
+        (3, 3),
+        (4, 4),
+        (7, 7),
+        (9, 9),
         (6, 6),
     ],
 }
 
 
-MATCHING_GROUPS:  dict[str, list[tuple[int, ...]]]  = {
-    "Poppy":  [(5, 14), (23, 7), (24, 8)],
-    "Ivy":    [],
+MATCHING_GROUPS: dict[str, list[tuple[int, ...]]] = {
+    "Poppy": [(5, 14), (23, 7), (24, 8)],
+    "Ivy": [],
     "Freddy": [],
 }
 
 
 NEURON_COLORS = ["#3CB371", "#E8388A", "#4472C4", "#FF8C00"]
 SIDE_COLORS = {"left pellet": "blue", "right pellet": "red", "zero pellets": "green"}
-SIDES  = ["left pellet", "right pellet"] # "zero pellets"
+SIDES = ["left pellet", "right pellet"]  # "zero pellets"
 
 
 BIRD_LABEL_MAPPING: dict[str, dict[int, dict]] = {
     "Poppy": {
-        1:  {"name": "pullOutStick",        "color": np.array([1.        , 0.4       , 0.69803922]), "letter": "A"},
-        2:  {"name": "diagonalToBox",       "color": np.array([0.4       , 0.61960784, 1.        ]), "letter": "B"},
-        3:  {"name": "toss",                "color": np.array([0.6       , 0.2       , 1.        ]), "letter": "C"},
-        15: {"name": "nodding",             "color": np.array([0.02745098, 0.02745098, 0.84313725]), "letter": "D"},
-        26: {"name": "postNod",             "color": np.array([0.95,     0.35,      0.05]),          "letter": "E"},
-        9:  {"name": "stickToDisp",         "color": np.array([1.        , 1.        , 0.        ]), "letter": "H"},
-        10: {"name": "stickInDisp",         "color": np.array([0.        , 0.8       , 0.8       ]), "letter": "I"},
-        11: {"name": "rightToPellet",       "color": np.array([0.50196078, 0.50196078, 0.        ]), "letter": "J"},
-        12: {"name": "snapPellet",          "color": np.array([1.        , 0.        , 1.        ]), "letter": "K"},
-        13: {"name": "eat",                 "color": np.array([1.        , 0.64705882, 0.        ]), "letter": "L"},
-        5:  {"name": "reachToWall",         "color": np.array([0.        , 0.50196078, 1.        ]), "letter": "L1"},
-        23: {"name": "pullOutLeft",         "color": np.array([0.        , 0.6       , 0.        ]), "letter": "L2"},
-        24: {"name": "swoopOutLeft",        "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "L3"},
-        14: {"name": "curvedRight",         "color": np.array([0.        , 0.50196078, 1.        ]), "letter": "R1"},
-        7:  {"name": "pullOutAlongWall",    "color": np.array([0.        , 0.6       , 0.        ]), "letter": "R2"},
-        8:  {"name": "swoopOut",            "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "R3"},
+        1: {"name": "pullOutStick", "color": np.array([1.0, 0.4, 0.69803922]), "letter": "A"},
+        2: {"name": "diagonalToBox", "color": np.array([0.4, 0.61960784, 1.0]), "letter": "B"},
+        3: {"name": "toss", "color": np.array([0.6, 0.2, 1.0]), "letter": "C"},
+        15: {"name": "nodding", "color": np.array([0.02745098, 0.02745098, 0.84313725]), "letter": "D"},
+        26: {"name": "postNod", "color": np.array([0.95, 0.35, 0.05]), "letter": "E"},
+        9: {"name": "stickToDisp", "color": np.array([1.0, 1.0, 0.0]), "letter": "H"},
+        10: {"name": "stickInDisp", "color": np.array([0.0, 0.8, 0.8]), "letter": "I"},
+        11: {"name": "rightToPellet", "color": np.array([0.50196078, 0.50196078, 0.0]), "letter": "J"},
+        12: {"name": "snapPellet", "color": np.array([1.0, 0.0, 1.0]), "letter": "K"},
+        13: {"name": "eat", "color": np.array([1.0, 0.64705882, 0.0]), "letter": "L"},
+        5: {"name": "reachToWall", "color": np.array([0.0, 0.50196078, 1.0]), "letter": "L1"},
+        23: {"name": "pullOutLeft", "color": np.array([0.0, 0.6, 0.0]), "letter": "L2"},
+        24: {"name": "swoopOutLeft", "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "L3"},
+        14: {"name": "curvedRight", "color": np.array([0.0, 0.50196078, 1.0]), "letter": "R1"},
+        7: {"name": "pullOutAlongWall", "color": np.array([0.0, 0.6, 0.0]), "letter": "R2"},
+        8: {"name": "swoopOut", "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "R3"},
     },
     "Ivy": {
-        1:  {"name": "pullOutStick",        "color": np.array([1.        , 0.4       , 0.69803922]), "letter": "A"},
-        2:  {"name": "diagonalToBox",       "color": np.array([0.4       , 0.61960784, 1.        ]), "letter": "B"},
-        15: {"name": "nodding",             "color": np.array([0.02745098, 0.02745098, 0.84313725]), "letter": "D"},
-        7:  {"name": "pullOutAlongWall",    "color": np.array([0.        , 0.6       , 0.        ]), "letter": "F"},
-        8:  {"name": "swoopOut",            "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "G"},
-        9:  {"name": "stickToDisp",         "color": np.array([1.        , 1.        , 0.        ]), "letter": "H"},
-        10: {"name": "stickInDisp",         "color": np.array([0.        , 0.8       , 0.8       ]), "letter": "I"},
-        11: {"name": "rightToPellet",       "color": np.array([0.50196078, 0.50196078, 0.        ]), "letter": "J"},
-        12: {"name": "snapPellet",          "color": np.array([1.        , 0.        , 1.        ]), "letter": "K"},
-        13: {"name": "eat",                 "color": np.array([1.        , 0.64705882, 0.        ]), "letter": "L"},
-        16: {"name": "beakToDisp",          "color": np.array([0.50196078, 0.        , 1.        ]), "letter": "M"},
-        17: {"name": "stickInDispTwo",      "color": np.array([1.0       , 0.843     , 0.0       ]), "letter": "N"},
-        5:  {"name": "reachToWall",         "color": np.array([0.4       , 1.        , 0.4       ]), "letter": "L1"},
-        6:  {"name": "right",               "color": np.array([1.        , 0.6       , 0.4       ]), "letter": "L2"},
-        14: {"name": "curvedRight",         "color": np.array([0.        , 0.50196078, 1.        ]), "letter": "R1"},
+        1: {"name": "pullOutStick", "color": np.array([1.0, 0.4, 0.69803922]), "letter": "A"},
+        2: {"name": "diagonalToBox", "color": np.array([0.4, 0.61960784, 1.0]), "letter": "B"},
+        15: {"name": "nodding", "color": np.array([0.02745098, 0.02745098, 0.84313725]), "letter": "D"},
+        7: {"name": "pullOutAlongWall", "color": np.array([0.0, 0.6, 0.0]), "letter": "F"},
+        8: {"name": "swoopOut", "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "G"},
+        9: {"name": "stickToDisp", "color": np.array([1.0, 1.0, 0.0]), "letter": "H"},
+        10: {"name": "stickInDisp", "color": np.array([0.0, 0.8, 0.8]), "letter": "I"},
+        11: {"name": "rightToPellet", "color": np.array([0.50196078, 0.50196078, 0.0]), "letter": "J"},
+        12: {"name": "snapPellet", "color": np.array([1.0, 0.0, 1.0]), "letter": "K"},
+        13: {"name": "eat", "color": np.array([1.0, 0.64705882, 0.0]), "letter": "L"},
+        16: {"name": "beakToDisp", "color": np.array([0.50196078, 0.0, 1.0]), "letter": "M"},
+        17: {"name": "stickInDispTwo", "color": np.array([1.0, 0.843, 0.0]), "letter": "N"},
+        5: {"name": "reachToWall", "color": np.array([0.4, 1.0, 0.4]), "letter": "L1"},
+        6: {"name": "right", "color": np.array([1.0, 0.6, 0.4]), "letter": "L2"},
+        14: {"name": "curvedRight", "color": np.array([0.0, 0.50196078, 1.0]), "letter": "R1"},
     },
     "Freddy": {
-        1:  {"name": "pullOutStick",        "color": np.array([1.        , 0.4       , 0.69803922]), "letter": "A"},
-        2:  {"name": "diagonalToBox",       "color": np.array([0.4       , 0.61960784, 1.        ]), "letter": "B"},
-        3:  {"name": "toss",                "color": np.array([0.6       , 0.2       , 1.        ]), "letter": "C"},
-        4:  {"name": "swoopPreBox",         "color": np.array([1.        , 0.2       , 0.2       ]), "letter": "D"},
-        7:  {"name": "pullOutAlongWall",    "color": np.array([0.        , 0.6       , 0.        ]), "letter": "F"},
-        8:  {"name": "swoopOut",            "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "G"},
-        9:  {"name": "stickToDisp",         "color": np.array([1.        , 1.        , 0.        ]), "letter": "H"},
-        10: {"name": "stickInDisp",         "color": np.array([0.        , 0.8       , 0.8       ]), "letter": "I"},
-        11: {"name": "rightToPellet",       "color": np.array([0.50196078, 0.50196078, 0.        ]), "letter": "J"},
-        12: {"name": "snapPellet",          "color": np.array([1.        , 0.        , 1.        ]), "letter": "K"},
-        13: {"name": "eat",                 "color": np.array([1.        , 0.64705882, 0.        ]), "letter": "L"},
-        5:  {"name": "reachToWall",         "color": np.array([0.4       , 1.        , 0.4       ]), "letter": "L1"},
-        6:  {"name": "right",               "color": np.array([1.        , 0.6       , 0.4       ]), "letter": "L2"},
-        14: {"name": "curvedRight",         "color": np.array([0.        , 0.50196078, 1.        ]), "letter": "R1"},
+        1: {"name": "pullOutStick", "color": np.array([1.0, 0.4, 0.69803922]), "letter": "A"},
+        2: {"name": "diagonalToBox", "color": np.array([0.4, 0.61960784, 1.0]), "letter": "B"},
+        3: {"name": "toss", "color": np.array([0.6, 0.2, 1.0]), "letter": "C"},
+        4: {"name": "swoopPreBox", "color": np.array([1.0, 0.2, 0.2]), "letter": "D"},
+        7: {"name": "pullOutAlongWall", "color": np.array([0.0, 0.6, 0.0]), "letter": "F"},
+        8: {"name": "swoopOut", "color": np.array([0.69803922, 0.43529412, 0.17254902]), "letter": "G"},
+        9: {"name": "stickToDisp", "color": np.array([1.0, 1.0, 0.0]), "letter": "H"},
+        10: {"name": "stickInDisp", "color": np.array([0.0, 0.8, 0.8]), "letter": "I"},
+        11: {"name": "rightToPellet", "color": np.array([0.50196078, 0.50196078, 0.0]), "letter": "J"},
+        12: {"name": "snapPellet", "color": np.array([1.0, 0.0, 1.0]), "letter": "K"},
+        13: {"name": "eat", "color": np.array([1.0, 0.64705882, 0.0]), "letter": "L"},
+        5: {"name": "reachToWall", "color": np.array([0.4, 1.0, 0.4]), "letter": "L1"},
+        6: {"name": "right", "color": np.array([1.0, 0.6, 0.4]), "letter": "L2"},
+        14: {"name": "curvedRight", "color": np.array([0.0, 0.50196078, 1.0]), "letter": "R1"},
     },
 }
-BIRD_LETTER_DICT = {bird: {lab: entry["letter"] for lab, entry in labels.items()} for bird, labels in BIRD_LABEL_MAPPING.items()}
+BIRD_LETTER_DICT = {
+    bird: {lab: entry["letter"] for lab, entry in labels.items()} for bird, labels in BIRD_LABEL_MAPPING.items()
+}
 
 OVERRIDE_LABEL_COLORS_BY_CONDITION = True  # when True: color_l=red, color_r=blue, color=grey
-LEFT_COLOR  = np.array([1.0, 0.0, 0.0])
+LEFT_COLOR = np.array([1.0, 0.0, 0.0])
 RIGHT_COLOR = np.array([0.0, 0.0, 1.0])
-NEUTRAL_GREY  = np.array([0.5, 0.5, 0.5])
+NEUTRAL_GREY = np.array([0.5, 0.5, 0.5])
 
 
 # for t-SNE change to 0.6, 1.4
-DARK_FACTOR   = 0.9
+DARK_FACTOR = 0.9
 BRIGHT_FACTOR = 1.1
+
 
 def _scale(color, factor):
     r, g, b = mcolors.to_rgb(color)
@@ -259,7 +348,6 @@ def _scale(color, factor):
         return (r * factor, g * factor, b * factor)
     t = factor - 1.0
     return (r + (1 - r) * t, g + (1 - g) * t, b + (1 - b) * t)
-
 
 
 new_mapping = {}
@@ -285,7 +373,7 @@ for bird, labels in BIRD_LABEL_MAPPING.items():
 
         new_mapping[bird][lab] = {
             **entry,
-            "color":   base_color_out,
+            "color": base_color_out,
             "color_orig": tuple(base_color),
             "color_orig_l": _scale(base_color, BRIGHT_FACTOR),
             "color_orig_r": _scale(base_color, DARK_FACTOR),
@@ -294,7 +382,6 @@ for bird, labels in BIRD_LABEL_MAPPING.items():
         }
 
 BIRD_LABEL_MAPPING = new_mapping
-
 
 
 def parse_sequence(seq: str) -> set[int]:
@@ -309,6 +396,7 @@ def derive_canonical_labels() -> dict[tuple[str, str], set[int]]:
         if condition != "order"
     }
 
+
 def drop_non_canonical(df):
     canonical = derive_canonical_labels()
     keep = np.ones(len(df), dtype=bool)
@@ -318,84 +406,102 @@ def drop_non_canonical(df):
     return df[keep].reset_index(drop=True)
 
 
-
-
 # ── Signal / processing parameters ───────────────────────────────────────────
-SR = 30_000             # ephys sample rate (Hz)
-FPS = 200                # video frame rate (Hz)
+SR = 30_000  # ephys sample rate (Hz)
+FPS = 200  # video frame rate (Hz)
 
 
 # for prep pynapple
 
 
 # prep pynapple derives position_stickTip, position_pellet, angles_stickTip, etc...
-# pairwise distances features (e.g. pellet_stickTip_dist) -> create those as needed, e.g. since we maybe do pre-procesing (e.g. nan filling) before deriving these
-SIGNAL_NAMES = ("position", "velocity", "speed", "acceleration", "angles", "angle_rgb",
-                "aux_acceleration", "pellet_stickClosest_angular_similarity") # create via prep_pynapple.py, SKIP_EPHYS = False, uncomment after 1x) 
+# pairwise distances features (e.g. pellet_stickTip_dist) -> create those as needed, e.g. since we maybe do pre-processing (e.g. nan filling) before deriving these
+SIGNAL_NAMES = (
+    "position",
+    "velocity",
+    "speed",
+    "acceleration",
+    "angles",
+    "angle_rgb",
+    "aux_acceleration",
+    "pellet_stickClosest_angular_similarity",
+)  # create via prep_pynapple.py, SKIP_EPHYS = False, uncomment after 1x)
 
 
-SIGNAL_NAMES = ("velocity", "speed", "pellet_stickClosest_dist", "pellet_stickClosestMedian_dist") 
+SIGNAL_NAMES = ("velocity", "speed", "pellet_stickClosest_dist", "pellet_stickClosestMedian_dist")
 
 
-SIGNAL_NAMES = ("position", "velocity", "speed", "angles", "angle_rgb",
-                "position_stickTip", "velocity_stickTip", "speed_stickTip", "angles_stickTip", 
-                "position_pellet", "velocity_pellet", "speed_pellet", "angles_pellet",
-                "acceleration", "aux_acceleration",
-                "angle_rgb", "angle_rgb_stickTip",  # visualization
-                "pellet_stickClosest_dist", "pellet_stickClosestMedian_dist" # pellet
-                )
+SIGNAL_NAMES = (
+    "position",
+    "velocity",
+    "speed",
+    "angles",
+    "angle_rgb",
+    "position_stickTip",
+    "velocity_stickTip",
+    "speed_stickTip",
+    "angles_stickTip",
+    "position_pellet",
+    "velocity_pellet",
+    "speed_pellet",
+    "angles_pellet",
+    "acceleration",
+    "aux_acceleration",
+    "angle_rgb",
+    "angle_rgb_stickTip",  # visualization
+    "pellet_stickClosest_dist",
+    "pellet_stickClosestMedian_dist",  # pellet
+)
 
 # for prep_pynapple don't add the _stickTip suffix
-
 
 
 # "pellet_beakTip_dist", "pellet_stickTip_dist" # don't include in Fig1, GLM
 
 
-DT = 0.005 # Stride of spike count so aligned with behaviour (1/fps)
-BIN_SIZE = 0.05 # I compared 0.05 and 0.1, and some harp modulation (e.g. valley in two-peak PETH) was lost at 0.1, keep 0.05!
+DT = 0.005  # Stride of spike count so aligned with behaviour (1/fps)
+BIN_SIZE = (
+    0.05  # I compared 0.05 and 0.1, and some harp modulation (e.g. valley in two-peak PETH) was lost at 0.1, keep 0.05!
+)
 assert math.isclose(round(BIN_SIZE / DT), BIN_SIZE / DT, rel_tol=1e-9)
 
-SESSION_DURATION = 36000.0 
+SESSION_DURATION = 36000.0
 SESSION_ID_STRIDE = 10_000
 
 
-# DATA PRE-PROCESING
+# DATA PRE-PROCESSING
 # see also decisions in pipeline.iypnb, e.g. clipping
 
 # Empiricially determined, for pellet, stickTip, beaktip, take np.percentile(diff(abs(position)), 99)
-DERIVATIVE_THRESHOLDS = {
-    "x": 0.335020,
-    "y": 0.256299,
-    "z": 0.590033
-}
+DERIVATIVE_THRESHOLDS = {"x": 0.335020, "y": 0.256299, "z": 0.590033}
 
 
 # ── IFR smoothing (gaussian_filter1d) ─────────────────────────────────────────
 # sigma controls smoothing width in bins (1 bin = DT s = 1 ms).
 # radius is derived automatically so the Gaussian tail is never clipped.
-IFR_SMOOTH_SIGMA  = 20
+IFR_SMOOTH_SIGMA = 20
 IFR_SMOOTH_RADIUS = max(30, int(4 * IFR_SMOOTH_SIGMA + 0.5))
 
 # ── Pipeline flags ────────────────────────────────────────────────────────────
-SKIP_EPHYS    = True
+SKIP_EPHYS = True
 SKIP_FEATURES = False
 
 
 # VISUALIZATION PARAMETERS
 
 # Heatmap plot
-SPEED_VMAX = 95 # (equivalent to trimming to 95% percentile) to avoid outliers dominating colormap; set to None to disable
-
+SPEED_VMAX = (
+    95  # (equivalent to trimming to 95% percentile) to avoid outliers dominating colormap; set to None to disable
+)
 
 
 # Janus panel heights (inches; figure height = sum of all rows)
-JANUS_SPEED_LINE_HEIGHT    = 3   # joint speed line at top
-JANUS_COLOR_STRIP_HEIGHT   = 0.5   # syllable letter bar (per condition)
-JANUS_SPEED_HEATMAP_HEIGHT = 3   # speed heatmap (per condition)
-JANUS_SIGNAL_HEATMAP_HEIGHT =3  # angle-RGB heatmap (per condition)
-RASTER_ROW_HEIGHT          = 0.01  # per trial row in the raster
-JANUS_PSTH_HEIGHT          = 2   # PSTH band above each unit's raster block, inches
+JANUS_SPEED_LINE_HEIGHT = 3  # joint speed line at top
+JANUS_COLOR_STRIP_HEIGHT = 0.5  # syllable letter bar (per condition)
+JANUS_SPEED_HEATMAP_HEIGHT = 3  # speed heatmap (per condition)
+JANUS_SIGNAL_HEATMAP_HEIGHT = 3  # angle-RGB heatmap (per condition)
+RASTER_ROW_HEIGHT = 0.01  # per trial row in the raster
+JANUS_PSTH_HEIGHT = 2  # PSTH band above each unit's raster block, inches
 
 # Janus count-trace z-score display range
 JANUS_COUNT_ZCLIP = 5.0
@@ -407,12 +513,13 @@ NEURONS_PER_PDF = 10
 MIN_PETH_TRIALS = 5
 
 
-
 # ── frank.py analysis controls ───────────────────────────────────────────────
 # None = all, 0 = first, int = specific cluster id
 
 # Defaults (leave uncommented)
-selected_bird = None;  selected_session_id = None; selected_clu = None
+selected_bird = None
+selected_session_id = None
+selected_clu = None
 
 
 # selected_bird = "Freddy"; # selected_session_id = "20250528_01"; selected_clu = None #
@@ -420,16 +527,16 @@ selected_bird = None;  selected_session_id = None; selected_clu = None
 # selected_bird = "Ivy";  selected_session_id = "20260413_01"; selected_clu = 154
 
 
-EXCLUDED_SESSIONS    =  []
+EXCLUDED_SESSIONS = []
 GAP_PRE_FIRST_SYLLABLE = 1.5  # will only be half since we half pre gap
 GAP_POST_LAST_SYLLABLE = 0.75  # same
-AVERAGE              = "median"
+AVERAGE = "median"
 # for wide plot (for figure 2 showing baselien firing, set to 2, 2, not 1.5, 0.75)
-
 
 
 # for multi neuron frankenstein
 SELECT_NEAR_MEDIAN = 15  # rows per column: trials closest to median syllable duration
+
 
 # ── Derived ───────────────────────────────────────────────────────────────────
 def _filter_bird_dict(d):
@@ -437,12 +544,11 @@ def _filter_bird_dict(d):
         return d
     return {k: v for k, v in d.items() if k == selected_bird}
 
+
 sessions = find_session_paths(_filter_bird_dict(AKSELI_SESSIONS), skip_ephys=SKIP_EPHYS, user="Akseli")
 
 sessions2 = find_session_paths(_filter_bird_dict(ALICE_SESSIONS), skip_ephys=SKIP_EPHYS, user="Alice")
 sessions += sessions2
-
-
 
 
 # Make sure sessions not double specified
@@ -450,16 +556,14 @@ ids = [s.date_id for s in sessions]
 dupes = {k: v for k, v in Counter(ids).items() if v > 1}
 assert not dupes, f"Duplicate session.date_id from find_session_paths: {dupes}"
 
- 
 
 if selected_bird is None:
     sessions_filtered = [s for s in sessions if s.date_id not in EXCLUDED_SESSIONS]
 else:
     sessions_filtered = [s for s in sessions if s.bird == selected_bird and s.date_id not in EXCLUDED_SESSIONS]
-    
+
 if selected_session_id is not None:
     sessions_filtered = [s for s in sessions_filtered if s.date_id == selected_session_id]
-    
 
 
 def _decode(s):
@@ -468,46 +572,45 @@ def _decode(s):
     return np.array(s.split("–"), dtype=np.int64)
 
 
-
- 
-def load_session(session, offset: float, session_idx: int, exclude_conditions: bool = False, drive: bool = False, exclude_all_two_pellets: bool = False, signal_names=None):
+def load_session(
+    session,
+    offset: float,
+    session_idx: int,
+    exclude_conditions: bool = False,
+    drive: bool = False,
+    exclude_all_two_pellets: bool = False,
+    signal_names=None,
+):
     py_path = session.nc_path.parent / "pynapple"
     if signal_names is None:
         signal_names = SIGNAL_NAMES
-    
 
     if drive:
         tsv_drive_folder = Path(paths[user]["tsv_drive_folder"])
 
-        backup_folders = [
-            p for p in tsv_drive_folder.iterdir()
-            if p.is_dir() and "backup" in p.name.lower()
-        ]
+        backup_folders = [p for p in tsv_drive_folder.iterdir() if p.is_dir() and "backup" in p.name.lower()]
 
         # get most recently created folder
-        latest_backup_folder = max(
-            backup_folders,
-            key=lambda p: p.stat().st_ctime
-        )
-        label_dir = Path(r"G:\My Drive\Crow lab\data\Akseli\backup_20260818") # latest_backup_folder
+        latest_backup_folder = max(backup_folders, key=lambda p: p.stat().st_ctime)
+        label_dir = Path(r"G:\My Drive\Crow lab\data\Akseli\backup_20260818")  # latest_backup_folder
         suffix = f"_{session.date_id}_{session.bird}"
     else:
         label_dir = session.nc_path.parent
         suffix = ""
 
     df = pd.read_csv(label_dir / f"Trial_data_labels{suffix}.tsv", sep="\t")
-    df.sort_values(["onset_global"], inplace=True) 
-    
-    
-    assert df.onset_global.max() <= SESSION_DURATION, f"For {session.date_id}: Increase SESSION_DURATION to at least {df.onset_global.max()}s"
+    df.sort_values(["onset_global"], inplace=True)
+
+    assert df.onset_global.max() <= SESSION_DURATION, (
+        f"For {session.date_id}: Increase SESSION_DURATION to at least {df.onset_global.max()}s"
+    )
     df["trial_onset"] += offset
-    
+
     if "trial_offset" in df.columns:
-        df["trial_offset"]  += offset
-    
+        df["trial_offset"] += offset
+
     df["onset_global"] += offset
     df["offset_global"] += offset
-
 
     df["session_idx"] = session_idx
 
@@ -516,7 +619,7 @@ def load_session(session, offset: float, session_idx: int, exclude_conditions: b
         df["sequence"] = df["sequence"].str.replace(rf"\b{old}\b", str(new), regex=True)
 
     if session.bird == "Ivy":
-        df = remove_labels(df, [4]) # Label 4 is an inconsistent syllable for Ivy, exclude from all analyses
+        df = remove_labels(df, [4])  # Label 4 is an inconsistent syllable for Ivy, exclude from all analyses
 
     # ADD BACK
     df = correct_labels(df, offset=offset)
@@ -526,19 +629,17 @@ def load_session(session, offset: float, session_idx: int, exclude_conditions: b
     if exclude_conditions:
         # Removes roughly 100 trials, remaining ~6000 (poscat 5, 6 sessions excluded)
         df = df[~df.condition.isin(["two+ sep. pellets", "other"])]
-    
 
     df["date_id"] = session.date_id
 
-    signals = {
-        name: shift_tsd(nap.load_file(py_path / f"{name}.npz"), offset)
-        for name in signal_names
-    }
+    signals = {name: shift_tsd(nap.load_file(py_path / f"{name}.npz"), offset) for name in signal_names}
     tsgroup = nap.load_file(py_path / "units.npz")
 
     assert df.session.nunique() == 1
     tsgroup = shift_and_relabel_units(
-        tsgroup, offset, df.session.iloc[0],
+        tsgroup,
+        offset,
+        df.session.iloc[0],
         bird=session.bird,
         brain_region=SESSION_REGION.get(session.date_id, "unknown"),
     )
@@ -548,8 +649,13 @@ def load_session(session, offset: float, session_idx: int, exclude_conditions: b
     return df, tsgroup, signals
 
 
-def load_sessions(date_ids=None, exclude_conditions: bool = False, drive: bool = False,
-                  exclude_all_two_pellets: bool = False, signal_names=None):
+def load_sessions(
+    date_ids=None,
+    exclude_conditions: bool = False,
+    drive: bool = False,
+    exclude_all_two_pellets: bool = False,
+    signal_names=None,
+):
     """Load and merge several sessions (the canonical multi-session loading loop).
 
     date_ids: iterable of session date_ids to load, in sessions_filtered order;
@@ -573,9 +679,13 @@ def load_sessions(date_ids=None, exclude_conditions: bool = False, drive: bool =
     offset = 0.0
     for session_idx, session in enumerate(selected):
         session_df, session_units, session_signals = load_session(
-            session, offset, session_idx,
-            exclude_conditions=exclude_conditions, drive=drive,
-            exclude_all_two_pellets=exclude_all_two_pellets, signal_names=signal_names,
+            session,
+            offset,
+            session_idx,
+            exclude_conditions=exclude_conditions,
+            drive=drive,
+            exclude_all_two_pellets=exclude_all_two_pellets,
+            signal_names=signal_names,
         )
         all_dfs.append(session_df)
         all_units.append(session_units)
@@ -601,14 +711,11 @@ def full_unit_id(date_id: str, clu: int) -> int:
     return _date_prefix(date_id) * SESSION_ID_STRIDE + clu
 
 
-
-
 def _filter_units(count_by_side: dict, exclude: set) -> dict:
     exclude = set(exclude)
-    return {
-        s: {u: ca[u] for u in ca.keys() if u not in exclude}
-        for s, ca in count_by_side.items()
-    }
+    return {s: {u: ca[u] for u in ca.keys() if u not in exclude} for s, ca in count_by_side.items()}
+
+
 def load_janus(fname: str, janus_path: Path = None, exclude: list = None) -> dict:
     if exclude is None:
         meta_df = pd.read_csv(META_TSV, sep="\t")
@@ -619,9 +726,6 @@ def load_janus(fname: str, janus_path: Path = None, exclude: list = None) -> dic
 
     with open(Path(janus_path) / fname, "rb") as f:
         data = pickle.load(f)
-    
-
-
 
     bird = fname.split("_")[0]
     count_by_side = {s: data["result"][1][s] for s in SIDES}
@@ -631,20 +735,25 @@ def load_janus(fname: str, janus_path: Path = None, exclude: list = None) -> dic
     return data, bird, data["bin_size"]
 
 
-
 def color_strip_panel(ax: plt.Axes, syl_intervals, bird: str, color: str) -> None:
     letter_dict = BIRD_LETTER_DICT[bird]
     for start, end, label in zip(syl_intervals.start, syl_intervals.end, syl_intervals.label):
         width = end - start
         ax.add_patch(mpatches.Rectangle((start, 0), width, 1, facecolor=color, edgecolor="black", linewidth=1.0))
-        ax.text(start + width / 2, 0.5, letter_dict.get(int(label), str(int(label))), ha="center", va="center", fontweight="bold")
+        ax.text(
+            start + width / 2,
+            0.5,
+            letter_dict.get(int(label), str(int(label))),
+            ha="center",
+            va="center",
+            fontweight="bold",
+        )
     ax.axis("off")
 
 
 def remove_labels(df: pd.DataFrame, labels_to_remove: list[int]) -> pd.DataFrame:
     to_remove = set(labels_to_remove)
     return df[~df["labels"].isin(to_remove)].reset_index(drop=True)
-
 
 
 def correct_labels(
@@ -681,9 +790,7 @@ def correct_labels(
     onset_global = np.full(len(df), np.nan)
     offset_global = np.full(len(df), np.nan)
 
-
     for session_trial, row_idx in df.groupby(trial_col, sort=False).indices.items():
-
         pulses = trial_pulses[session_trial]
         trial_onset_idxs = onset_idxs[row_idx]
         trial_offset_idxs = offset_idxs[row_idx]
@@ -722,21 +829,16 @@ def correct_labels(
     return df.reset_index(drop=True)
 
 
-
-
-
-
-
 def add_conditions(
     df: pd.DataFrame,
     exclude_two_pellets: bool = False,
 ) -> pd.DataFrame:
     valid_pellets = {1} if exclude_two_pellets else {1, 2}
-    
+
     def classify_condition(row: pd.Series) -> str:
         poscat = int(row["poscat"])
         num_pellets = int(row["num_pellets"])
-        
+
         if num_pellets == 0 and poscat == 0:
             return "zero pellets"
         if poscat in {13, 4} and num_pellets >= 2:
@@ -745,18 +847,14 @@ def add_conditions(
             return "left pellet"
         if poscat == 3 and num_pellets in valid_pellets:
             return "right pellet"
-        if poscat in {4, 5, 6}: # 5, 6, control conditions 
+        if poscat in {4, 5, 6}:  # 5, 6, control conditions
             return "other"
-        
+
         raise ValueError(
-            f"Unexpected poscat={poscat}, num_pellets={num_pellets} "
-            f"in session_trial={row['session_trial']}"
+            f"Unexpected poscat={poscat}, num_pellets={num_pellets} in session_trial={row['session_trial']}"
         )
-    
+
     return df.assign(condition=df.apply(classify_condition, axis=1))
-
- 
-
 
 
 # HELPERS
@@ -764,8 +862,7 @@ def _assert_constant_trial_onset(df: pd.DataFrame) -> None:
     max_unique = df.groupby("session_trial")["trial_onset"].nunique().max()
     if max_unique != 1:
         raise ValueError(
-            f"trial_onset must be constant within each session_trial, "
-            f"found up to {max_unique} unique values per trial"
+            f"trial_onset must be constant within each session_trial, found up to {max_unique} unique values per trial"
         )
 
 
@@ -778,10 +875,8 @@ def _point_mask(df: pd.DataFrame) -> np.ndarray:
 
 def _build_trial_pulse_dict(df: pd.DataFrame, trial_col: str) -> dict[object, np.ndarray]:
     filled = df["pulse_onsets"].replace("", np.nan).ffill()
-    return {
-        trial: _decode(s)
-        for trial, s in filled.groupby(df[trial_col], sort=False).first().items()
-    }
+    return {trial: _decode(s) for trial, s in filled.groupby(df[trial_col], sort=False).first().items()}
+
 
 def _check_in_bounds(
     df: pd.DataFrame,
@@ -807,12 +902,11 @@ def _check_in_bounds(
     print(bad_rows[cols].to_string())
     raise ValueError(f"Trial {session_trial} has labels beyond recorded pulses")
 
+
 def _decode(s):
     if not isinstance(s, str) or not s:
         return np.array([], dtype=np.int64)
     return np.array(s.split("–"), dtype=np.int64)
-
-
 
 
 def get_trial_periods(
@@ -829,27 +923,30 @@ def get_trial_periods(
     else:
         raise TypeError(f"Expected DataFrame or IntervalSet, got {type(X).__name__}")
 
-    grouped = df.groupby("session_trial",sort=False)
+    grouped = df.groupby("session_trial", sort=False)
 
     if point_events:
         trials = (
-            pd.DataFrame({
-                "start": grouped[start_col].min() - gap,
-                "end": grouped[start_col].max() + gap,
-            })
+            pd.DataFrame(
+                {
+                    "start": grouped[start_col].min() - gap,
+                    "end": grouped[start_col].max() + gap,
+                }
+            )
             .sort_values("start")
             .reset_index()
         )
     else:
         trials = (
-            pd.DataFrame({
-                "start": grouped[start_col].min() - gap,
-                "end": grouped[end_col].max() + gap,
-            })
+            pd.DataFrame(
+                {
+                    "start": grouped[start_col].min() - gap,
+                    "end": grouped[end_col].max() + gap,
+                }
+            )
             .sort_values("start")
             .reset_index()
         )
-
 
     optional_cols = ["session", "individual", "region", "condition", "final_pellet"]
     for col in optional_cols:
@@ -862,6 +959,7 @@ def get_trial_periods(
         end=trials["end"].values,
         metadata=trials[meta_cols],
     )
+
 
 def _no_overlap_report(no_overlap: dict, trial_periods: nap.IntervalSet, session: str) -> str:
     lines = [
@@ -896,7 +994,7 @@ def _set_session_trial_metadata(tsgroup: nap.TsGroup, df: pd.DataFrame) -> nap.T
             i_first, i_last = 0, -1
         else:
             i_first = np.searchsorted(trial_periods.start, float(t0), "left")
-            i_last  = np.searchsorted(trial_periods.end,   float(t1), "right") - 1
+            i_last = np.searchsorted(trial_periods.end, float(t1), "right") - 1
 
         if i_first > i_last:
             no_overlap[clu] = (t0, t1)
@@ -905,16 +1003,16 @@ def _set_session_trial_metadata(tsgroup: nap.TsGroup, df: pd.DataFrame) -> nap.T
             n_left[clu] = n_right[clu] = n_zero[clu] = n_trials[clu] = 0
             continue
 
-        first[clu]   = trial_periods.session_trial.iloc[i_first]
-        last[clu]    = trial_periods.session_trial.iloc[i_last]
+        first[clu] = trial_periods.session_trial.iloc[i_first]
+        last[clu] = trial_periods.session_trial.iloc[i_last]
         first_t[clu] = float(trial_periods.start[i_first])
-        last_t[clu]  = float(trial_periods.end[i_last])
+        last_t[clu] = float(trial_periods.end[i_last])
 
         unit_trials = trial_periods.session_trial.iloc[i_first : i_last + 1]
         counts = trial_cond.reindex(unit_trials).value_counts()
-        n_left[clu]   = int(counts.get("left pellet",   0))
-        n_right[clu]  = int(counts.get("right pellet",  0))
-        n_zero[clu]   = int(counts.get("zero pellets",  0))
+        n_left[clu] = int(counts.get("left pellet", 0))
+        n_right[clu] = int(counts.get("right pellet", 0))
+        n_zero[clu] = int(counts.get("zero pellets", 0))
         n_trials[clu] = int(counts.sum())
 
     if no_overlap:
@@ -938,7 +1036,6 @@ def _set_session_trial_metadata(tsgroup: nap.TsGroup, df: pd.DataFrame) -> nap.T
         n_zero=pd.Series(n_zero),
     )
     return tsgroup
-
 
 
 def merge_units(all_units: list[nap.TsGroup]) -> nap.TsGroup:
@@ -1024,9 +1121,13 @@ def fill_nans(
     `fill_values` overrides `default` per signal, either as a scalar or as one value
     per column, e.g. the dispenser coordinates for the stick tip position::
 
-        signals = S.fill_nans(signals, trial_periods, fill_values={
-            "position_stickTip": [-10.23, -5.907, -1.395],   # [x, y, z]
-        })
+        signals = S.fill_nans(
+            signals,
+            trial_periods,
+            fill_values={
+                "position_stickTip": [-10.23, -5.907, -1.395],  # [x, y, z]
+            },
+        )
 
     Samples outside `trial_periods` are never touched, and non-float signals are
     skipped. Returns a new dict; the input signals are not modified.
@@ -1050,8 +1151,8 @@ def fill_nans(
         if value.size == 1:
             value = np.repeat(value, flat.shape[1])
         assert not fill_edges or value.size == flat.shape[1], (
-            f"{name}: fill value has {value.size} entries but the signal has "
-            f"{flat.shape[1]} column(s)")
+            f"{name}: fill value has {value.size} entries but the signal has {flat.shape[1]} column(s)"
+        )
 
         if not fill_edges:
             continue
@@ -1072,17 +1173,19 @@ def fill_nans(
         if not n_filled:
             continue
         out[name] = _like(sig, flat.reshape(d.shape))
-        report.append((name, n_filled, len(trials_hit), value,
-                       int(np.isnan(flat[~np.isnan(trial_of_sample)]).sum())))
+        report.append((name, n_filled, len(trials_hit), value, int(np.isnan(flat[~np.isnan(trial_of_sample)]).sum())))
 
     if verbose:
-        print(f"fill_nans: edge-filled {len(report)} signal(s) over {len(trial_periods)} "
-              f"trials (names containing {substring!r}"
-              f"{' + ' + ', '.join(sorted(set(fill_values))) if fill_values else ''})")
+        print(
+            f"fill_nans: edge-filled {len(report)} signal(s) over {len(trial_periods)} "
+            f"trials (names containing {substring!r}"
+            f"{' + ' + ', '.join(sorted(set(fill_values))) if fill_values else ''})"
+        )
         for name, n_filled, n_trials, value, left in report:
-            print(f"  {name:28s} {n_trials:4d} trial(s) | filled {n_filled} edge NaN(s) "
-                  f"with {value.round(3).tolist()}"
-                  + (f" | {left} interior NaN(s) left" if left else ""))
+            print(
+                f"  {name:28s} {n_trials:4d} trial(s) | filled {n_filled} edge NaN(s) "
+                f"with {value.round(3).tolist()}" + (f" | {left} interior NaN(s) left" if left else "")
+            )
     return out
 
 
@@ -1113,17 +1216,18 @@ def nan_bin_mask(
     missing = [n for n in signal_names if n not in signals]
     assert not missing, f"signal_names not in signals: {missing}"
     first = signals[signal_names[0]]
-    assert all(np.array_equal(signals[n].t, first.t) for n in signal_names), \
+    assert all(np.array_equal(signals[n].t, first.t) for n in signal_names), (
         "signals are on different time grids -- align them before masking"
+    )
 
     def to_bins(bad_samples):
-        flag = nap.Tsd(t=first.t, d=bad_samples.astype(float),
-                       time_support=first.time_support)
+        flag = nap.Tsd(t=first.t, d=bad_samples.astype(float), time_support=first.time_support)
         return flag.restrict(trial_periods).bin_average(bin_size, ep=trial_periods)
 
-    per_signal = {n: np.isnan(np.asarray(signals[n].values, dtype=float)
-                              .reshape(len(signals[n]), -1)).any(axis=1)
-                  for n in signal_names}
+    per_signal = {
+        n: np.isnan(np.asarray(signals[n].values, dtype=float).reshape(len(signals[n]), -1)).any(axis=1)
+        for n in signal_names
+    }
     any_bad = np.logical_or.reduce(list(per_signal.values()))
 
     binned = to_bins(any_bad)
@@ -1134,10 +1238,12 @@ def nan_bin_mask(
         bin_trial = trial_periods.in_interval(binned).astype(int)
         hit = np.unique(bin_trial[drop])
         lost = [t for t in hit if drop[bin_trial == t].all()]
-        print(f"nan_bin_mask: dropping {drop.sum()} / {len(drop)} bins "
-              f"({drop.mean():.2%}) touching {len(hit)} / {len(trial_periods)} trials"
-              + (f", {len(lost)} of which lose EVERY bin" if lost else ""))
-        in_trial = ~np.isnan(trial_periods.in_interval(first))   # ignore between-trial NaNs
+        print(
+            f"nan_bin_mask: dropping {drop.sum()} / {len(drop)} bins "
+            f"({drop.mean():.2%}) touching {len(hit)} / {len(trial_periods)} trials"
+            + (f", {len(lost)} of which lose EVERY bin" if lost else "")
+        )
+        in_trial = ~np.isnan(trial_periods.in_interval(first))  # ignore between-trial NaNs
         for n in signal_names:
             n_samples = int((per_signal[n] & in_trial).sum())
             if not n_samples:
@@ -1164,25 +1270,23 @@ def shift_tsd(obj, offset: float):
     if isinstance(obj, nap.TsdFrame):
         return nap.TsdFrame(t=obj.times() + offset, d=obj.values, columns=obj.columns)
     return nap.Tsd(t=obj.times() + offset, d=obj.values)
- 
- 
+
+
 def _date_prefix(session_date: str) -> int:
     # "20250309_01" → 2025030901
     return int(session_date.replace("_", "").replace("-", ""))
 
 
-def shift_and_relabel_units(tsgroup: nap.TsGroup, offset: float,
-                             session_date: str, bird: str = "",
-                             brain_region: str = "") -> nap.TsGroup:
+def shift_and_relabel_units(
+    tsgroup: nap.TsGroup, offset: float, session_date: str, bird: str = "", brain_region: str = ""
+) -> nap.TsGroup:
     new_id = lambda k: _date_prefix(session_date) * SESSION_ID_STRIDE + int(k)
     session_support = nap.IntervalSet(offset, offset + SESSION_DURATION)
     relabeled = nap.TsGroup(
-        {new_id(k): nap.Ts(t=tsgroup[k].times() + offset, time_support=session_support)
-         for k in tsgroup.keys()},
+        {new_id(k): nap.Ts(t=tsgroup[k].times() + offset, time_support=session_support) for k in tsgroup.keys()},
         time_support=session_support,
     )
-    exclude = ["rate", "Amplitude", "ContamPct", "KSLabel", "amp", 
-               "n_spikes", "shm", "fr", "group", "group_order"]
+    exclude = ["rate", "Amplitude", "ContamPct", "KSLabel", "amp", "n_spikes", "shm", "fr", "group", "group_order"]
     info = tsgroup.metadata.drop(columns=exclude, errors="ignore").copy()
 
     info.index = [new_id(k) for k in info.index]
@@ -1195,9 +1299,8 @@ def shift_and_relabel_units(tsgroup: nap.TsGroup, offset: float,
     return relabeled
 
 
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_grid(tensor, cols=5, plot_type="line"):
@@ -1210,7 +1313,7 @@ def plot_grid(tensor, cols=5, plot_type="line"):
         "3d"   -> xyz trajectory
     """
 
-    if tensor.ndim == 2: # (trials, time)
+    if tensor.ndim == 2:  # (trials, time)
         tensor = tensor[None, :, :]  # Add a space dimension if missing
         if plot_type in ["2d", "3d"]:
             raise ValueError("2D and 3D plots require a 3D tensor (space, trials, time)")
@@ -1269,9 +1372,7 @@ def plot_grid(tensor, cols=5, plot_type="line"):
             elif plot_type == "line":
                 # x/y/z over time
 
-                ax.plot(
-                    tensor[:, i, :].T
-                )
+                ax.plot(tensor[:, i, :].T)
 
                 ax.set_xlabel("time")
                 ax.set_ylabel("position")
@@ -1282,10 +1383,7 @@ def plot_grid(tensor, cols=5, plot_type="line"):
                 )
 
             else:
-                raise ValueError(
-                    f"Unknown plot_type '{plot_type}'. "
-                    "Use 'line', '2d', or '3d'."
-                )
+                raise ValueError(f"Unknown plot_type '{plot_type}'. Use 'line', '2d', or '3d'.")
 
             ax.set_title(f"Trial {i}")
 
@@ -1323,7 +1421,6 @@ def save_png(
     return path
 
 
-
 def save_text(
     text: str,
     folder: str,
@@ -1356,13 +1453,15 @@ def save_pdf(
     save_eps: bool = False,
 ) -> Path:
 
-    mpl.rcParams.update({
-        "svg.fonttype": "path",
-        "pdf.fonttype": 42,
-        "ps.fonttype": 42,
-        "text.usetex": False,
-        "path.simplify": False,
-    })
+    mpl.rcParams.update(
+        {
+            "svg.fonttype": "path",
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
+            "text.usetex": False,
+            "path.simplify": False,
+        }
+    )
 
     with plt.style.context(STYLE_PATH):
         if isinstance(figs, plt.Figure):
@@ -1395,12 +1494,10 @@ def save_pdf(
 
         return path
 
-def _save_native(
-    figs: list[plt.Figure], path: Path, dpi: int, close_figs: bool
-) -> None:
+
+def _save_native(figs: list[plt.Figure], path: Path, dpi: int, close_figs: bool) -> None:
     with PdfPages(path, keep_empty=False) as pdf:
         for fig in figs:
-            pdf.savefig(fig, dpi=dpi, bbox_inches=None,
-                        metadata={"Creator": "matplotlib"})
+            pdf.savefig(fig, dpi=dpi, bbox_inches=None, metadata={"Creator": "matplotlib"})
             if close_figs:
                 plt.close(fig)

@@ -37,13 +37,13 @@ PLOT_DIR = get_project_root() / "plots"
 # 51 sessions
 # Sessions are split by whose data folder they live in (user_paths.json)
 AKSELI_SESSIONS: dict[str, list[str]] = {
-    "Poppy": [# "20260304_01","20260305_02", # exclude for glm as less clear 
-              "20260306_01", "20260307_01", # 
+    "Poppy": [# "20260304_01","20260305_02", # exclude for glm as less clear
+              "20260306_01", "20260307_01", #
               "20260308_01", "20260309_01", "20260310_01", "20260311_01",
                "20260312_01", "20260313_01", "20260317_01"],
-    # "Poppy": ["20260308_01", "20260313_01"],      
+    # "Poppy": ["20260308_01", "20260313_01"],
     "Ivy":   ["20260413_01", "20260414_01", "20260415_01", "20260416_01",
-              "20260417_01", 
+              "20260417_01",
               "20260420_01", "20260421_01", # control
               # "20260424_01" # stimulation
             ]
@@ -61,10 +61,10 @@ ALICE_SESSIONS: dict[str, list[str]] = {
     ],
     "Freddy": [
         "20250526_01", "20250526_02", "20250527_01", "20250527_02",
-        "20250528_01", "20250528_02", "20250529_01", 
+        "20250528_01", "20250528_02", "20250529_01",
         "20250530_01",
     ],
-    # "Ivy": ["20250308_01", "20250307_01"], 
+    # "Ivy": ["20250308_01", "20250307_01"],
     # "Freddy": ["20250529_01"] # , "20250528_02"]
 }
 
@@ -121,7 +121,7 @@ SKIP_GAPS: list[tuple[int, int]] = [(1, 2), (9, 10), (10, 11)]
 # }
 
 # for LABEL_MAPPING sorting
-# 21, 22, could place in teh middle for poppy, ends for now
+# 21, 22, could place in the middle for poppy, ends for now
 
 
 # for compatibility keep, but try to use BIRD_LABEL_MAPPING
@@ -150,7 +150,7 @@ BIRD_SEQUENCES: dict[str, dict[str, str]] = {
     },
 }
 
-# Per Bird, these transitions occured more than 50x across sessions
+# Per Bird, these transitions occurred more than 50x across sessions
 BIRD_TRANSITIONS: dict[str, list[tuple[int, int]]] = {
     "Poppy": [
         (15, 26), (10, 10), (1, 2),   (9, 10),  (3, 15),  (2, 3),
@@ -329,16 +329,16 @@ FPS = 200                # video frame rate (Hz)
 
 
 # prep pynapple derives position_stickTip, position_pellet, angles_stickTip, etc...
-# pairwise distances features (e.g. pellet_stickTip_dist) -> create those as needed, e.g. since we maybe do pre-procesing (e.g. nan filling) before deriving these
+# pairwise distances features (e.g. pellet_stickTip_dist) -> create those as needed, e.g. since we maybe do pre-processing (e.g. nan filling) before deriving these
 SIGNAL_NAMES = ("position", "velocity", "speed", "acceleration", "angles", "angle_rgb",
-                "aux_acceleration", "pellet_stickClosest_angular_similarity") # create via prep_pynapple.py, SKIP_EPHYS = False, uncomment after 1x) 
+                "aux_acceleration", "pellet_stickClosest_angular_similarity") # create via prep_pynapple.py, SKIP_EPHYS = False, uncomment after 1x)
 
 
-SIGNAL_NAMES = ("velocity", "speed", "pellet_stickClosest_dist", "pellet_stickClosestMedian_dist") 
+SIGNAL_NAMES = ("velocity", "speed", "pellet_stickClosest_dist", "pellet_stickClosestMedian_dist")
 
 
 SIGNAL_NAMES = ("position", "velocity", "speed", "angles", "angle_rgb",
-                "position_stickTip", "velocity_stickTip", "speed_stickTip", "angles_stickTip", 
+                "position_stickTip", "velocity_stickTip", "speed_stickTip", "angles_stickTip",
                 "position_pellet", "velocity_pellet", "speed_pellet", "angles_pellet",
                 "acceleration", "aux_acceleration",
                 "angle_rgb", "angle_rgb_stickTip",  # visualization
@@ -356,11 +356,11 @@ DT = 0.005 # Stride of spike count so aligned with behaviour (1/fps)
 BIN_SIZE = 0.05 # I compared 0.05 and 0.1, and some harp modulation (e.g. valley in two-peak PETH) was lost at 0.1, keep 0.05!
 assert math.isclose(round(BIN_SIZE / DT), BIN_SIZE / DT, rel_tol=1e-9)
 
-SESSION_DURATION = 36000.0 
+SESSION_DURATION = 36000.0
 SESSION_ID_STRIDE = 10_000
 
 
-# DATA PRE-PROCESING
+# DATA PRE-PROCESSING
 # see also decisions in pipeline.iypnb, e.g. clipping
 
 # Empiricially determined, for pellet, stickTip, beaktip, take np.percentile(diff(abs(position)), 99)
@@ -450,16 +450,16 @@ ids = [s.date_id for s in sessions]
 dupes = {k: v for k, v in Counter(ids).items() if v > 1}
 assert not dupes, f"Duplicate session.date_id from find_session_paths: {dupes}"
 
- 
+
 
 if selected_bird is None:
     sessions_filtered = [s for s in sessions if s.date_id not in EXCLUDED_SESSIONS]
 else:
     sessions_filtered = [s for s in sessions if s.bird == selected_bird and s.date_id not in EXCLUDED_SESSIONS]
-    
+
 if selected_session_id is not None:
     sessions_filtered = [s for s in sessions_filtered if s.date_id == selected_session_id]
-    
+
 
 
 def _decode(s):
@@ -469,12 +469,12 @@ def _decode(s):
 
 
 
- 
+
 def load_session(session, offset: float, session_idx: int, exclude_conditions: bool = False, drive: bool = False, exclude_all_two_pellets: bool = False, signal_names=None):
     py_path = session.nc_path.parent / "pynapple"
     if signal_names is None:
         signal_names = SIGNAL_NAMES
-    
+
 
     if drive:
         tsv_drive_folder = Path(paths[user]["tsv_drive_folder"])
@@ -496,15 +496,15 @@ def load_session(session, offset: float, session_idx: int, exclude_conditions: b
         suffix = ""
 
     df = pd.read_csv(label_dir / f"Trial_data_labels{suffix}.tsv", sep="\t")
-    df.sort_values(["onset_global"], inplace=True) 
-    
-    
+    df.sort_values(["onset_global"], inplace=True)
+
+
     assert df.onset_global.max() <= SESSION_DURATION, f"For {session.date_id}: Increase SESSION_DURATION to at least {df.onset_global.max()}s"
     df["trial_onset"] += offset
-    
+
     if "trial_offset" in df.columns:
         df["trial_offset"]  += offset
-    
+
     df["onset_global"] += offset
     df["offset_global"] += offset
 
@@ -526,7 +526,7 @@ def load_session(session, offset: float, session_idx: int, exclude_conditions: b
     if exclude_conditions:
         # Removes roughly 100 trials, remaining ~6000 (poscat 5, 6 sessions excluded)
         df = df[~df.condition.isin(["two+ sep. pellets", "other"])]
-    
+
 
     df["date_id"] = session.date_id
 
@@ -619,7 +619,7 @@ def load_janus(fname: str, janus_path: Path = None, exclude: list = None) -> dic
 
     with open(Path(janus_path) / fname, "rb") as f:
         data = pickle.load(f)
-    
+
 
 
 
@@ -732,11 +732,11 @@ def add_conditions(
     exclude_two_pellets: bool = False,
 ) -> pd.DataFrame:
     valid_pellets = {1} if exclude_two_pellets else {1, 2}
-    
+
     def classify_condition(row: pd.Series) -> str:
         poscat = int(row["poscat"])
         num_pellets = int(row["num_pellets"])
-        
+
         if num_pellets == 0 and poscat == 0:
             return "zero pellets"
         if poscat in {13, 4} and num_pellets >= 2:
@@ -745,17 +745,17 @@ def add_conditions(
             return "left pellet"
         if poscat == 3 and num_pellets in valid_pellets:
             return "right pellet"
-        if poscat in {4, 5, 6}: # 5, 6, control conditions 
+        if poscat in {4, 5, 6}: # 5, 6, control conditions
             return "other"
-        
+
         raise ValueError(
             f"Unexpected poscat={poscat}, num_pellets={num_pellets} "
             f"in session_trial={row['session_trial']}"
         )
-    
+
     return df.assign(condition=df.apply(classify_condition, axis=1))
 
- 
+
 
 
 
@@ -1164,8 +1164,8 @@ def shift_tsd(obj, offset: float):
     if isinstance(obj, nap.TsdFrame):
         return nap.TsdFrame(t=obj.times() + offset, d=obj.values, columns=obj.columns)
     return nap.Tsd(t=obj.times() + offset, d=obj.values)
- 
- 
+
+
 def _date_prefix(session_date: str) -> int:
     # "20250309_01" → 2025030901
     return int(session_date.replace("_", "").replace("-", ""))
@@ -1181,7 +1181,7 @@ def shift_and_relabel_units(tsgroup: nap.TsGroup, offset: float,
          for k in tsgroup.keys()},
         time_support=session_support,
     )
-    exclude = ["rate", "Amplitude", "ContamPct", "KSLabel", "amp", 
+    exclude = ["rate", "Amplitude", "ContamPct", "KSLabel", "amp",
                "n_spikes", "shm", "fr", "group", "group_order"]
     info = tsgroup.metadata.drop(columns=exclude, errors="ignore").copy()
 

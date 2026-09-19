@@ -21,7 +21,6 @@ from qtpy.QtWidgets import (
     QHeaderView,
     QLabel,
     QMenu,
-    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -817,39 +816,6 @@ class LabelsWidget(QWidget):
             notify(f"Loaded {len(self._mappings) - 1} labels from {Path(mapping_path).name}")
         except FileNotFoundError:
             notify(f"Mapping file not found: {mapping_path}", "warning")
-
-    def _create_temporary_labels(self):
-        """Open dialog to create temporary labels for this session."""
-        dialog = TemporaryLabelsDialog(self)
-        if dialog.exec_():
-            labels = dialog.get_labels()
-            if labels:
-                from ethograph.io.session_layout import session_dir_of
-                from ethograph.utils.paths import default_config_dir
-
-                data_dir = session_dir_of(self.app_state.nc_file_path) if self.app_state.nc_file_path else None
-                config_dir = default_config_dir(data_dir)
-                mapping_path = config_dir / "mapping_temporary.txt"
-                mapping_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(mapping_path, "w") as f:
-                    f.write("0 background\n")
-                    for i, label in enumerate(labels, start=1):
-                        f.write(f"{i} {label}\n")
-
-                self.io_widget.mapping_file_path_edit.setText(str(mapping_path))
-                self._mappings = load_label_mapping(mapping_path)
-                self.app_state._label_mappings = self._mappings
-                if self.plot_container:
-                    self.plot_container.set_label_mappings(self._mappings)
-                if self.changepoints_widget:
-                    self.changepoints_widget.set_motif_mappings(self._mappings)
-                if self.data_widget and self.data_widget.navigation_widget:
-                    self.data_widget.navigation_widget.set_mappings(self._mappings)
-                self._populate_labels_table()
-                self.refresh_labels_shapes_layer()
-                if self.data_widget:
-                    self.data_widget.update_main_plot(preserve_x_range=True)
-                notify(f"Loaded {len(labels)} temporary labels")
 
     def _import_predictions_from_folder(self):
         """A segmentation run's own output folder — real intervals, confidence curves."""
@@ -2259,37 +2225,3 @@ class LabelsPerPlotDialog(QDialog):
 
     def get_modes(self) -> dict[str, str]:
         return {type_key: combo.currentData() for type_key, combo in self._combos.items()}
-
-
-class TemporaryLabelsDialog(QDialog):
-    """Dialog for creating temporary labels for the current session."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Create Temporary Labels")
-        self.setMinimumWidth(400)
-        self.setMinimumHeight(300)
-        self._setup_ui()
-
-    def _setup_ui(self):
-        layout = QVBoxLayout(self)
-
-        info_label = QLabel("Enter label names (one per line):")
-        layout.addWidget(info_label)
-
-        self.text_edit = QPlainTextEdit()
-        self.text_edit.setPlaceholderText(
-            "label1\nlabel2\nlabel3\n...\n\n(background is added automatically as label 0)"
-        )
-        layout.addWidget(self.text_edit)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def get_labels(self):
-        """Parse and return the list of label names."""
-        text = self.text_edit.toPlainText()
-        labels = [line.strip().replace(" ", "_") for line in text.split("\n") if line.strip()]
-        return labels

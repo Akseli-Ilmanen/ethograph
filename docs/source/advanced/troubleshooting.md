@@ -13,9 +13,10 @@ Report bugs on [GitHub Issues](https://github.com/Akseli-Ilmanen/ethograph/issue
 
 | Problem | Solution |
 |---------|----------|
-| Unexpected error in the GUI | Save labels (`Ctrl + S`), then restart the GUI. Save semi-regularly! |
 | A plot or video is frozen, black, blank or out of date | Press `Ctrl+R` (**Help ▸ Reset panels**). Every plot is rebuilt and every video reloaded in place, as if the window had been closed and reopened; the layout, the dataset and your labels are untouched. |
+| Unexpected error in the GUI | Save labels (`Ctrl + S`), then restart the GUI. Save semi-regularly! |
 | Error with user settings | In the top bar, first try **Help ▸ Reset local settings (this dataset)**. If that does not help, use **Help ▸ Reset global settings (gui_settings.yaml)**. |
+| Video, audio or ephys drift apart — the alignment looks off | **Help ▸ Visualize data alignment** draws every stream on its own clock, so you can see which one disagrees. It is usually a mis-specified `alignment.nwb`: a trial's timing, a stream offset or a media path pointing at the wrong file. |
 | Plots are squeezed to thin strips or seem missing | The saved layout holds more panels than fit. Close the extras with their ✕, or use **Help ▸ Reset local settings (this dataset)**: it rebuilds the default panels immediately. |
 
 ---

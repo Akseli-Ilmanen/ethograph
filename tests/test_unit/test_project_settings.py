@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ethograph.gui.project import ProjectSettings, add_ignore, find_project_dir, load_project_settings
+from ethograph.gui.project import (
+    ProjectSettings,
+    add_ignore,
+    find_project_dir,
+    load_project_settings,
+    update_project_settings,
+)
 
 
 def _write(project: Path, **settings) -> Path:
@@ -24,14 +30,13 @@ def test_every_key_reads_back(tmp_path: Path):
     project = _write(
         tmp_path / "study",
         individuals=["crow1", "crow2"],
-        cameras=["cam-1"],
-        mics=["mic-1"],
+        individuals_mode="both",
         rig="CrowBench",
         pose={"source_software": "SLEAP", "skeleton": skeleton},
     )
     s = load_project_settings(project)
     assert s.individuals == ("crow1", "crow2")
-    assert s.cameras == ("cam-1",) and s.mics == ("mic-1",)
+    assert s.individuals_mode == "both"
     assert s.rig == "CrowBench" and s.pose_software == "SLEAP"
     assert s.skeleton == skeleton  # inline, the shape the skeleton editor saves
 
@@ -43,6 +48,12 @@ def test_unknown_keys_and_bad_shapes_are_refused_by_name(tmp_path: Path):
         load_project_settings(_write(tmp_path / "b", individuals=["crow1", "crow1"]))
     with pytest.raises(ValueError, match="pose.skeleton"):
         load_project_settings(_write(tmp_path / "c", pose={"skeleton": "config/skeleton.yaml"}))
+    with pytest.raises(ValueError, match="individuals_mode"):
+        load_project_settings(_write(tmp_path / "d", individuals_mode="inherit_maybe"))
+
+
+class _Alignment:
+    individuals = ["only_this_one"]
 
 
 def test_label_individuals_precedence(app_state, tmp_path: Path):
@@ -52,11 +63,36 @@ def test_label_individuals_precedence(app_state, tmp_path: Path):
     app_state.nwb_alignment = None
     app_state.data_loader = None
     assert app_state.label_individuals() == ["crow1", "crow2"]
-
-    class _Alignment:
-        individuals = ["only_this_one"]
-
     app_state.nwb_alignment = _Alignment()
+    assert app_state.label_individuals() == ["only_this_one"]
+
+
+def test_a_bare_drag_and_drop_still_labels_somebody(app_state):
+    """No project folder, no project.yaml, nothing declared: the selector is never empty."""
+    app_state.project_path = None
+    app_state.nwb_alignment = None
+    app_state.data_loader = None
+    assert app_state.label_individuals() == ["default"]
+
+    app_state.nwb_alignment = _Alignment()  # a dataset's own dim needs no settings to be used
+    assert app_state.label_individuals() == ["only_this_one"]
+
+
+def test_individuals_mode_decides_who_can_be_labelled(app_state, tmp_path: Path):
+    """The data's declaration only wins where the mode lets it."""
+    project = _write(tmp_path / "study", individuals=["crow1", "crow2"])
+    app_state.project_path = str(project)
+    app_state.data_loader = None
+    app_state.nwb_alignment = _Alignment()
+
+    update_project_settings(project, individuals_mode="define")
+    assert app_state.label_individuals() == ["crow1", "crow2"]
+
+    update_project_settings(project, individuals_mode="both")
+    assert app_state.label_individuals() == ["only_this_one", "crow1", "crow2"]
+
+    # An empty list cannot silence the data, whatever the mode says.
+    update_project_settings(project, individuals=[], individuals_mode="define")
     assert app_state.label_individuals() == ["only_this_one"]
 
 

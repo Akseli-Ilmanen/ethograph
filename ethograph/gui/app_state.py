@@ -388,6 +388,10 @@ class AppStateSpec:
         "skeleton_use_base": (bool, True, True),
         "skeleton_base_color": (str | None, "#00CC66", True),
         "skeleton_config_override": (dict | None, None, True),
+        # Which skeleton wins when the data carries one AND project.yaml does:
+        # "nwb" (the data's, the default) or "project". A preference, so global —
+        # it is how the user works, not a property of one session.
+        "skeleton_source": (str, "nwb", True),
         # Keypoint labelling: the schema being labelled and the chosen fill
         # backend. The labelled coordinates themselves are project data and go
         # to a sidecar next to the video, never here.
@@ -1203,26 +1207,34 @@ class ObservableAppState(QObject):
     def label_individuals(self) -> list[str]:
         """Every individual that can act or receive, backend-agnostic.
 
-        The session record's list when it declares one (``alignment.individuals``),
-        else the dataset's individual dim (whatever its spelling), else the
-        project's default (``project.yaml``), else the names the labels themselves
-        use — a session with no individual dimension still labels *somebody*.
-        Falls back to a single ``"default"`` so the selector is never empty.
+        What the data declares is the session record's list (``alignment.individuals``)
+        or, failing that, the dataset's individual dim (whatever its spelling).
+        ``project.yaml``'s ``individuals_mode`` says what to do with it:
+        ``"inherit"`` (the default) takes the declaration and falls back to the
+        project's list, ``"define"`` takes the project's list outright, ``"both"``
+        is the declaration plus the list. With neither, the names the labels
+        themselves use — a session with no individual dimension still labels
+        *somebody*. Falls back to a single ``"default"`` so the selector is never
+        empty.
         """
-        declared = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
-        if declared:
-            return declared
-        loader = getattr(self, "data_loader", None)
-        catalog = getattr(loader, "catalog", None)
-        if catalog is not None and catalog.individual_combo:
-            values = [str(v) for v in catalog.combo_values(catalog.individual_combo)]
-            if values:
-                return values
         from ethograph.gui.project import project_settings_of
 
-        project_default = list(project_settings_of(self).individuals)
-        if project_default:
-            return project_default
+        settings = project_settings_of(self)
+        declared = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
+        if not declared:
+            loader = getattr(self, "data_loader", None)
+            catalog = getattr(loader, "catalog", None)
+            if catalog is not None and catalog.individual_combo:
+                declared = [str(v) for v in catalog.combo_values(catalog.individual_combo)]
+        listed = list(settings.individuals)
+        if settings.individuals_mode == "define" and listed:
+            return listed
+        if settings.individuals_mode == "both":
+            return declared + [name for name in listed if name not in declared]
+        if declared:
+            return declared
+        if listed:
+            return listed
         names: list[str] = []
         df = self._all_labels_df
         if df is not None and not df.empty and "individual" in df.columns:

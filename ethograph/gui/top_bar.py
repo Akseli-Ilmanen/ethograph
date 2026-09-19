@@ -149,6 +149,7 @@ class TopBarBuilder:
         menu_bar = self.shell.menuBar()
         menu_bar.clear()
         self._build_file_menu(menu_bar)
+        self._build_settings_menu(menu_bar)
         self._build_changepoints_menu(menu_bar)
         self._build_tools_menu(menu_bar)
         self._build_model_menu(menu_bar)
@@ -394,13 +395,6 @@ class TopBarBuilder:
         menu = menu_bar.addMenu("&File")
         io = getattr(self.meta, "io_widget", None)
 
-        menu.addAction("Open settings folder (.ethograph)…", self._open_ethograph_home)
-        self.open_project_action = menu.addAction("Open project folder…", self._open_project_folder)
-        self._sync_open_project_action()
-        if self.app_state is not None:
-            self.app_state.project_path_changed.connect(lambda _value: self._sync_open_project_action())
-        menu.addSeparator()
-
         # Each I/O sub-panel pops up on its own (no unrelated sections):
         # labels import (mapping.txt + tsv/crowsetta) is separate from
         # predictions import and from label export. Data loading itself
@@ -431,6 +425,68 @@ class TopBarBuilder:
             menu.addAction("Save labels (Ctrl+S)", save_labels)
         menu.addSeparator()
         menu.addAction("Exit", self.shell.close)
+
+    # ------------------------------------------------------------------
+    # Settings menu
+    # ------------------------------------------------------------------
+
+    def _build_settings_menu(self, menu_bar):
+        """Settings menu — the study's own decisions, plus the two settings folders.
+
+        The label vocabulary, the individuals and the skeleton are the project's,
+        not one session's: each opens a dialog that writes ``mapping.txt`` or
+        ``project.yaml`` and then drives the GUI as a user's own edit would.
+        """
+        menu = menu_bar.addMenu("&Settings")
+        menu.addAction("Create / edit label mapping…", self._open_label_mapping)
+        menu.addAction("Create / edit individuals…", self._open_individuals)
+        menu.addAction("Edit skeleton…", self._open_skeleton_settings)
+        menu.addSeparator()
+        menu.addAction("Open GUI settings folder (.ethograph)…", self._open_ethograph_home)
+        self.open_project_action = menu.addAction("Open project settings folder…", self._open_project_folder)
+        self._sync_open_project_action()
+        if self.app_state is not None:
+            self.app_state.project_path_changed.connect(lambda _value: self._sync_open_project_action())
+
+    def _open_label_mapping(self):
+        from .dialog_settings import LabelMappingDialog
+
+        LabelMappingDialog(self.app_state, getattr(self.meta, "labels_widget", None), parent=self.shell).exec_()
+
+    def _open_individuals(self):
+        from .dialog_settings import IndividualsDialog, require_project
+
+        if require_project(self.app_state, self.shell) is None:
+            return
+        IndividualsDialog(self.app_state, on_changed=self._refresh_individuals, parent=self.shell).exec_()
+
+    def _refresh_individuals(self):
+        """Re-populate the sidebar's one individual combo from the new answer."""
+        dw = getattr(self.meta, "data_widget", None)
+        refresh = getattr(dw, "refresh_individual_choices", None)
+        if refresh is not None:
+            refresh()
+
+    def _open_skeleton_settings(self):
+        from .dialog_settings import SkeletonSettingsDialog, require_project
+
+        if require_project(self.app_state, self.shell) is None:
+            return
+        dw = getattr(self.meta, "data_widget", None)
+        dialog = SkeletonSettingsDialog(
+            self.app_state,
+            pose_mgr=getattr(dw, "pose_mgr", None),
+            on_changed=lambda: self._refresh_skeleton(dw),
+            parent=self.shell,
+        )
+        dialog.exec_()
+        self._refresh_skeleton(dw)
+
+    @staticmethod
+    def _refresh_skeleton(data_widget):
+        pose_mgr = getattr(data_widget, "pose_mgr", None)
+        if pose_mgr is not None:
+            pose_mgr.refresh_skeleton()
 
     def _open_ethograph_home(self):
         """Open the global ``.ethograph`` settings/cache folder in the OS file browser."""

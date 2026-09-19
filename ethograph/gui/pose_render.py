@@ -758,14 +758,19 @@ class PoseDisplayManager:
         """Skeleton + shapes config after override/base-colour resolution."""
         if not self._skeleton_enabled():
             return None
-        # Precedence: the user's own drawing, then the project's skeleton, then the data's.
+        # Precedence: the user's own drawing, then the data's and the project's in
+        # the order ``skeleton_source`` asks for (the data's by default).
         from ethograph.gui.project import project_settings_of
 
         override = getattr(self.app_state, "skeleton_config_override", None)
         if override is not None:
             config = override
         else:
-            config = project_settings_of(self.app_state).skeleton or pr.skeleton_config
+            project = project_settings_of(self.app_state).skeleton
+            if getattr(self.app_state, "skeleton_source", "nwb") == "project":
+                config = project or pr.skeleton_config
+            else:
+                config = pr.skeleton_config or project
         if getattr(self.app_state, "skeleton_use_base", True):
             config = _resolve_skeleton_colors(config, getattr(self.app_state, "skeleton_base_color", None))
         return config

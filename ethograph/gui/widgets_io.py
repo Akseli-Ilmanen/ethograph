@@ -450,10 +450,6 @@ class IOWidget(QWidget):
 
         target_layout.addRow("Name mapping:", mapping_row)
 
-        self.temp_labels_button = QPushButton("Create temporary labels")
-        self.temp_labels_button.setToolTip("Create custom labels for this session only")
-        target_layout.addRow("", self.temp_labels_button)
-
     def _create_predictions_row(self, target_layout):
         self.pred_group = QGroupBox("Predictions")
         pred_group_layout = QVBoxLayout()
@@ -1742,7 +1738,6 @@ class IOWidget(QWidget):
             lambda: self.labels_widget._reload_mapping(self.mapping_file_path_edit.text())
         )
         self.browse_mapping_btn.clicked.connect(self.labels_widget._browse_mapping_file)
-        self.temp_labels_button.clicked.connect(self.labels_widget._create_temporary_labels)
         self.import_predictions_from_folder_action.triggered.connect(self.labels_widget._import_predictions_from_folder)
         self.import_predictions_from_folders_action.triggered.connect(
             self.labels_widget._import_predictions_from_folders

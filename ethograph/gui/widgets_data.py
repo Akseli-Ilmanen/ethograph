@@ -544,13 +544,7 @@ class DataPanel(QWidget):
         design_box.setLayout(design_vbox)
         pose_layout.addWidget(design_box)
 
-        # ── Actions ──
-        self.create_skeleton_btn = QPushButton("Create / edit skeleton…")
-        self.create_skeleton_btn.setToolTip(
-            "Open an editor to draw skeleton connections on real pose data:\n"
-            "drag between keypoints to connect, then assign color categories."
-        )
-        pose_layout.addWidget(self.create_skeleton_btn)
+        # ── Actions ── (the skeleton itself is the project's: Settings ▸ Edit skeleton)
 
         self.label_keypoints_btn = QPushButton("Label keypoints…")
         self.label_keypoints_btn.setToolTip(
@@ -820,7 +814,6 @@ class DataWidget(QWidget):
         self.pose_points_color_btn = panel.pose_points_color_btn
         self.pose_points_use_base_checkbox = panel.pose_points_use_base_checkbox
         self.pose_color_by_combo = panel.pose_color_by_combo
-        self.create_skeleton_btn = panel.create_skeleton_btn
         self.label_keypoints_btn = panel.label_keypoints_btn
         self.pose_show_keypoints_checkbox = panel.pose_show_keypoints_checkbox
         self.filter_keypoints_btn = panel.filter_keypoints_btn
@@ -850,7 +843,6 @@ class DataWidget(QWidget):
         panel.pose_points_color_btn.clicked.connect(self._on_points_color_clicked)
         panel.pose_points_use_base_checkbox.stateChanged.connect(self._on_points_use_base_toggled)
         panel.pose_color_by_combo.currentIndexChanged.connect(self._on_pose_color_by_changed)
-        panel.create_skeleton_btn.clicked.connect(self._on_create_skeleton_clicked)
         panel.label_keypoints_btn.clicked.connect(self.open_keypoint_labelling)
         panel.bbox_hide_threshold_spin.valueChanged.connect(self._on_bbox_hide_threshold_changed)
         panel.bbox_show_text_checkbox.stateChanged.connect(self._on_bbox_text_toggled)
@@ -1056,24 +1048,6 @@ class DataWidget(QWidget):
     def _on_points_use_base_toggled(self, state: int):
         self.app_state.pose_points_use_base = self.pose_points_use_base_checkbox.isChecked()
         self.pose_mgr.refresh_skeleton()
-
-    def _on_create_skeleton_clicked(self):
-        from .dialog_skeleton_editor import SkeletonEditorDialog
-
-        data = self.pose_mgr.primary_pose_for_editor()
-        if data is None:
-            notify("No pose data available for the current camera/trial.", "warning")
-            return
-        keypoints, positions = data
-        if positions.shape[0] == 0:
-            notify("Pose data has no frames to edit.", "warning")
-            return
-        existing = getattr(self.app_state, "skeleton_config_override", None)
-        dialog = SkeletonEditorDialog(keypoints, positions, existing_config=existing, parent=self)
-        if dialog.exec_():
-            self.app_state.skeleton_config_override = dialog.get_config()
-            self.pose_show_skeleton_checkbox.setChecked(True)
-            self.update_pose()
 
     def open_keypoint_labelling(self):
         """Open (or raise) the keypoint labelling dialog.

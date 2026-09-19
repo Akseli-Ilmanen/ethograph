@@ -8,10 +8,10 @@ project keeps a registry of the session folders dropped while it was open, so
 the cover page can list and reopen them.
 
 The project also holds ``project.yaml``: the study's defaults for what recurs
-across its sessions (who the individuals are, which cameras and mics a rig has,
-which pose software, the skeleton to draw — written inline, not in a file of its
-own). A session's own record or dataset overrides them; they are defaults, never
-claims about a session. Machine paths never go in it.
+across its sessions (who the individuals are and how they are decided, which
+pose software, the skeleton to draw — written inline, not in a file of its own).
+A session's own record or dataset overrides them; they are defaults, never
+claims about a session. File paths never go in it.
 
 Layout::
 
@@ -69,13 +69,21 @@ def project_dir_of(app_state) -> Path | None:
     return path if path.is_dir() else None
 
 
+#: How a session decides who can be labelled. ``"inherit"`` takes the data's own
+#: individual dim, ``"define"`` takes ``project.yaml``'s list, ``"both"`` is the
+#: data's plus that list. ``"both"`` is never a default: the user picks it.
+INDIVIDUALS_MODES = ("inherit", "define", "both")
+DEFAULT_INDIVIDUALS_MODE = "inherit"
+
+
 @dataclass(frozen=True)
 class ProjectSettings:
     """The study-level defaults ``project.yaml`` holds. Every field optional; empty means "no default"."""
 
     individuals: tuple[str, ...] = ()
-    cameras: tuple[str, ...] = ()
-    mics: tuple[str, ...] = ()
+    #: One of :data:`INDIVIDUALS_MODES`. Data that names its individuals wins by
+    #: default; a session with none falls through to ``individuals`` either way.
+    individuals_mode: str = DEFAULT_INDIVIDUALS_MODE
     rig: str | None = None  # default rig notebook name under wizard/
     pose_software: str | None = None  # default tracking tool, e.g. "DeepLabCut"
     skeleton: dict | None = None  # the skeleton itself: {keypoints: [...], connections: [{start, end, ...}]}
@@ -85,7 +93,7 @@ class ProjectSettings:
     ignore: tuple[str, ...] = ()
 
 
-_PROJECT_KEYS = {"individuals", "cameras", "mics", "rig", "pose", "ignore"}
+_PROJECT_KEYS = {"individuals", "individuals_mode", "rig", "pose", "ignore"}
 _POSE_KEYS = {"source_software", "skeleton"}
 
 
@@ -114,10 +122,12 @@ def load_project_settings(project: Path | str | None) -> ProjectSettings:
     skeleton = pose.get("skeleton")
     if skeleton is not None and not (isinstance(skeleton, dict) and "connections" in skeleton):
         raise ValueError(f"{path}: 'pose.skeleton' is the skeleton itself, a mapping with 'connections'")
+    mode = str(raw.get("individuals_mode") or DEFAULT_INDIVIDUALS_MODE)
+    if mode not in INDIVIDUALS_MODES:
+        raise ValueError(f"{path}: 'individuals_mode' must be one of {list(INDIVIDUALS_MODES)}, got {mode!r}")
     return ProjectSettings(
         individuals=_names(raw.get("individuals"), path, "individuals"),
-        cameras=_names(raw.get("cameras"), path, "cameras"),
-        mics=_names(raw.get("mics"), path, "mics"),
+        individuals_mode=mode,
         rig=str(raw["rig"]) if raw.get("rig") else None,
         pose_software=str(pose["source_software"]) if pose.get("source_software") else None,
         skeleton=dict(skeleton) if skeleton else None,
@@ -148,6 +158,27 @@ def find_project_dir(start: Path | str) -> Path | None:
         if (folder / PROJECT_SETTINGS_FILENAME).is_file():
             return folder
     return None
+
+
+def update_project_settings(project: Path | str, **updates) -> Path:
+    """Merge *updates* into ``{project}/project.yaml``, creating it if needed.
+
+    The file is the user's too, so keys it already holds and this call does not
+    name are left exactly as they are. A key set to ``None`` is removed.
+    """
+    path = Path(project) / PROJECT_SETTINGS_FILENAME
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else None
+    raw = dict(raw or {})
+    for key, value in updates.items():
+        if key not in _PROJECT_KEYS:
+            raise ValueError(f"unknown project setting {key!r}; known: {sorted(_PROJECT_KEYS)}")
+        if value is None:
+            raw.pop(key, None)
+        else:
+            raw[key] = value
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return path
 
 
 def add_ignore(project: Path | str, name: str) -> Path:
