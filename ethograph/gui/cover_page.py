@@ -745,8 +745,8 @@ class CoverPage(QDialog):
             starter = self._using_starter_project()
             self._project_hint.setText(
                 (
-                    "starter project — fine for a visualization only; choose your own folder "
-                    "if you plan to label behaviours or train a segmentation model"
+                    "starter project — fine for visualization only; choose your own folder "
+                    "to annotate in the GUI or train models"
                 )
                 if starter
                 else ("← choose a folder before loading your own data" if project is None else "")
