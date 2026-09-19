@@ -479,16 +479,19 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Unexpected error in the GUI</p></td>
-<td><p>Save labels (<code class="docutils literal notranslate"><span class="pre">Ctrl</span> <span class="pre">+</span> <span class="pre">S</span></code>), then restart the GUI. Save semi-regularly!</p></td>
-</tr>
-<tr class="row-odd"><td><p>A plot or video is frozen, black, blank or out of date</p></td>
+<tr class="row-even"><td><p>A plot or video is frozen, black, blank or out of date</p></td>
 <td><p>Press <code class="docutils literal notranslate"><span class="pre">Ctrl+R</span></code> (<strong>Help ▸ Reset panels</strong>). Every plot is rebuilt and every video reloaded in place, as if the window had been closed and reopened; the layout, the dataset and your labels are untouched.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Unexpected error in the GUI</p></td>
+<td><p>Save labels (<code class="docutils literal notranslate"><span class="pre">Ctrl</span> <span class="pre">+</span> <span class="pre">S</span></code>), then restart the GUI. Save semi-regularly!</p></td>
 </tr>
 <tr class="row-even"><td><p>Error with user settings</p></td>
 <td><p>In the top bar, first try <strong>Help ▸ Reset local settings (this dataset)</strong>. If that does not help, use <strong>Help ▸ Reset global settings (gui_settings.yaml)</strong>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>Plots are squeezed to thin strips or seem missing</p></td>
+<tr class="row-odd"><td><p>Video, audio or ephys drift apart — the alignment looks off</p></td>
+<td><p><strong>Help ▸ Visualize data alignment</strong> draws every stream on its own clock, so you can see which one disagrees. It is usually a mis-specified <code class="docutils literal notranslate"><span class="pre">alignment.nwb</span></code>: a trial’s timing, a stream offset or a media path pointing at the wrong file.</p></td>
+</tr>
+<tr class="row-even"><td><p>Plots are squeezed to thin strips or seem missing</p></td>
 <td><p>The saved layout holds more panels than fit. Close the extras with their ✕, or use <strong>Help ▸ Reset local settings (this dataset)</strong>: it rebuilds the default panels immediately.</p></td>
 </tr>
 </tbody>
