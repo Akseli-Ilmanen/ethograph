@@ -1167,8 +1167,8 @@ class MetaWidget(GridSectionContainer):
         self.apply_saved_panel_layout()
         for path in prediction_paths:
             self.plot_container.add_panel("predictions", prediction_path=path)
-        self.app_state._preserve_x_range_next = True
-        self.data_widget.on_trial_changed()
+        with self.app_state.switching_trial(preserve_x_range=True):
+            self.data_widget.on_trial_changed()
         self.plot_container.schedule_labels_redraw()
         notify("Panels reset.")
 

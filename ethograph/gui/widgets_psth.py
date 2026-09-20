@@ -744,8 +744,8 @@ class PSTHDialog(QDialog):
 
         # Navigate to trial
         if self.navigation_widget is not None:
-            self.app_state._preserve_x_range_next = True
-            self.navigation_widget.navigate_to_trial(trial_id)
+            with self.app_state.switching_trial(preserve_x_range=True):
+                self.navigation_widget.navigate_to_trial(trial_id)
 
         # Convert rel_time (relative to event) → trial-relative time
         trial_start_abs = self._start_map.get(trial_id, 0.0)
@@ -794,8 +794,8 @@ class PSTHDialog(QDialog):
             return
         trial_id = str(self._current_trials[trial_idx])
         if self.navigation_widget is not None:
-            self.app_state._preserve_x_range_next = True
-            self.navigation_widget.navigate_to_trial(trial_id)
+            with self.app_state.switching_trial(preserve_x_range=True):
+                self.navigation_widget.navigate_to_trial(trial_id)
         self._status.setText(f"Navigated → {trial_id}")
 
     # ------------------------------------------------------------------

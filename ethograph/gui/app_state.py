@@ -3,6 +3,9 @@
 import logging
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, get_args, get_origin
@@ -46,6 +49,14 @@ from ethograph.utils.qt import find_combo_index
 logger = logging.getLogger(__name__)
 
 SIMPLE_SIGNAL_TYPES = (int, float, str, bool)
+
+
+@dataclass(frozen=True)
+class TrialSwitch:
+    """How the trial change in progress treats the view (``switching_trial``)."""
+
+    preserve_x_range: bool = False
+    keep_marker: bool = False
 
 
 def get_signal_type(type_hint):
@@ -689,6 +700,7 @@ class ObservableAppState(QObject):
         # The panel the user last clicked, whose pinned individual (if any)
         # is the one a new label is about. See selected_individual().
         self._subject_panel = None
+        self._trial_switch = TrialSwitch()
 
         from ethograph.io.nwb_alignment import EmpytAlignment
 
@@ -698,6 +710,26 @@ class ObservableAppState(QObject):
         self._auto_save_timer = QTimer()
         self._auto_save_timer.timeout.connect(self.save_to_yaml)
         self._auto_save_timer.start(auto_save_interval)
+
+    @property
+    def trial_switch(self) -> TrialSwitch:
+        """The options of the trial change in progress; the defaults outside one."""
+        return self._trial_switch
+
+    @contextmanager
+    def switching_trial(self, *, preserve_x_range: bool = False, keep_marker: bool = False) -> Iterator[None]:
+        """Scope a trial change's view options to the change itself.
+
+        Trial-change delivery is synchronous, so whatever switches the trial
+        inside the block sees the options; they end with the block even when
+        nothing switched or a subscriber raised, never reaching a later change.
+        """
+        previous = self._trial_switch
+        self._trial_switch = TrialSwitch(preserve_x_range=preserve_x_range, keep_marker=keep_marker)
+        try:
+            yield
+        finally:
+            self._trial_switch = previous
 
     @property
     def video_fps(self) -> float | None:

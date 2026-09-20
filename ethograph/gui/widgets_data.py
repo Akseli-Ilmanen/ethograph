@@ -3276,9 +3276,8 @@ class DataWidget(QWidget):
         if self.ephys_widget:
             self.ephys_widget.on_trial_changed()
 
-        preserve = getattr(self.app_state, "_preserve_x_range_next", False)
-        self.app_state._preserve_x_range_next = False
-        self.update_main_plot(preserve_x_range=preserve)
+        switch = self.app_state.trial_switch
+        self.update_main_plot(preserve_x_range=switch.preserve_x_range)
         try:
             self.update_space_plot()
         except Exception:
@@ -3289,9 +3288,7 @@ class DataWidget(QWidget):
         # session basis the trial starts at its session offset. Marker-driven
         # trial switches (auto-follow, session-scope label clicks) keep the
         # marker where the user put it instead.
-        marker_follow = getattr(self.app_state, "_marker_driven_trial_switch", False)
-        self.app_state._marker_driven_trial_switch = False
-        if not marker_follow:
+        if not switch.keep_marker:
             self.plot_container.update_time_marker_by_time(self.app_state.to_display(trials_sel, 0.0))
 
         self._update_confidence_overlay()
@@ -3512,8 +3509,6 @@ class DataWidget(QWidget):
         trial_id = hit[0]
         old_video = getattr(state, "video", None)
         was_playing = bool(old_video is not None and old_video.is_playing)
-        state._preserve_x_range_next = True
-        state._marker_driven_trial_switch = True
         state.trials_sel = trial_id
         nav = getattr(state, "navigation_widget", None)
         combo = getattr(nav, "trials_combo", None)
@@ -3521,7 +3516,8 @@ class DataWidget(QWidget):
             combo.blockSignals(True)
             combo.setCurrentText(str(trial_id))
             combo.blockSignals(False)
-        state.trial_changed.emit()
+        with state.switching_trial(preserve_x_range=True, keep_marker=True):
+            state.trial_changed.emit()
         # Land the video (and marker) on the followed time, not the trial start.
         self.plot_container.update_time_marker_by_time(time_s)
         video = getattr(state, "video", None)

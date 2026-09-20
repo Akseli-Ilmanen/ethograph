@@ -1579,12 +1579,10 @@ class LabelsWidget(QWidget):
         """Session-basis click on another trial's span: make it current.
 
         The session axis already shows the right place, so the view must not
-        re-center (``_preserve_x_range_next``); the trial-change machinery
+        re-center (``preserve_x_range``); the trial-change machinery
         loads that trial's data/video underneath the click.
         """
         state = self.app_state
-        state._preserve_x_range_next = True
-        state._marker_driven_trial_switch = True
         state.trials_sel = trial_id
         nav = getattr(state, "navigation_widget", None)
         combo = getattr(nav, "trials_combo", None)
@@ -1592,7 +1590,8 @@ class LabelsWidget(QWidget):
             combo.blockSignals(True)
             combo.setCurrentText(str(trial_id))
             combo.blockSignals(False)
-        state.trial_changed.emit()
+        with state.switching_trial(preserve_x_range=True, keep_marker=True):
+            state.trial_changed.emit()
 
     def _active_label_is_point(self) -> bool:
         """True iff the currently selected label class is declared as a point."""
