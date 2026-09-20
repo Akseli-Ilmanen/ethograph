@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from qtpy.QtCore import QMimeData, QSize, Qt, Signal
+from qtpy.QtCore import QEvent, QMimeData, QSize, Qt, Signal
 from qtpy.QtGui import QColor, QDrag
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -108,6 +108,28 @@ _OVERLAY_CHOICES = {
 }
 _OVERLAY_PER_PLOT = "per_plot"
 _OVERLAY_PER_PLOT_TEXT = "Per plot type…"
+
+
+class _FitContentScrollArea(QScrollArea):
+    """A scroll area as tall as its content, and no taller.
+
+    One branch takes one table's height; each added branch takes its own, and
+    the area only starts scrolling once the sidebar has no more room to give.
+    """
+
+    def setWidget(self, widget: QWidget) -> None:
+        super().setWidget(widget)
+        widget.installEventFilter(self)
+
+    def eventFilter(self, obj, event) -> bool:
+        if obj is self.widget() and event.type() == QEvent.LayoutRequest:
+            self.updateGeometry()
+        return super().eventFilter(obj, event)
+
+    def sizeHint(self) -> QSize:
+        content = self.widget().sizeHint()
+        frame = 2 * self.frameWidth()
+        return QSize(content.width() + frame, content.height() + frame)
 
 
 class BranchTable(QTableWidget):
@@ -589,8 +611,9 @@ class LabelsWidget(QWidget):
         self.hide_label_cb.setChecked(bool(self.app_state.get_with_default("hide_label_text")))
         self.hide_label_cb.toggled.connect(lambda v: setattr(self.app_state, "hide_label_text", v))
 
-        # Scrollable area for branch tables
-        scroll = QScrollArea()
+        # Scrollable area for branch tables: as tall as the branches that exist,
+        # so a single branch leaves no gap above the buttons below it.
+        scroll = _FitContentScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.NoFrame)
         scroll_content = QWidget()
@@ -599,8 +622,8 @@ class LabelsWidget(QWidget):
         self._branches_layout.setContentsMargins(0, 0, 0, 0)
         self._branches_layout.addStretch()
         scroll.setWidget(scroll_content)
-        scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        layout.addWidget(scroll, stretch=1)
+        scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        layout.addWidget(scroll)
 
         # What you do with the tables above: read them, add a class, add a branch.
         # "Add label" is the mapping editor — the one place a class is created.
@@ -629,6 +652,8 @@ class LabelsWidget(QWidget):
         # drag them into the scope area (see widgets_curation.py).
         self.curation_panel = CurationPanel(self.app_state, self)
         layout.addWidget(self.curation_panel)
+        # Spare height collects at the bottom, not between the sections.
+        layout.addStretch(1)
 
     _TABLE_STYLE = """
         QTableWidget { gridline-color: transparent; background: #444; color: #fff; }
@@ -1291,8 +1316,7 @@ class LabelsWidget(QWidget):
                 table.setItem(row, col_offset + 2, color_item)
 
             # Auto-size table height to fit all rows (no cap)
-            row_count = table.rowCount()
-            table.setFixedHeight(LABELS_TABLE_ROW_HEIGHT * row_count + table.horizontalHeader().height() + 4)
+            table.setFixedHeight(table.verticalHeader().length() + table.horizontalHeader().height() + 4)
 
         # Keep backward-compat labels_table pointing to first branch
         if self._branch_sections:

@@ -105,6 +105,7 @@ ethograph/spot/               # Pixel point-event spotting (docs: docs/source/mo
     msagsm.py                 # MultiScaleGatedShift, written from the paper
 
 ethograph/utils/              # io.py, xr_utils.py, sequences.py, device.py, system_check.py
+    configkit.py              # Chained YAML + dotted overrides ↔ dataclass tree; segment and spot each pass a Schema
 ethograph/skeleton/           # PrecomputedRenderer, SkeletonState, config.py, shapes.py
 THIRD_PARTY_NOTICES.md        # Index of every vendored tree and adapted file
 ```

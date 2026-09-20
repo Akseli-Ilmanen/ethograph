@@ -428,8 +428,6 @@ class BasePlot(pg.PlotWidget):
         self._gutter_host: QGraphicsWidget | None = None
         self.reserve_right_gutter(PANEL_RIGHT_GUTTER_PX)
 
-        self.setLabel("bottom", "Time")
-
         # Time marker with enhanced styling
         self.time_marker = pg.InfiniteLine(angle=90, pen=pg.mkPen("r", width=2), movable=False)
         self.addItem(self.time_marker)

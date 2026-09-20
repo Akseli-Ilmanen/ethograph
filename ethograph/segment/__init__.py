@@ -26,7 +26,7 @@ architecture, run, role, prediction set) is defined in the repository's
 ``CONTEXT.md``; the design is documented in ``docs/source/advanced/segment/``.
 """
 
-from ethograph.segment.config import SegmentConfig, as_overrides, load_config
+from ethograph.segment.config import SegmentConfig, load_config
 from ethograph.segment.feral import export_feral, import_feral_predictions
 from ethograph.segment.project import Project, architectures, extract_videos, tunable_params
 from ethograph.segment.sessions import (
@@ -35,6 +35,7 @@ from ethograph.segment.sessions import (
     feature_sampling_rates,
     feature_sampling_rates_from_source,
 )
+from ethograph.utils.configkit import as_overrides
 from ethograph.utils.logging import enable_console_logging
 
 enable_console_logging()

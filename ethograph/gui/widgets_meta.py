@@ -219,13 +219,6 @@ class MetaWidget(GridSectionContainer):
         if video_label_gb is not None:
             self.labels_widget.attach_video_groupbox(video_label_gb)
 
-        # The prediction overlays (Confidence, Envelope) belong with the Labels
-        # section. How label rectangles are *drawn* is the Labels tab's own
-        # top-row combo, not a group down here.
-        overlay_gb = getattr(self.data_panel, "overlays_groupbox", None)
-        if overlay_gb is not None and self.labels_widget.layout() is not None:
-            self.labels_widget.layout().addWidget(overlay_gb)
-
         self.add_widget(self.context_panel, collapsible=True, widget_title="Data")
         self.add_widget(self.labels_widget, collapsible=True, widget_title="Labels")
         self.add_widget(self._build_nav_tab(), collapsible=True, widget_title="Navigation")

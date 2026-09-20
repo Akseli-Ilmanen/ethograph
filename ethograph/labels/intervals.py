@@ -28,6 +28,7 @@ read-only consumers (dense conversion, plot rendering).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
 
@@ -56,6 +57,100 @@ LABELING_AUTOMATED = "automated"
 LABELING_CURATED = "curated"
 LABELING_METHODS = (LABELING_MANUAL, LABELING_AUTOMATED, LABELING_CURATED)
 
+# ── The label column schema ──────────────────────────────────────────────
+#
+# One declaration of every column a labels table can carry. Every list of
+# column names in the codebase is a query over it, so adding a column is one
+# edit here and nothing can silently disagree about its dtype, its default or
+# whether it is required.
+
+#: A column identifying the row's trial. One per table, never per label.
+KIND_KEY = "key"
+#: A per-label column: its value is this label's, and lives in the in-memory
+#: interval frames.
+KIND_LABEL = "label"
+#: A per-trial column: the same value repeated on every row of a trial.
+KIND_TRIAL_META = "trial_meta"
+#: A column computed on save for analysis (``labels/export.py``), never read
+#: back as truth. A study's own columns are of this kind too — listing one
+#: here fixes where it lands in the file, not who produces it.
+KIND_DERIVED = "derived"
+
+
+@dataclass(frozen=True)
+class LabelColumn:
+    """One column of the labels table.
+
+    ``dtype`` and ``default`` are only meaningful for the kinds that are
+    stored: a derived column is whatever the producer computed.
+    """
+
+    name: str
+    kind: str
+    dtype: type | None = None
+    default: object = None
+    #: Part of the minimum a file must have to be a labels file at all.
+    required: bool = False
+    #: Must carry a value on *every* row. ``offset_s`` is excluded: a point
+    #: event legitimately stores it as NaN.
+    nonnull: bool = False
+    #: Decimals to show in the label table (the stored value is untouched).
+    decimals: int | None = None
+    #: Filtered by a threshold in the label table rather than a checklist.
+    numeric_filter: bool = False
+
+
+#: Every known column, in the order a labels file is written. Unknown columns
+#: (a study's own, an older file's) follow in their existing order.
+LABEL_SCHEMA: tuple[LabelColumn, ...] = (
+    LabelColumn("session", KIND_DERIVED),
+    LabelColumn("trial", KIND_KEY, dtype=object, required=True, nonnull=True),
+    LabelColumn("session_trial", KIND_DERIVED),
+    LabelColumn("individual", KIND_LABEL, dtype=object, required=True, nonnull=True),
+    LabelColumn("individual_rec", KIND_LABEL, dtype=object, default=NO_RECIPIENT),
+    LabelColumn("labels", KIND_LABEL, dtype=np.int32, required=True, nonnull=True),
+    LabelColumn("onset_s", KIND_LABEL, dtype=np.float64, required=True, nonnull=True, decimals=3, numeric_filter=True),
+    LabelColumn("offset_s", KIND_LABEL, dtype=np.float64, required=True, decimals=3, numeric_filter=True),
+    LabelColumn("event_type", KIND_LABEL, dtype=object, default=EVENT_TYPE_STATE),
+    LabelColumn("confidence", KIND_LABEL, dtype=np.float64, default=HUMAN_CONFIDENCE, decimals=3, numeric_filter=True),
+    LabelColumn("labeling_method", KIND_LABEL, dtype=object, default=LABELING_MANUAL),
+    LabelColumn("trial_onset", KIND_DERIVED),
+    LabelColumn("trial_offset", KIND_DERIVED),
+    LabelColumn("onset_global", KIND_DERIVED),
+    LabelColumn("offset_global", KIND_DERIVED),
+    LabelColumn("duration", KIND_DERIVED),
+    LabelColumn("sequence_idx", KIND_DERIVED),
+    LabelColumn("sequence", KIND_DERIVED),
+    # Legacy: an older file's ``human_verified`` is carried along untouched and
+    # never read — ``labeling_method`` answers that per label now.
+    LabelColumn("human_verified", KIND_DERIVED),
+    LabelColumn("changepoint_corrected", KIND_TRIAL_META, dtype=int, default=0),
+    LabelColumn("prediction_source", KIND_TRIAL_META, dtype=str, default=""),
+    LabelColumn("n_samples", KIND_TRIAL_META, dtype=int, default=0, numeric_filter=True),
+)
+
+
+def schema_columns(*kinds: str) -> list[str]:
+    """The names of every column of *kinds*, in file order."""
+    return [col.name for col in LABEL_SCHEMA if col.kind in kinds]
+
+
+def schema_column(name: str) -> LabelColumn | None:
+    """The declaration of *name*, or ``None`` for a column the schema
+    does not know (a study's own, an older file's)."""
+    return next((col for col in LABEL_SCHEMA if col.name == name), None)
+
+
+def write_order(columns) -> list[str]:
+    """*columns* ordered as a labels file is written: the schema's order
+    first, then anything it does not know, in the order given."""
+    known = [col.name for col in LABEL_SCHEMA if col.name in set(columns)]
+    return known + [c for c in columns if c not in set(known)]
+
+
+#: The per-label columns, in the order the in-memory interval frames carry
+#: them. A contract test pins this to the schema's ``KIND_LABEL`` set; only the
+#: order is stated here, because the file's order and the frame's differ.
 INTERVAL_COLUMNS = [
     "onset_s",
     "offset_s",
@@ -67,16 +162,7 @@ INTERVAL_COLUMNS = [
     "labeling_method",
 ]
 
-INTERVAL_DTYPES = {
-    "onset_s": np.float64,
-    "offset_s": np.float64,
-    "labels": np.int32,
-    "individual": object,
-    "individual_rec": object,
-    "event_type": object,
-    "confidence": np.float64,
-    "labeling_method": object,
-}
+INTERVAL_DTYPES = {col.name: col.dtype for col in LABEL_SCHEMA if col.kind == KIND_LABEL}
 
 #: The columns identifying whose label a row is — the actor and the recipient.
 #: What identifies a label row's subject: who acted, and towards whom.

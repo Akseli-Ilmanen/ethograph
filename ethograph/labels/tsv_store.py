@@ -36,42 +36,29 @@ from ethograph.io.session_layout import labels_path
 from ethograph.labels.intervals import (
     INTERVAL_COLUMNS,
     INTERVAL_DTYPES,
+    KIND_KEY,
+    KIND_LABEL,
+    KIND_TRIAL_META,
+    LABEL_SCHEMA,
     empty_intervals,
     ensure_confidence,
     ensure_event_type,
     ensure_individual_rec,
     ensure_labeling_method,
+    schema_columns,
+    write_order,
 )
 
 logger = logging.getLogger(__name__)
 
-TSV_COLUMNS = [
-    "trial",
-    "individual",
-    "individual_rec",
-    "labels",
-    "onset_s",
-    "offset_s",
-    "event_type",
-    "confidence",
-    "labeling_method",
-    "changepoint_corrected",
-    "prediction_source",
-    "n_samples",
-]
+#: Every stored column, in file order. Derived from the schema, so a column
+#: added there needs no edit here.
+TSV_COLUMNS = schema_columns(KIND_KEY, KIND_LABEL, KIND_TRIAL_META)
 
 # Per-trial metadata columns (same value for all rows in a trial)
-TRIAL_META_COLUMNS = [
-    "changepoint_corrected",
-    "prediction_source",
-    "n_samples",
-]
+TRIAL_META_COLUMNS = schema_columns(KIND_TRIAL_META)
 
-TRIAL_META_DEFAULTS = {
-    "changepoint_corrected": 0,
-    "prediction_source": "",
-    "n_samples": 0,
-}
+TRIAL_META_DEFAULTS = {col.name: col.default for col in LABEL_SCHEMA if col.kind == KIND_TRIAL_META}
 
 
 def _ensure_label_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -108,11 +95,12 @@ def labels_tsv_path(source: str | Path, suffix: str = "") -> Path:
 # Load / save labels
 # ---------------------------------------------------------------------------
 
-REQUIRED_COLUMNS = {"onset_s", "offset_s", "labels", "individual", "trial"}
+#: The minimum a file must have to be a labels file at all.
+REQUIRED_COLUMNS = {col.name for col in LABEL_SCHEMA if col.required}
 
 #: Columns that must carry a value on *every* row. ``offset_s`` is excluded —
 #: a point event legitimately stores it as NaN.
-REQUIRED_NONNULL_COLUMNS = ("trial", "individual", "labels", "onset_s")
+REQUIRED_NONNULL_COLUMNS = tuple(col.name for col in LABEL_SCHEMA if col.nonnull)
 
 
 def validate_labels_tsv(df: pd.DataFrame, path: str | Path = "") -> None:
@@ -213,33 +201,7 @@ def save_labels_tsv(path: str | Path, df: pd.DataFrame) -> None:
     else:
         out = out.sort_values(["trial", "onset_s"]).reset_index(drop=True)
 
-    preferred = [
-        "session",
-        "trial",
-        "session_trial",
-        "individual",
-        "individual_rec",
-        "labels",
-        "onset_s",
-        "offset_s",
-        "event_type",
-        "confidence",
-        "labeling_method",
-        "trial_onset",
-        "trial_offset",
-        "onset_global",
-        "offset_global",
-        "duration",
-        "sequence_idx",
-        "sequence",
-        "human_verified",
-        "changepoint_corrected",
-        "prediction_source",
-        "n_samples",
-    ]
-    cols = [c for c in preferred if c in out.columns]
-    cols += [c for c in out.columns if c not in cols]
-    out = out[cols]
+    out = out[write_order(out.columns)]
 
     # Drop negative-duration state intervals; keep point events (NaN offset).
     duration = out["offset_s"] - out["onset_s"]

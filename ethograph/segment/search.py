@@ -45,17 +45,11 @@ import optuna
 import pandas as pd
 import yaml
 
-from ethograph.segment.config import (
-    SegmentConfig,
-    apply_overrides,
-    as_overrides,
-    config_from_dict,
-    config_to_dict,
-    deep_merge,
-)
+from ethograph.segment.config import SegmentConfig, config_from_dict, config_to_dict
 from ethograph.segment.materialise import COLUMNS_FILE, materialise, read_target_table
 from ethograph.segment.metrics import EVAL_ARRAYS_FILE
 from ethograph.segment.train import BEST_FILE, LAST_FILE, run_name_for, train
+from ethograph.utils.configkit import apply_overrides, as_overrides, deep_merge
 from ethograph.utils.logging import log_to_file
 
 logger = logging.getLogger(__name__)

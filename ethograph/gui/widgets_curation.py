@@ -392,6 +392,12 @@ class CurationPanel(QGroupBox):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
+        # Set apart from the label tables above: a gap, and a title that reads
+        # as a heading rather than one more group.
+        self.setObjectName("curation_panel")
+        self.setStyleSheet(
+            "QGroupBox#curation_panel { margin-top: 18px; padding-top: 18px; font-size: 11pt; font-weight: bold; }"
+        )
         lay = QVBoxLayout(self)
         lay.setSpacing(4)
         lay.setContentsMargins(4, 4, 4, 4)
@@ -416,6 +422,7 @@ class CurationPanel(QGroupBox):
         self.mode_combo = QComboBox()
         for key, text in CURATION_MODES.items():
             self.mode_combo.addItem(text, key)
+            self.mode_combo.setItemData(self.mode_combo.count() - 1, _MODE_HINTS[key], Qt.ToolTipRole)
         self.mode_combo.currentIndexChanged.connect(self._on_mode_combo)
         mode_row.addWidget(self.mode_combo, stretch=1)
         mode_row.addWidget(QLabel("Order:"))
@@ -429,11 +436,6 @@ class CurationPanel(QGroupBox):
         self.order_combo.currentIndexChanged.connect(self._on_order_combo)
         mode_row.addWidget(self.order_combo, stretch=1)
         lay.addLayout(mode_row)
-
-        self.mode_hint = QLabel("")
-        self.mode_hint.setWordWrap(True)
-        self.mode_hint.setStyleSheet("color: #aaa; font-size: 10px;")
-        lay.addWidget(self.mode_hint)
 
         # ── Frame-by-frame review ───────────────────────────────────
         self.frame_group = QWidget()
@@ -657,7 +659,7 @@ class CurationPanel(QGroupBox):
         self._apply_mode(self.mode())
 
     def _apply_mode(self, key: str) -> None:
-        self.mode_hint.setText(_MODE_HINTS.get(key, ""))
+        self.mode_combo.setToolTip(_MODE_HINTS[key])
         self.frame_group.setVisible(key == "frame")
         if key != "frame" and self._session_active:
             self._stop()

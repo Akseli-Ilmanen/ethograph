@@ -16,10 +16,8 @@ they are outputs written into the run directory.
 
 from __future__ import annotations
 
-import copy
-import dataclasses
 import logging
-from dataclasses import MISSING, dataclass, field, fields, is_dataclass, replace
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any, ClassVar, Iterable
 
@@ -28,6 +26,7 @@ import yaml
 from ethograph.features.label_inputs import check_branches_disjoint
 from ethograph.io.session_layout import adopt_legacy_files
 from ethograph.labels.tsv_store import labels_tsv_path
+from ethograph.utils.configkit import Schema, build, read_config, replaced, resolve_path, to_plain, write_yaml
 from ethograph.utils.paths import defaults_dir, ethograph_home, global_setting
 from ethograph.video_features.base import CropBox, Extractor, check_extractor_name, extractor_module
 
@@ -262,6 +261,30 @@ def name_colliding_sessions(specs: list[SessionSpec]) -> None:
                 break
         else:
             raise ValueError(f"config.sessions: {label!r} is listed more than once from the same place: {paths}")
+
+
+def select_sessions(sessions: list[SessionSpec], selector: Iterable[str | Path] | None) -> list[SessionSpec]:
+    """The *sessions* that *selector* names, in config order; ``None`` = all of them.
+
+    An entry matches a session by its ``name``, its full path, or the source's
+    stem or file name, so a fold can be named ``"ses-03"`` rather than spelled out.
+    """
+    if selector is None:
+        return list(sessions)
+    wanted = [str(s) for s in selector]
+    chosen: list[SessionSpec] = []
+    for item in wanted:
+        matches = [
+            s
+            for s in sessions
+            if s.label == item or str(s.source) == item or s.source.stem == item or s.source.name == item
+        ]
+        if not matches:
+            raise ValueError(f"No session matches {item!r}; this config has {[s.label for s in sessions]}")
+        for spec in matches:
+            if spec not in chosen:
+                chosen.append(spec)
+    return [s for s in sessions if s in chosen]
 
 
 @dataclass
@@ -1176,39 +1199,15 @@ class SegmentConfig:
         return self.runs_dir / run_name
 
     def select_sessions(self, selector: Iterable[str | Path] | None) -> list[SessionSpec]:
-        """The sessions *selector* names, in config order; ``None`` = all of them.
-
-        An entry matches a session by full path or by the source file's stem,
-        so a fold can be named ``"ses-03"`` rather than spelled out.
-        """
-        if selector is None:
-            return list(self.sessions)
-        chosen: list[SessionSpec] = []
-        wanted = [str(s) for s in selector]
-        for item in wanted:
-            matches = [
-                s for s in self.sessions if str(s.source) == item or s.source.stem == item or s.source.name == item
-            ]
-            if not matches:
-                raise ValueError(
-                    f"No session matches {item!r}; this config has {[s.source.stem for s in self.sessions]}"
-                )
-            for spec in matches:
-                if spec not in chosen:
-                    chosen.append(spec)
-        return [s for s in self.sessions if s in chosen]
+        """The sessions *selector* names, in config order — see :func:`select_sessions`."""
+        return select_sessions(self.sessions, selector)
 
 
 # ---------------------------------------------------------------------------
 # Building from dicts
 # ---------------------------------------------------------------------------
 
-_PATH_FIELDS = {"source", "labels_path", "video_dir", "alignment", "mapping", "root", "frames"}
-_PATH_LIST_FIELDS = {"holdout_sessions"}
-_TUPLE_FIELDS = {"clip_percentiles", "stretch"}
-
-
-#: Settings that were removed, spelled as the dotted path :func:`_build` sees.
+#: Settings that were removed, spelled as the dotted path :func:`configkit.build` sees.
 #: A key here is dropped with a log line instead of being refused as unknown:
 #: a run's ``config.yaml`` is the record of what it trained with and is read
 #: back by :func:`~ethograph.segment.inference.inference`, so retiring a
@@ -1220,128 +1219,23 @@ RETIRED_KEYS: dict[str, str] = {
 }
 
 
-def _build(cls: type, data: Any, where: str, base_dir: Path, nested: dict[str, type] | None = None) -> Any:
-    """Build dataclass *cls* from *data*, failing on unknown keys.
-
-    *nested* maps a field name to the dataclass its mapping builds, and
-    defaults to this module's own :data:`_NESTED`. A sibling pipeline passes
-    its own so that a field name both of them use — ``train``, ``model``,
-    ``split`` — builds the right type for the config being read.
-    """
-    nested = _NESTED if nested is None else nested
-    if not isinstance(data, dict):
-        raise ValueError(f"{where}: expected a mapping, got {type(data).__name__}")
-    known = {f.name: f for f in fields(cls)}
-    retired = [name for name in data if f"{where}.{name}" in RETIRED_KEYS]
-    if retired:
-        data = {k: v for k, v in data.items() if k not in retired}
-        for name in retired:
-            logger.info("%s.%s is a retired setting, ignored: %s", where, name, RETIRED_KEYS[f"{where}.{name}"])
-    unknown = set(data) - set(known)
-    if unknown:
-        raise ValueError(f"{where}: unknown key(s) {sorted(unknown)}; valid keys: {sorted(known)}")
-    kwargs: dict[str, Any] = {}
-    for name, value in data.items():
-        if value is None and known[name].default_factory is not MISSING:
-            # `params:` with nothing after it — or only a comment — is YAML
-            # null, and for a field whose default is built by a factory (every
-            # dict, list and nested config here) that plainly means "leave it
-            # at the default". Passing the None on would hand a `None` to code
-            # expecting a mapping, far from the line that wrote it.
-            continue
-        kwargs[name] = _convert(name, known[name].type, value, f"{where}.{name}", base_dir, nested)
-    try:
-        return cls(**kwargs)
-    except TypeError as exc:
-        raise ValueError(f"{where}: {exc}") from exc
-
-
-_NESTED: dict[str, type] = {
-    "preprocess": PreprocessConfig,
-    "labels": LabelsConfig,
-    "changepoint_features": ChangepointFeaturesConfig,
-    "neural": NeuralFeaturesConfig,
-    "label_inputs": LabelInputsConfig,
-    "features": FeaturesConfig,
-    "model": ModelConfig,
-    "augment": AugmentConfig,
-    "split": SplitConfig,
-    "train": TrainConfig,
-    "search": SearchConfig,
-    "postprocess": PostprocessConfig,
-    "infer": InferConfig,
-    "trials": TrialsConfig,
-    "video_features": VideoFeaturesConfig,
-    "crop": CropBox,
-}
-
-
-def _convert(
-    name: str, annotation: Any, value: Any, where: str, base_dir: Path, nested: dict[str, type] | None = None
-) -> Any:
-    nested = _NESTED if nested is None else nested
-    if value is None:
-        return None
-    if name in nested:
-        return _build(nested[name], value, where, base_dir, nested)
-    if name == "sessions":
-        if not isinstance(value, list):
-            raise ValueError(f"{where}: 'sessions' must be a list")
-        return [_session(v, f"{where}[{i}]", base_dir) for i, v in enumerate(value)]
-    if name in _PATH_FIELDS:
-        return _path(value, base_dir)
-    if name == "video_feature_folders":
-        if not isinstance(value, dict):
-            raise ValueError(f"{where}: expected a mapping of variable name -> folder, got {type(value).__name__}")
-        return {str(k): _path(v, base_dir) for k, v in value.items()}
-    if name in _PATH_LIST_FIELDS:
-        if not isinstance(value, list):
-            raise ValueError(f"{where}: expected a list of session paths, got {type(value).__name__}")
-        return [_path(v, base_dir) for v in value]
-    if name in _TUPLE_FIELDS:
-        if len(value) != 2:
-            raise ValueError(f"{where}: expected two numbers, got {value!r}")
-        return (float(value[0]), float(value[1]))
-    cast = _numeric_cast(annotation)
-    if cast is not None and isinstance(value, (str, int, float)) and not isinstance(value, bool):
-        return _as_number(cast, value, where)
-    return value
-
-
-_NUMERIC: dict[str, type] = {"float": float, "int": int}
-
-
-def _numeric_cast(annotation: Any) -> type | None:
-    """The coercion a ``float``/``int`` (optionally ``| None``) field needs, else ``None``.
-
-    Not cosmetic: YAML 1.1 reads ``learning_rate: 1e-4`` as the *string*
-    ``"1e-4"`` — no dot, no sign — so an unconverted value would reach the
-    optimizer as text. Covered by ``tests/test_unit/test_segment_pipeline.py``.
-    """
-    text = annotation if isinstance(annotation, str) else getattr(annotation, "__name__", "")
-    return _NUMERIC.get(text.replace(" ", "").removesuffix("|None"))
-
-
-def _as_number(cast: type, value: Any, where: str) -> Any:
-    try:
-        number = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{where}: expected a number, got {value!r}") from exc
-    if cast is int and not float(number).is_integer():
-        raise ValueError(f"{where}: expected a whole number, got {value!r}")
-    return cast(number)
+def build_sessions(value: Any, where: str, base_dir: Path) -> list[SessionSpec]:
+    """The ``sessions:`` list, each entry a path or a mapping — shared with ``ethograph.spot``."""
+    if not isinstance(value, list):
+        raise ValueError(f"{where}: 'sessions' must be a list")
+    return [_session(v, f"{where}[{i}]", base_dir) for i, v in enumerate(value)]
 
 
 def _session(value: Any, where: str, base_dir: Path) -> SessionSpec:
     if isinstance(value, (str, Path)):
-        return SessionSpec(source=_path(value, base_dir))
+        return SessionSpec(source=resolve_path(value, base_dir))
     if isinstance(value, dict) and "role" in value:
         raise ValueError(
             f"{where}: sessions no longer carry a 'role'. Set the ratios in train.split "
             "(train_fraction / val_fraction / test_fraction) to split trials, and hold whole "
             "sessions out with Project.cross_validate() (train.split.holdout_sessions)."
         )
-    spec = _build(SessionSpec, value, where, base_dir)
+    spec = build(SessionSpec, value, where, base_dir, SESSION_SCHEMA)
     if spec.name is not None and not isinstance(spec.name, str):
         # YAML 1.1 reads `name: 20260304_01` as the integer 2026030401 — the
         # underscore is a digit separator — and the original spelling is gone.
@@ -1352,90 +1246,37 @@ def _session(value: Any, where: str, base_dir: Path) -> SessionSpec:
     return spec
 
 
-def _path(value: Any, base_dir: Path) -> Path:
-    p = Path(str(value)).expanduser()
-    return p if p.is_absolute() else (base_dir / p).resolve()
+#: One session entry; the same in every pipeline that lists sessions.
+SESSION_SCHEMA = Schema(
+    paths=frozenset({"source", "labels_path", "video_dir", "alignment"}),
+    path_maps=frozenset({"video_feature_folders"}),
+)
 
-
-# ---------------------------------------------------------------------------
-# YAML in / out
-# ---------------------------------------------------------------------------
-
-
-def deep_merge(base: dict, over: dict) -> dict:
-    """Recursively merge *over* onto *base*, returning a new dict."""
-    out = copy.deepcopy(base)
-    for key, value in over.items():
-        if isinstance(value, dict) and isinstance(out.get(key), dict):
-            out[key] = deep_merge(out[key], value)
-        else:
-            out[key] = copy.deepcopy(value)
-    return out
-
-
-def _read_yaml_chain(path: Path) -> dict:
-    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(raw, dict):
-        raise ValueError(f"{path}: top level must be a mapping")
-    base_ref = raw.pop("base", None)
-    if base_ref is None:
-        return raw
-    base_path = _path(base_ref, path.parent)
-    if not base_path.is_file():
-        raise FileNotFoundError(f"{path}: base config {base_path} does not exist")
-    return deep_merge(_read_yaml_chain(base_path), raw)
-
-
-#: The generic config machinery, for a sibling pipeline that shares the
-#: session/split dataclasses but has its own stage graph (``ethograph.spot``).
-build_dataclass = _build
-read_yaml_chain = _read_yaml_chain
-resolve_path = _path
-
-
-def as_overrides(params: dict[str, Any]) -> list[str]:
-    """``{"train.epochs": 40}`` → ``["train.epochs=40"]``, the spelling :func:`apply_overrides` takes.
-
-    Values go through YAML, so a dict, a list, a path or a bool round-trips
-    exactly as the file would have spelled it — which is what a script
-    building overrides programmatically wants, rather than ``str()`` and its
-    Python-repr quoting.
-    """
-    return [f"{key}={_dump_value(value)}" for key, value in params.items()]
-
-
-def _dump_value(value: Any) -> str:
-    """*value* as a one-line YAML scalar/flow collection.
-
-    PyYAML ends a scalar *document* with a ``...`` marker on its own line
-    (``1e-05`` dumps as ``"1.0e-05\\n...\\n"``), which would travel into the
-    override string and out again into anything that prints or reuses it.
-    """
-    text = yaml.safe_dump(value, default_flow_style=True).strip()
-    lines = [line for line in text.splitlines() if line.strip() != "..."]
-    return " ".join(lines)
-
-
-def apply_overrides(data: dict, overrides: list[str]) -> dict:
-    """Apply ``a.b.c=value`` dotlist overrides (values parsed as YAML)."""
-    out = copy.deepcopy(data)
-    for item in overrides:
-        if "=" not in item:
-            raise ValueError(f"Override {item!r} is not of the form key.path=value")
-        key, _, raw_value = item.partition("=")
-        value = yaml.safe_load(raw_value) if raw_value != "" else None
-        node = out
-        parts = key.split(".")
-        for part in parts[:-1]:
-            if node.get(part) is None:
-                # `params:` with nothing after it is YAML null — "the default",
-                # exactly as _build reads it — so an override may descend into it.
-                node[part] = {}
-            node = node[part]
-            if not isinstance(node, dict):
-                raise ValueError(f"Override {item!r}: {part!r} is not a mapping")
-        node[parts[-1]] = value
-    return out
+SCHEMA = Schema(
+    nested={
+        "preprocess": PreprocessConfig,
+        "labels": LabelsConfig,
+        "changepoint_features": ChangepointFeaturesConfig,
+        "neural": NeuralFeaturesConfig,
+        "label_inputs": LabelInputsConfig,
+        "features": FeaturesConfig,
+        "model": ModelConfig,
+        "augment": AugmentConfig,
+        "split": SplitConfig,
+        "train": TrainConfig,
+        "search": SearchConfig,
+        "postprocess": PostprocessConfig,
+        "infer": InferConfig,
+        "trials": TrialsConfig,
+        "video_features": VideoFeaturesConfig,
+        "crop": CropBox,
+    },
+    paths=frozenset({"mapping", "root"}),
+    path_lists=frozenset({"holdout_sessions"}),
+    pairs=frozenset({"clip_percentiles", "stretch"}),
+    converters={"sessions": build_sessions},
+    retired=RETIRED_KEYS,
+)
 
 
 def _resolve_gui_postprocess(data: dict, base_dir: Path) -> dict:
@@ -1473,7 +1314,7 @@ def _default_labels_path(spec: SessionSpec) -> None:
 def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None) -> SegmentConfig:
     data = _resolve_gui_postprocess(dict(data), base_dir)
     data.setdefault("root", ".")
-    cfg = _build(SegmentConfig, data, "config", base_dir)
+    cfg = build(SegmentConfig, data, "config", base_dir, SCHEMA)
     cfg.config_path = config_path
     if not cfg.sessions:
         raise ValueError("config.sessions is empty — list at least one session")
@@ -1529,25 +1370,8 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
 
 def load_config(path: str | Path, overrides: list[str] | None = None) -> SegmentConfig:
     """Read a config file (following ``base:``), apply overrides, build."""
-    path = Path(path).resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f"Config not found: {path}")
-    data = _read_yaml_chain(path)
-    if overrides:
-        data = apply_overrides(data, list(overrides))
+    data, path = read_config(path, overrides)
     return config_from_dict(data, path.parent, config_path=path)
-
-
-def _to_plain(obj: Any) -> Any:
-    if is_dataclass(obj) and not isinstance(obj, type):
-        return {f.name: _to_plain(getattr(obj, f.name)) for f in fields(obj) if f.name != "config_path"}
-    if isinstance(obj, Path):
-        return str(obj)
-    if isinstance(obj, dict):
-        return {k: _to_plain(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [_to_plain(v) for v in obj]
-    return obj
 
 
 def config_to_dict(cfg: SegmentConfig) -> dict:
@@ -1557,7 +1381,7 @@ def config_to_dict(cfg: SegmentConfig) -> dict:
     left out, because :func:`config_from_dict` merges them back in and would
     otherwise read them as explicit entries colliding with its own expansion.
     """
-    data = _to_plain(cfg)
+    data = to_plain(cfg, skip=frozenset({"config_path"}))
     generated: set[str] = set()
     if cfg.features.changepoint_features is not None:
         generated |= set(cfg.features.changepoint_features.expanded_columns())
@@ -1570,11 +1394,9 @@ def config_to_dict(cfg: SegmentConfig) -> dict:
 
 
 def save_config(cfg: SegmentConfig, path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(config_to_dict(cfg), sort_keys=False), encoding="utf-8")
-    return path
+    return write_yaml(config_to_dict(cfg), path)
 
 
 def with_overrides(cfg: SegmentConfig, **changes: Any) -> SegmentConfig:
-    """A copy of *cfg* with top-level fields replaced."""
-    return dataclasses.replace(cfg, **changes)
+    """An independent copy of *cfg* with top-level fields replaced."""
+    return replaced(cfg, **changes)

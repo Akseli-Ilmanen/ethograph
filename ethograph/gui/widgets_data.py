@@ -302,6 +302,10 @@ class DataPanel(QWidget):
         self.overlays_layout.addLayout(self.overlays_row2_layout)
         self.overlays_groupbox.setLayout(self.overlays_layout)
         parent_layout.addWidget(self.overlays_groupbox)
+        # Only where the Confidence / Envelope checkboxes are built; they are
+        # then moved to the predictions importer and the energy controls
+        # (MetaWidget._relocate_overlay_checkboxes), leaving this group empty.
+        self.overlays_groupbox.hide()
 
         parent_layout.addStretch()
 
@@ -349,9 +353,10 @@ class DataPanel(QWidget):
         parent_layout.addWidget(self.individual_groupbox)
 
     def _create_video_crop_section(self, parent_layout):
-        """Display crop for the clicked camera view (borrowed into the video
-        context of the right sidebar, like the pose group)."""
-        self.videocrop_groupbox = QGroupBox("Crop")
+        """Display crop for the clicked camera view, and the 90° rotation of
+        every view (borrowed into the video context of the right sidebar, like
+        the pose group)."""
+        self.videocrop_groupbox = QGroupBox("Crop / rotate")
         row = QHBoxLayout()
         row.setSpacing(5)
         row.setContentsMargins(4, 4, 4, 4)
@@ -368,6 +373,10 @@ class DataPanel(QWidget):
         self.uncrop_video_btn = QPushButton("Uncrop video")
         self.uncrop_video_btn.setToolTip("Show this camera's full video frame again.")
         row.addWidget(self.uncrop_video_btn)
+
+        self.rotate_video_btn = QPushButton("↻ 90°")
+        self.rotate_video_btn.setToolTip("Rotate all video and pose layers by 90° clockwise")
+        row.addWidget(self.rotate_video_btn)
         row.addStretch()
 
         parent_layout.addWidget(self.videocrop_groupbox)
@@ -864,6 +873,7 @@ class DataWidget(QWidget):
         self.videolabel_groupbox = panel.videolabel_groupbox
         panel.crop_video_btn.clicked.connect(self._on_crop_video_clicked)
         panel.uncrop_video_btn.clicked.connect(self._on_uncrop_video_clicked)
+        panel.rotate_video_btn.clicked.connect(self.pose_mgr.on_rotate_video_pose)
 
         panel.energy_configure_btn.clicked.connect(self._open_energy_params)
 

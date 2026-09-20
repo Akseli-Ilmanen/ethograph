@@ -34,6 +34,7 @@ from ethograph.io.metadata_table import metadata_tsv_path
 from ethograph.io.pynapple import label_intervalsets
 from ethograph.io.session_layout import session_dir_of
 from ethograph.io.validation import EPHYS_FILE_FILTER
+from ethograph.labels import exporters
 from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv
 from ethograph.utils.paths import (
     default_config_dir,
@@ -286,6 +287,25 @@ class IOWidget(QWidget):
         self.save_labels_button.clicked.connect(self._save_labels)
         layout.addWidget(self.save_labels_button)
 
+        # Which lab's extra columns the saved table carries. The standard
+        # columns are always there; a lab adds its own (labels/exporters/).
+        exporter_row = QHBoxLayout()
+        exporter_label = QLabel("Columns:")
+        exporter_label.setFixedWidth(90)
+        exporter_row.addWidget(exporter_label)
+        self.exporter_combo = QComboBox()
+        for name, description in exporters.choices():
+            self.exporter_combo.addItem(description, name)
+        self.exporter_combo.setToolTip(
+            "Every save writes the standard columns; a lab's exporter adds its own on top.\n"
+            "Contribute your lab's own in ethograph/labels/exporters/."
+        )
+        index = self.exporter_combo.findData(self.app_state.label_exporter)
+        self.exporter_combo.setCurrentIndex(max(index, 0))
+        self.exporter_combo.currentIndexChanged.connect(self._on_exporter_changed)
+        exporter_row.addWidget(self.exporter_combo)
+        layout.addLayout(exporter_row)
+
         # Local backup (read-only display)
         local_backup_row = QHBoxLayout()
         local_backup_label = QLabel("Local backup:")
@@ -394,6 +414,12 @@ class IOWidget(QWidget):
     # ------------------------------------------------------------------
     # Export panel handlers
     # ------------------------------------------------------------------
+
+    def _on_exporter_changed(self, index: int) -> None:
+        """Remember which lab's columns the user wants, globally."""
+        name = self.exporter_combo.itemData(index)
+        if name is not None:
+            self.app_state.label_exporter = name
 
     def _save_labels(self):
         remote_path = self.remote_backup_edit.text().strip() or None

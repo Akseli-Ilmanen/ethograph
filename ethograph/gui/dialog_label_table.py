@@ -62,6 +62,7 @@ from ethograph.labels.intervals import (
     EVENT_TYPE_STATE,
     INTERVAL_COLUMNS,
     INTERVAL_DTYPES,
+    LABEL_SCHEMA,
     LABELING_METHODS,
 )
 from ethograph.labels.tsv_store import TRIAL_META_COLUMNS, TSV_COLUMNS
@@ -81,10 +82,10 @@ CHOICE_COLUMNS: dict[str, tuple[str, ...]] = {
 }
 
 #: Columns shown with a fixed number of decimals (the stored value is untouched).
-_DECIMALS = {"onset_s": 3, "offset_s": 3, "confidence": 3}
+_DECIMALS = {col.name: col.decimals for col in LABEL_SCHEMA if col.decimals is not None}
 
 #: Columns filtered by a threshold rather than a checklist.
-_NUMERIC_FILTER_COLUMNS = {"onset_s", "offset_s", "confidence", "n_samples"}
+_NUMERIC_FILTER_COLUMNS = {col.name for col in LABEL_SCHEMA if col.numeric_filter}
 
 #: Columns eligible for find & replace: string-valued and editable. Numeric
 #: columns (onset_s, offset_s, confidence, labels) are excluded — a substring

@@ -491,7 +491,6 @@ def render_plot_data(plot_item, plot_data: PlotData, show_changepoints=True, leg
     else:
         logger.warning("Data ndim=%d not supported for plotting", plot_data.data.ndim)
 
-    plot_item.setLabel("bottom", "Time", units="s")
     plot_item.setLabel("left", plot_data.ylabel, Fontsize="14pt")
     plot_item.setTitle(plot_data.title)
 

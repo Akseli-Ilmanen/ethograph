@@ -183,7 +183,7 @@ class BottomPlaybackBar(QWidget):
         top.addWidget(self.time_slider, stretch=1)
         rows.addLayout(top)
 
-        # ── Bottom row: audio channel · mode · FPS · toggles · rotate · trials
+        # ── Bottom row: audio channel · mode · FPS · toggles · trials
         bot = QHBoxLayout()
         bot.setSpacing(8)
 
@@ -264,13 +264,6 @@ class BottomPlaybackBar(QWidget):
         self.proxy_cb.toggled.connect(self._on_proxy_toggled)
         self._update_proxy_checkbox()
         bot.addWidget(self.proxy_cb)
-
-        # Rotate video/pose 90° (circular arrow)
-        self.rotate_btn = QPushButton("↻")
-        self.rotate_btn.setFixedSize(26, 22)
-        self.rotate_btn.setToolTip("Rotate all video and pose layers by 90° clockwise")
-        self.rotate_btn.clicked.connect(self._on_rotate_clicked)
-        bot.addWidget(self.rotate_btn)
 
         bot.addStretch()
 
@@ -415,16 +408,6 @@ class BottomPlaybackBar(QWidget):
         """Apply the output gain live and persist it (gui_settings.yaml)."""
         set_master_volume(volume_pct_to_gain(value))
         self.app_state.playback_volume_pct = float(value)
-
-    def _on_rotate_clicked(self):
-        dw = getattr(self, "_data_widget", None)
-        pose_mgr = getattr(dw, "pose_mgr", None) if dw is not None else None
-        if pose_mgr is None:
-            from .notify import notify
-
-            notify("No video/pose loaded to rotate.", severity="warning")
-            return
-        pose_mgr.on_rotate_video_pose()
 
     def _update_audio_indicator(self):
         """Show the channel Play will sound, or hide the indicator when silent."""

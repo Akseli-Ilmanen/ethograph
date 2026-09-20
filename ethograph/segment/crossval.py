@@ -48,8 +48,6 @@ from ethograph.segment.config import (
     FERAL,
     SegmentConfig,
     SessionSpec,
-    apply_overrides,
-    as_overrides,
     config_from_dict,
     config_to_dict,
 )
@@ -58,6 +56,7 @@ from ethograph.segment.materialise import COLUMNS_FILE, materialise, read_index,
 from ethograph.segment.metrics import EVAL_ARRAYS_FILE
 from ethograph.segment.prediction_sets import prediction_run_dir
 from ethograph.segment.train import RunResult, run_name_for, train
+from ethograph.utils.configkit import apply_overrides, as_overrides
 from ethograph.utils.logging import log_to_file
 from ethograph.utils.paths import session_id
 

@@ -24,8 +24,10 @@ from ethograph.io.time_model import (
     TimeRange,
     TrialVideoBounds,
 )
+from ethograph.labels import exporters
 from ethograph.labels import workflow as wf
 from ethograph.labels.curation import trial_curation_status
+from ethograph.labels.export import enrich_labels_df
 from ethograph.labels.tsv_store import (
     LabelEdit,
     LabelHistory,
@@ -537,6 +539,9 @@ class AppStateSpec:
         "remote_backup_path": (str | None, None, True),
         "remote_backup_mode": (str, "timestamp", True),
         "remote_path_depth": (int, 0, True),
+        # Which lab's extra columns the saved labels carry (labels/exporters/).
+        # Global: which lab you are follows you, not the session.
+        "label_exporter": (str, exporters.STANDARD, True),
         # Envelope / energy (general, used by both heatmap and overlay)
         "energy_metric": (str, "energy_lowpass", True),
         "env_rate": (float, 2000.0, True),
@@ -1937,16 +1942,15 @@ class ObservableAppState(QObject):
         suffix = self._get_downsampled_suffix()
         stem = f"labels{suffix}"
 
-        # Enrich with computed columns (duration, sequence, global timing, trial attrs)
-        from ethograph.labels.export import enrich_labels_df
-
-        keep_attrs = self.trial_conditions if self.trial_conditions else []
+        # Enrich with computed columns (duration, sequence, global timing, trial
+        # attrs), plus whichever lab's own columns the export settings name.
         enriched = enrich_labels_df(
             self._all_labels_df,
             nwb_alignment=self.nwb_alignment,
-            keep_attrs=keep_attrs,
             dt=self.dt,
             metadata_df=self.metadata_df,
+            exporter=exporters.get(self.label_exporter),
+            session_dir=session,
         )
         save_df = enriched if not enriched.empty else self._all_labels_df
 

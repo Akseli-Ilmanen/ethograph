@@ -3,7 +3,7 @@
 One YAML file becomes a :class:`SpotConfig`, exactly as the segmentation
 pipeline's config becomes a ``SegmentConfig`` — same ``base:`` chaining, same
 dotted ``key=value`` overrides, same generic dataclass builder
-(:func:`~ethograph.segment.config.build_dataclass`). What differs is the stage
+(:mod:`ethograph.utils.configkit`). What differs is the stage
 graph: there is no ``features:`` section, because this model reads pixels.
 
 **Every temporal setting is a duration.** Upstream E2E-Spot expresses clip
@@ -17,14 +17,12 @@ Docs: ``docs/source/models/spot/index.md``.
 
 from __future__ import annotations
 
-import copy
 import logging
 import math
-from dataclasses import asdict, dataclass, field, is_dataclass, replace
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from ethograph.features.label_inputs import branches_of, check_branches_disjoint
 from ethograph.io.session_layout import adopt_legacy_files
@@ -34,13 +32,13 @@ from ethograph.segment.config import (
     SessionSpec,
     SplitConfig,
     TrialsConfig,
-    apply_overrides,
-    build_dataclass,
+    build_sessions,
     merge_label_input_columns,
     name_colliding_sessions,
-    read_yaml_chain,
+    select_sessions,
     user_ignore,
 )
+from ethograph.utils.configkit import Schema, build, read_config, replaced, to_plain, write_yaml
 from ethograph.utils.paths import defaults_dir
 
 logger = logging.getLogger(__name__)
@@ -479,44 +477,29 @@ class SpotConfig:
                 return label
         raise ValueError(f"{name!r} is not one of this config's classes {self.labels.classes}")
 
-    def select_sessions(self, selector: Any) -> list[SessionSpec]:
-        """The sessions *selector* names, in config order; ``None`` = all.
-
-        Matches by ``name``, full path, or the source's stem, so a fold can
-        be named ``"20260307_01"`` rather than spelled out — the same rule
-        ``SegmentConfig.select_sessions`` follows.
-        """
-        if selector is None:
-            return list(self.sessions)
-        chosen: list[SessionSpec] = []
-        for item in [str(s) for s in selector]:
-            matches = [
-                s
-                for s in self.sessions
-                if s.label == item or str(s.source) == item or s.source.stem == item or s.source.name == item
-            ]
-            if not matches:
-                raise ValueError(f"No session matches {item!r}; this config has {[s.label for s in self.sessions]}")
-            for spec in matches:
-                if spec not in chosen:
-                    chosen.append(spec)
-        return [s for s in self.sessions if s in chosen]
+    def select_sessions(self, selector: Iterable[str | Path] | None) -> list[SessionSpec]:
+        """The sessions *selector* names, in config order — the rule every pipeline follows."""
+        return select_sessions(self.sessions, selector)
 
 
-#: Field name -> the dataclass its mapping builds. Passed to the shared
-#: builder so that ``train``, ``model`` and ``labels`` build *this* pipeline's
-#: types rather than the segmentation pipeline's same-named ones.
-_NESTED: dict[str, type] = {
-    "trials": TrialsConfig,
-    "labels": LabelsConfig,
-    "clip": ClipConfig,
-    "model": ModelConfig,
-    "train": TrainConfig,
-    "split": SplitConfig,
-    "infer": InferConfig,
-    "crop": CropConfig,
-    "label_inputs": LabelInputsConfig,
-}
+#: Its own schema, so that ``train``, ``model`` and ``labels`` build *this*
+#: pipeline's types rather than the segmentation pipeline's same-named ones.
+SCHEMA = Schema(
+    nested={
+        "trials": TrialsConfig,
+        "labels": LabelsConfig,
+        "clip": ClipConfig,
+        "model": ModelConfig,
+        "train": TrainConfig,
+        "split": SplitConfig,
+        "infer": InferConfig,
+        "crop": CropConfig,
+        "label_inputs": LabelInputsConfig,
+    },
+    paths=frozenset({"root", "frames", "mapping"}),
+    path_lists=frozenset({"holdout_sessions"}),
+    converters={"sessions": build_sessions},
+)
 
 
 def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None) -> SpotConfig:
@@ -538,7 +521,7 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
             "reads pixels plus what you list here, it does not materialise feature columns"
         )
     data.setdefault("root", ".")
-    cfg = build_dataclass(SpotConfig, data, "config", base_dir, _NESTED)
+    cfg = build(SpotConfig, data, "config", base_dir, SCHEMA)
     cfg.config_path = config_path
     if not cfg.sessions:
         raise ValueError("config.sessions is empty — list at least one session")
@@ -577,25 +560,8 @@ def config_from_dict(data: dict, base_dir: Path, config_path: Path | None = None
 
 def load_config(path: str | Path, overrides: list[str] | None = None) -> SpotConfig:
     """Read a config file (following ``base:``), apply overrides, build."""
-    path = Path(path).resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f"Config not found: {path}")
-    data = read_yaml_chain(path)
-    if overrides:
-        data = apply_overrides(data, list(overrides))
+    data, path = read_config(path, overrides)
     return config_from_dict(data, path.parent, config_path=path)
-
-
-def _to_plain(obj: Any) -> Any:
-    if is_dataclass(obj) and not isinstance(obj, type):
-        return {k: _to_plain(v) for k, v in asdict(obj).items() if k != "config_path"}
-    if isinstance(obj, dict):
-        return {k: _to_plain(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [_to_plain(v) for v in obj]
-    if isinstance(obj, Path):
-        return str(obj)
-    return obj
 
 
 def config_to_dict(cfg: SpotConfig) -> dict:
@@ -604,7 +570,7 @@ def config_to_dict(cfg: SpotConfig) -> dict:
     Round-trips: the ``features:`` entry ``label_inputs`` generated is left
     out, because :func:`config_from_dict` merges it back in.
     """
-    data = _to_plain(cfg)
+    data = to_plain(cfg, skip=frozenset({"config_path"}))
     if cfg.label_inputs is not None:
         generated = cfg.label_inputs.expanded_columns()
         data["features"] = {k: v for k, v in data["features"].items() if k not in generated}
@@ -612,11 +578,9 @@ def config_to_dict(cfg: SpotConfig) -> dict:
 
 
 def save_config(cfg: SpotConfig, path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(config_to_dict(cfg), sort_keys=False), encoding="utf-8")
-    return path
+    return write_yaml(config_to_dict(cfg), path)
 
 
 def with_overrides(cfg: SpotConfig, **changes: Any) -> SpotConfig:
-    """A copy of *cfg* with top-level fields replaced."""
-    return replace(copy.deepcopy(cfg), **changes)
+    """An independent copy of *cfg* with top-level fields replaced."""
+    return replaced(cfg, **changes)
