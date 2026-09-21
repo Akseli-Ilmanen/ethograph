@@ -43,8 +43,12 @@ ethograph launch
 `uv tool update-shell` once and **open a new terminal**
 (see {ref}`command-not-found`).
 
-Upgrade with `uv tool upgrade ethograph`, remove with
-`uv tool uninstall ethograph`.
+Upgrade by re-running the install with `--force --refresh`, remove with
+`uv tool uninstall ethograph`:
+
+```bash
+uv tool install --python 3.12 --force --refresh "ethograph[gui,audio]"
+```
 ````
 
 ````{tab-item} Write scripts

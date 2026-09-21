@@ -47,6 +47,12 @@ ethograph launch
 > **`ethograph` not recognized?** uv has not added its bin directory to your
 > `PATH` yet. Run `uv tool update-shell`, then open a **new** terminal.
 
+To upgrade later, run the same command with `--force --refresh`:
+
+```bash
+uv tool install --python 3.12 --force --refresh "ethograph[gui,audio]"
+```
+
 For installing into a dedicated virtual environment,segmentation models, and troubleshooting, see
 [installation guide](https://akseli-ilmanen.github.io/ethograph/getting_started/installation.html).
 
