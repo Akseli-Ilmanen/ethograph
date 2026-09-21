@@ -2,7 +2,7 @@
 # Exporting labels
 
 **File → Export labels…** opens the export panel described below (save button,
-post-processing actions, remote backup settings).
+the **Columns** selector, remote backup settings).
 
 ## Label file format
 
@@ -79,8 +79,6 @@ recalculated.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `session` | str | Session identifier from `ds.attrs["session"]`. Only present when `session` is set in the dataset attributes. |
-| `session_trial` | str | `"{session}_{trial}"` for grouping across sessions. Only present when `session` is set. |
 | `duration` | float | `offset_s - onset_s` in seconds |
 | `sequence_idx` | int | Zero-based position of this segment in the trial's label sequence |
 | `sequence` | str | Dash-joined label IDs for the trial (e.g. `"1-3-2-1"`) |
@@ -104,6 +102,64 @@ trial start/stop times (i.e. `alignment.has_real_timing` is `True`).
 - Use `onset_s` / `offset_s` when working within a single trial (plotting, ML training).
 - Use `onset_global` / `offset_global` when aligning across trials or comparing to session-level events (e.g. neural recordings with session-absolute timestamps).
 ```
+
+(target-lab-specific-columns)=
+### Lab-specific columns
+
+Some columns only mean something for one lab's data. The export panel's
+**Columns** selector chooses which — if any — are added:
+
+| Choice | What the TSV carries |
+|--------|----------------------|
+| **Standard** (default) | Only the columns documented above |
+| **Standard + \<lab\>** | The standard columns **plus** that lab's own |
+
+A lab's exporter always runs *after* the standard columns, on the table they
+produced. Choosing one never means going without the standard export, and an
+exporter that dropped a required column is refused rather than written.
+
+The choice is stored in the global settings (`gui_settings.yaml`), so it
+follows you across sessions rather than being a property of one dataset.
+
+Ethograph ships one:
+
+| Exporter | Columns | Requires |
+|----------|---------|----------|
+| **Crow lab** | `session` — session identifier<br>`session_trial` — `"{session}_{trial}"`, for grouping across sessions<br>`pulse_onsets` — the trial's pulse times, on the trial's first row only | `ds.attrs["session"]`, a `pulse_onsets` variable |
+
+A session missing those simply gets no such column, so picking an exporter
+whose data you do not have is harmless.
+
+#### Adding your lab's columns
+
+Exporters live in `ethograph/labels/exporters/`. Add a module beside the
+others, register it, and open a pull request:
+
+```python
+# ethograph/labels/exporters/mylab.py
+from ethograph.labels.exporters import ExportContext, register
+
+
+@register("mylab", "My lab — the columns my analysis expects")
+def my_columns(df: pd.DataFrame, ctx: ExportContext) -> pd.DataFrame:
+    df["my_column"] = ...
+    return df
+```
+
+Then add `from ethograph.labels.exporters import mylab` to `_load_builtin()`
+in that package's `__init__.py`, so registering happens on import.
+
+`df` is the table with every standard column already on it, one row per
+non-background label. `ctx` carries what the session knows: `ctx.dt` (the data
+tree), `ctx.alignment`, `ctx.metadata_df` and `ctx.session_dir` — read a
+sidecar file from the last of these if your columns come from outside the
+dataset. Return the table; add or change your own columns, but leave the ones
+a labels file is made of alone.
+
+The registered description is shown in the selector prefixed with
+`Standard + `, so write only what your exporter adds.
+
+---
 
 ### Example
 

@@ -482,17 +482,14 @@ never read: whether a trial is reviewed is a question answered per label by
 <dl class="py data">
 <dt class="sig sig-object py" id="ethograph.labels.tsv_store.REQUIRED_COLUMNS">
 <span class="sig-prename descclassname"><span class="pre">ethograph.labels.tsv_store.</span></span><span class="sig-name descname"><span class="pre">REQUIRED_COLUMNS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'individual',</span> <span class="pre">'labels',</span> <span class="pre">'offset_s',</span> <span class="pre">'onset_s',</span> <span class="pre">'trial'}</span></em><a class="headerlink" href="#ethograph.labels.tsv_store.REQUIRED_COLUMNS" title="Link to this definition">#</a></dt>
-<dd><p>set() -&gt; new empty set object
-set(iterable) -&gt; new set object</p>
-<p>Build an unordered collection of unique elements.</p>
+<dd><p>The minimum a file must have to be a labels file at all.</p>
 </dd></dl>
 
 <dl class="py data">
 <dt class="sig sig-object py" id="ethograph.labels.tsv_store.TSV_COLUMNS">
 <span class="sig-prename descclassname"><span class="pre">ethograph.labels.tsv_store.</span></span><span class="sig-name descname"><span class="pre">TSV_COLUMNS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['trial',</span> <span class="pre">'individual',</span> <span class="pre">'individual_rec',</span> <span class="pre">'labels',</span> <span class="pre">'onset_s',</span> <span class="pre">'offset_s',</span> <span class="pre">'event_type',</span> <span class="pre">'confidence',</span> <span class="pre">'labeling_method',</span> <span class="pre">'changepoint_corrected',</span> <span class="pre">'prediction_source',</span> <span class="pre">'n_samples']</span></em><a class="headerlink" href="#ethograph.labels.tsv_store.TSV_COLUMNS" title="Link to this definition">#</a></dt>
-<dd><p>Built-in mutable sequence.</p>
-<p>If no argument is given, the constructor creates a new empty list.
-The argument must be an iterable if specified.</p>
+<dd><p>Every stored column, in file order. Derived from the schema, so a column
+added there needs no edit here.</p>
 </dd></dl>
 
 <dl class="py data">

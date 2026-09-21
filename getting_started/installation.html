@@ -499,8 +499,11 @@ ethograph<span class="w"> </span>launch
 <p><code class="docutils literal notranslate"><span class="pre">ethograph</span> <span class="pre">launch</span></code> says <em>“not recognized”</em> or <em>“command not found”</em>? Run
 <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">update-shell</span></code> once and <strong>open a new terminal</strong>
 (see <a class="reference internal" href="../advanced/troubleshooting.html#command-not-found"><span class="std std-ref">ethograph is not recognized as a command</span></a>).</p>
-<p>Upgrade with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">upgrade</span> <span class="pre">ethograph</span></code>, remove with
-<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">uninstall</span> <span class="pre">ethograph</span></code>.</p>
+<p>Upgrade by re-running the install with <code class="docutils literal notranslate"><span class="pre">--force</span> <span class="pre">--refresh</span></code>, remove with
+<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">uninstall</span> <span class="pre">ethograph</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--force<span class="w"> </span>--refresh<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+</pre></div>
+</div>
 </div>
 <input id="sd-tab-item-3" name="sd-tab-set-1" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-3">
@@ -524,9 +527,15 @@ conda</label><div class="sd-tab-content docutils">
 conda<span class="w"> </span>activate<span class="w"> </span>ethograph
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
 ethograph<span class="w"> </span>check<span class="w">                  </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
+ethograph<span class="w"> </span>shortcut<span class="w">               </span><span class="c1"># optional: desktop / Start Menu launcher</span>
+ethograph<span class="w"> </span>launch
 </pre></div>
 </div>
 <p>conda only creates the environment; ethograph itself is installed with uv.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ethograph</span> <span class="pre">launch</span></code> only works from an activated environment, so
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">ethograph</span></code> comes first every time. <code class="docutils literal notranslate"><span class="pre">ethograph</span> <span class="pre">shortcut</span></code> writes a
+desktop and Start Menu entry that activates this environment for you — one
+click instead of a terminal.</p>
 </div>
 </div>
 <p>Upgrade with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">&quot;ethograph[gui,audio]&quot;</span></code>; if that doesn’t seem
@@ -558,6 +567,8 @@ conda<span class="w"> </span>activate<span class="w"> </span>ethograph
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[gui,audio,model]"</span>
 ethograph<span class="w"> </span>check<span class="w">                  </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
+ethograph<span class="w"> </span>shortcut<span class="w">               </span><span class="c1"># optional: desktop / Start Menu launcher</span>
+ethograph<span class="w"> </span>launch
 </pre></div>
 </div>
 <p>Creating the environment from <code class="docutils literal notranslate"><span class="pre">conda-forge</span></code> keeps shared libraries on one

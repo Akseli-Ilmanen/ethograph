@@ -47,8 +47,8 @@ useful guide when guessing a binding.
 | `Q W E R T Z U I O P` | Activate label 11-20 |
 | `A S D F G H J K L Y` | Activate label 21-30 |
 | `F1-F10` | Activate label 31-40 |
-| Click twice on line plot | Define label boundaries (set start/end) — *On the time series* mode |
-| Label key at a frame | Place the boundary at the frame on screen: a point event on one press, a state event on two — *At the current frame* mode (Labels tab dropdown) |
+| Click twice on line plot | Define label boundaries (set start/end) — *Graph based labelling* mode |
+| Label key at a frame | Place the boundary at the frame on screen: a point event on one press, a state event on two — *Frame by frame labelling* mode (Labels tab, **Mode**) |
 | Left-click on label | Select existing label |
 | `Ctrl+E` | Edit selected label boundaries (after selecting label, click twice for new boundaries) |
 | `Ctrl+D` | Delete selected label (after selecting label) |

@@ -778,11 +778,158 @@ window.runMermaid = runMermaid;</script>
                 <article class="bd-article">
                   
   <h1>Source code for ethograph.labels.export</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span></span><span class="sd">"""Computed columns added to the labels table on save.</span>
+
+<span class="sd">Everything here holds for any dataset: a label's duration, its place in the</span>
+<span class="sd">trial's sequence, the trial's timing on the session clock, and whatever the</span>
+<span class="sd">trial metadata table carries.</span>
+
+<span class="sd">Columns that only mean something for one lab do not belong here. They live in</span>
+<span class="sd">``labels/exporters/`` as a named exporter the user picks in the export</span>
+<span class="sd">settings; this module hands it the enriched table and the session's context.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.exporters</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExportContext</span><span class="p">,</span> <span class="n">Exporter</span><span class="p">,</span> <span class="n">run</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="n">TRACK_COLUMNS</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">#: Metadata columns describing the *curation* rather than the trial, so</span>
+<span class="c1">#: exporting them would say nothing about the data.</span>
+<span class="n">_SKIP_METADATA_COLUMNS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">"trial"</span><span class="p">,</span>
+        <span class="s2">"offsets_corrected"</span><span class="p">,</span>
+        <span class="s2">"small_labels_purged"</span><span class="p">,</span>
+        <span class="s2">"model_confidence"</span><span class="p">,</span>
+        <span class="s2">"model_confidence_level"</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_trial_timing</span><span class="p">(</span><span class="n">nwb_alignment</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The trial's start and stop on the session clock, or ``(None, None)``.</span>
+
+<span class="sd">    A session with no alignment has no session clock, so the global columns are</span>
+<span class="sd">    simply absent. A trial the alignment does not know is worth a warning: the</span>
+<span class="sd">    labels and the alignment disagree about which trials exist.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">nwb_alignment</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="n">trial_id</span><span class="p">),</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">stop_time</span><span class="p">(</span><span class="n">trial_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Alignment has no timing for trial </span><span class="si">%r</span><span class="s2">; exporting it without session times."</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_trial_metadata</span><span class="p">(</span><span class="n">metadata_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The metadata row for *trial_id*, keyed by column; empty when there is none.</span>
+
+<span class="sd">    The table joins on a ``trial`` column when it has one, and on the index</span>
+<span class="sd">    otherwise.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">metadata_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="s2">"trial"</span> <span class="ow">in</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">metadata_df</span><span class="p">[</span><span class="n">metadata_df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">==</span> <span class="n">trial_id</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">trial_id</span> <span class="ow">in</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[[</span><span class="n">trial_id</span><span class="p">]]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">rows</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">first</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SKIP_METADATA_COLUMNS</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_enrich_trial</span><span class="p">(</span><span class="n">group</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">nwb_alignment</span><span class="p">,</span> <span class="n">metadata_df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One trial's labels, with its sequence, its timing and its metadata columns."""</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"onset_s"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">group</span><span class="p">[</span><span class="s2">"sequence_idx"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">))</span>
+    <span class="n">group</span><span class="p">[</span><span class="s2">"sequence"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"-"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">group</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">])</span>
+
+    <span class="n">t_start</span><span class="p">,</span> <span class="n">t_stop</span> <span class="o">=</span> <span class="n">_trial_timing</span><span class="p">(</span><span class="n">nwb_alignment</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">t_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">group</span><span class="p">[</span><span class="s2">"trial_onset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_start</span>
+        <span class="n">group</span><span class="p">[</span><span class="s2">"onset_global"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_start</span> <span class="o">+</span> <span class="n">group</span><span class="p">[</span><span class="s2">"onset_s"</span><span class="p">]</span>
+        <span class="n">group</span><span class="p">[</span><span class="s2">"offset_global"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_start</span> <span class="o">+</span> <span class="n">group</span><span class="p">[</span><span class="s2">"offset_s"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">t_stop</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">group</span><span class="p">[</span><span class="s2">"trial_offset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_stop</span>
+
+    <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_trial_metadata</span><span class="p">(</span><span class="n">metadata_df</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">group</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">return</span> <span class="n">group</span>
+
+
+<div class="viewcode-block" id="enrich_labels_df">
+<a class="viewcode-back" href="../../../api/labels.html#ethograph.labels.export.enrich_labels_df">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">enrich_labels_df</span><span class="p">(</span>
+    <span class="n">all_labels_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">nwb_alignment</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">metadata_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">exporter</span><span class="p">:</span> <span class="n">Exporter</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">session_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Add the computed analysis columns to a raw labels table.</span>
+
+<span class="sd">    Adds ``duration``, ``sequence``, ``sequence_idx``, the trial's timing on the</span>
+<span class="sd">    session clock (``trial_onset``, ``trial_offset``, ``onset_global``,</span>
+<span class="sd">    ``offset_global``) and every trial metadata column.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    all_labels_df : pd.DataFrame</span>
+<span class="sd">        Raw labels with required columns: onset_s, offset_s, labels, individual, trial.</span>
+<span class="sd">    nwb_alignment</span>
+<span class="sd">        Session alignment, for trial timing. Without one the global columns are</span>
+<span class="sd">        left out.</span>
+<span class="sd">    dt : TrialTree, optional</span>
+<span class="sd">        Handed to *exporter*; unused otherwise.</span>
+<span class="sd">    metadata_df : pd.DataFrame, optional</span>
+<span class="sd">        Trial metadata table, joined per trial.</span>
+<span class="sd">    exporter : callable, optional</span>
+<span class="sd">        The lab's own columns (``labels/exporters/``). Without one, only the</span>
+<span class="sd">        columns above are added.</span>
+<span class="sd">    session_dir : Path, optional</span>
+<span class="sd">        Handed to *exporter*, for a sidecar file beside the session.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        One row per non-background segment. Empty when there is nothing to export.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">all_labels_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">all_labels_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="n">valid</span> <span class="o">=</span> <span class="n">all_labels_df</span><span class="p">[</span><span class="n">all_labels_df</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">valid</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="n">valid</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">valid</span><span class="p">[</span><span class="s2">"offset_s"</span><span class="p">]</span> <span class="o">-</span> <span class="n">valid</span><span class="p">[</span><span class="s2">"onset_s"</span><span class="p">]</span>
+
+    <span class="n">enriched</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">_enrich_trial</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">nwb_alignment</span><span class="p">,</span> <span class="n">metadata_df</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">valid</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"trial"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">enriched</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">exporter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">ExportContext</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span> <span class="n">alignment</span><span class="o">=</span><span class="n">nwb_alignment</span><span class="p">,</span> <span class="n">metadata_df</span><span class="o">=</span><span class="n">metadata_df</span><span class="p">,</span> <span class="n">session_dir</span><span class="o">=</span><span class="n">session_dir</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">exporter</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">"trial"</span><span class="p">,</span> <span class="s2">"onset_s"</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="correct_offsets_trial">
@@ -790,9 +937,9 @@ window.runMermaid = runMermaid;</script>
 <span class="k">def</span><span class="w"> </span><span class="nf">correct_offsets_trial</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Apply gap correction to a single trial's interval DataFrame.</span>
 
-<span class="sd">    For each subject (actor + recipient), pulls back ``offset_s`` when the gap</span>
-<span class="sd">    to the next onset is smaller than ``eps`` so pynapple can resolve all</span>
-<span class="sd">    intervals.</span>
+<span class="sd">    For each actor (``TRACK_COLUMNS`` --- the recipient is an attribute, not a</span>
+<span class="sd">    second track), pulls back ``offset_s`` when the gap to the next onset is</span>
+<span class="sd">    smaller than ``eps`` so pynapple can resolve all intervals.</span>
 
 <span class="sd">    Works on the per-trial format (columns: trial, onset_s, offset_s, labels,</span>
 <span class="sd">    individual) returned by ``app_state.get_trial_intervals()``.</span>
@@ -831,145 +978,6 @@ window.runMermaid = runMermaid;</script>
         <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="o">*</span><span class="n">subject</span><span class="p">,</span> <span class="s2">"onset_global"</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">corrected</span><span class="p">,</span> <span class="n">negative_gaps</span></div>
-
-
-
-<div class="viewcode-block" id="enrich_labels_df">
-<a class="viewcode-back" href="../../../api/labels.html#ethograph.labels.export.enrich_labels_df">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">enrich_labels_df</span><span class="p">(</span>
-    <span class="n">all_labels_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-    <span class="n">nwb_alignment</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">keep_attrs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">metadata_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Enrich a raw labels DataFrame with computed columns for analysis export.</span>
-
-<span class="sd">    Takes the in-memory ``_all_labels_df`` (with columns ``onset_s``, ``offset_s``,</span>
-<span class="sd">    ``labels``, ``individual``, ``trial``) and adds session timing, duration,</span>
-<span class="sd">    sequence info, and trial attributes from metadata_df and ds.attrs.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    all_labels_df : pd.DataFrame</span>
-<span class="sd">        Raw labels with required columns: onset_s, offset_s, labels, individual, trial.</span>
-<span class="sd">    nwb_alignment</span>
-<span class="sd">        Session metadata (for trial timing).</span>
-<span class="sd">    keep_attrs : list[str], optional</span>
-<span class="sd">        Trial-level ``ds.attrs`` keys to include as extra columns (xarray only).</span>
-<span class="sd">    dt : TrialTree, optional</span>
-<span class="sd">        Xarray data tree (only needed for ``keep_attrs`` and session name).</span>
-<span class="sd">    metadata_df : pd.DataFrame, optional</span>
-<span class="sd">        Trial metadata table. Columns are merged per trial into the enriched output.</span>
-<span class="sd">        If metadata_df contains "poscat" or "num_pellets", those are used instead</span>
-<span class="sd">        of falling back to ds.attrs.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pd.DataFrame</span>
-<span class="sd">        Enriched DataFrame with one row per non-background segment.</span>
-<span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">all_labels_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">all_labels_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-
-    <span class="k">if</span> <span class="n">keep_attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">keep_attrs</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="n">valid</span> <span class="o">=</span> <span class="n">all_labels_df</span><span class="p">[</span><span class="n">all_labels_df</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">valid</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-
-    <span class="n">valid</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">valid</span><span class="p">[</span><span class="s2">"offset_s"</span><span class="p">]</span> <span class="o">-</span> <span class="n">valid</span><span class="p">[</span><span class="s2">"onset_s"</span><span class="p">]</span>
-
-    <span class="c1"># Session info (only when session attr exists)</span>
-    <span class="n">session_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="s2">"attrs"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"session"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">session_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">valid</span><span class="p">[</span><span class="s2">"session"</span><span class="p">]</span> <span class="o">=</span> <span class="n">session_name</span>
-        <span class="n">valid</span><span class="p">[</span><span class="s2">"session_trial"</span><span class="p">]</span> <span class="o">=</span> <span class="n">valid</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-    <span class="c1"># Determine which legacy attrs to fetch from ds (only if not in metadata_df)</span>
-    <span class="n">legacy_fallback_attrs</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">if</span> <span class="n">metadata_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">"poscat"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="n">legacy_fallback_attrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"poscat"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">metadata_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">"num_pellets"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="n">legacy_fallback_attrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"num_pellets"</span><span class="p">)</span>
-
-    <span class="c1"># Per-trial: sequence, sequence_idx, timing, attrs</span>
-    <span class="n">enriched_rows</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">trial_id</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">valid</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"trial"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="n">group</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"onset_s"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">sequence</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-        <span class="n">group</span><span class="p">[</span><span class="s2">"sequence_idx"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">))</span>
-        <span class="n">group</span><span class="p">[</span><span class="s2">"sequence"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"-"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">)</span>
-
-        <span class="c1"># Session timing</span>
-        <span class="n">t_start</span><span class="p">,</span> <span class="n">t_stop</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">t_start</span> <span class="o">=</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="n">trial_id</span><span class="p">)</span>
-        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
-            <span class="k">pass</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">t_stop</span> <span class="o">=</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">stop_time</span><span class="p">(</span><span class="n">trial_id</span><span class="p">)</span>
-        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
-            <span class="k">pass</span>
-
-        <span class="k">if</span> <span class="n">t_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">group</span><span class="p">[</span><span class="s2">"trial_onset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_start</span>
-            <span class="n">group</span><span class="p">[</span><span class="s2">"onset_global"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_start</span> <span class="o">+</span> <span class="n">group</span><span class="p">[</span><span class="s2">"onset_s"</span><span class="p">]</span>
-            <span class="n">group</span><span class="p">[</span><span class="s2">"offset_global"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_start</span> <span class="o">+</span> <span class="n">group</span><span class="p">[</span><span class="s2">"offset_s"</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">t_stop</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">group</span><span class="p">[</span><span class="s2">"trial_offset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_stop</span>
-
-        <span class="c1"># Trial attrs from metadata_df (primary source)</span>
-        <span class="k">if</span> <span class="n">metadata_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-            <span class="c1"># Support both "trial" column or index</span>
-            <span class="k">if</span> <span class="s2">"trial"</span> <span class="ow">in</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                <span class="n">trial_meta</span> <span class="o">=</span> <span class="n">metadata_df</span><span class="p">[</span><span class="n">metadata_df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">==</span> <span class="n">trial_id</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Try by index</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">trial_meta</span> <span class="o">=</span> <span class="n">metadata_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[[</span><span class="n">trial_id</span><span class="p">]]</span>
-                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-                    <span class="n">trial_meta</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">trial_meta</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-                <span class="c1"># Skip computed/derived columns that shouldn't be exported</span>
-                <span class="n">skip_cols</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="s2">"trial"</span><span class="p">,</span>
-                    <span class="s2">"offsets_corrected"</span><span class="p">,</span>
-                    <span class="s2">"small_labels_purged"</span><span class="p">,</span>
-                    <span class="s2">"model_confidence"</span><span class="p">,</span>
-                    <span class="s2">"model_confidence_level"</span><span class="p">,</span>
-                <span class="p">}</span>
-                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">trial_meta</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_cols</span><span class="p">:</span>
-                        <span class="n">group</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">trial_meta</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="c1"># Legacy fallback: poscat and num_pellets from ds.attrs only if not in metadata_df</span>
-        <span class="k">if</span> <span class="n">legacy_fallback_attrs</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">ds</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">trial</span><span class="p">(</span><span class="n">trial_id</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">legacy_fallback_attrs</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
-                        <span class="n">group</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span>
-            <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
-                <span class="k">pass</span>
-
-        <span class="n">enriched_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
-
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">enriched_rows</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-        <span class="c1"># Crow lab only</span>
-        <span class="k">if</span> <span class="s2">"pulse_onsets"</span> <span class="ow">in</span> <span class="n">dt</span><span class="o">.</span><span class="n">itrial</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
-            <span class="n">trial_pulse_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">trial</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">trial</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span><span class="o">.</span><span class="n">pulse_onsets</span><span class="o">.</span><span class="n">values</span> <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="n">dt</span><span class="o">.</span><span class="n">trials</span><span class="p">}</span>
-
-            <span class="n">first_in_trial</span> <span class="o">=</span> <span class="o">~</span><span class="n">df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span>
-            <span class="n">df</span><span class="p">[</span><span class="s2">"pulse_onsets"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">""</span>
-            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">first_in_trial</span><span class="p">,</span> <span class="s2">"pulse_onsets"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">first_in_trial</span><span class="p">,</span> <span class="s2">"trial"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
-                <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="s2">"–"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">trial_pulse_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">[])))</span>
-            <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">"trial"</span><span class="p">,</span> <span class="s2">"onset_s"</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 </pre></div>
 

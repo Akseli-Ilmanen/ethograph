@@ -483,24 +483,40 @@ you:</p>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">~/.ethograph/</span></code></p></td>
 <td><p>The GUI.</p></td>
-<td><p>Your settings, caches, and a starter project used while no project folder is chosen.</p></td>
+<td><p>Your settings, caches, and the <strong>starter project</strong> — the project folder a fresh install begins in.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <section id="the-project-folder">
 <h2>The project folder<a class="headerlink" href="#the-project-folder" title="Link to this heading">#</a></h2>
-<p>Chosen once on the start page (<strong>Project folder</strong>) and remembered across
-restarts. Sessions are <em>listed</em> from wherever they are, so you can keep your
-session folders inside it (as below) or on another drive. Either way, the
-folder holds what you build on top of them:</p>
+<p><strong>A project folder is always set.</strong> A fresh install starts in the <em>starter
+project</em>, <code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/</span></code> — it ships a <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>, the example configs
+and the reference geometries, so the GUI works the moment you open it and a quick
+look at a dataset needs no set-up at all.</p>
+<p>Choose a folder of your own before you start a study: labelling writes the label
+names, and models write their configs and runs, into the project folder, and
+having that be the starter one means every study shares a single vocabulary. The
+start page’s <strong>Project folder</strong> bar says which one you are in and links here;
+<strong>Clear</strong> returns to the starter project rather than to none.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Changed in a recent version.</strong> The project folder used to be optional, and
+<code class="docutils literal notranslate"><span class="pre">project.yaml</span></code> inside it held the individuals, the excluded files and the
+skeleton. Neither is true any more — see <a class="reference internal" href="#what-moved-out-of-projectyaml"><span class="xref myst">what moved where</span></a>
+below. Nothing is lost: opening a folder that still has a <code class="docutils literal notranslate"><span class="pre">project.yaml</span></code> folds its
+lists into your settings once and tells you it did.</p>
+</div>
+<p>Sessions are <em>listed</em> from wherever they are, so you can keep your session folders
+inside the project (as below) or on another drive. Either way, the folder holds
+what you build on top of them:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
-    ├── project.yaml                   # study defaults: individuals, rig, pose software, skeleton
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config
+    │   ├── skeleton/                  # one YAML per skeleton (crow.yaml, mouse.yaml, …)
     │   └── space/                     # reference geometries for the Space plot
     ├── runs/
     │   └── lightgbm/                  # lightgbm models trained from the Model menu
@@ -514,212 +530,204 @@ folder holds what you build on top of them:</p>
 <p class="admonition-title">Important</p>
 <p><strong>One session folder, one <code class="docutils literal notranslate"><span class="pre">.nc</span></code>.</strong> A second <code class="docutils literal notranslate"><span class="pre">.nc</span></code> at the root is an old version,
 and Ethograph refuses to guess which one is current — in the GUI and in a
-<code class="docutils literal notranslate"><span class="pre">segment</span></code> or <code class="docutils literal notranslate"><span class="pre">spot</span></code> run alike. Tell the project which files to skip, once, in
-<code class="docutils literal notranslate"><span class="pre">project.yaml</span></code>:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">ignore</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Trial_data.nc</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"*_old.nc"</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># file names or globs, matched in every session folder</span>
+<code class="docutils literal notranslate"><span class="pre">segment</span></code> or <code class="docutils literal notranslate"><span class="pre">spot</span></code> run alike. Name the old one once, on the start page
+(<strong>Excluded files…</strong>) or from the dialog that asks; it is kept in your
+<code class="docutils literal notranslate"><span class="pre">gui_settings.yaml</span></code> as <code class="docutils literal notranslate"><span class="pre">ignore_files</span></code> and applies in every session folder:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">ignore_files</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Trial_data.nc</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"*_old.nc"</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># file names or globs</span>
 </pre></div>
 </div>
 </div>
-<p>The GUI offers this as a button when it hits the case. A file named explicitly
-(<code class="docutils literal notranslate"><span class="pre">source:</span> <span class="pre">.../Trial_data3.nc</span></code>) is always loaded, whatever the list says.</p>
+<p>A file named explicitly (<code class="docutils literal notranslate"><span class="pre">source:</span> <span class="pre">.../Trial_data3.nc</span></code>) is always loaded, whatever
+the list says. The list is yours rather than the project’s on purpose: a project
+folder may be copied to another machine, and which file is current is answered by
+whoever is sitting in front of it.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
-`project.yaml` holds what recurs across the study's sessions. Every key is
-optional and every key is a default: a session's own record (the individuals the
-wizard wrote) or its dataset overrides it. Machine paths never go in it, so it can
-be committed and shared.
+### What moved out of `project.yaml`
 
-```yaml
-individuals: [crow1, crow2]
-individuals_mode: inherit      # inherit (default) | define | both — see below
-ignore: [Trial_data.nc]        # old dataset versions to skip in every session folder
-rig: CrowBench                 # the wizard notebook under wizard/ to start from
-pose:
-  source_software: DeepLabCut
-  skeleton:                    # the skeleton itself, same shape as the skeleton editor saves
-    keypoints: [beak, head, tail]
-    connections:
-      - {start: beak, end: head}
-      - {start: head, end: tail}
+**There is no `project.yaml` any more.** The project folder holds *files* — the
+label vocabulary, the pipeline configs, the skeletons, the runs — and nothing you
+have to learn a settings schema for. What used to live in that file now lives where
+it belongs:
+
+| Used to be | Now |
+|---|---|
+| `individuals` | `extra_individuals` in `gui_settings.yaml` — added to the names your data declares, edited in **Settings ▸ Create / edit individuals…** or the sidebar's **Edit individuals…** |
+| `ignore` | `ignore_files` in `gui_settings.yaml`, edited on the start page |
+| `pose.skeleton` | `config/skeleton/{name}.yaml`, one file per skeleton |
+| `rig` | Nothing: the wizard names the rig after the session folder |
+| `pose.source_software` | Remembered from the last time you answered the drop card |
+
+If you already have a `project.yaml`, choosing that project folder folds its
+`individuals` and `ignore` lists into your settings once and says so. The file is
+left alone; nothing reads it afterwards.
+
+### Who can be labelled
+
+**The data names its individuals; your own list only adds to them.** First what
+the data declares — the session record, else the dataset's `individual` dimension
+([movement](https://movement.neuroinformatics.dev)'s convention, and the spelling
+a pose file carries: `position (time, individual, keypoint, space)`; the older
+plural `individuals` is read too) — then `extra_individuals`. There is no mode and
+no override, so the answer is always a superset of what your data declares, and
+the dialog shows exactly that: the data's names greyed out on top, yours editable
+below.
+
+Until somebody is named *and* a `mapping.txt` holds a class, the Labels tab is
+greyed out and the label keys refuse to place anything — there is no individual to
+attribute a label to. The tab says which half is missing and opens the dialog that
+fixes it.
+
+### The skeleton
+
+One YAML per skeleton in `config/skeleton/`, named by its file (`crow.yaml` →
+"crow"), because a study with two rigs has two skeletons. **Settings ▸ Edit
+skeleton…** draws one on your pose data and saves it under a name; with no project
+folder it goes to your own library under `~/.ethograph/defaults/config/skeleton/`,
+so drawing a skeleton never requires a project either.
+
+Precedence: a skeleton you drew for this session outranks everything, then the
+data's own (an NWB that carries one) and the library's in the order the dialog
+asks for — **the data's by default**, since a file that describes its own skeleton
+is usually right. Pick the library's to edit a skeleton without touching an NWB.
+A library holding exactly one skeleton needs no choosing.
+
+The starter project, `~/.ethograph/defaults/`, has this same shape and ships with
+a `mapping.txt`, the example configs and the geometries — it *is* a project folder,
+not a fallback, which is why a fresh install can label and plot straight away. See
+{ref}`target-label-mapping` for how the mapping is resolved between a session and
+its project.
+
+## The session folder
+
+One per recording. A folder is a session when it holds `.ethograph/alignment.nwb`
+(written by the wizard, a notebook or a drag &amp; drop) or an `.nwb` of its own; the
+`.nc` files in it are feature layers, and there may be none. Session files are named
+by the folder, never by a data file: `labels.tsv`, `metadata.tsv`, `labels/`. On the
+start page, open the folder (or any data file in it). Per backend:
+
+::::{tab-set}
+
+:::{tab-item} xarray (.nc)
+
 </pre></div>
 </div>
-<p>You do not have to write this file by hand: the <strong>Settings</strong> menu edits the parts
-of it that decide what you can label.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Settings ▸</p></th>
-<th class="head"><p>Edits</p></th>
-<th class="head"><p>What it decides</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><strong>Create / edit label mapping…</strong></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code></p></td>
-<td><p>The label vocabulary as a table: the id (fixed — it is the label’s identity in <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code>), the name, the branch and whether the label is a state or a point event. With no file yet the home defaults fill the table, and the first save writes the project’s own.</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>Create / edit individuals…</strong></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">individuals</span></code>, <code class="docutils literal notranslate"><span class="pre">individuals_mode</span></code></p></td>
-<td><p>Who can act or receive, so the individual selector is never empty — a video-only session labels somebody without any pose data at all.</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>Edit skeleton…</strong></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">pose.skeleton</span></code></p></td>
-<td><p>The skeleton drawn over the pose, plus which source wins when the data carries one too.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">individuals_mode</span></code> is that middle question’s answer:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">inherit</span></code> (the default) — the individuals the data names, falling back to
-<code class="docutils literal notranslate"><span class="pre">individuals</span></code> when it names none.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">define</span></code> — <code class="docutils literal notranslate"><span class="pre">individuals</span></code>, whatever the data says.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">both</span></code> — the data’s names plus <code class="docutils literal notranslate"><span class="pre">individuals</span></code>. Never a default; you choose it.</p></li>
-</ul>
-<p>“The individuals the data names” is, in order: the session record written by the
-wizard or a notebook, else the <strong><code class="docutils literal notranslate"><span class="pre">individual</span></code> dimension</strong> of the loaded dataset —
-<a class="reference external" href="https://movement.neuroinformatics.dev">movement</a>’s convention, and the spelling a
-pose file (DLC, SLEAP, …) or an <code class="docutils literal notranslate"><span class="pre">.nc</span></code> built from one carries:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">position</span>  <span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">individual</span><span class="p">,</span> <span class="n">keypoint</span><span class="p">,</span> <span class="n">space</span><span class="p">)</span>
+<p>session_01/
+├── <a class="reference external" href="http://session.nc">session.nc</a>                     # The dataset (TrialTree or plain Dataset); optional, and only one
+├── labels.tsv                     # Session labels
+├── metadata.tsv                   # Trial-level metadata
+├── .ethograph/
+│   ├── alignment.nwb              # Media paths, trial timing, stream offsets
+│   ├── local_settings.yaml        # Session-specific GUI state
+│   └── mapping.txt                # Optional: overrides the project’s for this session
+│
+├── labels/
+│   ├── backups/
+│   │  └── labels_20240315_101230.tsv
+│   └── predictions_asformer_20240215_101230/
+│       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
+│       └── session_probs.npz           # per-sample class probabilities
+│
+├── video/
+│   ├── camera1_trial001.mp4
+│   └── camera2_trial001.mp4
+├── pose/                          # External pose files (DLC, SLEAP, …)
+│   ├── trial001_pose.h5
+│   └── …
+├── audio/
+│   ├── mic1_trial001.wav
+│   └── …
+└── ephys/
+├── recording.rhd
+└── kilosort4/
+├── <a class="reference external" href="http://params.py">params.py</a>
+├── spike_times.npy
+├── spike_clusters.npy
+├── channel_positions.npy
+├── channel_map.npy
+├── templates.npy
+└── cluster_info.tsv</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">:::</span>
+
+<span class="p">:::{</span><span class="n">tab</span><span class="o">-</span><span class="n">item</span><span class="p">}</span> <span class="n">NWB</span> <span class="p">(</span><span class="o">.</span><span class="n">nwb</span><span class="p">)</span>
+
 </pre></div>
 </div>
-<p>Singular <code class="docutils literal notranslate"><span class="pre">individual</span></code> is the convention; the older plural <code class="docutils literal notranslate"><span class="pre">individuals</span></code> is read
-too, and Ethograph never assumes one spelling — it uses whichever your dataset
-has. A dataset with no such dimension (a plain feature <code class="docutils literal notranslate"><span class="pre">.nc</span></code>, a video-only drop)
-names nobody, so <code class="docutils literal notranslate"><span class="pre">individuals</span></code> in <code class="docutils literal notranslate"><span class="pre">project.yaml</span></code> is what you get, and <strong>Settings ▸
-Create / edit individuals…</strong> is how you write it.</p>
-<p>The skeleton has one more precedence step: a skeleton you drew for this session
-outranks both, then the data’s own and the project’s in the order <strong>Settings ▸
-Edit skeleton…</strong> asks for (the data’s by default). Pick the project’s to edit the
-skeleton without touching an NWB file; that choice is a preference, so it lives
-in <code class="docutils literal notranslate"><span class="pre">gui_settings.yaml</span></code>, not in the project.</p>
-<p>Without a project folder, <code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/</span></code> stands in — it has the same
-shape and ships with a default <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>, example configs and geometries.
-See <a class="reference internal" href="../labels/mapping.html#target-label-mapping"><span class="std std-ref">Label mapping (mapping.txt)</span></a> for how the mapping is resolved between the
-session, the project and that backup.</p>
-</section>
-<section id="the-session-folder">
-<h2>The session folder<a class="headerlink" href="#the-session-folder" title="Link to this heading">#</a></h2>
-<p>One per recording. A folder is a session when it holds <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>
-(written by the wizard, a notebook or a drag &amp; drop) or an <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> of its own; the
-<code class="docutils literal notranslate"><span class="pre">.nc</span></code> files in it are feature layers, and there may be none. Session files are named
-by the folder, never by a data file: <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code>, <code class="docutils literal notranslate"><span class="pre">labels/</span></code>. On the
-start page, open the folder (or any data file in it). Per backend:</p>
-<div class="sd-tab-set docutils">
-<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-0">
-xarray (.nc)</label><div class="sd-tab-content docutils">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>session_01/
-    ├── session.nc                     # The dataset (TrialTree or plain Dataset); optional, and only one
-    ├── labels.tsv                     # Session labels
-    ├── metadata.tsv                   # Trial-level metadata
-    ├── .ethograph/
-    │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
-    │   ├── local_settings.yaml        # Session-specific GUI state
-    │   └── mapping.txt                # Optional: overrides the project's for this session
-    │
-    ├── labels/
-    │   ├── backups/
-    │   │  └── labels_20240315_101230.tsv
-    │   └── predictions_asformer_20240215_101230/
-    │       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
-    │       └── session_probs.npz           # per-sample class probabilities
-    │
-    ├── video/
-    │   ├── camera1_trial001.mp4
-    │   └── camera2_trial001.mp4
-    ├── pose/                          # External pose files (DLC, SLEAP, ...)
-    │   ├── trial001_pose.h5
-    │   └── ...
-    ├── audio/
-    │   ├── mic1_trial001.wav
-    │   └── ...
-    └── ephys/
-        ├── recording.rhd
-        └── kilosort4/
-            ├── params.py
-            ├── spike_times.npy
-            ├── spike_clusters.npy
-            ├── channel_positions.npy
-            ├── channel_map.npy
-            ├── templates.npy
-            └── cluster_info.tsv
+<p>session_01/
+├── session.nwb                    # Self-contained: trials, time series,
+│                                  # pose (PoseEstimationSeries), video
+│                                  # refs (ImageSeries.external_file)
+│
+├── labels.tsv                     # Session labels
+├── metadata.tsv                   # Trial-level metadata
+│
+├── .ethograph/
+│   ├── alignment.nwb              # inherit/overwrite alignment in session.nwb
+│   ├── local_settings.yaml        # Session-specific GUI state
+│   └── mapping.txt                # Optional: overrides the project’s for this session
+│
+├── labels/
+│   ├── backups/
+│   │   └── labels_20240315_101230.tsv
+│   └── predictions_asformer_20240215_101230/
+│       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
+│       └── session_probs.npz           # per-sample class probabilities
+│
+└── video/                         # Only needed if ImageSeries paths
+├── camera1_trial001.mp4       # no longer point to the right location
+└── camera2_trial001.mp4</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
+Pose estimation and other behavioural time series are stored inside the `.nwb`
+file — no external tracking folder needed.
+:::
+
+:::{tab-item} Pynapple (.npz / folder)
+
 </pre></div>
 </div>
-</div>
-<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-1">
-NWB (.nwb)</label><div class="sd-tab-content docutils">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>session_01/
-    ├── session.nwb                    # Self-contained: trials, time series,
-    │                                  # pose (PoseEstimationSeries), video
-    │                                  # refs (ImageSeries.external_file)
-    │
-    ├── labels.tsv                     # Session labels
-    ├── metadata.tsv                   # Trial-level metadata
-    │
-    ├── .ethograph/
-    │   ├── alignment.nwb              # inherit/overwrite alignment in session.nwb
-    │   ├── local_settings.yaml        # Session-specific GUI state
-    │   └── mapping.txt                # Optional: overrides the project's for this session
-    │
-    ├── labels/
-    │   ├── backups/
-    │   │   └── labels_20240315_101230.tsv
-    │   └── predictions_asformer_20240215_101230/
-    │       ├── session_predictions.tsv     # labels TSV, labeling_method=automated
-    │       └── session_probs.npz           # per-sample class probabilities
-    │
-    └── video/                         # Only needed if ImageSeries paths
-        ├── camera1_trial001.mp4       # no longer point to the right location
-        └── camera2_trial001.mp4
+<p>session_01/
+├── position.npz                   # Pynapple Tsd/TsdFrame objects
+├── speed.npz
+├── units.npz                      # TsGroup of spike times
+│
+├── labels.tsv                     # Session labels
+├── metadata.tsv                   # Trial-level metadata
+│
+├── .ethograph/
+│   ├── alignment.nwb              # Media paths, trial timing, stream offsets
+│   ├── local_settings.yaml        # Session-specific GUI state
+│   └── mapping.txt                # Optional: overrides the project’s for this session
+│
+├── labels/
+│   ├── backups/
+│   │   └── labels_20240315_101230.tsv
+│   └── predictions_asformer_20240215_101230/
+│       ├── labels_predictions.tsv     # labels TSV, labeling_method=automated
+│       └── labels_probs.npz           # per-sample class probabilities
+│
+├── video/
+│   ├── camera1_trial001.mp4
+│   └── …
+└── audio/
+├── mic1_trial001.wav
+└── …</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>:::
+
+::::
+
+You write the session file and the media folders. Everything under
+`.ethograph/` and `labels/backups/` is created by the GUI on first load and
+first save.
+
+## The home folder
+
 </pre></div>
 </div>
-<p>Pose estimation and other behavioural time series are stored inside the <code class="docutils literal notranslate"><span class="pre">.nwb</span></code>
-file — no external tracking folder needed.</p>
-</div>
-<input id="sd-tab-item-2" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-2">
-Pynapple (.npz / folder)</label><div class="sd-tab-content docutils">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>session_01/
-    ├── position.npz                   # Pynapple Tsd/TsdFrame objects
-    ├── speed.npz
-    ├── units.npz                      # TsGroup of spike times
-    │
-    ├── labels.tsv                     # Session labels
-    ├── metadata.tsv                   # Trial-level metadata
-    │
-    ├── .ethograph/
-    │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
-    │   ├── local_settings.yaml        # Session-specific GUI state
-    │   └── mapping.txt                # Optional: overrides the project's for this session
-    │
-    ├── labels/
-    │   ├── backups/
-    │   │   └── labels_20240315_101230.tsv
-    │   └── predictions_asformer_20240215_101230/
-    │       ├── labels_predictions.tsv     # labels TSV, labeling_method=automated
-    │       └── labels_probs.npz           # per-sample class probabilities
-    │
-    ├── video/
-    │   ├── camera1_trial001.mp4
-    │   └── ...
-    └── audio/
-        ├── mic1_trial001.wav
-        └── ...
-</pre></div>
-</div>
-</div>
-</div>
-<p>You write the session file and the media folders. Everything under
-<code class="docutils literal notranslate"><span class="pre">.ethograph/</span></code> and <code class="docutils literal notranslate"><span class="pre">labels/backups/</span></code> is created by the GUI on first load and
-first save.</p>
-</section>
-<section id="the-home-folder">
-<h2>The home folder<a class="headerlink" href="#the-home-folder" title="Link to this heading">#</a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>~/.ethograph/
-    ├── gui_settings.yaml              # your layout, playback and dialog folders
-    ├── logs/
-    ├── cache/                         # video proxies, extracted audio, example data — safe to delete
-    └── defaults/                      # the starter project: mapping.txt, config/, …
+<p>~/.ethograph/
+├── gui_settings.yaml              # your layout, playback and dialog folders
+├── logs/
+├── cache/                         # video proxies, extracted audio, example data — safe to delete
+└── defaults/                      # the starter project: mapping.txt, config/, …</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>
 </pre></div>
 </div>
 </section>
@@ -773,8 +781,6 @@ first save.</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-folder">The project folder</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-session-folder">The session folder</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-home-folder">The home folder</a></li>
 </ul>
   </nav></div>
 

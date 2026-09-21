@@ -491,6 +491,12 @@
 <tr class="row-odd"><td><p>Video, audio or ephys drift apart — the alignment looks off</p></td>
 <td><p><strong>Help ▸ Visualize data alignment</strong> draws every stream on its own clock, so you can see which one disagrees. It is usually a mis-specified <code class="docutils literal notranslate"><span class="pre">alignment.nwb</span></code>: a trial’s timing, a stream offset or a media path pointing at the wrong file.</p></td>
 </tr>
+<tr class="row-even"><td><p>A dialog you opened is nowhere to be seen</p></td>
+<td><p>It is behind the main window or on a screen you have since unplugged — dialogs belong to the main window, so they get no taskbar entry of their own. <strong>Help ▸ Gather all windows onto this screen</strong> pulls every one back and raises it; <strong>Window</strong> lists them by name.</p></td>
+</tr>
+<tr class="row-odd"><td><p>You upgraded, but nothing changed</p></td>
+<td><p>Re-run the install with <code class="docutils literal notranslate"><span class="pre">--force</span> <span class="pre">--refresh</span></code> instead of upgrading (see <a class="reference internal" href="#upgrade-did-nothing"><span class="std std-ref">Upgrading did not change anything</span></a>).</p></td>
+</tr>
 <tr class="row-even"><td><p>Plots are squeezed to thin strips or seem missing</p></td>
 <td><p>The saved layout holds more panels than fit. Close the extras with their ✕, or use <strong>Help ▸ Reset local settings (this dataset)</strong>: it rebuilds the default panels immediately.</p></td>
 </tr>
@@ -536,6 +542,16 @@ with your shell:</p>
 <p>Then <strong>close the terminal and open a new one</strong>. <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is only read when a shell
 starts, so the current window will keep reporting the same error. After that,
 <code class="docutils literal notranslate"><span class="pre">ethograph</span> <span class="pre">launch</span></code> works from any directory.</p>
+</section>
+<section id="upgrading-did-not-change-anything">
+<span id="upgrade-did-nothing"></span><h3>Upgrading did not change anything<a class="headerlink" href="#upgrading-did-not-change-anything" title="Link to this heading">#</a></h3>
+<p>The GUI still behaves like the old version. Re-run the install instead of
+upgrading — this ignores uv’s cached package index and rebuilds the environment
+from scratch:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--force<span class="w"> </span>--refresh<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">list</span></code> shows which version is installed.</p>
 </section>
 <section id="linux-system-libraries-the-wheels-need">
 <span id="linux-system-libraries"></span><h3>Linux: system libraries the wheels need<a class="headerlink" href="#linux-system-libraries-the-wheels-need" title="Link to this heading">#</a></h3>
@@ -734,6 +750,7 @@ uncompressed. Converting in bulk up front is faster for a whole project:</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-does-this-button-do">What does this button do?</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installation-fails-with-resolution-too-deep">Installation fails with “resolution-too-deep”</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph-is-not-recognized-as-a-command"><code class="docutils literal notranslate"><span class="pre">ethograph</span></code> is not recognized as a command</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#upgrading-did-not-change-anything">Upgrading did not change anything</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#linux-system-libraries-the-wheels-need">Linux: system libraries the wheels need</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#windows-subsystem-for-linux-wsl">Windows Subsystem for Linux (WSL)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#silent-audio-on-linux">Silent audio on Linux</a></li>

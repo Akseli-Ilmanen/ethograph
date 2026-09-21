@@ -439,9 +439,9 @@
 <dt class="sig sig-object py" id="ethograph.labels.export.correct_offsets_trial">
 <span class="sig-prename descclassname"><span class="pre">ethograph.labels.export.</span></span><span class="sig-name descname"><span class="pre">correct_offsets_trial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/labels/export.html#correct_offsets_trial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.labels.export.correct_offsets_trial" title="Link to this definition">#</a></dt>
 <dd><p>Apply gap correction to a single trial’s interval DataFrame.</p>
-<p>For each subject (actor + recipient), pulls back <code class="docutils literal notranslate"><span class="pre">offset_s</span></code> when the gap
-to the next onset is smaller than <code class="docutils literal notranslate"><span class="pre">eps</span></code> so pynapple can resolve all
-intervals.</p>
+<p>For each actor (<code class="docutils literal notranslate"><span class="pre">TRACK_COLUMNS</span></code> — the recipient is an attribute, not a
+second track), pulls back <code class="docutils literal notranslate"><span class="pre">offset_s</span></code> when the gap to the next onset is
+smaller than <code class="docutils literal notranslate"><span class="pre">eps</span></code> so pynapple can resolve all intervals.</p>
 <p>Works on the per-trial format (columns: trial, onset_s, offset_s, labels,
 individual) returned by <code class="docutils literal notranslate"><span class="pre">app_state.get_trial_intervals()</span></code>.</p>
 <dl class="field-list simple">

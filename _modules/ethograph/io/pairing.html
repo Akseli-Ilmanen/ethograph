@@ -1014,6 +1014,13 @@ window.runMermaid = runMermaid;</script>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">trial_table</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"trial_table has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">trial_table</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows but </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span><span class="si">}</span><span class="s2"> trials"</span><span class="p">)</span>
 
+        <span class="n">already</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">media_cols</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">colnames</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">already</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> already pairs </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">already</span><span class="p">)</span><span class="si">}</span><span class="s2">. Pairing adds columns, so the same "</span>
+                <span class="s2">"media cannot be paired in twice; pass on_existing='replace' to rebuild the alignment "</span>
+                <span class="s2">"from this table instead."</span>
+            <span class="p">)</span>
         <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">media_cols</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">_basename</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trial_table</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span>
             <span class="n">table</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">col</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> filename"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">)</span>
@@ -1136,6 +1143,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pose_fps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">individuals</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">on_existing</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"extend"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NWBFile</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Write ``.ethograph/alignment.nwb`` from a pairing table.</span>
 
@@ -1145,12 +1153,19 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media</span>
 <span class="sd">    files the table names.</span>
 
-<span class="sd">    If ``output_path`` is an existing NWB that *already has a trials table* (a neuroconv-written</span>
-<span class="sd">    source), the streams are added to that file in place through</span>
-<span class="sd">    :func:`~ethograph.io.nwb_alignment.edit_nwb`, never rebuilt: per-trial columns from</span>
-<span class="sd">    *trial_table* are written as new trial columns (row count must equal the file's trials, else</span>
-<span class="sd">    ``ValueError``) and ``session_wide`` streams as acquisition ``ImageSeries``. Existing</span>
-<span class="sd">    acquisition names are left alone.</span>
+<span class="sd">    **What happens to a file that is already there is the caller's decision, never the</span>
+<span class="sd">    filesystem's** (``on_existing``). Annotating somebody's NWB and building a session's</span>
+<span class="sd">    own alignment are different jobs, and a function that guessed between them by</span>
+<span class="sd">    looking at the disk was eventually called from the path that wanted the other one.</span>
+
+<span class="sd">    ``on_existing="extend"`` (the default) adds to an existing NWB that *already has a</span>
+<span class="sd">    trials table* — a neuroconv-written source — in place through</span>
+<span class="sd">    :func:`~ethograph.io.nwb_alignment.edit_nwb`, never rebuilding it: per-trial columns</span>
+<span class="sd">    from *trial_table* become new trial columns (row count must equal the file's trials,</span>
+<span class="sd">    else ``ValueError``) and ``session_wide`` streams acquisition ``ImageSeries``;</span>
+<span class="sd">    existing acquisition names are left alone. ``on_existing="replace"`` deletes the file</span>
+<span class="sd">    and writes it afresh — what a *drop* or the wizard does, because an alignment built</span>
+<span class="sd">    from dropped files is derived data and rebuilding it must be idempotent.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1165,7 +1180,11 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        ``{"{stream}_{device}": (file, rate_hz, starting_time_s)}`` for streams that are one</span>
 <span class="sd">        file spanning the whole session rather than one file per trial.</span>
 <span class="sd">    output_path</span>
-<span class="sd">        Where to write (or, for an existing NWB with a trials table, extend) the ``.nwb`` file.</span>
+<span class="sd">        Where to write the ``.nwb`` file.</span>
+<span class="sd">    on_existing</span>
+<span class="sd">        What an existing *output_path* means: ``"extend"`` pairs into its trials table,</span>
+<span class="sd">        ``"replace"`` rebuilds it from scratch. Anything building a session's own</span>
+<span class="sd">        alignment passes ``"replace"``, so running it twice is the same as once.</span>
 <span class="sd">    pose_fps</span>
 <span class="sd">        Frame rate for probing pose files, when inferring times from a table whose only media</span>
 <span class="sd">        columns are ``pose_*``.</span>
@@ -1177,7 +1196,11 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    -------</span>
 <span class="sd">    The in-memory :class:`~pynwb.NWBFile`.</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">on_existing</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"extend"</span><span class="p">,</span> <span class="s2">"replace"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"on_existing must be 'extend' or 'replace', got </span><span class="si">{</span><span class="n">on_existing</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">out</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">on_existing</span> <span class="o">==</span> <span class="s2">"replace"</span><span class="p">:</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>  <span class="c1"># derived data: rebuilt whole, so pairing twice is pairing once</span>
     <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">out</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_existing_nwb_has_trials</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_pair_into_existing</span><span class="p">(</span>
             <span class="n">out</span><span class="p">,</span> <span class="n">trial_table</span><span class="p">,</span> <span class="n">stream_rates</span><span class="o">=</span><span class="n">stream_rates</span><span class="p">,</span> <span class="n">session_wide</span><span class="o">=</span><span class="n">session_wide</span><span class="p">,</span> <span class="n">individuals</span><span class="o">=</span><span class="n">individuals</span>

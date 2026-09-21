@@ -511,213 +511,6 @@
 <h2>Build NWB alignment and dataset<a class="headerlink" href="#build-nwb-alignment-and-dataset" title="Link to this heading">#</a></h2>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">describe_h5</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">show</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="n">h5py</span><span class="o">.</span><span class="n">HLObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">40s</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">obj</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">obj</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"    @</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-
-    <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"@</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">visititems</span><span class="p">(</span><span class="n">show</span><span class="p">)</span>
-
-
-<span class="n">describe_h5</span><span class="p">(</span><span class="n">h5_path</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>@fileFormatVersion = '1.0'
-auxFrameSignals/
-auxFrameSignals/doorState                (20000,) uint8
-    @DIMENSION_LABELS = array(['frame'], dtype=object)
-    @description = 'The isolation box door state as a vector of length nFramesInFile and two possible states. True (1) if door is closed. False (0) if door is open.'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = ''
-auxFrameSignals/lightState               (20000,) float32
-    @DIMENSION_LABELS = array(['frame'], dtype=object)
-    @description = 'The dimming level of the light in the isolation box in percent of the maximum light power as a vector of length nFramesInFile.'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = '%'
-auxFrameSignals/outSoundLvl              (20000,) float32
-    @DIMENSION_LABELS = array(['frame'], dtype=object)
-    @description = 'The RMS sound level outside of the isolation box in Volts as a vector of length nFramesInFile.'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'Volts'
-daqSignals                               (7, 10240000) float32
-    @DIMENSION_LABELS = array(['daqCh', 'sample'], dtype=object)
-    @description = 'The NI DAQ channel signals. The signal range is [-5.4V, 5.4V].'
-    @sampleRate_Hz = np.float64(24414.0625)
-    @units = 'Volts'
-fileInfo/
-    @fileStartTime = '2021-05-25T08:12:51.823587987+02:00'
-    @hasVideo = np.uint8(1)
-    @iFirstFrame = np.int32(380000)
-    @iSplit = np.int32(19)
-    @nFramesInFile = np.int32(20000)
-    @nSamplesInFile = np.int32(10240000)
-    @tdmsFn = 'BP_2021-05-25_08-12-51_655154_0380000.tdms'
-radioFrameSignals/
-radioFrameSignals/frq                    (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'A downsampled version of the radioSignals.'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'Hz'
-radioFrameSignals/phiA                   (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The compensation phases for antenna A in deg (in paper notation: $\\phi_i^A$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/phiB                   (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The compensation phases for antenna B in deg (in paper notation: $\\phi_i^B$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/phiC                   (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The compensation phases for antenna C in deg (in paper notation: $\\phi_i^C$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/phiD                   (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The compensation phases for antenna D in deg (in paper notation: $\\phi_i^D$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/phiM                   (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The sum of all compensation phases in deg (in paper notation: $\\phi_i^A+\\phi_i^B+\\phi_i^C+\\phi_i^D$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/powNA                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The variance of the rotated vector for antenna A at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $var(u_i^A, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powNB                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The variance of the rotated vector for antenna B at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $var(u_i^B, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powNC                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The variance of the rotated vector for antenna C at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $var(u_i^C, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powND                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The variance of the rotated vector for antenna D at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $var(u_i^D, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powNM                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The variance of the master vector at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $var(u_i^M, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powRA                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The power of antenna signal A at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $mean((u_i^A)^2, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powRB                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The power of antenna signal B at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $mean((u_i^B)^2, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powRC                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The power of antenna signal C at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $mean((u_i^C)^2, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powRD                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The power of antenna signal D at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $mean((u_i^D)^2, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/powRM                  (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The power of master signal at sender frequency (at frequency of the master vector) in dBFS (in paper notation: $mean((u_i^M)^2, 512 samples)$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'dBFS'
-radioFrameSignals/thetaA                 (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The angles of the rotated vectors for antenna A (in paper notation: $\\alpha_i^A$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/thetaB                 (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The angles of the rotated vectors for antenna B (in paper notation: $\\alpha_i^B$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/thetaC                 (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The angles of the rotated vectors for antenna C (in paper notation: $\\alpha_i^C$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/thetaD                 (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The angles of the rotated vectors for antenna D (in paper notation: $\\alpha_i^D$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioFrameSignals/thetaS                 (2, 20000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'frame'], dtype=object)
-    @description = 'The angles of the master vectors in deg (in paper notation: $\\theta_i$).'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @units = 'deg'
-radioSignals                             (2, 10240000) float32
-    @DIMENSION_LABELS = array(['radioCh', 'sample'], dtype=object)
-    @description = 'The radio channel signals (the radio instantaneous frequencies for each radio channel). The signals are in the range [-radioTrackingRange_Hz, radioTrackingRange_Hz] Hz.'
-    @sampleRate_Hz = np.float64(24414.0625)
-    @units = 'Hz'
-recInfo/
-    @daqChDescs = array(['mic position: centered, above rear stage wall; input gain: ca. 17.0 dB re 1Volt/Pascal; Type: Rode NT1',
-       'mic position: centered, above left stage wall; input gain: ca. 17.0 dB re 1Volt/Pascal; Type: Rode NT1',
-       "mic position: centered, above front stage wall, mounted on the sound isolating box's door; input gain: ca. 17.0 dB re 1Volt/Pascal; Type: Rode NT1",
-       'mic position: centered, above right stage wall; input gain: ca. 17.0 dB re 1Volt/Pascal; Type: Rode NT1',
-       'mic position: ceiling of isolation box, slightly to the right of the top camera; input gain: ca. 17.0 dB re 1Volt/Pascal; Type: Rode NT1',
-       'mic position: inside Nest1 (left side); input gain: ca. 4.9 dB re 1Volt/Pascal; Type: Rode RODELink Lav',
-       'mic position: inside Nest2 (right side); input gain: ca. 4.9 dB re 1Volt/Pascal; Type: Rode RODELink Lav'],
-      dtype=object)
-    @daqChNames = array(['Mic1', 'Mic2', 'Mic3', 'Mic4', 'Mic5', 'Mic6', 'Mic7'],
-      dtype=object)
-    @expInstanceId = 'copExpBP08'
-    @expSetupId = 'BirdPark1'
-    @frameRateRational_Hz = '390625/8192'
-    @frameRate_Hz = np.float64(47.6837158203125)
-    @nDaqChs = np.int32(7)
-    @nFramesFileRollover = np.int32(20000)
-    @nFramesInRec = np.int32(2403162)
-    @nRadioChs = np.int32(2)
-    @nSamplesInRec = np.int32(1230418944)
-    @nSamplesPerFrame = np.int32(512)
-    @nSplit = np.int32(121)
-    @radioChBirdRadioIds = array([0, 1], dtype=int32)
-    @radioChCenterFrqs_Hz = array([3.06525e+08, 3.34350e+08])
-    @radioChNames = array(['b18y8_m', 'b15y3_f'], dtype=object)
-    @radioChSenderColors = array(['pyrrole red', 'primary yellow'], dtype=object)
-    @radioChSenderDescs = array(['accelerometer transmitter device with Knowles BU21771 sensor',
-       'accelerometer transmitter device with Knowles BU21771 sensor'],
-      dtype=object)
-    @radioChSenderIds = array(['019', '010'], dtype=object)
-    @radioGain_dB = np.float64(68.0)
-    @radioLocalOscFrq_Hz = np.float64(325000000.0)
-    @radioTrackingRange_Hz = np.float64(1000000.0)
-    @recId = '655154'
-    @recStartTime = '2021-05-25T06:00:02.645987987+02:00'
-    @sampleRateRational_Hz = '390625/16'
-    @sampleRate_Hz = np.float64(24414.0625)
-</pre></div>
-</div>
-</div>
-</div>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Recording: copExpBP08, session BP_2021-05-25_08-12-51_655154_0380000</span>
 <span class="n">fps</span> <span class="o">=</span> <span class="mf">47.6837158203125</span>
 <span class="n">audio_sr</span> <span class="o">=</span> <span class="mf">24414.0625</span>  <span class="c1"># audio and accelerometer sampling rate (from dataset metadata)</span>
@@ -754,6 +547,7 @@ recInfo/
     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">audio_sr</span><span class="p">)},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
+    <span class="n">on_existing</span><span class="o">=</span><span class="s2">"replace"</span>
 <span class="p">)</span>
 
 <span class="c1"># ─── Build xarray dataset ───</span>
@@ -775,6 +569,34 @@ recInfo/
         <span class="s2">"audio_sr"</span><span class="p">:</span> <span class="n">audio_sr</span><span class="p">,</span>
     <span class="p">},</span>
 <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span><span class="gt">---------------------------------------------------------------------------</span>
+<span class="ne">ValueError</span><span class="g g-Whitespace">                                </span>Traceback (most recent call last)
+<span class="n">Cell</span> <span class="n">In</span><span class="p">[</span><span class="mi">13</span><span class="p">],</span> <span class="n">line</span> <span class="mi">33</span>
+<span class="g g-Whitespace">     </span><span class="mi">29</span>     <span class="p">}</span>
+<span class="g g-Whitespace">     </span><span class="mi">30</span> <span class="p">)</span>
+<span class="g g-Whitespace">     </span><span class="mi">31</span> 
+<span class="g g-Whitespace">     </span><span class="mi">32</span> <span class="n">nwb_path</span> <span class="o">=</span> <span class="n">recording_folder</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"alignment.nwb"</span>
+<span class="ne">---&gt; </span><span class="mi">33</span> <span class="n">pair_media</span><span class="p">(</span>
+<span class="g g-Whitespace">     </span><span class="mi">34</span>     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
+<span class="g g-Whitespace">     </span><span class="mi">35</span>     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">audio_sr</span><span class="p">)},</span>
+<span class="g g-Whitespace">     </span><span class="mi">36</span>     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
+
+<span class="nn">File ~\Documents\Code\ethograph\ethograph\io\pairing.py:412,</span> in <span class="ni">pair_media</span><span class="nt">(trial_table, stream_rates, session_wide, output_path, pose_fps, individuals, on_existing)</span>
+<span class="g g-Whitespace">    </span><span class="mi">360</span><span class="w"> </span><span class="sd">"""Write ``.ethograph/alignment.nwb`` from a pairing table.</span>
+<span class="g g-Whitespace">    </span><span class="mi">361</span><span class="sd"> </span>
+<span class="g g-Whitespace">    </span><span class="mi">362</span><span class="sd">     Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one</span>
+<span class="sd">   (...)    409     The in-memory :class:`~pynwb.NWBFile`.</span>
+<span class="g g-Whitespace">    </span><span class="mi">410</span><span class="sd"> """</span>
+<span class="g g-Whitespace">    </span><span class="mi">411</span> <span class="k">if</span> <span class="n">on_existing</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"extend"</span><span class="p">,</span> <span class="s2">"replace"</span><span class="p">):</span>
+<span class="ne">--&gt; </span><span class="mi">412</span>     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"on_existing must be 'extend' or 'replace', got </span><span class="si">{</span><span class="n">on_existing</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">413</span> <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+<span class="g g-Whitespace">    </span><span class="mi">414</span> <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">out</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">on_existing</span> <span class="o">==</span> <span class="s2">"replace"</span><span class="p">:</span>
+
+<span class="ne">ValueError</span>: on_existing must be 'extend' or 'replace', got 'overwrite'
 </pre></div>
 </div>
 </div>
@@ -820,6 +642,65 @@ recInfo/
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Saved to c:\Users\aksel\Documents\Code\ethograph\data\birdpark\copExpBP08\BP_2021-05-25_08-12-51_655154_0380000.nc
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># ─── Microphone envelopes + sliding-window correlation with the vibration ───</span>
+<span class="c1"># Each microphone gets the same highpass envelope as the vibration, so both live on</span>
+<span class="c1"># the 1000 Hz `time_env_high` clock and can be correlated sample-for-sample.</span>
+<span class="n">corr_win_s</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="n">env_rate_high</span> <span class="o">=</span> <span class="mf">1000.0</span>
+
+<span class="n">mic_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"mic_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">daqSignals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+<span class="n">audio_envs</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="n">daqSignals</span><span class="p">:</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">mic_env</span> <span class="o">=</span> <span class="n">highpass_envelope</span><span class="p">(</span><span class="n">channel</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">audio_sr</span><span class="p">,</span> <span class="n">env_rate</span><span class="o">=</span><span class="n">env_rate_high</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="mf">200.0</span><span class="p">)</span>
+    <span class="n">audio_envs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mic_env</span><span class="p">)</span>
+
+<span class="n">vib_high</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">vibration_highpass</span><span class="o">.</span><span class="n">values</span>
+<span class="n">n</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">vib_high</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">audio_envs</span><span class="p">))</span>
+<span class="n">audio_env</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">e</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">audio_envs</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">vib_high</span> <span class="o">=</span> <span class="n">vib_high</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+<span class="n">env_high_time_c</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">time_env_high</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sliding_corr</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Pearson correlation of ``a`` and ``b`` over a centred sliding window."""</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">roll</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"same"</span><span class="p">)</span>
+
+    <span class="n">n_win</span> <span class="o">=</span> <span class="n">roll</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+    <span class="n">mean_a</span><span class="p">,</span> <span class="n">mean_b</span> <span class="o">=</span> <span class="n">roll</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_win</span><span class="p">,</span> <span class="n">roll</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_win</span>
+    <span class="n">cov</span> <span class="o">=</span> <span class="n">roll</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_win</span> <span class="o">-</span> <span class="n">mean_a</span> <span class="o">*</span> <span class="n">mean_b</span>
+    <span class="n">var_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">roll</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_win</span> <span class="o">-</span> <span class="n">mean_a</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">var_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">roll</span><span class="p">(</span><span class="n">b</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_win</span> <span class="o">-</span> <span class="n">mean_b</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">denom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_a</span> <span class="o">*</span> <span class="n">var_b</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">cov</span><span class="p">,</span> <span class="n">denom</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">cov</span><span class="p">),</span> <span class="n">where</span><span class="o">=</span><span class="n">denom</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+
+<span class="n">window</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">corr_win_s</span> <span class="o">*</span> <span class="n">env_rate_high</span><span class="p">))</span>
+<span class="n">pair_names</span><span class="p">,</span> <span class="n">pair_corrs</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">individual</span><span class="o">.</span><span class="n">values</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">mic</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mic_names</span><span class="p">):</span>
+        <span class="n">pair_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ind</span><span class="si">}</span><span class="s2"> × </span><span class="si">{</span><span class="n">mic</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">pair_corrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sliding_corr</span><span class="p">(</span><span class="n">vib_high</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">audio_env</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">window</span><span class="p">))</span>
+
+<span class="n">ds</span><span class="p">[</span><span class="s2">"audio_env"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+    <span class="n">audio_env</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time_env_high"</span><span class="p">,</span> <span class="s2">"microphone"</span><span class="p">],</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time_env_high"</span><span class="p">:</span> <span class="n">env_high_time_c</span><span class="p">,</span> <span class="s2">"microphone"</span><span class="p">:</span> <span class="n">mic_names</span><span class="p">}</span>
+<span class="p">)</span>
+<span class="n">ds</span><span class="p">[</span><span class="s2">"sliding_corr"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">pair_corrs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time_env_high"</span><span class="p">,</span> <span class="s2">"pair"</span><span class="p">],</span>
+    <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time_env_high"</span><span class="p">:</span> <span class="n">env_high_time_c</span><span class="p">,</span> <span class="s2">"pair"</span><span class="p">:</span> <span class="n">pair_names</span><span class="p">},</span>
+<span class="p">)</span>
+
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">nc_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">)</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">nc_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

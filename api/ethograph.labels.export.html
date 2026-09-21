@@ -420,6 +420,13 @@
                   
   <section id="module-ethograph.labels.export">
 <span id="ethograph-labels-export"></span><h1>ethograph.labels.export<a class="headerlink" href="#module-ethograph.labels.export" title="Link to this heading">#</a></h1>
+<p>Computed columns added to the labels table on save.</p>
+<p>Everything here holds for any dataset: a label’s duration, its place in the
+trial’s sequence, the trial’s timing on the session clock, and whatever the
+trial metadata table carries.</p>
+<p>Columns that only mean something for one lab do not belong here. They live in
+<code class="docutils literal notranslate"><span class="pre">labels/exporters/</span></code> as a named exporter the user picks in the export
+settings; this module hands it the enriched table and the session’s context.</p>
 <p class="rubric">Functions</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
@@ -427,7 +434,7 @@
 <td><p>Apply gap correction to a single trial's interval DataFrame.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="labels.html#ethograph.labels.export.enrich_labels_df" title="ethograph.labels.export.enrich_labels_df"><code class="xref py py-obj docutils literal notranslate"><span class="pre">enrich_labels_df</span></code></a></p></td>
-<td><p>Enrich a raw labels DataFrame with computed columns for analysis export.</p></td>
+<td><p>Add the computed analysis columns to a raw labels table.</p></td>
 </tr>
 </tbody>
 </table>

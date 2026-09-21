@@ -464,7 +464,7 @@
   <section class="tex2jax_ignore mathjax_ignore" id="exporting-labels">
 <span id="target-exporting-labels"></span><h1>Exporting labels<a class="headerlink" href="#exporting-labels" title="Link to this heading">#</a></h1>
 <p><strong>File → Export labels…</strong> opens the export panel described below (save button,
-post-processing actions, remote backup settings).</p>
+the <strong>Columns</strong> selector, remote backup settings).</p>
 <section id="label-file-format">
 <h2>Label file format<a class="headerlink" href="#label-file-format" title="Link to this heading">#</a></h2>
 <p>Labels are stored in a <strong>TSV file</strong> alongside the <code class="docutils literal notranslate"><span class="pre">.nc</span></code> data file. The <code class="docutils literal notranslate"><span class="pre">.nc</span></code>
@@ -591,14 +591,6 @@ recalculated.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">session</span></code></p></td>
-<td><p>str</p></td>
-<td><p>Session identifier from <code class="docutils literal notranslate"><span class="pre">ds.attrs[&quot;session&quot;]</span></code>. Only present when <code class="docutils literal notranslate"><span class="pre">session</span></code> is set in the dataset attributes.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">session_trial</span></code></p></td>
-<td><p>str</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">&quot;{session}_{trial}&quot;</span></code> for grouping across sessions. Only present when <code class="docutils literal notranslate"><span class="pre">session</span></code> is set.</p></td>
-</tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">duration</span></code></p></td>
 <td><p>float</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">offset_s</span> <span class="pre">-</span> <span class="pre">onset_s</span></code> in seconds</p></td>
@@ -660,6 +652,76 @@ trial start/stop times (i.e. <code class="docutils literal notranslate"><span cl
 </ul>
 </div>
 </section>
+<section id="lab-specific-columns">
+<span id="target-lab-specific-columns"></span><h3>Lab-specific columns<a class="headerlink" href="#lab-specific-columns" title="Link to this heading">#</a></h3>
+<p>Some columns only mean something for one lab’s data. The export panel’s
+<strong>Columns</strong> selector chooses which — if any — are added:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Choice</p></th>
+<th class="head"><p>What the TSV carries</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Standard</strong> (default)</p></td>
+<td><p>Only the columns documented above</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Standard + &lt;lab&gt;</strong></p></td>
+<td><p>The standard columns <strong>plus</strong> that lab’s own</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A lab’s exporter always runs <em>after</em> the standard columns, on the table they
+produced. Choosing one never means going without the standard export, and an
+exporter that dropped a required column is refused rather than written.</p>
+<p>The choice is stored in the global settings (<code class="docutils literal notranslate"><span class="pre">gui_settings.yaml</span></code>), so it
+follows you across sessions rather than being a property of one dataset.</p>
+<p>Ethograph ships one:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Exporter</p></th>
+<th class="head"><p>Columns</p></th>
+<th class="head"><p>Requires</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Crow lab</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">session</span></code> — session identifier<br><code class="docutils literal notranslate"><span class="pre">session_trial</span></code> — <code class="docutils literal notranslate"><span class="pre">&quot;{session}_{trial}&quot;</span></code>, for grouping across sessions<br><code class="docutils literal notranslate"><span class="pre">pulse_onsets</span></code> — the trial’s pulse times, on the trial’s first row only</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ds.attrs[&quot;session&quot;]</span></code>, a <code class="docutils literal notranslate"><span class="pre">pulse_onsets</span></code> variable</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A session missing those simply gets no such column, so picking an exporter
+whose data you do not have is harmless.</p>
+<section id="adding-your-labs-columns">
+<h4>Adding your lab’s columns<a class="headerlink" href="#adding-your-labs-columns" title="Link to this heading">#</a></h4>
+<p>Exporters live in <code class="docutils literal notranslate"><span class="pre">ethograph/labels/exporters/</span></code>. Add a module beside the
+others, register it, and open a pull request:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># ethograph/labels/exporters/mylab.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.exporters</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExportContext</span><span class="p">,</span> <span class="n">register</span>
+
+
+<span class="nd">@register</span><span class="p">(</span><span class="s2">"mylab"</span><span class="p">,</span> <span class="s2">"My lab — the columns my analysis expects"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">my_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ExportContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">"my_column"</span><span class="p">]</span> <span class="o">=</span> <span class="o">...</span>
+    <span class="k">return</span> <span class="n">df</span>
+</pre></div>
+</div>
+<p>Then add <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">ethograph.labels.exporters</span> <span class="pre">import</span> <span class="pre">mylab</span></code> to <code class="docutils literal notranslate"><span class="pre">_load_builtin()</span></code>
+in that package’s <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>, so registering happens on import.</p>
+<p><code class="docutils literal notranslate"><span class="pre">df</span></code> is the table with every standard column already on it, one row per
+non-background label. <code class="docutils literal notranslate"><span class="pre">ctx</span></code> carries what the session knows: <code class="docutils literal notranslate"><span class="pre">ctx.dt</span></code> (the data
+tree), <code class="docutils literal notranslate"><span class="pre">ctx.alignment</span></code>, <code class="docutils literal notranslate"><span class="pre">ctx.metadata_df</span></code> and <code class="docutils literal notranslate"><span class="pre">ctx.session_dir</span></code> — read a
+sidecar file from the last of these if your columns come from outside the
+dataset. Return the table; add or change your own columns, but leave the ones
+a labels file is made of alone.</p>
+<p>The registered description is shown in the selector prefixed with
+<code class="docutils literal notranslate"><span class="pre">Standard</span> <span class="pre">+</span> </code>, so write only what your exporter adds.</p>
+</section>
+</section>
+<hr class="docutils" />
 <section id="example">
 <h3>Example<a class="headerlink" href="#example" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -807,6 +869,10 @@ and on your PATH; the remote folder must be a git repository.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#per-trial-metadata-columns">Per-trial metadata columns</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#computed-columns-generated-on-save">Computed columns (generated on save)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#timing-columns-computed-requires-alignment">Timing columns (computed, requires alignment)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lab-specific-columns">Lab-specific columns</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-your-labs-columns">Adding your lab’s columns</a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example">Example</a></li>
 </ul>
 </li>

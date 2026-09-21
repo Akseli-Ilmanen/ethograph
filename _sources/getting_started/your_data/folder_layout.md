@@ -7,23 +7,41 @@ you:
 |---|---|---|
 | **Session folder** — one per recording | You: the session file. The GUI: labels, alignment, layout. | Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session's videos is itself a fine session folder, but nothing requires it. |
 | **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag & drop. Your session folders can live here too, but don't have to — Ethograph never copies data into it. |
-| `~/.ethograph/` | The GUI. | Your settings, caches, and a starter project used while no project folder is chosen. |
+| `~/.ethograph/` | The GUI. | Your settings, caches, and the **starter project** — the project folder a fresh install begins in. |
 
 ## The project folder
 
-Chosen once on the start page (**Project folder**) and remembered across
-restarts. Sessions are *listed* from wherever they are, so you can keep your
-session folders inside it (as below) or on another drive. Either way, the
-folder holds what you build on top of them:
+**A project folder is always set.** A fresh install starts in the *starter
+project*, `~/.ethograph/defaults/` — it ships a `mapping.txt`, the example configs
+and the reference geometries, so the GUI works the moment you open it and a quick
+look at a dataset needs no set-up at all.
+
+Choose a folder of your own before you start a study: labelling writes the label
+names, and models write their configs and runs, into the project folder, and
+having that be the starter one means every study shares a single vocabulary. The
+start page's **Project folder** bar says which one you are in and links here;
+**Clear** returns to the starter project rather than to none.
+
+```{note}
+**Changed in a recent version.** The project folder used to be optional, and
+`project.yaml` inside it held the individuals, the excluded files and the
+skeleton. Neither is true any more — see [what moved where](#what-moved-out-of-projectyaml)
+below. Nothing is lost: opening a folder that still has a `project.yaml` folds its
+lists into your settings once and tells you it did.
+```
+
+Sessions are *listed* from wherever they are, so you can keep your session folders
+inside the project (as below) or on another drive. Either way, the folder holds
+what you build on top of them:
 
 ```
 my_project/                            # chosen on the start page
     ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
-    ├── project.yaml                   # study defaults: individuals, rig, pose software, skeleton
     ├── config/
     │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
     │   ├── spot.yaml                  # pixel event-spotting config
+    │   ├── skeleton/                  # one YAML per skeleton (crow.yaml, mouse.yaml, …)
     │   └── space/                     # reference geometries for the Space plot
     ├── runs/
     │   └── lightgbm/                  # lightgbm models trained from the Model menu
@@ -36,77 +54,74 @@ my_project/                            # chosen on the start page
 ```{important}
 **One session folder, one `.nc`.** A second `.nc` at the root is an old version,
 and Ethograph refuses to guess which one is current — in the GUI and in a
-`segment` or `spot` run alike. Tell the project which files to skip, once, in
-`project.yaml`:
+`segment` or `spot` run alike. Name the old one once, on the start page
+(**Excluded files…**) or from the dialog that asks; it is kept in your
+`gui_settings.yaml` as `ignore_files` and applies in every session folder:
 
 ```yaml
-ignore: [Trial_data.nc, "*_old.nc"]   # file names or globs, matched in every session folder
+ignore_files: [Trial_data.nc, "*_old.nc"]   # file names or globs
 ```
 
-The GUI offers this as a button when it hits the case. A file named explicitly
-(`source: .../Trial_data3.nc`) is always loaded, whatever the list says.
+A file named explicitly (`source: .../Trial_data3.nc`) is always loaded, whatever
+the list says. The list is yours rather than the project's on purpose: a project
+folder may be copied to another machine, and which file is current is answered by
+whoever is sitting in front of it.
 ```
 
-`project.yaml` holds what recurs across the study's sessions. Every key is
-optional and every key is a default: a session's own record (the individuals the
-wizard wrote) or its dataset overrides it. Machine paths never go in it, so it can
-be committed and shared.
+### What moved out of `project.yaml`
 
-```yaml
-individuals: [crow1, crow2]
-individuals_mode: inherit      # inherit (default) | define | both — see below
-ignore: [Trial_data.nc]        # old dataset versions to skip in every session folder
-rig: CrowBench                 # the wizard notebook under wizard/ to start from
-pose:
-  source_software: DeepLabCut
-  skeleton:                    # the skeleton itself, same shape as the skeleton editor saves
-    keypoints: [beak, head, tail]
-    connections:
-      - {start: beak, end: head}
-      - {start: head, end: tail}
-```
+**There is no `project.yaml` any more.** The project folder holds *files* — the
+label vocabulary, the pipeline configs, the skeletons, the runs — and nothing you
+have to learn a settings schema for. What used to live in that file now lives where
+it belongs:
 
-You do not have to write this file by hand: the **Settings** menu edits the parts
-of it that decide what you can label.
+| Used to be | Now |
+|---|---|
+| `individuals` | `extra_individuals` in `gui_settings.yaml` — added to the names your data declares, edited in **Settings ▸ Create / edit individuals…** or the sidebar's **Edit individuals…** |
+| `ignore` | `ignore_files` in `gui_settings.yaml`, edited on the start page |
+| `pose.skeleton` | `config/skeleton/{name}.yaml`, one file per skeleton |
+| `rig` | Nothing: the wizard names the rig after the session folder |
+| `pose.source_software` | Remembered from the last time you answered the drop card |
 
-| Settings ▸ | Edits | What it decides |
-|---|---|---|
-| **Create / edit label mapping…** | `mapping.txt` | The label vocabulary as a table: the id (fixed — it is the label's identity in `labels.tsv`), the name, the branch and whether the label is a state or a point event. With no file yet the home defaults fill the table, and the first save writes the project's own. |
-| **Create / edit individuals…** | `individuals`, `individuals_mode` | Who can act or receive, so the individual selector is never empty — a video-only session labels somebody without any pose data at all. |
-| **Edit skeleton…** | `pose.skeleton` | The skeleton drawn over the pose, plus which source wins when the data carries one too. |
+If you already have a `project.yaml`, choosing that project folder folds its
+`individuals` and `ignore` lists into your settings once and says so. The file is
+left alone; nothing reads it afterwards.
 
-`individuals_mode` is that middle question's answer:
+### Who can be labelled
 
-* `inherit` (the default) — the individuals the data names, falling back to
-  `individuals` when it names none.
-* `define` — `individuals`, whatever the data says.
-* `both` — the data's names plus `individuals`. Never a default; you choose it.
+**The data names its individuals; your own list only adds to them.** First what
+the data declares — the session record, else the dataset's `individual` dimension
+([movement](https://movement.neuroinformatics.dev)'s convention, and the spelling
+a pose file carries: `position (time, individual, keypoint, space)`; the older
+plural `individuals` is read too) — then `extra_individuals`. There is no mode and
+no override, so the answer is always a superset of what your data declares, and
+the dialog shows exactly that: the data's names greyed out on top, yours editable
+below.
 
-"The individuals the data names" is, in order: the session record written by the
-wizard or a notebook, else the **`individual` dimension** of the loaded dataset —
-[movement](https://movement.neuroinformatics.dev)'s convention, and the spelling a
-pose file (DLC, SLEAP, …) or an `.nc` built from one carries:
+Until somebody is named *and* a `mapping.txt` holds a class, the Labels tab is
+greyed out and the label keys refuse to place anything — there is no individual to
+attribute a label to. The tab says which half is missing and opens the dialog that
+fixes it.
 
-```
-position  (time, individual, keypoint, space)
-```
+### The skeleton
 
-Singular `individual` is the convention; the older plural `individuals` is read
-too, and Ethograph never assumes one spelling — it uses whichever your dataset
-has. A dataset with no such dimension (a plain feature `.nc`, a video-only drop)
-names nobody, so `individuals` in `project.yaml` is what you get, and **Settings ▸
-Create / edit individuals…** is how you write it.
+One YAML per skeleton in `config/skeleton/`, named by its file (`crow.yaml` →
+"crow"), because a study with two rigs has two skeletons. **Settings ▸ Edit
+skeleton…** draws one on your pose data and saves it under a name; with no project
+folder it goes to your own library under `~/.ethograph/defaults/config/skeleton/`,
+so drawing a skeleton never requires a project either.
 
-The skeleton has one more precedence step: a skeleton you drew for this session
-outranks both, then the data's own and the project's in the order **Settings ▸
-Edit skeleton…** asks for (the data's by default). Pick the project's to edit the
-skeleton without touching an NWB file; that choice is a preference, so it lives
-in `gui_settings.yaml`, not in the project.
+Precedence: a skeleton you drew for this session outranks everything, then the
+data's own (an NWB that carries one) and the library's in the order the dialog
+asks for — **the data's by default**, since a file that describes its own skeleton
+is usually right. Pick the library's to edit a skeleton without touching an NWB.
+A library holding exactly one skeleton needs no choosing.
 
-Without a project folder, `~/.ethograph/defaults/` stands in — it has the same
-shape and ships with a default `mapping.txt`, example configs and geometries.
-See {ref}`target-label-mapping` for how the mapping is resolved between the
-session, the project and that backup.
+The starter project, `~/.ethograph/defaults/`, has this same shape and ships with
+a `mapping.txt`, the example configs and the geometries — it *is* a project folder,
+not a fallback, which is why a fresh install can label and plot straight away. See
+{ref}`target-label-mapping` for how the mapping is resolved between a session and
+its project.
 
 ## The session folder
 

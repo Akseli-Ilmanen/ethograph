@@ -3,18 +3,28 @@
 
 ## Creating labels
 
-The **Labelling** dropdown at the top of the Labels tab chooses where a new
-label's boundaries come from. Both modes use the same label keys (see image
-below), and everything after the time is read — undo, overlap resolution,
-the label table, the grids, export — is identical.
+Until there is somebody to label and something to label them with, the Labels
+tab shows what is missing and the button that fixes it — **Define individuals…**
+(Settings' individuals dialog) or **Define labels…** (the `mapping.txt` editor).
+Data that names its own individuals answers the first half for you; you can
+still add more. Only the missing half is offered.
 
-### On the time series (click the plots)
+Once past that, the top row of the Labels tab holds the two choices every label
+answers: **Mode** — where a new label's boundaries come from — and **Overlay** — how
+existing labels are drawn (*Full plot*, *Bottom strip*, *Hidden*, or
+*Per plot type…* to set them one plot type at a time).
+
+Both modes use the same label keys (see image below), and everything after the
+time is read — undo, overlap resolution, the label table, the grids, export —
+is identical.
+
+### Graph based labelling
 
 1. Press one of the number/letter keys to activate a behavioural label.
 2. Click twice on a plot to define the start and end boundaries of the label. For point events, click only once.
 3. The label is created and displayed with a colour-coded overlay.
 
-### At the current frame (the label key places it)
+### Frame by frame labelling
 
 The classic ethogram-software workflow, for labelling from the video alone:
 
@@ -37,15 +47,22 @@ panel** popup, and with **Open a label timeline when no panel is shown** ticked
 other panel.
 
 
+Under the branch tables: **Label table…** (every trial's labels as a
+spreadsheet), **+ Add label** (the `mapping.txt` editor — the one place a class
+is created) and **+ Add branch** (a second set of labels drawn above the first,
+at most three: Full / Top1 / Top2).
+
 ![keyboard](../../_static/media/keyboard.png)
 
 ---
 
 ## Who the labels are about
 
-The **Individual** section at the top of the right sidebar is shown for every
-panel except the video, whatever backend the data came from. It holds two
-dropdowns:
+The **Individual** section sits at the top of the right sidebar and is always
+there — for every panel, the video and the label timeline included, whatever
+backend the data came from. The names it offers are the ones resolved from your
+data and **Settings ▸ Create / edit individuals…** (see
+{doc}`../your_data/folder_layout`). It holds two dropdowns:
 
 - **Individual** — the animal performing the behaviour. Switching it switches
   the labels you see and create.

@@ -2157,6 +2157,43 @@ window.runMermaid = runMermaid;</script>
     <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">scratch</span><span class="p">[</span><span class="n">INDIVIDUALS_TABLE</span><span class="p">]</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()[</span><span class="s2">"individual"</span><span class="p">]]</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">alignment_extras</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""What an existing alignment holds that re-pairing its media cannot rebuild.</span>
+
+<span class="sd">    Media filenames and trial timing come back from the files themselves, so</span>
+<span class="sd">    rebuilding them costs nothing. Anything *else* was put there by a person — the</span>
+<span class="sd">    individuals they declared, the metadata columns they typed into the trials</span>
+<span class="sd">    table — and a rebuild would drop it silently. Returns one human-readable phrase</span>
+<span class="sd">    per finding, so a caller can name them in a confirmation; ``[]`` when a rebuild</span>
+<span class="sd">    loses nothing.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.metadata_table</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_media_column</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">NWBHDF5IO</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="s2">"r"</span><span class="p">,</span> <span class="n">load_namespaces</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">io</span><span class="p">:</span>
+            <span class="n">nwbfile</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">read_individuals</span><span class="p">(</span><span class="n">nwbfile</span><span class="p">):</span>
+                <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the individuals it declares (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">read_individuals</span><span class="p">(</span><span class="n">nwbfile</span><span class="p">))</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">nwbfile</span><span class="o">.</span><span class="n">trials</span>
+            <span class="k">if</span> <span class="n">table</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">c</span>
+                    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">colnames</span>
+                    <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"start_time"</span><span class="p">,</span> <span class="s2">"stop_time"</span><span class="p">,</span> <span class="s2">"trial"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_media_column</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+                <span class="p">]</span>
+                <span class="k">if</span> <span class="n">extra</span><span class="p">:</span>
+                    <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"trial metadata (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">extra</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="c1"># Unreadable is not the same as empty: say so, so a caller still asks.</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Could not inspect </span><span class="si">%s</span><span class="s2">; treating it as holding work worth asking about"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="s2">"contents this drop could not read"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">set_individuals</span><span class="p">(</span><span class="n">nwb_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">individuals</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Edit the individuals list of an existing session record in place."""</span>
     <span class="k">with</span> <span class="n">edit_nwb</span><span class="p">(</span><span class="n">nwb_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">nwbfile</span><span class="p">:</span>

@@ -808,6 +808,7 @@ window.runMermaid = runMermaid;</script>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
 
@@ -836,6 +837,100 @@ window.runMermaid = runMermaid;</script>
 <span class="n">LABELING_CURATED</span> <span class="o">=</span> <span class="s2">"curated"</span>
 <span class="n">LABELING_METHODS</span> <span class="o">=</span> <span class="p">(</span><span class="n">LABELING_MANUAL</span><span class="p">,</span> <span class="n">LABELING_AUTOMATED</span><span class="p">,</span> <span class="n">LABELING_CURATED</span><span class="p">)</span>
 
+<span class="c1"># ── The label column schema ──────────────────────────────────────────────</span>
+<span class="c1">#</span>
+<span class="c1"># One declaration of every column a labels table can carry. Every list of</span>
+<span class="c1"># column names in the codebase is a query over it, so adding a column is one</span>
+<span class="c1"># edit here and nothing can silently disagree about its dtype, its default or</span>
+<span class="c1"># whether it is required.</span>
+
+<span class="c1">#: A column identifying the row's trial. One per table, never per label.</span>
+<span class="n">KIND_KEY</span> <span class="o">=</span> <span class="s2">"key"</span>
+<span class="c1">#: A per-label column: its value is this label's, and lives in the in-memory</span>
+<span class="c1">#: interval frames.</span>
+<span class="n">KIND_LABEL</span> <span class="o">=</span> <span class="s2">"label"</span>
+<span class="c1">#: A per-trial column: the same value repeated on every row of a trial.</span>
+<span class="n">KIND_TRIAL_META</span> <span class="o">=</span> <span class="s2">"trial_meta"</span>
+<span class="c1">#: A column computed on save for analysis (``labels/export.py``), never read</span>
+<span class="c1">#: back as truth. A study's own columns are of this kind too — listing one</span>
+<span class="c1">#: here fixes where it lands in the file, not who produces it.</span>
+<span class="n">KIND_DERIVED</span> <span class="o">=</span> <span class="s2">"derived"</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LabelColumn</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One column of the labels table.</span>
+
+<span class="sd">    ``dtype`` and ``default`` are only meaningful for the kinds that are</span>
+<span class="sd">    stored: a derived column is whatever the producer computed.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">dtype</span><span class="p">:</span> <span class="nb">type</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">default</span><span class="p">:</span> <span class="nb">object</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: Part of the minimum a file must have to be a labels file at all.</span>
+    <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1">#: Must carry a value on *every* row. ``offset_s`` is excluded: a point</span>
+    <span class="c1">#: event legitimately stores it as NaN.</span>
+    <span class="n">nonnull</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1">#: Decimals to show in the label table (the stored value is untouched).</span>
+    <span class="n">decimals</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: Filtered by a threshold in the label table rather than a checklist.</span>
+    <span class="n">numeric_filter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<span class="c1">#: Every known column, in the order a labels file is written. Unknown columns</span>
+<span class="c1">#: (a study's own, an older file's) follow in their existing order.</span>
+<span class="n">LABEL_SCHEMA</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">LabelColumn</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"session"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"trial"</span><span class="p">,</span> <span class="n">KIND_KEY</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nonnull</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"session_trial"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"individual"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nonnull</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"individual_rec"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">NO_RECIPIENT</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"labels"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nonnull</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"onset_s"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nonnull</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">numeric_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"offset_s"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">numeric_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"event_type"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">EVENT_TYPE_STATE</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"confidence"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">HUMAN_CONFIDENCE</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">numeric_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"labeling_method"</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">LABELING_MANUAL</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"trial_onset"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"trial_offset"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"onset_global"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"offset_global"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"sequence_idx"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"sequence"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="c1"># Legacy: an older file's ``human_verified`` is carried along untouched and</span>
+    <span class="c1"># never read — ``labeling_method`` answers that per label now.</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"human_verified"</span><span class="p">,</span> <span class="n">KIND_DERIVED</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"changepoint_corrected"</span><span class="p">,</span> <span class="n">KIND_TRIAL_META</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"prediction_source"</span><span class="p">,</span> <span class="n">KIND_TRIAL_META</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">),</span>
+    <span class="n">LabelColumn</span><span class="p">(</span><span class="s2">"n_samples"</span><span class="p">,</span> <span class="n">KIND_TRIAL_META</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">numeric_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">schema_columns</span><span class="p">(</span><span class="o">*</span><span class="n">kinds</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The names of every column of *kinds*, in file order."""</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="n">kinds</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">schema_column</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LabelColumn</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The declaration of *name*, or ``None`` for a column the schema</span>
+<span class="sd">    does not know (a study's own, an older file's)."""</span>
+    <span class="k">return</span> <span class="nb">next</span><span class="p">((</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">write_order</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""*columns* ordered as a labels file is written: the schema's order</span>
+<span class="sd">    first, then anything it does not know, in the order given."""</span>
+    <span class="n">known</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">known</span> <span class="o">+</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">known</span><span class="p">)]</span>
+
+
+<span class="c1">#: The per-label columns, in the order the in-memory interval frames carry</span>
+<span class="c1">#: them. A contract test pins this to the schema's ``KIND_LABEL`` set; only the</span>
+<span class="c1">#: order is stated here, because the file's order and the frame's differ.</span>
 <span class="n">INTERVAL_COLUMNS</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"onset_s"</span><span class="p">,</span>
     <span class="s2">"offset_s"</span><span class="p">,</span>
@@ -847,16 +942,7 @@ window.runMermaid = runMermaid;</script>
     <span class="s2">"labeling_method"</span><span class="p">,</span>
 <span class="p">]</span>
 
-<span class="n">INTERVAL_DTYPES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"onset_s"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
-    <span class="s2">"offset_s"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
-    <span class="s2">"labels"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
-    <span class="s2">"individual"</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
-    <span class="s2">"individual_rec"</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
-    <span class="s2">"event_type"</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
-    <span class="s2">"confidence"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
-    <span class="s2">"labeling_method"</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
-<span class="p">}</span>
+<span class="n">INTERVAL_DTYPES</span> <span class="o">=</span> <span class="p">{</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">KIND_LABEL</span><span class="p">}</span>
 
 <span class="c1">#: The columns identifying whose label a row is — the actor and the recipient.</span>
 <span class="c1">#: What identifies a label row's subject: who acted, and towards whom.</span>

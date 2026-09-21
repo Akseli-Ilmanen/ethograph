@@ -534,6 +534,19 @@ you open uses it.</p>
 session (the GUI warns when they disagree). Without a project <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>,
 the default in <code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/mapping.txt</span></code> is used.</p>
 </div>
+</section>
+<section id="editing-it-from-the-gui">
+<h2>Editing it from the GUI<a class="headerlink" href="#editing-it-from-the-gui" title="Link to this heading">#</a></h2>
+<p><strong>Settings ▸ Create / edit label mapping.txt…</strong> opens the file in use as a table:
+one row per label, with the ID read-only (it is the label’s identity in
+<code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> — renaming a label keeps its rows, changing its ID would orphan
+them), and the name, branch and event type editable. <em>Add label</em> takes the next
+free ID; <em>Open mapping.txt…</em> loads a different file to edit.</p>
+<p>With no <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> yet, the table starts from <code class="docutils literal notranslate"><span class="pre">~/.ethograph/defaults/</span></code>, and
+saving writes the project’s own. Saving reloads the vocabulary everywhere at
+once — the branch sections, the plots and the label table.</p>
+<p>File ▸ Import labels only ever <em>reads</em> the mapping (and appends classes the
+imported file names, below); it is not a second place to define it.</p>
 <hr class="docutils" />
 </section>
 <section id="importing-labels-from-other-formats">
@@ -627,6 +640,7 @@ changepoint correction) untouched — they have no duration, so concepts like
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#format">Format</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-mapping-txt-lives">Where <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> lives</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#editing-it-from-the-gui">Editing it from the GUI</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#importing-labels-from-other-formats">Importing labels from other formats</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-vs-point-events">State vs point events</a></li>
 </ul>

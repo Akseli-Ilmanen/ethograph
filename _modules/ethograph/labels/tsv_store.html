@@ -816,42 +816,29 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">INTERVAL_COLUMNS</span><span class="p">,</span>
     <span class="n">INTERVAL_DTYPES</span><span class="p">,</span>
+    <span class="n">KIND_KEY</span><span class="p">,</span>
+    <span class="n">KIND_LABEL</span><span class="p">,</span>
+    <span class="n">KIND_TRIAL_META</span><span class="p">,</span>
+    <span class="n">LABEL_SCHEMA</span><span class="p">,</span>
     <span class="n">empty_intervals</span><span class="p">,</span>
     <span class="n">ensure_confidence</span><span class="p">,</span>
     <span class="n">ensure_event_type</span><span class="p">,</span>
     <span class="n">ensure_individual_rec</span><span class="p">,</span>
     <span class="n">ensure_labeling_method</span><span class="p">,</span>
+    <span class="n">schema_columns</span><span class="p">,</span>
+    <span class="n">write_order</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
-<span class="n">TSV_COLUMNS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"trial"</span><span class="p">,</span>
-    <span class="s2">"individual"</span><span class="p">,</span>
-    <span class="s2">"individual_rec"</span><span class="p">,</span>
-    <span class="s2">"labels"</span><span class="p">,</span>
-    <span class="s2">"onset_s"</span><span class="p">,</span>
-    <span class="s2">"offset_s"</span><span class="p">,</span>
-    <span class="s2">"event_type"</span><span class="p">,</span>
-    <span class="s2">"confidence"</span><span class="p">,</span>
-    <span class="s2">"labeling_method"</span><span class="p">,</span>
-    <span class="s2">"changepoint_corrected"</span><span class="p">,</span>
-    <span class="s2">"prediction_source"</span><span class="p">,</span>
-    <span class="s2">"n_samples"</span><span class="p">,</span>
-<span class="p">]</span>
+<span class="c1">#: Every stored column, in file order. Derived from the schema, so a column</span>
+<span class="c1">#: added there needs no edit here.</span>
+<span class="n">TSV_COLUMNS</span> <span class="o">=</span> <span class="n">schema_columns</span><span class="p">(</span><span class="n">KIND_KEY</span><span class="p">,</span> <span class="n">KIND_LABEL</span><span class="p">,</span> <span class="n">KIND_TRIAL_META</span><span class="p">)</span>
 
 <span class="c1"># Per-trial metadata columns (same value for all rows in a trial)</span>
-<span class="n">TRIAL_META_COLUMNS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"changepoint_corrected"</span><span class="p">,</span>
-    <span class="s2">"prediction_source"</span><span class="p">,</span>
-    <span class="s2">"n_samples"</span><span class="p">,</span>
-<span class="p">]</span>
+<span class="n">TRIAL_META_COLUMNS</span> <span class="o">=</span> <span class="n">schema_columns</span><span class="p">(</span><span class="n">KIND_TRIAL_META</span><span class="p">)</span>
 
-<span class="n">TRIAL_META_DEFAULTS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"changepoint_corrected"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="s2">"prediction_source"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
-    <span class="s2">"n_samples"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-<span class="p">}</span>
+<span class="n">TRIAL_META_DEFAULTS</span> <span class="o">=</span> <span class="p">{</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">col</span><span class="o">.</span><span class="n">default</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">KIND_TRIAL_META</span><span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_label_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -891,11 +878,12 @@ window.runMermaid = runMermaid;</script>
 <span class="c1"># Load / save labels</span>
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
-<span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"onset_s"</span><span class="p">,</span> <span class="s2">"offset_s"</span><span class="p">,</span> <span class="s2">"labels"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">,</span> <span class="s2">"trial"</span><span class="p">}</span>
+<span class="c1">#: The minimum a file must have to be a labels file at all.</span>
+<span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">required</span><span class="p">}</span>
 
 <span class="c1">#: Columns that must carry a value on *every* row. ``offset_s`` is excluded —</span>
 <span class="c1">#: a point event legitimately stores it as NaN.</span>
-<span class="n">REQUIRED_NONNULL_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"trial"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">,</span> <span class="s2">"labels"</span><span class="p">,</span> <span class="s2">"onset_s"</span><span class="p">)</span>
+<span class="n">REQUIRED_NONNULL_COLUMNS</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">LABEL_SCHEMA</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">nonnull</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="validate_labels_tsv">
@@ -1004,33 +992,7 @@ window.runMermaid = runMermaid;</script>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">"trial"</span><span class="p">,</span> <span class="s2">"onset_s"</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">preferred</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">"session"</span><span class="p">,</span>
-        <span class="s2">"trial"</span><span class="p">,</span>
-        <span class="s2">"session_trial"</span><span class="p">,</span>
-        <span class="s2">"individual"</span><span class="p">,</span>
-        <span class="s2">"individual_rec"</span><span class="p">,</span>
-        <span class="s2">"labels"</span><span class="p">,</span>
-        <span class="s2">"onset_s"</span><span class="p">,</span>
-        <span class="s2">"offset_s"</span><span class="p">,</span>
-        <span class="s2">"event_type"</span><span class="p">,</span>
-        <span class="s2">"confidence"</span><span class="p">,</span>
-        <span class="s2">"labeling_method"</span><span class="p">,</span>
-        <span class="s2">"trial_onset"</span><span class="p">,</span>
-        <span class="s2">"trial_offset"</span><span class="p">,</span>
-        <span class="s2">"onset_global"</span><span class="p">,</span>
-        <span class="s2">"offset_global"</span><span class="p">,</span>
-        <span class="s2">"duration"</span><span class="p">,</span>
-        <span class="s2">"sequence_idx"</span><span class="p">,</span>
-        <span class="s2">"sequence"</span><span class="p">,</span>
-        <span class="s2">"human_verified"</span><span class="p">,</span>
-        <span class="s2">"changepoint_corrected"</span><span class="p">,</span>
-        <span class="s2">"prediction_source"</span><span class="p">,</span>
-        <span class="s2">"n_samples"</span><span class="p">,</span>
-    <span class="p">]</span>
-    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">preferred</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
-    <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">]</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">write_order</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">)]</span>
 
     <span class="c1"># Drop negative-duration state intervals; keep point events (NaN offset).</span>
     <span class="n">duration</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"offset_s"</span><span class="p">]</span> <span class="o">-</span> <span class="n">out</span><span class="p">[</span><span class="s2">"onset_s"</span><span class="p">]</span>

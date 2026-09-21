@@ -465,20 +465,28 @@
 <span id="target-labelling-gui"></span><h1>Labelling in the GUI<a class="headerlink" href="#labelling-in-the-gui" title="Link to this heading">#</a></h1>
 <section id="creating-labels">
 <h2>Creating labels<a class="headerlink" href="#creating-labels" title="Link to this heading">#</a></h2>
-<p>The <strong>Labelling</strong> dropdown at the top of the Labels tab chooses where a new
-label’s boundaries come from. Both modes use the same label keys (see image
-below), and everything after the time is read — undo, overlap resolution,
-the label table, the grids, export — is identical.</p>
-<section id="on-the-time-series-click-the-plots">
-<h3>On the time series (click the plots)<a class="headerlink" href="#on-the-time-series-click-the-plots" title="Link to this heading">#</a></h3>
+<p>Until there is somebody to label and something to label them with, the Labels
+tab shows what is missing and the button that fixes it — <strong>Define individuals…</strong>
+(Settings’ individuals dialog) or <strong>Define labels…</strong> (the <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> editor).
+Data that names its own individuals answers the first half for you; you can
+still add more. Only the missing half is offered.</p>
+<p>Once past that, the top row of the Labels tab holds the two choices every label
+answers: <strong>Mode</strong> — where a new label’s boundaries come from — and <strong>Overlay</strong> — how
+existing labels are drawn (<em>Full plot</em>, <em>Bottom strip</em>, <em>Hidden</em>, or
+<em>Per plot type…</em> to set them one plot type at a time).</p>
+<p>Both modes use the same label keys (see image below), and everything after the
+time is read — undo, overlap resolution, the label table, the grids, export —
+is identical.</p>
+<section id="graph-based-labelling">
+<h3>Graph based labelling<a class="headerlink" href="#graph-based-labelling" title="Link to this heading">#</a></h3>
 <ol class="arabic simple">
 <li><p>Press one of the number/letter keys to activate a behavioural label.</p></li>
 <li><p>Click twice on a plot to define the start and end boundaries of the label. For point events, click only once.</p></li>
 <li><p>The label is created and displayed with a colour-coded overlay.</p></li>
 </ol>
 </section>
-<section id="at-the-current-frame-the-label-key-places-it">
-<h3>At the current frame (the label key places it)<a class="headerlink" href="#at-the-current-frame-the-label-key-places-it" title="Link to this heading">#</a></h3>
+<section id="frame-by-frame-labelling">
+<h3>Frame by frame labelling<a class="headerlink" href="#frame-by-frame-labelling" title="Link to this heading">#</a></h3>
 <p>The classic ethogram-software workflow, for labelling from the video alone:</p>
 <ol class="arabic simple">
 <li><p>Navigate to the frame — play with <code class="docutils literal notranslate"><span class="pre">Space</span></code>, scrub the timeline, or step with <code class="docutils literal notranslate"><span class="pre">Left</span></code> / <code class="docutils literal notranslate"><span class="pre">Right</span></code>.</p></li>
@@ -497,15 +505,21 @@ the label overlay — fills that gap: it is the first entry in the ➕ <strong>A
 panel</strong> popup, and with <strong>Open a label timeline when no panel is shown</strong> ticked
 (Labels tab, on by default) it opens by itself when a dataset loads with no
 other panel.</p>
+<p>Under the branch tables: <strong>Label table…</strong> (every trial’s labels as a
+spreadsheet), <strong>+ Add label</strong> (the <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> editor — the one place a class
+is created) and <strong>+ Add branch</strong> (a second set of labels drawn above the first,
+at most three: Full / Top1 / Top2).</p>
 <p><img alt="keyboard" src="../../_images/keyboard.png" /></p>
 </section>
 </section>
 <hr class="docutils" />
 <section id="who-the-labels-are-about">
 <h2>Who the labels are about<a class="headerlink" href="#who-the-labels-are-about" title="Link to this heading">#</a></h2>
-<p>The <strong>Individual</strong> section at the top of the right sidebar is shown for every
-panel except the video, whatever backend the data came from. It holds two
-dropdowns:</p>
+<p>The <strong>Individual</strong> section sits at the top of the right sidebar and is always
+there — for every panel, the video and the label timeline included, whatever
+backend the data came from. The names it offers are the ones resolved from your
+data and <strong>Settings ▸ Create / edit individuals…</strong> (see
+<a class="reference internal" href="../your_data/folder_layout.html"><span class="doc">Folder layout</span></a>). It holds two dropdowns:</p>
 <ul class="simple">
 <li><p><strong>Individual</strong> — the animal performing the behaviour. Switching it switches
 the labels you see and create.</p></li>
@@ -602,8 +616,8 @@ own panel. See <a class="reference internal" href="importing.html"><span class="
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-labels">Creating labels</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#on-the-time-series-click-the-plots">On the time series (click the plots)</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#at-the-current-frame-the-label-key-places-it">At the current frame (the label key places it)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#graph-based-labelling">Graph based labelling</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#frame-by-frame-labelling">Frame by frame labelling</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-panel-to-see-the-labels-on">A panel to see the labels on</a></li>
 </ul>
 </li>
