@@ -23,7 +23,16 @@ def test_dump_labels_tab(moll2025_gui, qtbot):
     while scroll is not None and type(scroll).__name__ != "_FitContentScrollArea":
         scroll = scroll.parent()
     print("branches:", len(tables), "table h:", [t.height() for t in tables])
-    print("rows:", tables[0].rowCount(), "rowH:", tables[0].rowHeight(0), "hdr:", tables[0].horizontalHeader().height(), "vp:", tables[0].viewport().height())
+    print(
+        "rows:",
+        tables[0].rowCount(),
+        "rowH:",
+        tables[0].rowHeight(0),
+        "hdr:",
+        tables[0].horizontalHeader().height(),
+        "vp:",
+        tables[0].viewport().height(),
+    )
     print("scroll h:", scroll.height(), "hint:", scroll.sizeHint().height())
     print("curation y:", cp.y(), "h:", cp.height(), "labels widget h:", lw.height())
     print("groupbox font pt/bold:", cp.font().pointSizeF(), cp.font().bold())
