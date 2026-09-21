@@ -35,7 +35,7 @@ from ethograph.io.pynapple import label_intervalsets
 from ethograph.io.session_layout import session_dir_of
 from ethograph.io.validation import EPHYS_FILE_FILTER
 from ethograph.labels import exporters
-from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv
+from ethograph.labels.tsv_store import labels_tsv_path, load_labels_tsv, save_labels_tsv, set_trial_in_tsv
 from ethograph.utils.paths import (
     default_config_dir,
 )
@@ -1026,26 +1026,20 @@ class IOWidget(QWidget):
 
     def _apply_imported_intervals(self, intervals_df):
         """Common post-import: save converted TSV, load into app state, refresh UI."""
-        from ethograph.labels.tsv_store import (
-            save_labels_tsv,
-        )
-
-        # Set the complete imported dataframe as the active labels
-        self.app_state._all_labels_df = intervals_df
+        # An annotation file names no trial: its rows are the current trial's.
+        trial = self.app_state.trials_sel
+        all_df = set_trial_in_tsv(self.app_state._all_labels_df, trial, intervals_df)
+        self.app_state._all_labels_df = all_df
         self.app_state.clear_label_history()
         if self.data_widget:
             self.data_widget.refresh_individual_choices()
-
-        trial = getattr(self.app_state, "trials_sel", None)
-        if trial is not None:
-            self.app_state.label_intervals = self.app_state.get_trial_intervals(trial)
+        self.app_state.label_intervals = self.app_state.get_trial_intervals(trial)
 
         # For non-.tsv formats, save the converted TSV and show in output row
         fmt = self.labels_format_combo.currentText()
         if fmt != ".tsv" and self.app_state.nc_file_path:
             tsv_out = labels_tsv_path(self.app_state.nc_file_path)
-            if intervals_df is not None and not intervals_df.empty:
-                save_labels_tsv(tsv_out, intervals_df)
+            save_labels_tsv(tsv_out, all_df)
             self.app_state._labels_file_path = str(tsv_out)  # Track the converted TSV as active
             self.labels_output_edit.setText(str(tsv_out))
 

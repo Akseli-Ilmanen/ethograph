@@ -359,11 +359,11 @@ def pair_media(
 ) -> NWBFile:
     """Write ``.ethograph/alignment.nwb`` from a pairing table.
 
-        Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one
-        ``ImageSeries`` whose segments start at the trial starts; ``session_wide`` streams each get
-        one ``ImageSeries`` with a ``starting_time``.
-        ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media
-        files the table names.
+    Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one
+    ``ImageSeries`` whose segments start at the trial starts; ``session_wide`` streams each get
+    one ``ImageSeries`` with a ``starting_time``.
+    ``start_time``/``stop_time`` are optional — omitted, they are inferred from the media
+    files the table names.
 
     **What happens to a file that is already there is the caller's decision, never the
     filesystem's** (``on_existing``). Annotating somebody's NWB and building a session's
@@ -379,34 +379,34 @@ def pair_media(
     and writes it afresh — what a *drop* or the wizard does, because an alignment built
     from dropped files is derived data and rebuilding it must be idempotent.
 
-        Parameters
-        ----------
-        trial_table
-            ``trial`` + ``{stream}_{device}`` columns holding each file's full path (as
-            :func:`discover_media` returns); a bare filename is accepted when times are given.
-            The NWB trials table receives the basenames. ``start_time``/``stop_time`` optional.
-        stream_rates
-            Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``; a
-            ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
-        session_wide
-            ``{"{stream}_{device}": (file, rate_hz, starting_time_s)}`` for streams that are one
-            file spanning the whole session rather than one file per trial.
-        output_path
-            Where to write the ``.nwb`` file.
-        on_existing
-            What an existing *output_path* means: ``"extend"`` pairs into its trials table,
-            ``"replace"`` rebuilds it from scratch. Anything building a session's own
-            alignment passes ``"replace"``, so running it twice is the same as once.
-        pose_fps
-            Frame rate for probing pose files, when inferring times from a table whose only media
-            columns are ``pose_*``.
-        individuals
-            The individuals this session labels. Recorded in the session record, which is their
-            one home; a dataset's individual dim is checked against it on load.
+    Parameters
+    ----------
+    trial_table
+        ``trial`` + ``{stream}_{device}`` columns holding each file's full path (as
+        :func:`discover_media` returns); a bare filename is accepted when times are given.
+        The NWB trials table receives the basenames. ``start_time``/``stop_time`` optional.
+    stream_rates
+        Sampling rate per stream, e.g. ``{"video": 30.0, "audio": 48000.0}``; a
+        ``{stream}_{device}`` key (``"video_cam-2": 60.0``) overrides its stream's rate.
+    session_wide
+        ``{"{stream}_{device}": (file, rate_hz, starting_time_s)}`` for streams that are one
+        file spanning the whole session rather than one file per trial.
+    output_path
+        Where to write the ``.nwb`` file.
+    on_existing
+        What an existing *output_path* means: ``"extend"`` pairs into its trials table,
+        ``"replace"`` rebuilds it from scratch. Anything building a session's own
+        alignment passes ``"replace"``, so running it twice is the same as once.
+    pose_fps
+        Frame rate for probing pose files, when inferring times from a table whose only media
+        columns are ``pose_*``.
+    individuals
+        The individuals this session labels. Recorded in the session record, which is their
+        one home; a dataset's individual dim is checked against it on load.
 
-        Returns
-        -------
-        The in-memory :class:`~pynwb.NWBFile`.
+    Returns
+    -------
+    The in-memory :class:`~pynwb.NWBFile`.
     """
     if on_existing not in ("extend", "replace"):
         raise ValueError(f"on_existing must be 'extend' or 'replace', got {on_existing!r}")
