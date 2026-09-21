@@ -71,9 +71,16 @@ conda create -y -n ethograph -c conda-forge python=3.12 -y
 conda activate ethograph
 uv pip install "ethograph[gui,audio]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
+ethograph shortcut               # optional: desktop / Start Menu launcher
+ethograph launch
 ```
 
 conda only creates the environment; ethograph itself is installed with uv.
+
+`ethograph launch` only works from an activated environment, so
+`conda activate ethograph` comes first every time. `ethograph shortcut` writes a
+desktop and Start Menu entry that activates this environment for you — one
+click instead of a terminal.
 ::::
 
 :::::
@@ -106,6 +113,8 @@ conda activate ethograph
 uv pip install --torch-backend=auto torch torchvision
 uv pip install "ethograph[gui,audio,model]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
+ethograph shortcut               # optional: desktop / Start Menu launcher
+ethograph launch
 ```
 
 Creating the environment from `conda-forge` keeps shared libraries on one
