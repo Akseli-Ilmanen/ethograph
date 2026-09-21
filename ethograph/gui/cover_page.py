@@ -887,11 +887,12 @@ class CoverPage(QDialog):
 
         Fills the otherwise empty lower half of card 1 with a taste of what
         "Browse templates…" opens. Animated previews are skipped — a still
-        strip should not draw the eye away from the drop zone. Short screens
-        show fewer (and smaller) previews so the cards stay readable.
+        strip should not draw the eye away from the drop zone. A short screen
+        shrinks the previews -- every size here goes through ``_px`` -- rather
+        than dropping any: three is the strip the card is laid out for.
         """
         if limit is None:
-            limit = 3 if self._scale > 0.85 else (2 if self._scale > 0.7 else 1)
+            limit = 3
         previews: list[QLabel] = []
         for ds in DATASETS.values():
             if len(previews) >= limit:
