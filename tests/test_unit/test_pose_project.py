@@ -266,3 +266,22 @@ class TestCheckLabels:
         assert drawn.max() > 0  # a dot landed
         assert iio.imread(output / "img15.png").max() == 0
         assert [f.name for f in project.labeled_folders()] == [video.stem]
+
+
+class TestMachineLabels:
+    def test_folder_with_only_machine_labels_starts_from_them(self, pose_project_root):
+        """DeepLabCut's extract_outlier_frames leaves machinelabels-iter0.h5 and no CollectedData."""
+        project = pp.PoseProject.open(pose_project_root)
+        folder = project.labeled_dir / "vidX"
+        folder.mkdir()
+        rows = pp.labels_rows({"img05.png": np.array([[[1.0, 2.0], [3.0, 4.0]]])}, "vidX", KEYPOINTS, [], "DLC_model")
+        rows.to_hdf(folder / "machinelabels-iter0.h5", key=pp.DLC_H5_KEY, mode="w")
+
+        table = project.labels_table("vidX")
+        frames = table.read()
+        assert frames["img05.png"][0, 1].tolist() == [3.0, 4.0]
+        assert table.schema() == (KEYPOINTS, [], "alice")  # the labeller's scorer, not the model's
+
+        table.write(frames)
+        assert (folder / "CollectedData_alice.csv").is_file()
+        assert pp.read_labels_table(folder / "CollectedData_alice.csv").columns[0][0] == "alice"

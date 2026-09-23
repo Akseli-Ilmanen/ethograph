@@ -191,3 +191,18 @@ class TestRefineStage:
         assert [str(t) for t in meta.app_state.trials] == [VIDEO_A, VIDEO_B]
         assert mode.refine_dialog is None
         assert type(shell.video_area.primary.plot).__name__ == "PlotVideo"
+
+    def test_a_second_load_does_not_duplicate_the_sidebar_combos(self, refined):
+        """Every stage switch is a session load; the Data tab must still show each dim once."""
+        from qtpy.QtWidgets import QComboBox
+
+        _shell, meta, mode = refined
+        assert mode.switch(pp.STAGE_EXTRACT, parent=None)
+        QApplication.processEvents()
+        dw = meta.data_widget
+        names = [c.objectName() for c in dw.coords_groupbox.findChildren(QComboBox) if not c.isHidden()]
+        assert names.count("keypoint_combo") == 1 and names.count("space_combo") == 1
+        individuals = [
+            c for c in dw.individual_groupbox.findChildren(QComboBox) if c.objectName() == "individual_combo"
+        ]
+        assert len(individuals) == 1

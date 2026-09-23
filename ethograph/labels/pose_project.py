@@ -324,6 +324,17 @@ def find_tracking(root: Path, stem: str, layout: str) -> tuple[Path | None, str 
 # ----------------------------------------------------------------------
 
 
+MACHINE_LABELS_PREFIX = "machinelabels-iter"
+
+
+def machine_labels_file(folder: Path) -> Path | None:
+    """The newest ``machinelabels-iter<N>.h5`` of a DeepLabCut video folder, or ``None``."""
+    if not folder.is_dir():
+        return None
+    found = [p for p in folder.glob(f"{MACHINE_LABELS_PREFIX}*.h5") if p.is_file()]
+    return natsort.natsorted(found, key=lambda p: p.name)[-1] if found else None
+
+
 def find_dlc_table(folder: Path) -> Path | None:
     """The one ``CollectedData_<scorer>`` of a DeepLabCut video folder (csv first, else h5)."""
     for suffix in (".csv", ".h5"):
@@ -354,7 +365,7 @@ def read_labels_table(path: Path) -> pd.DataFrame:
         is_index = [str(col[-1]) not in ("x", "y", "likelihood") for col in raw.columns]
         index_cols = [col for col, flag in zip(raw.columns, is_index) if flag]
         rows = [
-            tuple(str(x) for x in row) if len(index_cols) == 3 else _split_image_path(row[0])
+            tuple(str(x) for x in row) if len(index_cols) == 3 else _split_image_path("/".join(str(x) for x in row))
             for row in raw[index_cols].itertuples(index=False, name=None)
         ]
         df = raw[[col for col, flag in zip(raw.columns, is_index) if not flag]]
@@ -453,21 +464,39 @@ class LabelsTable:
         return self.path.is_file() or self.path.with_suffix(".h5").is_file()
 
     def _source(self) -> Path | None:
+        """The file the labels are read from: the table, else DeepLabCut's machine labels.
+
+        ``extract_outlier_frames`` writes the model's predictions for the
+        extracted frames as ``machinelabels-iter<N>.h5`` and no
+        ``CollectedData`` until ``refine_labels`` has run — so a folder that
+        holds only machine labels starts from those, and the first save
+        writes the table.
+        """
         if self.path.is_file():
             return self.path
         h5 = self.path.with_suffix(".h5")
-        return h5 if h5.is_file() else None
+        if h5.is_file():
+            return h5
+        return machine_labels_file(self.folder)
+
+    def _is_machine_source(self, source: Path | None) -> bool:
+        return source is not None and source.name.startswith(MACHINE_LABELS_PREFIX)
 
     def read_table(self) -> pd.DataFrame | None:
         source = self._source()
         return read_labels_table(source) if source is not None else None
 
     def schema(self) -> tuple[list[str], list[str], str]:
-        """``(keypoints, individuals, scorer)``: the table's own when it exists, else the project's."""
+        """``(keypoints, individuals, scorer)``: the table's own when it exists, else the project's.
+
+        Machine labels lend their keypoints but never their scorer: that is
+        the model's name, and the table written from them is the labeller's.
+        """
         table = self.read_table()
         if table is not None and len(table.columns):
             keypoints, individuals = table_schema(table)
-            return keypoints, individuals, table_scorer(table)
+            scorer = self.project.scorer if self._is_machine_source(self._source()) else table_scorer(table)
+            return keypoints, individuals, scorer
         return list(self.project.keypoints), list(self.project.individuals), self.project.scorer
 
     def read(self) -> dict[str, np.ndarray]:
@@ -475,7 +504,8 @@ class LabelsTable:
         table = self.read_table()
         if table is None or table.empty:
             return {}
-        keypoints, individuals, scorer = self.schema()
+        keypoints, individuals, _scorer = self.schema()
+        scorer = table_scorer(table)  # the file's own, whoever it names
         names = individuals or [SINGLE_INDIVIDUAL]
         multi = bool(individuals)
         mine = table[[row[1] == self.video_stem for row in table.index]]
@@ -495,7 +525,8 @@ class LabelsTable:
         """Replace this video's rows with *frames* (in :meth:`schema` order); returns what was written."""
         keypoints, individuals, scorer = self.schema()
         new = labels_rows(frames, self.video_stem, keypoints, individuals, scorer)
-        existing = self.read_table()
+        # Machine labels are a starting point, never merged into the labeller's table.
+        existing = None if self._is_machine_source(self._source()) else self.read_table()
         if existing is not None and len(existing.columns):
             others = existing[[row[1] != self.video_stem for row in existing.index]]
             columns = list(existing.columns) + [c for c in new.columns if c not in existing.columns]

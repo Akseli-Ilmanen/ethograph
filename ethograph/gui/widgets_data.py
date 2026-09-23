@@ -1522,17 +1522,31 @@ class DataWidget(QWidget):
             self.trials_widget.setup(mdf)
             self.refresh_trials_confidence()
 
-        for combo_name, combo_spec in self.catalog.combos.items():
-            if not combo_spec.values:
-                continue
-            self._create_combo_widget(combo_name, list(combo_spec.values))
-
-        self._create_colors_combo()
-        self.refresh_individual_choices()
+        if self.combos:
+            # A second session in this window (a pose project switching stage,
+            # a new file): the coords form is updated in place — building the
+            # combos again would leave the first set beside the new one.
+            self._rebuild_coord_controls()
+        else:
+            for combo_name, combo_spec in self.catalog.combos.items():
+                if not combo_spec.values:
+                    continue
+                self._create_combo_widget(combo_name, list(combo_spec.values))
+            self._create_colors_combo()
+            self.refresh_individual_choices()
 
         # Restore camera combos
         cameras = self.app_state.nwb_alignment.cameras
         slot_layout = self.slot_layout
+        # The slot group is rebuilt whole: its combos are this widget's own and
+        # the group is hidden, so the previous session's can simply go.
+        while slot_layout.count():
+            item = slot_layout.takeAt(0)
+            widget = item.widget() if item is not None else None
+            if widget is not None:
+                if widget in self.controls:
+                    self.controls.remove(widget)
+                widget.deleteLater()
 
         # Slot 1: Layers / Space Plot toggle
         self.space_view_combo = QComboBox()
@@ -2328,11 +2342,15 @@ class DataWidget(QWidget):
         for key in set(self.combos) - set(wanted) - {"colors"}:
             self._set_combo_row_visible(key, False)
 
-        self._populate_colors_combo(
-            self.combos["colors"],
-            list(self.catalog.features),
-            rgb_filter=self._colors_rgb_checkbox.isChecked(),
-        )
+        if "colors" not in self.combos:
+            # The first session had no features (media only), so the combo was never built.
+            self._create_colors_combo()
+        if "colors" in self.combos:
+            self._populate_colors_combo(
+                self.combos["colors"],
+                list(self.catalog.features),
+                rgb_filter=self._colors_rgb_checkbox.isChecked(),
+            )
         self.refresh_individual_choices()
 
     @staticmethod
