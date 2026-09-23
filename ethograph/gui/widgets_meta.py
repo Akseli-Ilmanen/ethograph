@@ -412,9 +412,12 @@ class MetaWidget(GridSectionContainer):
         from .active_panel import PanelKind
 
         kind = reg.kind
+        # Any panel's individual becomes the labelling subject; the console
+        # is not a panel of anybody, so it leaves the subject where it was.
+        if kind != "console":
+            self._track_subject_panel(reg.plot if reg.plot is not None else reg.widget)
         if kind in PanelKind.FEATURE and reg.plot is not None:
             self.plot_container.active_feature_plot = reg.plot
-            self._track_subject_panel(reg.plot)
         if kind == PanelKind.SPACE:
             self.data_widget.set_active_space_plot(reg.widget)
         if kind == PanelKind.RADIAL:
@@ -427,7 +430,6 @@ class MetaWidget(GridSectionContainer):
             self.plot_settings_widget.set_active_neo_plot(reg.widget)
         self._update_video_selection(reg if kind == PanelKind.VIDEO else None)
         if kind == PanelKind.VIDEO:
-            self._track_subject_panel(reg.widget)
             self.focus_video_context()
         elif kind in self._CONTEXT_KINDS:
             self._on_plot_focus(kind)

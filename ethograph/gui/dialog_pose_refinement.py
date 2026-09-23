@@ -9,8 +9,8 @@ format** as ``{stem}_refined{ext}`` beside the original. Multi-trial by
 construction — the dialog follows the normal trial navigation, flushing every
 refined file on the switch.
 
-:class:`PoseRefinementDialog` **is** the labelling dialog with the schema,
-Detect and Calibrate tabs removed: the whole Label & Edit tab — modes, the
+:class:`PoseRefinementDialog` **is** the labelling dialog with the schema and
+Detect tabs removed: the whole Label & Edit tab — modes, the
 points table, frame suggestions, ``Shift+H`` approval, the key handling — is
 inherited rather than rebuilt, because correcting a file is the same work as
 correcting a fill. What the subclass changes is where the store comes from and
@@ -74,6 +74,7 @@ from ethograph.gui.pose_annotate import (
 )
 from ethograph.gui.pose_fill import VideoFrameSource, build_backend
 from ethograph.gui.pose_render import PoseRenderData, ask_pose_source_software
+from ethograph.io.netcdf import netcdf_engine
 
 #: Suffix inserted before the extension of the written copy.
 REFINED_SUFFIX = "_refined"
@@ -218,7 +219,7 @@ def save_refined_ds(ds: xr.Dataset, path: str | Path, source_software: str) -> N
     temp.unlink(missing_ok=True)
     try:
         if suffix == ".nc":
-            ds.to_netcdf(temp)
+            ds.to_netcdf(temp, engine=netcdf_engine(temp))
         elif software == "lightningpose" and suffix == ".csv":
             save_poses.to_lp_file(ds, temp)
         elif software == "sleap" and suffix == ".h5":
@@ -283,9 +284,8 @@ class PoseRefinementDialog(PoseLabellingDialog):
     Inherits the whole Label & Edit tab and reuses the fill backends; overrides
     where stores are loaded from (each open camera's pose file, via the
     alignment) and where they are saved to (``_refined`` copies + click
-    sidecars). The schema, Detect and Calibrate tabs are removed — the files
-    define the schema, and detection/calibration belong to from-scratch
-    labelling.
+    sidecars). The schema and Detect tabs are removed — the files define the
+    schema, and detection belongs to from-scratch labelling.
     """
 
     def __init__(self, data_widget, parent=None):
@@ -350,7 +350,7 @@ class PoseRefinementDialog(PoseLabellingDialog):
             load_software = "SLEAP"  # .slp refined to an analysis .h5
         try:
             if load_path.suffix.lower() == ".nc":
-                ds = xr.open_dataset(load_path).load()
+                ds = xr.open_dataset(load_path, engine=netcdf_engine(load_path)).load()
             else:
                 ds = load_movement_dataset(str(load_path), load_software, float(fps))
         except (OSError, ValueError, KeyError) as e:
@@ -772,7 +772,7 @@ class PoseRefinementDialog(PoseLabellingDialog):
         # The schema page must survive tab removal — the Keypoints tree on it
         # is what the target selection and key handling read.
         self._schema_page = self.tabs.widget(0)
-        for page in (self._schema_page, self._detect_page, self._calibrate_page):
+        for page in (self._schema_page, self._detect_page):
             self.tabs.removeTab(self.tabs.indexOf(page))
 
         output_index = self.tabs.count() - 1

@@ -63,10 +63,7 @@ detecting and filling are all things you do while *looking* at the video —
 scrubbing to judge a detection, checking a fill — and a stray click there would
 drop a point you never meant to place, silently. The mode itself keeps running,
 so returning to this tab carries straight on. Your own **Lock** tick is left
-exactly as you set it and applies again the moment you come back. The one
-exception is {ref}`Calibrate <target-calibration>`, which takes the pointer for
-its own landmark clicks — leaving it hands the canvas back to labelling, active
-keypoint and all.
+exactly as you set it and applies again the moment you come back.
 
 ### Which frames to label
 

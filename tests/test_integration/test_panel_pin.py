@@ -230,3 +230,44 @@ def test_the_pending_label_previews_only_on_the_subjects_panels(birdpark_gui):
     plots = {id(p) for p, _line in pc._pending_label_items}
     assert id(pinned) in plots and id(following) not in plots
     pc.clear_pending_label()
+
+
+def test_any_panel_can_be_pinned_even_without_an_individual_dim(birdpark_gui):
+    """A label timeline has no data to select from, but it still shows one bird's labels.
+
+    Pinning it decides whose labels it draws and whose label a click on it
+    creates, its title says so, and the pin survives a layout round trip.
+    """
+    _, meta = birdpark_gui
+    state = meta.app_state
+    dw = meta.data_widget
+    pc = meta.plot_container
+    names = state.label_individuals()
+    a, b = names[0], names[1]
+    state.set_key_sel(dw._individual_actor_key(), a)
+
+    ribbon = pc.add_panel("labels")
+    assert pc._dyn_docks[ribbon].titleBarWidget().title() == f"Labels \u2014 {a} (sidebar)"
+    pc.active_panels.set_active(pc.active_panels.registration_for(ribbon))
+    assert dw._pinnable_widget() is ribbon
+    dw.pin_panel(ribbon, b)
+    assert ribbon.pinned_individual == b
+    assert pc._dyn_docks[ribbon].titleBarWidget().title() == f"Labels \u2014 {b} (pinned)"
+    assert state.selected_individual() == b, "the clicked panel's pin is the labelling subject"
+
+    trial = state.trials_sel
+    df = add_interval(empty_intervals(), 0.5, 1.0, 1, a)
+    df = add_interval(df, 2.5, 3.0, 1, b)
+    state.set_trial_intervals(trial, df)
+    state.label_intervals = state.get_trial_intervals(trial)
+    state.individual_receiver = ""
+    dw.update_label_plot()
+    shown = state.get_display_intervals()
+    assert list(dw._subject_intervals(shown, ribbon)["onset_s"]) == [2.5]
+
+    layout = pc.layout_state()
+    assert {"type": "labels", "individual": b} in layout["panels"]
+    pc.apply_layout_state(layout)
+    restored = pc._label_ribbons()
+    assert [r.pinned_individual for r in restored] == [b]
+    assert pc._dyn_docks[restored[0]].titleBarWidget().title() == f"Labels \u2014 {b} (pinned)"

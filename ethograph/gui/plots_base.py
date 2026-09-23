@@ -178,6 +178,27 @@ class TimeAxisItem(pg.AxisItem):
         return strings
 
 
+class IndividualPinMixin:
+    """Any panel can be pinned to one individual; ``None`` means it follows the sidebar.
+
+    The pin decides whose labels the panel draws and whose label a click on
+    it creates (``app_state.panel_individual``); a panel whose feature has an
+    individual dim (xarray or pynapple) additionally selects that individual's
+    data with it. Feature plots override the storage (their ``panel_state``),
+    space and radial plots additionally drive their own individual combo.
+    """
+
+    _pinned_individual: str | None = None
+
+    @property
+    def pinned_individual(self) -> str | None:
+        """The individual this panel is pinned to; ``None`` = follow the sidebar."""
+        return self._pinned_individual
+
+    def set_pinned_individual(self, individual: str | None) -> None:
+        self._pinned_individual = str(individual) if individual not in (None, "", "None") else None
+
+
 class PanelStateMixin:
     """Per-panel selection state shared by every feature plot (line plots AND
     the heatmap), so each panel is an independent instance.
@@ -401,7 +422,7 @@ def right_gutter_width(plot: "BasePlot") -> int:
     return max(0, int(round(PANEL_RIGHT_GUTTER_PX - taken)))
 
 
-class BasePlot(pg.PlotWidget):
+class BasePlot(IndividualPinMixin, pg.PlotWidget):
     """Base class for plot widgets with shared sync and marker functionality.
 
     Handles:

@@ -13,7 +13,7 @@ pytest.importorskip("pygfx")
 
 import pygfx as gfx  # noqa: E402
 
-from ethograph.gui.pose_annotate import CalibrationTable, KeypointStore  # noqa: E402
+from ethograph.gui.pose_annotate import KeypointStore  # noqa: E402
 from ethograph.gui.pose_convert import (  # noqa: E402
     COLOR_BY_INDIVIDUAL,
     COLOR_BY_KEYPOINT,
@@ -21,12 +21,10 @@ from ethograph.gui.pose_convert import (  # noqa: E402
 from ethograph.gui.pose_edit_mixin import (  # noqa: E402
     _INACTIVE_ALPHA,
     _OFFSCREEN,
-    CALIBRATION_MARKER_SHAPE,
     HIT_RADIUS_PX,
     LOOP_MODE,
     MARKER_SHAPE,
     SEQUENTIAL_MODE,
-    CalibrationClickMode,
     KeypointLabelMode,
     individual_colors_for,
     keypoint_colors,
@@ -553,121 +551,6 @@ def test_colour_by_keypoint_repeats_the_palette_on_every_individual(pair_mode):
 
     assert not np.allclose(colors[0], colors[1])  # keypoints differ
     np.testing.assert_allclose(colors[:n, :3], colors[n:, :3])  # individuals share
-
-
-# ----------------------------------------------------------------------
-# Calibration clicking — a corner is not a body part
-# ----------------------------------------------------------------------
-
-
-@pytest.fixture
-def calib():
-    view = _FakeView()
-    table = CalibrationTable()
-    for name in ["corner_a", "corner_b", "corner_c"]:
-        table.add(name)
-    return CalibrationClickMode(view, table)
-
-
-def test_calibration_attaches_like_a_label_mode(calib):
-    assert calib.view.label_mode is calib
-    assert calib.active_landmark == "corner_a"
-    assert not calib.view.pan_with_left_drag  # pan moved to Shift+drag
-
-
-def test_calibration_click_writes_the_table_not_the_store(calib):
-    calib.handle_click(100.0, 200.0)
-    assert calib.table.get("corner_a").clicks == {0: (100.0, 200.0)}
-
-
-def test_calibration_click_advances_to_the_next_unclicked_landmark(calib):
-    calib.handle_click(10.0, 10.0)
-    assert calib.active_landmark == "corner_b"
-    calib.handle_release(10.0, 10.0)
-    calib.handle_click(200.0, 200.0)
-    assert calib.active_landmark == "corner_c"
-
-
-def test_calibration_advance_wraps_to_an_earlier_gap(calib):
-    calib.set_active("corner_c")
-    calib.handle_click(10.0, 10.0)
-    assert calib.active_landmark == "corner_a"
-
-
-def test_calibration_active_stays_when_the_frame_is_complete(calib):
-    for i in range(3):
-        calib.handle_click(100.0 * i, 10.0)
-        calib.handle_release(100.0 * i, 10.0)
-    assert calib.active_landmark == "corner_c"
-
-
-def test_calibration_drag_replaces_the_same_frames_click(calib):
-    calib.handle_click(100.0, 100.0)
-    calib.handle_move(120.0, 90.0)
-    calib.handle_release(120.0, 90.0)
-    assert calib.table.get("corner_a").clicks == {0: (120.0, 90.0)}
-
-
-def test_clicking_an_existing_click_selects_and_drags_it(calib):
-    calib.handle_click(100.0, 100.0)
-    calib.handle_release(100.0, 100.0)
-    calib.set_frame(0)
-    calib.set_active("corner_c")
-    calib.handle_click(102.0, 101.0)  # within grab range of corner_a's click
-    calib.handle_move(200.0, 150.0)
-    calib.handle_release(200.0, 150.0)
-    assert calib.active_landmark == "corner_a"
-    assert calib.table.get("corner_a").clicks == {0: (200.0, 150.0)}
-    assert calib.table.get("corner_c").clicks == {}
-
-
-def test_calibration_clicks_are_per_frame(calib):
-    calib.handle_click(10.0, 10.0)
-    calib.handle_release(10.0, 10.0)
-    calib.set_frame(5)
-    calib.set_active("corner_a")
-    calib.handle_click(12.0, 11.0)
-    assert calib.table.get("corner_a").clicks == {0: (10.0, 10.0), 5: (12.0, 11.0)}
-
-
-def test_delete_active_removes_this_frames_click(calib):
-    calib.handle_click(10.0, 10.0)
-    calib.handle_release(10.0, 10.0)
-    calib.set_active("corner_a")
-    assert calib.delete_active()
-    assert calib.table.get("corner_a").clicks == {}
-    assert not calib.delete_active()
-
-
-def test_calibration_mode_is_never_locked(calib):
-    assert calib.locked is False
-
-
-def test_calibration_release_fires_the_fanout_once(calib):
-    fired = []
-    calib.on_changed = lambda: fired.append(True)
-    calib.handle_click(10.0, 10.0)
-    calib.handle_move(11.0, 11.0)  # drag moves refresh only
-    calib.handle_move(12.0, 12.0)
-    calib.handle_release(12.0, 12.0)
-    assert len(fired) == 2  # the click and the release, not every move
-
-
-def test_adding_a_landmark_rebuilds_the_overlay(calib):
-    calib.table.add("corner_d")
-    calib.refresh()
-    assert calib._overlay.names == ["corner_a", "corner_b", "corner_c", "corner_d"]
-
-
-def test_calibration_markers_are_diamonds(calib):
-    assert calib._overlay._clicks.material.marker == CALIBRATION_MARKER_SHAPE
-    assert CALIBRATION_MARKER_SHAPE != MARKER_SHAPE
-
-
-def test_detach_hands_the_pointer_back(calib):
-    calib.detach()
-    assert calib.view.label_mode is None
-    assert calib.view.pan_with_left_drag
 
 
 def test_colour_by_individual_gives_each_animal_one_colour(pair_mode):

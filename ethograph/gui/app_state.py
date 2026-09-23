@@ -433,10 +433,6 @@ class AppStateSpec:
         # to load is a user choice rather than a constant in pose_fill. Global:
         # it is a property of the machine's models, not of one dataset.
         "labelling_cotracker_checkpoint": (str, "", True),
-        # Where landmark world (cm) coordinates were last imported from (the
-        # Calibrate tab's "Load coordinates…"). Global: one layout file serves
-        # many sessions, and re-importing per session is the workflow.
-        "calibration_coords_path": (str, "", True),
         # Point detection (Detect tab): which detector and how it is tuned. The
         # detections themselves are derived data cached next to the video, and
         # what each detector label *means* is project data in the anchor
@@ -612,7 +608,6 @@ class AppStateSpec:
         "project_path": "dir",
         "remote_backup_path": "dir",
         "labelling_cotracker_checkpoint": "file",
-        "calibration_coords_path": "file",
     }
 
     @classmethod

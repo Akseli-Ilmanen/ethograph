@@ -35,6 +35,7 @@ from ethograph.io.metadata_table import (
     load_metadata_tsv,
     metadata_tsv_path,
 )
+from ethograph.io.netcdf import netcdf_engine
 from ethograph.io.nwb_alignment import (
     EmpytAlignment,
     TableAlignment,
@@ -319,7 +320,7 @@ def _open_trialtree(file_path: str) -> TrialTree:
     """A ``.nc`` as a TrialTree; a plain Dataset (a movement file, say) becomes one trial."""
     dt = eto.open(file_path)
     if not dt.children or not any(node.ds is not None and "trial" in node.ds.attrs for node in dt.children.values()):
-        ds = xr.open_dataset(file_path, engine="netcdf4")
+        ds = xr.open_dataset(file_path, engine=netcdf_engine(file_path))
         dt = _wizard_ds_to_continuous_dt(ds)
         dt._source_path = file_path
     return dt

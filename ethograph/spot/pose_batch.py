@@ -36,6 +36,7 @@ from ethograph.gui.pose_annotate import (
     store_to_dataset,
 )
 from ethograph.gui.pose_fill import VideoFrameSource, build_backend, no_progress
+from ethograph.io.netcdf import netcdf_engine
 from ethograph.segment.sessions import Session, filter_trials
 from ethograph.spot.config import SpotConfig
 from ethograph.spot.dataset import probe_video
@@ -90,7 +91,7 @@ def fill_and_export_video(
         filled, confidence = store.pin_static(filled, confidence)
     store.set_fill_from_flat(filled, confidence)
     ds = store_to_dataset(store, fps)
-    ds.to_netcdf(out)
+    ds.to_netcdf(out, engine=netcdf_engine(out))
     logger.info(
         "%s: filled %d keypoints over %d frames with %s -> %s",
         video.name,
@@ -183,7 +184,7 @@ def merge_keypoints(
         export = keypoints_dataset_path(video)
         if not export.is_file():
             continue
-        pose = xr.load_dataset(export)
+        pose = xr.load_dataset(export, engine=netcdf_engine(export))
         offset = float(alignment.stream_offset_for_trial(trial, "video", device=camera))
         dt.update_trial(trial, lambda ds, p=pose, o=offset: sample_onto_trial(ds, p, o, var))
         merged += 1

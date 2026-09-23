@@ -8,6 +8,7 @@ import pandas as pd
 import pynapple as nap
 import xarray as xr
 
+from ethograph.io.netcdf import netcdf_engine
 from ethograph.io.nwb_alignment import (
     EmpytAlignment,
     discover_nwb,
@@ -337,7 +338,7 @@ class TrialTree(xr.DataTree):
         Auto-discovers ``.ethograph/alignment.nwb`` next to the file.
         """
 
-        tree = xr.open_datatree(path, engine="netcdf4")
+        tree = xr.open_datatree(path, engine=netcdf_engine(path))
 
         tree.__class__ = cls
         tree._source_path = path
@@ -525,7 +526,7 @@ class TrialTree(xr.DataTree):
 
             try:
                 self.load()
-                self.to_netcdf(temp_path, mode="w")
+                self.to_netcdf(temp_path, mode="w", engine=netcdf_engine(temp_path))
                 self._close_all()
                 temp_path.replace(path)
                 self._source_path = str(path)
@@ -633,9 +634,9 @@ class TrialTree(xr.DataTree):
         loaded = {name: self[name].ds.load() for name in dirty}
         self._close_all()
         for name, ds in loaded.items():
-            ds.to_netcdf(path, mode="a", group=f"/{name}")
+            ds.to_netcdf(path, mode="a", group=f"/{name}", engine=netcdf_engine(path))
 
-        fresh = xr.open_datatree(str(path), engine="netcdf4")
+        fresh = xr.open_datatree(str(path), engine=netcdf_engine(path))
         for name in current_names:
             self[name] = xr.DataTree(loaded[name]) if name in loaded else fresh[name]
         self._extra_file_handle = fresh

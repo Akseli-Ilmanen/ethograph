@@ -2,8 +2,8 @@
 
 One tab per stage of the work — **Define keypoints** (who is labelled and with
 which keypoints), **Label & Edit** (the modes, the points table, frame
-suggestions), **Detect** (optional marker detection), **Calibrate** (optional
-pixel→cm landmark clicking) and **Fill and export**. One column holding every
+suggestions), **Detect** (optional marker detection) and **Fill and export**.
+One column holding every
 group at once grew taller than a screen; the split is by stage, so nothing a
 stage needs sits on another tab.
 
@@ -135,21 +135,18 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.dialog_busy_progress import BusyProgressDialog
-from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.notify import notify
 from ethograph.gui.pose_annotate import (
     DEFAULT_INDIVIDUAL,
     KINEMATICS,
     LEARNED,
     MANUAL,
-    MIN_CALIBRATION_LANDMARKS,
     RECOMMENDED_LABEL_SHARE,
     AssignmentError,
     KeypointStore,
     KeypointStoreError,
     detections_path,
     keypoints_dataset_path,
-    load_world_coordinates,
     refinement_path,
     sidecar_path,
     store_to_dataset,
@@ -174,7 +171,6 @@ from ethograph.gui.pose_detect_preview import PreviewPanel
 from ethograph.gui.pose_edit_mixin import (
     LOOP_MODE,
     SEQUENTIAL_MODE,
-    CalibrationClickMode,
     KeypointLabelMode,
     individual_colors_for,
     keypoint_colors_for,
@@ -195,6 +191,7 @@ from ethograph.gui.table_filter import (
     FilterHeaderView,
     MultiColumnFilterProxy,
 )
+from ethograph.io.netcdf import netcdf_engine
 
 logger = logging.getLogger(__name__)
 
@@ -767,24 +764,6 @@ class PoseLabellingDialog(QDialog):
         self._shell = data_widget.shell
         self._view = self._shell.video_area.primary
         self._mode: KeypointLabelMode | None = None
-        #: The calibration click mode, attached only while the Calibrate tab is
-        #: open. Held apart from ``_mode``: `_lock_wanted`/`_apply_lock` govern
-        #: the labelling mode alone, and the two are never attached together.
-        self._calib_mode: CalibrationClickMode | None = None
-        #: The labelling mode the Calibrate tab suspended — ``(mode, keypoint,
-        #: individual)`` — restored when the calibration mode detaches.
-        self._resume_label_mode: tuple[str, str | None, str | None] | None = None
-        #: Guards the calibration table's ``itemChanged`` against its own
-        #: rebuild churn, like the trials table's ``_building``.
-        self._calib_building = False
-        #: The coordinate space the USER picked, surviving the combo being
-        #: forced back to pixels while the calibration is transiently invalid
-        #: (a half-edited cell, a landmark being replaced) — restored the
-        #: moment the fit is usable again, so "cm" is never silently lost.
-        self._space_choice = "pixels"
-        #: True while `_refresh_space_combo` sets the combo programmatically,
-        #: so only the user's own changes update `_space_choice`.
-        self._space_syncing = False
         #: Frames proposed by pose_suggest, and where the user is within them.
         self._suggestions: list[int] = []
         self._suggestion_index = 0
@@ -950,10 +929,6 @@ class PoseLabellingDialog(QDialog):
         # pipeline: it produces observations, which the fill then bridges.
         self._detect_page = self._build_detect_page()
         self.tabs.addTab(self._detect_page, "Detect")
-        # Before the export, which is what a calibration changes: it maps the
-        # exported positions into the user's own cm frame.
-        self._calibrate_page = self._build_calibrate_page()
-        self.tabs.addTab(self._calibrate_page, "Calibrate")
         self.tabs.addTab(self._build_output_page(), "Fill and export")
         # Opening the tab IS the intent to label, so arm Sequential rather than
         # making the first click a mode choice.
@@ -1031,397 +1006,6 @@ class PoseLabellingDialog(QDialog):
         box.addWidget(self._build_export_group())
         box.addStretch()
         return page
-
-    # ------------------------------------------------------------------
-    # Calibrate: pixel → cm from clicked landmarks
-    # ------------------------------------------------------------------
-
-    def _build_calibrate_page(self) -> QWidget:
-        """Landmark table + clicking instructions; the tab arms its own mode.
-
-        Landmarks are **not keypoints**: they live in the store's
-        :class:`~ethograph.gui.pose_annotate.CalibrationTable`, so they never
-        join the fill span, the individual axis or the exported dims — and they
-        cannot collide with the detector's ``corner_N`` tag keypoints. Opening
-        the tab attaches a :class:`~ethograph.gui.pose_edit_mixin.CalibrationClickMode`
-        in place of the labelling mode (see :meth:`_on_tab_changed`), so a click
-        on the video places the selected landmark; leaving hands the canvas back.
-        """
-        page = QWidget()
-        box = QVBoxLayout(page)
-
-        intro = QLabel(
-            "Give each fixed physical landmark its real-world x/y (in cm), then "
-            "click it on the video on a few frames — the clicks are averaged, "
-            "assuming the camera does not move. With "
-            f"{MIN_CALIBRATION_LANDMARKS} landmarks ready the export can "
-            "produce cm instead of pixels (3 fit an affine; 4 or more fit a "
-            "homography, which also corrects an angled camera)."
-        )
-        intro.setWordWrap(True)
-        box.addWidget(intro)
-
-        group = QGroupBox("Landmarks")
-        group_box = QVBoxLayout(group)
-
-        self.calib_table = QTableWidget(0, 5)
-        self.calib_table.setHorizontalHeaderLabels(["Landmark", "x (cm)", "y (cm)", "Clicks", "Mean (px)"])
-        self.calib_table.horizontalHeader().setStretchLastSection(True)
-        self.calib_table.verticalHeader().setVisible(False)
-        self.calib_table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.calib_table.setSelectionMode(QTableWidget.SingleSelection)
-        self.calib_table.itemChanged.connect(self._on_calib_item_changed)
-        self.calib_table.currentCellChanged.connect(self._on_calib_row_selected)
-        group_box.addWidget(self.calib_table)
-
-        buttons = QHBoxLayout()
-        add_btn = QPushButton("Add landmark…")
-        add_btn.clicked.connect(self._on_add_landmark)
-        buttons.addWidget(add_btn)
-        remove_btn = QPushButton("Remove")
-        remove_btn.setToolTip("Remove the selected landmark, its cm coordinates and its clicks.")
-        remove_btn.clicked.connect(self._on_remove_landmark)
-        buttons.addWidget(remove_btn)
-        clear_btn = QPushButton("Clear clicks")
-        clear_btn.setToolTip("Drop the selected landmark's clicks, keeping its cm coordinates.")
-        clear_btn.clicked.connect(self._on_clear_landmark_clicks)
-        buttons.addWidget(clear_btn)
-        buttons.addStretch()
-        load_btn = QPushButton("Load coordinates…")
-        load_btn.setToolTip(
-            "Read landmark cm coordinates from a table, instead of typing them\n"
-            "per session. Two layouts work:\n\n"
-            "  name, x, y            — one row per landmark\n"
-            "  session, <name>_x, <name>_y   — one row per session; you pick the row\n\n"
-            "A z column is ignored: a single camera calibrates a plane, so use\n"
-            "landmarks roughly level with where the animal moves. Existing\n"
-            "landmarks keep their clicks — re-clicking per session is what\n"
-            "absorbs camera drift."
-        )
-        load_btn.clicked.connect(self._on_load_world_coordinates)
-        buttons.addWidget(load_btn)
-        group_box.addLayout(buttons)
-
-        self.calib_status = QLabel("")
-        self.calib_status.setWordWrap(True)
-        group_box.addWidget(self.calib_status)
-
-        box.addWidget(group)
-
-        # The clicked frames, mirrored from the points table: one row per
-        # frame, one column per landmark, click a row to go there.
-        frames_group = QGroupBox("Clicked frames")
-        frames_box = QVBoxLayout(frames_group)
-        self.calib_frames_table = QTableWidget(0, 1)
-        self.calib_frames_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.calib_frames_table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.calib_frames_table.setSelectionMode(QTableWidget.SingleSelection)
-        self.calib_frames_table.verticalHeader().setVisible(False)
-        self.calib_frames_table.horizontalHeader().setStretchLastSection(True)
-        self.calib_frames_table.setToolTip(
-            "Every frame carrying a calibration click. Clicking a row seeks the\n"
-            "video there; clicking a landmark's cell also makes it the one the\n"
-            "next canvas click places. Right-click removes clicks."
-        )
-        self.calib_frames_table.cellClicked.connect(self._on_calib_frame_clicked)
-        self.calib_frames_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.calib_frames_table.customContextMenuRequested.connect(self._on_calib_frames_menu)
-        frames_box.addWidget(self.calib_frames_table)
-        box.addWidget(frames_group, stretch=1)
-
-        self._refresh_calibration_table()
-        return page
-
-    def _enter_calibrate_mode(self) -> None:
-        """Swap the canvas from labelling to landmark clicking."""
-        if self._calib_mode is not None:
-            return
-        if self._view.scene() is None:
-            return  # the table is still editable; clicking needs a loaded frame
-        if self._mode is not None:
-            self._resume_label_mode = (self._mode.mode, self._mode.active_keypoint, self._mode.active_individual)
-            self._detach_mode()
-        self._calib_mode = CalibrationClickMode(
-            self._view,
-            self.store.calibration,
-            on_changed=self._after_calibration_changed,
-            point_size=float(self.app_state.labelling_point_size),
-        )
-        self._calib_mode.set_frame(int(self.app_state.current_frame or 0))
-        self._sync_calib_selection()
-
-    def _exit_calibrate_mode(self, restore: bool = True) -> None:
-        """Detach the calibration mode; *restore* re-arms the suspended labelling.
-
-        ``restore=False`` is for callers about to install a mode of their own
-        (:meth:`set_interaction_mode`) or tearing the canvas down entirely.
-        """
-        resume, self._resume_label_mode = self._resume_label_mode, None
-        if self._calib_mode is None:
-            return
-        self._calib_mode.detach()
-        self._calib_mode = None
-        if restore and resume is not None and self._can_label(quiet=True):
-            mode, keypoint, individual = resume
-            self._attach_mode(mode)
-            self._sync_mode_buttons()
-            if individual not in self.store.individual_names:
-                individual = None
-            if keypoint is not None and self.store.has_keypoint(keypoint, individual):
-                self._mode.set_active(keypoint, individual)
-            self._apply_lock()
-
-    def _after_calibration_changed(self) -> None:
-        """Everything a landmark click or table edit touches, in one place."""
-        self._save_store()  # clicks and cm coordinates are user intent
-        self._refresh_calibration_table()
-        self._refresh_space_combo()
-        if self._calib_mode is not None:
-            self._calib_mode.refresh()
-            self._sync_calib_selection()
-
-    def _refresh_calibration_table(self) -> None:
-        table = getattr(self, "calib_table", None)
-        if table is None:
-            return
-        self._calib_building = True
-        try:
-            landmarks = self.store.calibration.landmarks
-            table.setRowCount(len(landmarks))
-            for row, landmark in enumerate(landmarks):
-                world = landmark.world_xy
-                mean = landmark.mean_pixel()
-                cells = [
-                    QTableWidgetItem(landmark.name),
-                    QTableWidgetItem("" if world is None else f"{world[0]:g}"),
-                    QTableWidgetItem("" if world is None else f"{world[1]:g}"),
-                    QTableWidgetItem(str(len(landmark.clicks))),
-                    QTableWidgetItem("—" if mean is None else f"({mean[0]:.1f}, {mean[1]:.1f})"),
-                ]
-                for column, item in enumerate(cells):
-                    if column >= 3:  # clicks + mean are read-only readouts
-                        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                    table.setItem(row, column, item)
-        finally:
-            self._calib_building = False
-        self._refresh_calibration_status()
-        self._refresh_calibration_frames()
-
-    def _refresh_calibration_frames(self) -> None:
-        """Rebuild the clicked-frames table: one row per frame, one column per landmark."""
-        table = getattr(self, "calib_frames_table", None)
-        if table is None:
-            return
-        names = self.store.calibration.names()
-        frames = sorted({frame for landmark in self.store.calibration for frame in landmark.clicks})
-        table.setColumnCount(1 + len(names))
-        table.setHorizontalHeaderLabels(["Frame", *names])
-        table.setRowCount(len(frames))
-        for row, frame in enumerate(frames):
-            table.setItem(row, 0, QTableWidgetItem(str(frame)))
-            for column, name in enumerate(names, start=1):
-                click = self.store.calibration.get(name).clicks.get(frame)
-                text = "" if click is None else f"{click[0]:.1f}, {click[1]:.1f}"
-                table.setItem(row, column, QTableWidgetItem(text))
-        self._select_calib_frame_row()
-
-    def _select_calib_frame_row(self) -> None:
-        """Highlight the playhead's row in the clicked-frames table, without seeking."""
-        table = getattr(self, "calib_frames_table", None)
-        if table is None:
-            return
-        frame = int(self.app_state.current_frame or 0)
-        for row in range(table.rowCount()):
-            item = table.item(row, 0)
-            if item is not None and int(item.text()) == frame:
-                table.selectRow(row)
-                return
-        table.clearSelection()
-
-    def _on_calib_frame_clicked(self, row: int, column: int) -> None:
-        """Seek to the clicked row's frame; a landmark cell also selects it."""
-        item = self.calib_frames_table.item(row, 0)
-        if item is None:
-            return
-        self._seek(int(item.text()))
-        names = self.store.calibration.names()
-        if column >= 1 and column - 1 < len(names) and self._calib_mode is not None:
-            self._calib_mode.set_active(names[column - 1])
-            self._sync_calib_selection()
-
-    def _on_calib_frames_menu(self, position) -> None:
-        table = self.calib_frames_table
-        item = table.itemAt(position)
-        if item is None:
-            return
-        frame_item = table.item(item.row(), 0)
-        if frame_item is None:
-            return
-        frame = int(frame_item.text())
-        names = self.store.calibration.names()
-        menu = QMenu(table)
-        column = item.column()
-        if column >= 1 and column - 1 < len(names):
-            name = names[column - 1]
-            if frame in self.store.calibration.get(name).clicks:
-                remove_one = menu.addAction(f"Remove {name}'s click on frame {frame}")
-                remove_one.triggered.connect(
-                    lambda: (self.store.calibration.remove_click(name, frame), self._after_calibration_changed())
-                )
-        remove_all = menu.addAction(f"Remove every click on frame {frame}")
-
-        def _remove_frame() -> None:
-            for landmark_name in names:
-                self.store.calibration.remove_click(landmark_name, frame)
-            self._after_calibration_changed()
-
-        remove_all.triggered.connect(_remove_frame)
-        menu.exec_(table.viewport().mapToGlobal(position))
-
-    def _refresh_calibration_status(self) -> None:
-        status = getattr(self, "calib_status", None)
-        if status is None:
-            return
-        calibration = self.store.calibration
-        ready = len(calibration.ready())
-        if not len(calibration):
-            status.setText("No landmarks yet — add them by hand or load a coordinates file.")
-        elif ready >= MIN_CALIBRATION_LANDMARKS:
-            fit_kind = "affine" if ready == MIN_CALIBRATION_LANDMARKS else "homography"
-            status.setText(f"Ready: {ready} landmarks → {fit_kind} fit. The export now offers cm.")
-        else:
-            missing_world = sum(1 for lm in calibration if lm.world_xy is None)
-            missing_clicks = sum(1 for lm in calibration if not lm.clicks)
-            parts = []
-            if missing_world:
-                parts.append(f"{missing_world} without cm coordinates")
-            if missing_clicks:
-                parts.append(f"{missing_clicks} without a click")
-            status.setText(f"{ready}/{MIN_CALIBRATION_LANDMARKS} landmarks ready ({', '.join(parts)}).")
-
-    def _sync_calib_selection(self) -> None:
-        """Point the table's selected row at the mode's active landmark."""
-        if self._calib_mode is None or self._calib_mode.active_landmark is None:
-            return
-        names = self.store.calibration.names()
-        if self._calib_mode.active_landmark not in names:
-            return
-        row = names.index(self._calib_mode.active_landmark)
-        if self.calib_table.currentRow() != row:
-            self._calib_building = True
-            try:
-                self.calib_table.setCurrentCell(row, 0)
-            finally:
-                self._calib_building = False
-
-    def _on_calib_row_selected(self, row: int, *_args) -> None:
-        if self._calib_building or self._calib_mode is None:
-            return
-        names = self.store.calibration.names()
-        if 0 <= row < len(names):
-            self._calib_mode.set_active(names[row])
-
-    def _on_calib_item_changed(self, item: QTableWidgetItem) -> None:
-        if self._calib_building:
-            return
-        landmarks = self.store.calibration.landmarks
-        row, column = item.row(), item.column()
-        if not 0 <= row < len(landmarks):
-            return
-        landmark = landmarks[row]
-        text = item.text().strip()
-        if column == 0:
-            if text and text != landmark.name:
-                try:
-                    self.store.calibration.rename(landmark.name, text)
-                except KeypointStoreError as e:
-                    notify(str(e), "warning")
-        elif column in (1, 2):
-            x_text = (self.calib_table.item(row, 1).text() or "").strip()
-            y_text = (self.calib_table.item(row, 2).text() or "").strip()
-            # A blank half falls back to the value the landmark already has:
-            # the table is rebuilt after every edit, so treating a lone x as
-            # "no position" wiped the y the user had typed a moment before.
-            old = landmark.world_xy
-            try:
-                x_val = float(x_text) if x_text else (old[0] if old else None)
-                y_val = float(y_text) if y_text else (old[1] if old else None)
-            except ValueError:
-                notify("cm coordinates must be numbers.", "warning")
-                x_val, y_val = old if old else (None, None)
-            if x_val is None or y_val is None:
-                self.store.calibration.set_world(landmark.name, None)
-            else:
-                self.store.calibration.set_world(landmark.name, (x_val, y_val))
-        self._after_calibration_changed()
-
-    def _on_add_landmark(self) -> None:
-        name, ok = QInputDialog.getText(self, "Add landmark", "Landmark name:")
-        name = name.strip()
-        if not ok or not name:
-            return
-        try:
-            self.store.calibration.add(name)
-        except KeypointStoreError as e:
-            notify(str(e), "warning")
-            return
-        self._after_calibration_changed()
-        self.calib_table.setCurrentCell(self.calib_table.rowCount() - 1, 1)
-
-    def _selected_landmark_name(self) -> str | None:
-        names = self.store.calibration.names()
-        row = self.calib_table.currentRow()
-        return names[row] if 0 <= row < len(names) else None
-
-    def _on_remove_landmark(self) -> None:
-        name = self._selected_landmark_name()
-        if name is None:
-            return
-        self.store.calibration.remove(name)
-        self._after_calibration_changed()
-
-    def _on_clear_landmark_clicks(self) -> None:
-        name = self._selected_landmark_name()
-        if name is None:
-            return
-        self.store.calibration.clear_clicks(name)
-        self._after_calibration_changed()
-
-    def _on_load_world_coordinates(self) -> None:
-        """Fill the landmarks' cm coordinates from a table on disk.
-
-        Existing landmarks keep their clicks — the world layout is the stable
-        part, and re-clicking per session is what absorbs camera drift. New
-        names become new rows.
-        """
-        path = browse_open_file(
-            self,
-            self.app_state,
-            "Load landmark coordinates",
-            "Tables (*.csv *.tsv *.txt *.xlsx);;All files (*)",
-            preferred_dir=self.app_state.calibration_coords_path or None,
-        )
-        if not path:
-            return
-        try:
-            loaded = load_world_coordinates(path)
-            if isinstance(loaded, list):  # session-keyed file: ask which row
-                session, ok = QInputDialog.getItem(
-                    self, "Pick a session", "This file has one row per session:", loaded, 0, False
-                )
-                if not ok:
-                    return
-                loaded = load_world_coordinates(path, session=session)
-        except KeypointStoreError as e:
-            notify(str(e), "error")
-            return
-        self.app_state.calibration_coords_path = str(path)
-        for name, world in loaded.items():
-            if name not in self.store.calibration:
-                self.store.calibration.add(name)
-            self.store.calibration.set_world(name, world)
-        self._after_calibration_changed()
-        notify(f"Loaded cm coordinates for {len(loaded)} landmark(s) — now click them on the video.", "info")
 
     def _build_schema_page(self) -> QWidget:
         page = QWidget()
@@ -1759,8 +1343,6 @@ class PoseLabellingDialog(QDialog):
         self.app_state.labelling_point_size = float(value)
         if self._mode is not None:
             self._mode.set_point_size(float(value))
-        if self._calib_mode is not None:
-            self._calib_mode.set_point_size(float(value))
 
     # ------------------------------------------------------------------
     # Target pickers
@@ -2316,16 +1898,6 @@ class PoseLabellingDialog(QDialog):
         group = QGroupBox("Export")
         box = QVBoxLayout(group)
 
-        space_row = QHBoxLayout()
-        space_row.addWidget(QLabel("Coordinate space:"))
-        self.space_combo = QComboBox()
-        self.space_combo.addItem("pixels", "pixels")
-        self.space_combo.addItem("cm (calibrated)", "cm")
-        self.space_combo.currentIndexChanged.connect(self._on_space_combo_changed)
-        space_row.addWidget(self.space_combo)
-        space_row.addStretch()
-        box.addLayout(space_row)
-
         self.invert_y_check = QCheckBox("Flip y so plots are not upside down")
         self.invert_y_check.setChecked(True)
         self.invert_y_check.setToolTip(
@@ -2368,83 +1940,7 @@ class PoseLabellingDialog(QDialog):
         )
         movement_btn.clicked.connect(self._on_export_movement)
         box.addWidget(movement_btn)
-        self._refresh_space_combo()
         return group
-
-    def _refresh_space_combo(self) -> None:
-        """Offer cm exactly when a usable calibration exists.
-
-        The gate is the same shape as the head-direction row's: enabled when
-        the evidence is there, the reason in the tooltip when it is not — and a
-        calibration that becomes unusable snaps the choice back to pixels
-        rather than exporting something the fit can no longer honour.
-        """
-        combo = getattr(self, "space_combo", None)
-        if combo is None:
-            return
-        valid = self.store.calibration.is_valid()
-        combo.setEnabled(valid)
-        # The combo SHOWS pixels while the fit is unusable, but the user's own
-        # choice is kept and restored: a calibration goes transiently invalid
-        # on every half-edited coordinate cell, and losing "cm" to that churn
-        # meant exporting pixels without anyone choosing them.
-        target = self._space_choice if valid else "pixels"
-        self._space_syncing = True
-        try:
-            index = combo.findData(target)
-            if index >= 0 and combo.currentIndex() != index:
-                combo.setCurrentIndex(index)
-        finally:
-            self._space_syncing = False
-        if valid:
-            combo.setToolTip(
-                "pixels: source-video image coordinates, as clicked.\n"
-                "cm: mapped through the Calibrate tab's landmark fit — the\n"
-                "user-defined world frame, kinematics in cm/s.\n\n"
-                "Applies to 'Load into the GUI' and the NetCDF export. The video\n"
-                "overlay always stays in pixels."
-            )
-        else:
-            combo.setToolTip(
-                f"Needs at least {MIN_CALIBRATION_LANDMARKS} landmarks, each with cm\n"
-                "coordinates and at least one click — see the Calibrate tab."
-            )
-        self._sync_flip_for_space()
-
-    def _on_space_combo_changed(self, _index: int) -> None:
-        if not self._space_syncing:
-            self._space_choice = self.space_combo.currentData()
-        self._sync_flip_for_space()
-
-    def _sync_flip_for_space(self) -> None:
-        """The flip means something different per space; the tooltip says which.
-
-        In pixels it undoes the image's y-down convention (via ``image_height``);
-        in cm it mirrors the user's world frame after the calibration (composed
-        into the matrix in :meth:`_build_dataset`) — never the pixels, which the
-        fit was not made from.
-        """
-        check = getattr(self, "invert_y_check", None)
-        if check is None:
-            return
-        if self.space_combo.currentData() == "cm":
-            check.setToolTip(
-                "In cm this mirrors your world frame's y axis (y → −y), applied\n"
-                "after the calibration. Untick it if your landmark coordinates\n"
-                "already have y pointing the way you want plots to read."
-            )
-        else:
-            check.setToolTip(
-                "Pose coordinates count y DOWNWARD from the top-left corner; plots count\n"
-                "it upward. Without the flip a keypoint at the top of the video is drawn\n"
-                "at the bottom of a space plot.\n\n"
-                "Applies to 'Load into the GUI' and the NetCDF export. The video overlay\n"
-                "and the DeepLabCut export always keep raw image coordinates."
-            )
-
-    def _cm_selected(self) -> bool:
-        """Whether to export in cm: asked for, and the fit can honour it."""
-        return bool(self.space_combo.currentData() == "cm" and self.store.calibration.is_valid())
 
     def _build_head_direction_row(self) -> QWidget:
         """Head direction, read off the tags themselves.
@@ -2535,29 +2031,15 @@ class PoseLabellingDialog(QDialog):
         if not self.store.anchor_frames() and not self.store.detection_frames():
             notify("Nothing to save — no frames are labelled or detected.", "warning")
             return None
-        world_transform = None
-        if self._cm_selected():
-            try:
-                world_transform = self.store.calibration.fit()
-            except KeypointStoreError as e:
-                notify(f"Calibration is not usable: {e}", "error")
-                return None
-            if self.invert_y_check.isChecked():
-                # In cm the flip mirrors the WORLD frame's y, composed after
-                # the fit — never a pixel flip, which the fit was not made
-                # from. Positions and head direction both ride the one matrix.
-                world_transform = np.diag([1.0, -1.0, 1.0]) @ world_transform
         try:
             return store_to_dataset(
                 self.store,
                 fps,
                 # Kinematics and head direction follow the flip, so their y signs
-                # match the trajectory the user is looking at. In cm the flip
-                # retires — the world frame defines its own orientation.
-                image_height=None if world_transform is not None else self._export_image_height(),
+                # match the trajectory the user is looking at.
+                image_height=self._export_image_height(),
                 kinematics=self._selected_kinematics(),
                 head_direction=self._head_direction_wanted(),
-                world_transform=world_transform,
             )
         except (KeypointStoreError, ImportError, ValueError) as e:
             notify(f"Could not build the poses dataset: {e}", "error")
@@ -2586,7 +2068,7 @@ class PoseLabellingDialog(QDialog):
 
         path = keypoints_dataset_path(video)
         try:
-            ds.to_netcdf(path)
+            ds.to_netcdf(path, engine=netcdf_engine(path))
         except OSError as e:
             notify(f"Loaded, but could not save a copy to {path.name}: {e}", "warning")
 
@@ -3737,11 +3219,6 @@ class PoseLabellingDialog(QDialog):
 
     def set_interaction_mode(self, mode: str | None) -> None:
         """Arm the canvas for labelling or editing, or disarm it (``None``)."""
-        if mode is not None:
-            # A mode button pressed on the Calibrate tab: the calibration mode
-            # must let go of the canvas first, without re-arming the labelling
-            # mode itself — that is exactly what this call is about to do.
-            self._exit_calibrate_mode(restore=False)
         if mode is not None and not self._can_label():
             mode = None
         if mode is None:
@@ -3781,24 +3258,12 @@ class PoseLabellingDialog(QDialog):
         return True
 
     def _on_tab_changed(self, index: int) -> None:
-        """Arm Sequential when the labelling tab is opened with nothing armed.
-
-        The Calibrate tab is the one exception to "the armed mode survives a
-        tab switch": it needs the pointer for its own clicks, so entering it
-        suspends the labelling mode and attaches the calibration mode, and
-        leaving reverses that — restoring the labelling mode with its active
-        pair, locked or not per :meth:`_lock_wanted` as usual.
-        """
+        """Arm Sequential when the labelling tab is opened with nothing armed."""
         current = self.tabs.widget(index)
-        if current is not self._calibrate_page:
-            self._exit_calibrate_mode()
         # Applies to every tab: away from Label, the pointer goes back to the
         # camera (see `_lock_wanted`). The armed mode itself survives, so
         # coming back carries on where it left off.
         self._apply_lock()
-        if current is self._calibrate_page:
-            self._enter_calibrate_mode()
-            return
         if current is self._detect_page:
             # Nothing was drawn while the tab was hidden, so opening it is the
             # first chance to spend a decode on the preview.
@@ -3882,9 +3347,6 @@ class PoseLabellingDialog(QDialog):
     def _on_frame_changed(self, frame: int) -> None:
         if self._mode is not None:
             self._mode.set_frame(int(frame))
-        if self._calib_mode is not None:
-            self._calib_mode.set_frame(int(frame))
-            self._select_calib_frame_row()
         self._refresh_tree_marks()
         self._select_table_row_for_frame()
         self._schedule_preview()
@@ -4075,10 +3537,6 @@ class PoseLabellingDialog(QDialog):
         # The held-open preview source belongs to the video that is going away.
         self._close_preview_frames()
         self._switch_clip()
-        # The calibration mode holds pygfx objects in the scene being replaced;
-        # rebuilt (deferred, like the key filter) if the tab is still open.
-        self._exit_calibrate_mode(restore=False)
-        QTimer.singleShot(0, self._sync_calibrate_mode)
         QTimer.singleShot(0, self._reinstall_key_filter)
         self._schedule_preview()
 
@@ -4148,11 +3606,6 @@ class PoseLabellingDialog(QDialog):
                 self._data_widget.navigation_widget.navigate_to_trial(trial)
                 return
         notify("Every clip on this camera has labels.", "info")
-
-    def _sync_calibrate_mode(self) -> None:
-        """Re-attach the calibration mode if its tab is (still) the open one."""
-        if self.tabs.currentWidget() is self._calibrate_page:
-            self._enter_calibrate_mode()
 
     def _reinstall_key_filter(self) -> None:
         self._install_key_filter(True)
@@ -4296,10 +3749,6 @@ class PoseLabellingDialog(QDialog):
         turns to ``Fill``), which is correct — the next fill is free to place it
         again, unconstrained by the label you removed.
         """
-        if self._calib_mode is not None:
-            # Calibrating: the key removes the active landmark's click on this
-            # frame. The fan-out (sidecar save included) runs via on_changed.
-            return self._calib_mode.delete_active()
         if self._mode is not None:
             deleted = self._mode.delete_selected()
         else:
@@ -4772,13 +4221,12 @@ class PoseLabellingDialog(QDialog):
         path, _ = QFileDialog.getSaveFileName(self, "Export poses", "keypoints.nc", "NetCDF (*.nc)")
         if not path:
             return
-        ds.to_netcdf(path)
+        ds.to_netcdf(path, engine=netcdf_engine(path))
         notify(f"Wrote {path} ({ds.attrs['space_unit']})", "info")
 
     # ------------------------------------------------------------------
 
     def closeEvent(self, event):
-        self._exit_calibrate_mode(restore=False)
         self._detach_mode()
         self._save_detections()
         self._preview_timer.stop()

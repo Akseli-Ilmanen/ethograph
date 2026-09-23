@@ -544,6 +544,41 @@ def download_example_dataset(
     return None
 
 
+def ensure_template_dataset(key: str, verbose: bool = True) -> Path:
+    """Download template *key* as the GUI's template dialog would, if missing.
+
+    Fetches the GUI assets, the shipped prediction runs, the bundled configs
+    and the alignment NWB into :func:`~ethograph.datasets.dataset_dir`.
+    Files already present are kept, so calling it again is cheap.
+
+    Contributors run it over every key in ``DATASETS`` once so the integration
+    tests exercise every template instead of skipping it::
+
+        python -c "from ethograph.datasets import DATASETS; \\
+                   from ethograph.utils.download import ensure_template_dataset; \\
+                   [ensure_template_dataset(k) for k in DATASETS]"
+    """
+    dest = dataset_dir(key)
+    assets = get_gui_assets(key)
+
+    def _print_progress(count: int, name: str) -> None:
+        if count == len(assets):
+            print(f"  {key}: {name} ({count}/{len(assets)})")
+
+    download_assets(
+        release_tag=DATASETS[key]["release_tag"],
+        assets=assets,
+        dest=dest,
+        on_progress=_print_progress if verbose else None,
+    )
+    download_prediction_runs(key)
+    ensure_default_configs()
+    write_example_configs(key, dest)
+    if not (dest / ".ethograph" / "alignment.nwb").exists():
+        ensure_alignment_nwb(key)
+    return dest
+
+
 def setup_birdpark_continuous(
     dest: Path | None = None,
     n_trials: int = 3,

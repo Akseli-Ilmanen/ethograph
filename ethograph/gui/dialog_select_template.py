@@ -34,6 +34,7 @@ from ethograph.datasets import (  # noqa: E402
     video_features_size_mb,
 )
 from ethograph.gui.notify import notify_dialog  # noqa: E402
+from ethograph.io.netcdf import netcdf_engine  # noqa: E402
 from ethograph.utils.download import (  # noqa: E402
     download_assets,
     download_prediction_runs,
@@ -299,7 +300,7 @@ class TemplateDialog(QDialog):
                     audio_path=audio_path,
                     audio_sr=audio_sr,
                 )
-                dt.to_netcdf(nc_path)
+                dt.to_netcdf(nc_path, engine=netcdf_engine(nc_path))
             except Exception as e:
                 traceback.print_exc()
                 notify_dialog(f"Failed to generate .nc from audio:\n{e}", "error", "Error", self)

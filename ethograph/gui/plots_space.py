@@ -28,8 +28,9 @@ from qtpy.QtWidgets import (
 
 from ethograph.features.preprocessing import interpolate_nans
 from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
+from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_lineplot import MultiColoredLineItem
-from ethograph.io.catalog import DataLoader
+from ethograph.io.catalog import INDIVIDUAL_DIMS, DataLoader
 from ethograph.utils.paths import defaults_dir, seed_defaults
 
 logger = logging.getLogger(__name__)
@@ -267,13 +268,18 @@ def _auto_camera_3d(gl_widget, X, Y, Z):
 # ---------------------------------------------------------------------------
 
 
-class SpacePlot(QWidget):
+class SpacePlot(IndividualPinMixin, QWidget):
     """Dock widget for displaying spatial plots with user-selectable axes.
 
     Space plots are instances like line plots: any number can be open at
     once (same or different features / 2D/3D), each in its own shell dock.
     Closing the dock emits :pyattr:`closed` so the owner can drop the
     instance (``DataWidget.remove_space_plot``).
+
+    The individual combo is the panel's pin: it shows the pin, else the
+    sidebar's individual, and picking a name in it pins the panel
+    (:pyattr:`pin_changed`), exactly as a feature panel never keeps the
+    individual among its own selections.
     """
 
     #: Emitted on any mouse press in the plot → switches the sidebar to the
@@ -282,6 +288,10 @@ class SpacePlot(QWidget):
 
     #: Emitted with ``self`` when the user closes this panel's dock.
     closed = Signal(object)
+
+    #: Emitted with ``self`` when the user pinned this panel through its own
+    #: individual combo; the owner re-titles it and moves the labelling subject.
+    pin_changed = Signal(object)
 
     #: Emitted with ``self`` after the user interactively changes the view
     #: (2D zoom/pan or 3D camera orbit/zoom) — DataWidget mirrors the new
@@ -299,6 +309,7 @@ class SpacePlot(QWidget):
         self.dock_widget = None
         self.dock_object_name: str | None = None
         self._apply_default_width = True
+        self._dock_name = "Space Plot"
 
         self._store: DataLoader | None = None
 
@@ -485,6 +496,7 @@ class SpacePlot(QWidget):
         if not self.dock_widget:
             SpacePlot._dock_seq += 1
             name = "Space Plot" if SpacePlot._dock_seq == 1 else f"Space Plot {SpacePlot._dock_seq}"
+            self._dock_name = name
             # Dock in the top area — the same row (and height) as the video —
             # instead of the left edge, where the dock title collided with the
             # top bar and had to be dragged into place manually.
@@ -498,9 +510,42 @@ class SpacePlot(QWidget):
             if not self.dock_widget.restored_from_state and getattr(self, "_apply_default_width", True):
                 QTimer.singleShot(0, self._apply_default_dock_width)
             self.dock_widget.installEventFilter(self)
+            self.refresh_title()
         else:
             self.dock_widget.setVisible(True)
         super().show()
+
+    def refresh_title(self) -> None:
+        """Re-title the dock: its name, then which individual it shows and why."""
+        if self.dock_widget is not None:
+            self.dock_widget.setWindowTitle(self._dock_name + self.app_state.panel_mode_suffix(self))
+
+    # --- The panel's individual -----------------------------------------------
+
+    def set_pinned_individual(self, individual: str | None) -> None:
+        super().set_pinned_individual(individual)
+        self.sync_individual()
+
+    def _individual_combos(self) -> dict[str, QComboBox]:
+        return {dim: combo for dim, combo in self._dim_combos.items() if dim in INDIVIDUAL_DIMS}
+
+    def sync_individual(self) -> None:
+        """Point the individual combo at this panel's individual (its pin, else the sidebar's) and re-render."""
+        target = self.app_state.panel_individual(self)
+        if target is None:
+            return
+        changed = False
+        for dim, combo in self._individual_combos().items():
+            index = combo.findText(str(target))
+            if index < 0 or combo.currentIndex() == index:
+                continue
+            combo.blockSignals(True)
+            combo.setCurrentIndex(index)
+            combo.blockSignals(False)
+            self._current_dim_values[dim] = combo.currentText()
+            changed = True
+        if changed and self._store is not None:
+            self._update_plot()
 
     def _apply_default_dock_width(self):
         """Deferred default sizing for a NEW dock. By firing time the panel
@@ -672,6 +717,12 @@ class SpacePlot(QWidget):
         self._clear_dim_combos()
         space_dim = self.space_dim_combo.currentText()
         global_sels = self.app_state.get_selections() if hasattr(self.app_state, "get_selections") else {}
+        # The individual is never one of the panel's own selections: it is
+        # the pin, or the sidebar's individual for a panel that follows it.
+        individual = self.app_state.panel_individual(self)
+        for dim in INDIVIDUAL_DIMS:
+            if individual is not None:
+                global_sels[dim] = individual
 
         for dim, vals in self._feature_dims().items():
             if dim == space_dim or not vals:
@@ -750,6 +801,16 @@ class SpacePlot(QWidget):
                 self._current_dim_values[dim] = new_text
         if self._store is not None:
             self._update_plot()
+        if dim in INDIVIDUAL_DIMS and combo is not None and combo.currentText():
+            self._pin_through_combo(combo.currentText())
+
+    def _pin_through_combo(self, individual: str) -> None:
+        """Picking an individual in the panel's own combo pins the panel to it."""
+        if individual == self.app_state.panel_individual(self):
+            return
+        IndividualPinMixin.set_pinned_individual(self, individual)
+        self.refresh_title()
+        self.pin_changed.emit(self)
 
     def _on_axis_changed(self, *_args):
         if self._store is not None:
@@ -810,8 +871,12 @@ class SpacePlot(QWidget):
             "x": self.x_combo.currentText() or None,
             "y": self.y_combo.currentText() or None,
             "z": self.z_combo.currentText() or None,
-            "dims": {d: c.currentText() for d, c in self._dim_combos.items() if c.currentText()},
+            # The individual is the pin (or the sidebar's), never a saved selection.
+            "dims": {
+                d: c.currentText() for d, c in self._dim_combos.items() if c.currentText() and d not in INDIVIDUAL_DIMS
+            },
             "color": self.color_combo.currentText() or None,
+            **({"individual": self.pinned_individual} if self.pinned_individual else {}),
         }
 
     def apply_space_settings(self, settings: dict) -> None:
@@ -824,6 +889,8 @@ class SpacePlot(QWidget):
                 combo.setCurrentIndex(idx)
                 combo.blockSignals(False)
 
+        # Before the combos: the individual combo is built from the pin.
+        IndividualPinMixin.set_pinned_individual(self, settings.get("individual"))
         _set(self.feature_combo, settings.get("feature"))
         self._populate_space_dim_combo()
         _set(self.space_dim_combo, settings.get("space_dim"))
@@ -834,7 +901,7 @@ class SpacePlot(QWidget):
         _set(self.z_combo, settings.get("z"))
         for dim, val in (settings.get("dims") or {}).items():
             combo = self._dim_combos.get(dim)
-            if combo is not None:
+            if combo is not None and dim not in INDIVIDUAL_DIMS:
                 _set(combo, val)
                 self._current_dim_values[dim] = combo.currentText()
         _set(self.color_combo, settings.get("color"))

@@ -31,6 +31,7 @@ from typing import Iterable, Iterator
 import numpy as np
 import xarray as xr
 
+from ethograph.io.netcdf import netcdf_engine
 from ethograph.io.validation import VIDEO_EXTENSIONS
 from ethograph.segment.config import SegmentConfig, VideoFeaturesConfig
 from ethograph.segment.sessions import Session, filter_trials, open_session
@@ -144,7 +145,7 @@ def extract_videos(
         plan = extractor.plan(probe_video(str(video)).fps)
         logger.info("%s: %s", video.name, plan.describe())
         da = extractor.extract(video)
-        da.to_netcdf(target)
+        da.to_netcdf(target, engine=netcdf_engine(target))
         written.append(target)
         logger.info("  → %s %s", target, tuple(da.shape))
     return written
@@ -255,7 +256,7 @@ def with_video_feature(ds: xr.Dataset, sidecar: Path, alignment, trial, name: st
     The sidecar's time dim is found by name (``time_video``, or ``time_s3d``
     from a file written before the registry), so older sidecars still merge.
     """
-    da = xr.load_dataarray(sidecar)
+    da = xr.load_dataarray(sidecar, engine=netcdf_engine(sidecar))
     video_time = time_dim_of(da)
     offset = float(alignment.stream_offset_for_trial(trial, "video"))
     reference = next(iter(ds.data_vars.values()))
