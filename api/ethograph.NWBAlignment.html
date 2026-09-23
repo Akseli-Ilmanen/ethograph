@@ -613,6 +613,8 @@ cached trials table would still describe the pre-write file.</p>
 <li><p>Fallback: trial table filename + <code class="docutils literal notranslate"><span class="pre">fallback_folder</span></code>.</p></li>
 <li><p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> if unresolvable.</p></li>
 </ol>
+<p>A video may be an image folder (<code class="docutils literal notranslate"><span class="pre">io/image_sequence.py</span></code>), so “on disk”
+means <code class="xref py py-func docutils literal notranslate"><span class="pre">media_exists()</span></code>, never a bare <code class="docutils literal notranslate"><span class="pre">isfile</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>

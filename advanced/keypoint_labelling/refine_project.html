@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Audio changepoints &#8212; ethograph</title>
+    <title>Refining a DeepLabCut / LightningPose project &#8212; ethograph</title>
   
   
   
@@ -45,14 +45,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/changepoints/audio';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/keypoint_labelling/refine_project';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/changepoints/audio.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/refine_project.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Ruptures" href="ruptures.html" />
-    <link rel="prev" title="Kinematic changepoints" href="kinematic.html" />
+    <link rel="next" title="Trial metadata" href="../metadata.html" />
+    <link rel="prev" title="Refining imported poses" href="refine_imported.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -380,22 +380,22 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Changepoints</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="kinematic.html">Kinematic changepoints</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Audio changepoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ruptures.html">Ruptures</a></li>
-<li class="toctree-l2"><a class="reference internal" href="correction.html">Changepoint correction</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../changepoints/index.html">Changepoints</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../changepoints/overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../changepoints/kinematic.html">Kinematic changepoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../changepoints/audio.html">Audio changepoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../changepoints/ruptures.html">Ruptures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../keypoint_labelling/index.html">Keypoint labelling</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/labelling.html">1-2. Define keypoints and label frames</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/detect.html">3. Detect — optional, if your animals wear tags</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/fill.html">5. Fill</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/correction.html">6. The correction loop</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/export.html">7. Visualizing &amp; exporting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_imported.html">Refining imported poses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../keypoint_labelling/refine_project.html">Refining a DeepLabCut / LightningPose project</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
+<li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="refine_imported.html">Refining imported poses</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Refining a DeepLabCut / LightningPose project</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
@@ -446,9 +446,9 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Changepoints</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Keypoint labelling</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Audio changepoints</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Refining a DeepLabCut / LightningPose project</span></li>
   </ul>
 </nav>
 </div>
@@ -465,65 +465,120 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="audio-changepoints">
-<span id="target-audio-changepoints"></span><h1>Audio changepoints<a class="headerlink" href="#audio-changepoints" title="Link to this heading">#</a></h1>
-<p>For audio data or high-sample-rate periodic signals (loaded as <code class="docutils literal notranslate"><span class="pre">.wav</span></code> file).</p>
-<p>Four methods are available, drawn from two libraries.</p>
-<hr class="docutils" />
-<section id="vocalpy-methods">
-<h2>VocalPy methods<a class="headerlink" href="#vocalpy-methods" title="Link to this heading">#</a></h2>
-<p>Reference: <a class="reference external" href="https://vocalpy.readthedocs.io/">VocalPy documentation</a> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id137" title="David Nicholson. Vocalpy/vocalpy: 0.2.0. 2023. doi:10.5281/zenodo.7905426.">Nicholson, 2023</a>]</span></p>
-<p><strong>Mean-squared energy</strong> (<code class="docutils literal notranslate"><span class="pre">meansquared</span></code>): Computes a smoothed energy envelope
-via mean-squared amplitude, then thresholds to find vocal segments. Simple
-and fast.</p>
-<p><strong>AVA</strong> (<code class="docutils literal notranslate"><span class="pre">ava</span></code>): The segmentation method from the Animal Vocalization
-Analysis pipeline. Uses a spectrogram-based approach with multiple threshold
-levels.</p>
-</section>
-<hr class="docutils" />
-<section id="vocalseg-methods">
-<h2>VocalSeg methods<a class="headerlink" href="#vocalseg-methods" title="Link to this heading">#</a></h2>
-<p>Reference: <a class="reference external" href="https://github.com/timsainb/vocalization-segmentation">VocalSeg</a> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id139" title="Tim Sainburg, Marvin Thielk, and Timothy Q. Gentner. Finding, visualizing, and quantifying latent structure across diverse animal vocal repertoires. PLOS Computational Biology, 16(10):e1008228, 2020. doi:10.1371/journal.pcbi.1008228.">Sainburg <em>et al.</em>, 2020</a>]</span></p>
-<p><strong>Dynamic thresholding</strong> (<code class="docutils literal notranslate"><span class="pre">vocalseg</span></code>): Adaptive threshold segmentation that
-adjusts to local spectral energy. Good for signals with varying background
-noise.</p>
-<p><strong>Continuity filtering</strong> (<code class="docutils literal notranslate"><span class="pre">continuity</span></code>): Extends dynamic thresholding with
-temporal continuity constraints to merge fragmented detections.</p>
-</section>
-<hr class="docutils" />
-<section id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">#</a></h2>
-<ol class="arabic simple">
-<li><p>Open the <strong>Audio CPs</strong> panel.</p></li>
-<li><p>Choose a method and click <strong>Configure…</strong> to adjust parameters.</p></li>
-<li><p>Click <strong>Detect</strong>.</p></li>
-</ol>
-<p>Detected onsets and offsets are drawn as vertical lines on the plot and
-stored in the dataset as <code class="docutils literal notranslate"><span class="pre">audio_cp_onsets</span></code> / <code class="docutils literal notranslate"><span class="pre">audio_cp_offsets</span></code>.</p>
-</section>
-<hr class="docutils" />
-<section id="data-format">
-<h2>Data format<a class="headerlink" href="#data-format" title="Link to this heading">#</a></h2>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Audio changepoints format is subject to change, still in development.</p>
-</div>
-<p>Audio changepoints use a different storage format because dense binary arrays
-at audio sample rates (e.g. 44 kHz) would be prohibitively large. They are
-stored as onset/offset time pairs in seconds:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s2">"audio_cp_onsets"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-    <span class="n">onset_times_s</span><span class="p">,</span>
-    <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"audio_cp"</span><span class="p">],</span>
-    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"target_feature"</span><span class="p">:</span> <span class="s2">"audio"</span><span class="p">,</span> <span class="s2">"method"</span><span class="p">:</span> <span class="n">method</span><span class="p">},</span>
-<span class="p">)</span>
-<span class="n">ds</span><span class="p">[</span><span class="s2">"audio_cp_offsets"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-    <span class="n">offset_times_s</span><span class="p">,</span>
-    <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"audio_cp"</span><span class="p">],</span>
-    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"target_feature"</span><span class="p">:</span> <span class="s2">"audio"</span><span class="p">,</span> <span class="s2">"method"</span><span class="p">:</span> <span class="n">method</span><span class="p">},</span>
-<span class="p">)</span>
+  <section class="tex2jax_ignore mathjax_ignore" id="refining-a-deeplabcut-lightningpose-project">
+<span id="target-refine-project"></span><h1>Refining a DeepLabCut / LightningPose project<a class="headerlink" href="#refining-a-deeplabcut-lightningpose-project" title="Link to this heading">#</a></h1>
+<p><strong>Start page ▸ Refine DLC / LightningPose training data…</strong> opens a pose
+project <em>folder</em> — the one with <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code> — and turns it
+into two views of the same training set. Where <a class="reference internal" href="refine_imported.html"><span class="doc">Refining imported poses</span></a>
+corrects a pose file inside a session, this works on the project the way the
+pose tool itself lays it out, and writes back only what the tool reads:
+PNGs under <code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code> and the labels table beside them.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/
+├── config.yaml                  DeepLabCut: scorer, bodyparts, individuals
+├── CollectedData.csv            LightningPose: one labels table for every video
+├── labeled-data/
+│   └── &lt;video&gt;/                 the training frames of one video
+│       ├── img00012.png
+│       └── CollectedData_&lt;scorer&gt;.csv / .h5      DeepLabCut: one table per video
+└── videos/
+    ├── &lt;video&gt;.mp4
+    └── &lt;video&gt;DLC_&lt;model&gt;.h5    the model's predictions on the whole video
 </pre></div>
 </div>
-<hr class="docutils" />
+<p>The folder must hold both <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>; anything else is
+refused with the missing name. A DeepLabCut config fixes the <strong>scorer</strong> (the
+table has to be <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;</span></code> for <code class="docutils literal notranslate"><span class="pre">create_training_dataset</span></code> to
+find it); a project without one — LightningPose — asks who is labelling, and
+remembers the name.</p>
+<p>The top bar is reduced to the two stages, <strong>Docs</strong> and <strong>Help</strong>. Everything
+about sessions and models is gone because there is no session here: each
+stage is its own folder under <code class="docutils literal notranslate"><span class="pre">&lt;project&gt;/.ethograph/</span></code>, with its own
+alignment, labels and layout, so navigation, the trials table and the
+green/red curated colouring work exactly as in any session.</p>
+<section id="extract-frames">
+<h2>Extract Frames<a class="headerlink" href="#extract-frames" title="Link to this heading">#</a></h2>
+<p>One trial per video in <code class="docutils literal notranslate"><span class="pre">videos/</span></code>, named after the file. A video with
+predictions beside it (<code class="docutils literal notranslate"><span class="pre">&lt;video&gt;DLC_*.h5</span></code>, or <code class="docutils literal notranslate"><span class="pre">video_preds/&lt;video&gt;.csv</span></code>)
+brings them in as features — <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity</span></code>, <code class="docutils literal notranslate"><span class="pre">speed</span></code> —
+and opens with one keypoint’s position (x and y) and speed as line plots
+and every keypoint’s confidence as a heatmap. A video without predictions is still a trial —
+its panels are simply empty.</p>
+<p>The point is to choose frames off those curves rather than by scrubbing.
+The Labels section holds two classes:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Class</p></th>
+<th class="head"><p>What it marks</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><strong>ExtractSegment</strong> (state)</p></td>
+<td><p>a stretch worth sampling from: two clicks on a plot</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
+<td><p><strong>ExtractFrame</strong> (point)</p></td>
+<td><p>the frame on screen, taken as it is</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Below them, how a segment is sampled — <strong>Uniform</strong> (evenly spaced) or
+<strong>Diverse</strong> (one frame per k-means cluster of thumbnails, DeepLabCut’s
+method) — and the <strong>coverage</strong>, the share of a segment’s frames to take.
+Point events are always taken.</p>
+<p><strong>Extract frames from this video</strong> writes them as <code class="docutils literal notranslate"><span class="pre">img&lt;frame&gt;.png</span></code> into
+<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code>, numbered by their index on the video so a second
+extraction from the same video adds to the folder, and adds a row per frame
+to the labels table <strong>prefilled with the model’s prediction</strong> — the frame is
+reviewed, not labelled from nothing. Rows already in the table are kept.</p>
+</section>
+<section id="refine-pose">
+<h2>Refine Pose<a class="headerlink" href="#refine-pose" title="Link to this heading">#</a></h2>
+<p>One trial per folder in <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>, the folder standing in for a video:
+its images in natural order, one frame per image, on an image-sequence clock
+(one image per second, so the time axis reads as the image index). No
+features are shown — the selection was made in the other stage, and every
+frame here is to be reviewed.</p>
+<p>The Labels section is the <a class="reference internal" href="labelling.html"><span class="doc">Label &amp; Edit tab</span></a> of the
+keypoint labelling dialog with Sequential already armed: every row of the
+table is a solid, draggable label; <code class="docutils literal notranslate"><span class="pre">Tab</span></code> cycles keypoints, <code class="docutils literal notranslate"><span class="pre">1</span></code>–<code class="docutils literal notranslate"><span class="pre">9</span></code> pick the
+individual, <code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes, <code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> undoes. There is no fill, no
+detect and no export tab — the table <em>is</em> the export.</p>
+<p><strong>Static keypoints</strong> sit in the panel between the mode buttons and the
+table. Tick a
+landmark that never moves (a table corner, a fixed marker); it turns bold
+and pinned in the list. Label every static keypoint once on any frame, then
+<strong>Propagate static landmarks from this frame to all frames</strong> copies their
+positions on the frame on screen to every frame of the folder, so only the
+moving keypoints are left to place elsewhere. Static keypoints are
+remembered per project: the next folder starts with them in place.</p>
+<section id="saving">
+<h3>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h3>
+<p>Edits go back to <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;.csv</span></code> and its <code class="docutils literal notranslate"><span class="pre">.h5</span></code> twin (or the
+root <code class="docutils literal notranslate"><span class="pre">CollectedData.csv</span></code> of a LightningPose project) a few seconds after the
+last change, when you move to another folder, on <strong>Save labels now</strong>, when
+you switch stage and when the window closes — never per drag, since the
+<code class="docutils literal notranslate"><span class="pre">.h5</span></code> rewrite is not free and a half-written table is worse than a stale one.
+The line under the button says whether the table holds unsaved edits.</p>
+</section>
+<section id="checking-a-folder">
+<h3>Checking a folder<a class="headerlink" href="#checking-a-folder" title="Link to this heading">#</a></h3>
+<p><strong>Check labels</strong> writes every frame of the folder with its labels drawn on
+— one colour per keypoint, the config’s skeleton and dot size — into
+<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;_labeled/</span></code>, the folder DeepLabCut’s own <code class="docutils literal notranslate"><span class="pre">check_labels</span></code>
+produces, so the reviewed poses can be looked over in any image viewer. A
+<code class="docutils literal notranslate"><span class="pre">_labeled</span></code> folder is never a trial.</p>
+</section>
+<section id="curation">
+<h3>Curation<a class="headerlink" href="#curation" title="Link to this heading">#</a></h3>
+<p>A folder is a trial, and a trial is curated when every frame of it has been
+reviewed. <strong>Going to the next folder marks this one curated</strong> is on by
+default; <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> curates by hand. The verdict lives in the stage’s
+<code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> <code class="docutils literal notranslate"><span class="pre">curated</span></code> column and colours the trial green in the
+navigation, exactly like a curated session trial.</p>
+</section>
 </section>
 </section>
 
@@ -538,20 +593,20 @@ stored as onset/offset time pairs in seconds:</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="kinematic.html"
+       href="refine_imported.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Kinematic changepoints</p>
+        <p class="prev-next-title">Refining imported poses</p>
       </div>
     </a>
     <a class="right-next"
-       href="ruptures.html"
+       href="../metadata.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Ruptures</p>
+        <p class="prev-next-title">Trial metadata</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -574,10 +629,13 @@ stored as onset/offset time pairs in seconds:</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#vocalpy-methods">VocalPy methods</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#vocalseg-methods">VocalSeg methods</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#usage">Usage</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-format">Data format</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extract-frames">Extract Frames</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#refine-pose">Refine Pose</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#saving">Saving</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-a-folder">Checking a folder</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#curation">Curation</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
@@ -585,7 +643,7 @@ stored as onset/offset time pairs in seconds:</p>
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/changepoints/audio.md">
+    <a href="../../_sources/advanced/keypoint_labelling/refine_project.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

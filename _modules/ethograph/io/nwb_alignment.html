@@ -795,6 +795,8 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.image_sequence</span><span class="w"> </span><span class="kn">import</span> <span class="n">media_exists</span>
+
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 <span class="n">_EPOCH_GAP</span> <span class="o">=</span> <span class="mf">1e-4</span>
@@ -1193,7 +1195,7 @@ window.runMermaid = runMermaid;</script>
                 <span class="k">continue</span>
             <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="s2">"external_file"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]:</span>
                 <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
-                <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">and</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
                     <span class="n">folders</span><span class="p">[</span><span class="n">stream</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span>
                     <span class="k">break</span>
         <span class="k">return</span> <span class="n">folders</span>
@@ -1629,6 +1631,9 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        1. Try the ImageSeries ``external_file`` path for this trial (if on disk).</span>
 <span class="sd">        2. Fallback: trial table filename + ``fallback_folder``.</span>
 <span class="sd">        3. Returns ``None`` if unresolvable.</span>
+
+<span class="sd">        A video may be an image folder (``io/image_sequence.py``), so "on disk"</span>
+<span class="sd">        means :func:`media_exists`, never a bare ``isfile``.</span>
 <span class="sd">        """</span>
         <span class="n">acq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_acquisition</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
@@ -1653,21 +1658,21 @@ window.runMermaid = runMermaid;</script>
                     <span class="k">if</span> <span class="n">fallback_folder</span><span class="p">:</span>
                         <span class="n">filename</span> <span class="o">=</span> <span class="n">_filename_from_url_or_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span>
                         <span class="n">candidate</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fallback_folder</span><span class="p">,</span> <span class="n">filename</span><span class="p">))</span>
-                        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
                             <span class="k">return</span> <span class="n">candidate</span>
                     <span class="k">return</span> <span class="n">raw_path</span>
                 <span class="c1"># Try the stored path directly</span>
-                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">raw_path</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">raw_path</span><span class="p">):</span>
                     <span class="k">return</span> <span class="n">raw_path</span>
                 <span class="c1"># Try relative to NWB file location</span>
                 <span class="n">rel</span> <span class="o">=</span> <span class="n">nwb_base_dir</span> <span class="o">/</span> <span class="n">raw_path</span>
-                <span class="k">if</span> <span class="n">rel</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">rel</span><span class="p">):</span>
                     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
                 <span class="c1"># Fallback: filename + folder</span>
                 <span class="n">filename</span> <span class="o">=</span> <span class="n">_filename_from_url_or_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">fallback_folder</span><span class="p">:</span>
                     <span class="n">candidate</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fallback_folder</span><span class="p">,</span> <span class="n">filename</span><span class="p">))</span>
-                    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
                         <span class="k">return</span> <span class="n">candidate</span>
 
         <span class="c1"># Last resort: trial table filename + fallback_folder</span>
@@ -1675,12 +1680,12 @@ window.runMermaid = runMermaid;</script>
         <span class="k">if</span> <span class="n">media_file</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">_is_url</span><span class="p">(</span><span class="n">media_file</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">media_file</span>
-            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">media_file</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">media_file</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">media_file</span>
             <span class="k">if</span> <span class="n">fallback_folder</span><span class="p">:</span>
                 <span class="n">filename</span> <span class="o">=</span> <span class="n">_filename_from_url_or_path</span><span class="p">(</span><span class="n">media_file</span><span class="p">)</span>
                 <span class="n">candidate</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fallback_folder</span><span class="p">,</span> <span class="n">filename</span><span class="p">))</span>
-                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">media_exists</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
                     <span class="k">return</span> <span class="n">candidate</span>
 
         <span class="k">return</span> <span class="kc">None</span></div>
