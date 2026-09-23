@@ -12,6 +12,7 @@ import pytest
 from qtpy.QtCore import Qt
 
 from ethograph.gui.widget_trials import _CURRENT_ROW_COLOR
+from ethograph.io.session_layout import metadata_path
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def scored_gui(gui, tmp_path):
     # a trial change; only the trials table is under test.
     app_state.trial_changed.disconnect(meta.data_widget.on_trial_changed)
 
-    return shell, meta, tmp_path / "session_metadata.tsv"
+    return shell, meta, metadata_path(tmp_path)
 
 
 def _cell(trials_widget, trial, column: str):

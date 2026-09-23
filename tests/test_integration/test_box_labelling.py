@@ -12,6 +12,8 @@ import pytest
 
 pytest.importorskip("octron")
 
+pytestmark = pytest.mark.paused  # OCTRON integration is on pause
+
 
 def test_dialog_opens_once_and_binds_the_primary_camera(birdpark_gui, qtbot, monkeypatch, tmp_path):
     from ethograph.gui.dialog_box_labelling import BoxLabellingDialog

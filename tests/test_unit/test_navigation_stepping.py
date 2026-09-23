@@ -86,6 +86,7 @@ def nav(qapp, tmp_path):
     state.ready = True
     state.xlim_mode = "fixed"
     state.fixed_window_s = VIEW_SPAN
+    state.time_jump_s = VIEW_SPAN  # the "Jump step" spinbox drives stepping
     yield widget
     widget.close()
 
@@ -124,10 +125,8 @@ def test_stepping_does_nothing_before_a_dataset_is_ready(nav):
 
 
 def test_stepping_does_nothing_without_a_span(nav):
-    """A zero span would step nowhere; trial mode with no padding gives one."""
-    nav.app_state.xlim_mode = "interval"
-    nav.app_state.before_s_trial = 0.0
-    nav.app_state.after_s_trial = 0.0
+    """A zero jump step would step nowhere."""
+    nav.app_state.time_jump_s = 0.0
 
     nav.step_window_forward()
 

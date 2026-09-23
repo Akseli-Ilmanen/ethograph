@@ -356,11 +356,11 @@ def test_changepoint_times_read_the_current_marker(tmp_path: Path, monkeypatch):
     found = changepoint_times(session, 1, {})
     np.testing.assert_allclose(found, [0.05, 0.11])
 
-    # A file still carrying only the legacy marker has no changepoints now.
+    # The legacy marker is read as a synonym without migration (schema.is_changepoint).
     legacy = ds.copy(deep=True)
     legacy["speed_troughs"].attrs = {"type": "changepoints", "target_feature": "speed"}
     monkeypatch.setattr(type(session), "trial_dataset", lambda self, trial: legacy, raising=False)
-    assert changepoint_times(session, 1, {}).size == 0
+    np.testing.assert_allclose(changepoint_times(session, 1, {}), [0.05, 0.11])
     # ...until it is migrated.
     schema.migrate_legacy_attrs(legacy)
     assert changepoint_times(session, 1, {}).size == 2

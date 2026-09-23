@@ -541,19 +541,28 @@ class TrialTree(xr.DataTree):
         """Take every externally attached variable off the trial nodes.
 
         A video feature attached in memory from files
-        (``io/video_feature_files.py``, ``attrs["attached_from"]``) is not the
-        session's data and is never written; :meth:`save` detaches them,
-        writes, and puts them back with :meth:`_reattach_external`.
+        (``io/video_feature_files.py``, ``attrs["attached_from"]``) or an
+        external feature (``io/external_features.py``, ``attrs["external"]``)
+        is not the session's data and is never written; :meth:`save` detaches
+        them, writes, and puts them back with :meth:`_reattach_external`. A
+        coordinate only those variables used (their feature dim) goes with
+        them, so the file does not keep an orphaned dimension.
         """
+        from ethograph.io.external_features import external_vars
         from ethograph.io.video_feature_files import video_feature_vars
 
         detached: dict[str, dict[str, xr.DataArray]] = {}
         for name in self._current_trial_node_names():
             ds = self[name].ds
-            names = video_feature_vars(ds)
-            if names:
-                detached[name] = {var: ds[var] for var in names}
-                self[name] = xr.DataTree(ds.drop_vars(names))
+            names = list(dict.fromkeys(video_feature_vars(ds) + external_vars(ds)))
+            if not names:
+                continue
+            detached[name] = {var: ds[var] for var in names}
+            remaining = ds.drop_vars(names)
+            used_dims = {dim for var in remaining.data_vars.values() for dim in var.dims}
+            orphan_dims = {dim for var in detached[name].values() for dim in var.dims} - used_dims
+            orphan_coords = [str(c) for c in remaining.coords if orphan_dims & set(remaining[c].dims)]
+            self[name] = xr.DataTree(remaining.drop_vars(orphan_coords))
         return detached
 
     def _reattach_external(self, detached: dict[str, dict[str, xr.DataArray]]) -> None:

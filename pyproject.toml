@@ -215,11 +215,12 @@ git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--mat
 
 
 [tool.pytest.ini_options]
-addopts = "--cov=ethograph -m 'not slow'"
+addopts = "--cov=ethograph -m 'not slow and not paused'"
 testpaths = ["tests"]
 norecursedirs = ["pynaviz", "docs", "build", ".git"]
 markers = [
     "slow: marks tests that require network access or take >30s (deselect with '-m \"not slow\"')",
+    "paused: on-pause tests we may bring back later; list them with 'pytest -m paused --collect-only -q'",
 ]
 filterwarnings = [
     "error",

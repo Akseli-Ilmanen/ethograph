@@ -89,6 +89,8 @@ class TestMollActivateAndClickLabel:
         t_start = 1.0
         t_end = 2.0
 
+        # Off, or the click snaps to the nearest changepoint the panel draws.
+        meta.changepoints_widget.changepoint_correction_checkbox.setChecked(False)
         meta.labels_widget.activate_label(labels)
         meta.labels_widget._on_plot_clicked({"x": t_start, "button": Qt.LeftButton})
         assert meta.labels_widget.first_click == pytest.approx(t_start)

@@ -1,10 +1,13 @@
 """Taken from https://github.com/neuroinformatics-unit/movement/pull/763"""
 
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
+import xarray as xr
 
 from ethograph.skeleton.config import (
     config_to_arrays,
@@ -16,6 +19,55 @@ from ethograph.skeleton.config import (
     validate_config,
 )
 from ethograph.skeleton.renderers import PrecomputedRenderer
+
+
+def _make_pose_dataset(n_frames: int, n_keypoints: int, spatial_dims: int) -> xr.Dataset:
+    """A movement-style pose dataset, positions centred around 100."""
+    rng = np.random.default_rng(0)
+    space = ["x", "y", "z"][:spatial_dims]
+    position = 100.0 + rng.normal(scale=10.0, size=(n_frames, spatial_dims, n_keypoints, 1))
+    confidence = rng.uniform(size=(n_frames, n_keypoints, 1))
+    return xr.Dataset(
+        data_vars={
+            "position": xr.DataArray(position, dims=["time", "space", "keypoints", "individuals"]),
+            "confidence": xr.DataArray(confidence, dims=["time", "keypoints", "individuals"]),
+        },
+        coords={
+            "time": np.arange(n_frames),
+            "space": space,
+            "keypoints": [f"kp_{i}" for i in range(n_keypoints)],
+            "individuals": ["ind_0"],
+        },
+        attrs={"ds_type": "poses"},
+    )
+
+
+@pytest.fixture
+def synthetic_skeleton_dataset() -> Callable[..., xr.Dataset]:
+    def make(n_frames: int = 10, n_keypoints: int = 3, spatial_dims: int = 2) -> xr.Dataset:
+        return _make_pose_dataset(n_frames, n_keypoints, spatial_dims)
+
+    return make
+
+
+@pytest.fixture
+def skeleton_dataset_with_nans() -> xr.Dataset:
+    ds = _make_pose_dataset(n_frames=10, n_keypoints=3, spatial_dims=2)
+    ds["position"][0, :, 0, 0] = np.nan
+    ds["position"][5, :, :, 0] = np.nan
+    return ds
+
+
+@pytest.fixture
+def simple_skeleton_config() -> dict[str, Any]:
+    return {
+        "keypoints": ["kp_0", "kp_1", "kp_2"],
+        "connections": [
+            {"start": "kp_0", "end": "kp_1", "color": "#FF0000", "width": 2.0, "segment": "side1"},
+            {"start": "kp_1", "end": "kp_2", "color": "#00FF00", "width": 2.0, "segment": "side2"},
+            {"start": "kp_2", "end": "kp_0", "color": "#0000FF", "width": 2.0, "segment": "side3"},
+        ],
+    }
 
 
 def test_precomputed_renderer_init(synthetic_skeleton_dataset, simple_skeleton_config):
@@ -240,7 +292,6 @@ def test_precomputed_renderer_get_info(synthetic_skeleton_dataset, simple_skelet
 
 def test_precomputed_renderer_no_valid_vectors(simple_skeleton_config):
     """Test handling when all keypoints are NaN."""
-    import xarray as xr
 
     # Create dataset with all NaN positions
     ds = xr.Dataset(
@@ -405,7 +456,6 @@ def test_validate_config_invalid_keypoint(simple_skeleton_config, synthetic_skel
 
 def test_validate_config_no_keypoints_in_dataset(simple_skeleton_config):
     """Test validation fails when dataset has no keypoints coordinate."""
-    import xarray as xr
 
     # Create dataset without keypoints
     ds = xr.Dataset(attrs={"ds_type": "poses"})

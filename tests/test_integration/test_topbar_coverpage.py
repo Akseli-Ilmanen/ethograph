@@ -870,9 +870,8 @@ def test_cover_page_audio_only_alignment(gui, birdpark_data_dir, tmp_path):
     assert align.mics == ["mic-1"]
     assert align.cameras == []
     assert align.stop_time(1) and align.stop_time(1) > 0
-    # Stream-based alignments have no trials-table filename columns —
-    # the GUI must resolve audio via the ImageSeries external_file.
-    assert align.get_media(1, "audio", "mic-1") is None
+    # The trials table carries the basename; the stream carries the full path.
+    assert align.get_media(1, "audio", "mic-1") == audios[0].name
     resolved = align.resolve_media_path(1, "audio", device="mic-1")
     assert resolved and Path(resolved).name == audios[0].name
 

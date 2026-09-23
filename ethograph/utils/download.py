@@ -18,7 +18,7 @@ from ethograph.datasets import (
     is_dataset_downloaded,
     prediction_runs_dir,
 )
-from ethograph.utils.paths import BUNDLED_DEFAULTS_DIR
+from ethograph.utils.paths import BUNDLED_DEFAULTS_DIR, SETTINGS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -389,6 +389,8 @@ def ensure_alignment_nwb(key: str) -> None:
     Downloaded when the dataset ships one (``"download_alignment"``),
     constructed from its media mapping otherwise.
     """
+    if (dataset_dir(key) / SETTINGS_DIR / "alignment.nwb").exists():
+        return
     if DATASETS[key].get("download_alignment"):
         download_template_alignment(key)
         return

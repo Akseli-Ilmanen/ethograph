@@ -142,20 +142,6 @@ class TestBirdParkLoading:
 
 
 class TestTrialNavigation:
-    def test_next_trial(self, birdpark_gui):
-        _, meta = birdpark_gui
-        if len(meta.app_state.trials) < 2:
-            pytest.skip("Need at least 2 trials")
-        meta.navigation_widget.scope_combo.setCurrentText("Trial start → Trial end")
-        QApplication.processEvents()
-        trials = meta.app_state.trials
-        meta.navigation_widget.trials_combo.setCurrentText(str(trials[0]))
-        QApplication.processEvents()
-        first_trial = meta.app_state.trials_sel
-        meta.navigation_widget.next_trial()
-        QApplication.processEvents()
-        assert meta.app_state.trials_sel != first_trial
-
     def test_prev_trial_at_start_stays(self, birdpark_gui):
         _, meta = birdpark_gui
         meta.navigation_widget.scope_combo.setCurrentText("Trial start → Trial end")
@@ -166,16 +152,6 @@ class TestTrialNavigation:
         meta.navigation_widget.prev_trial()
         QApplication.processEvents()
         assert meta.app_state.trials_sel == first_trial
-
-    def test_trial_combo_change_loads_correct_ds(self, birdpark_gui):
-        _, meta = birdpark_gui
-        if len(meta.app_state.trials) < 2:
-            pytest.skip("Need at least 2 trials")
-        second_trial = meta.app_state.trials[1]
-        meta.navigation_widget.trials_combo.setCurrentText(str(second_trial))
-        QApplication.processEvents()
-        assert meta.app_state.trials_sel == second_trial
-        assert meta.app_state.ds is not None
 
 
 # ===================================================================

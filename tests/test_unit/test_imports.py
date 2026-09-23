@@ -41,9 +41,7 @@ def test_targeted_imports() -> None:
     assert eto.from_continuous.__doc__
 
 
-@pytest.mark.parametrize("module_name", _iter_ethograph_modules())
+@pytest.mark.parametrize("module_name", [m for m in _iter_ethograph_modules() if m != "ethograph.__main__"])
 def test_import_all_ethograph_modules(module_name: str) -> None:
     # Entry-point modules are excluded from smoke imports.
-    if module_name == "ethograph.__main__":
-        pytest.skip("skip entry-point module")
     importlib.import_module(module_name)

@@ -260,7 +260,7 @@ class TestSchemaAttrs:
     def test_to_dataarray_stamps_video_feature(self):
         feats = np.zeros((10, 4), dtype=np.float32)
         plan = S3DPlan(video_fps=30.0, step=1, stack_frames=13)
-        da = _to_dataarray(feats, plan, "clip.mp4", S3DConfig(), "full")
+        da = _to_dataarray(feats, plan, "clip.mp4", S3DConfig(), "full", crop=None)
         assert da.attrs[KIND] == VIDEO_FEATURE
         assert kind_of(da) == VIDEO_FEATURE
         # Stored as 0/1: NetCDF has no boolean attribute type.

@@ -741,8 +741,10 @@ class MetaWidget(GridSectionContainer):
         # A loaded-but-hidden primary (its dock closed without the teardown
         # path, e.g. a restored layout) counts as NOT open: re-adding must
         # re-show the primary, never fork an extra over an invisible one.
+        # ``isHidden`` is true only when the dock itself was hidden, not when
+        # the window has simply not been shown yet (headless, before show()).
         dock = getattr(self.shell, "_video_dock", None)
-        primary_hidden = dock is not None and not dock.isVisible()
+        primary_hidden = dock is not None and dock.isHidden()
         primary_open = vm.primary_view.has_video and not primary_hidden
 
         if not primary_open:

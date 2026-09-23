@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -13,13 +12,20 @@ from ethograph.datasets import dataset_dir, is_dataset_downloaded
 from ethograph.gui.wizard_multi_timeline import TimelinePage, _normalize_trial_key
 from ethograph.gui.wizard_state import ModalityConfig, WizardState
 
-DATA_DIR = Path(__file__).parents[2] / "data"
-XX_CSV = DATA_DIR / "xx.csv"
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _synthetic_trial_table() -> pd.DataFrame:
+    """Four back-to-back trials, 10 s each, over a 40 s session."""
+    return pd.DataFrame(
+        {
+            "trial": [1, 2, 3, 4],
+            "start_time": [0.0, 10.0, 20.0, 30.0],
+            "stop_time": [10.0, 20.0, 30.0, 40.0],
+        }
+    )
 
 
 def _make_state(trial_table: pd.DataFrame, files_aligned: bool = False) -> WizardState:
@@ -76,9 +82,8 @@ class TestTimelinePageXxCsv:
         return w
 
     @pytest.fixture
-    def trial_table(self):
-        assert XX_CSV.exists(), f"xx.csv not found at {XX_CSV}"
-        return pd.read_csv(XX_CSV)
+    def trial_table(self) -> pd.DataFrame:
+        return _synthetic_trial_table()
 
     def test_populate_timeline_mode_no_crash(self, page, trial_table):
         state = _make_state(trial_table, files_aligned=False)
@@ -89,8 +94,7 @@ class TestTimelinePageXxCsv:
         state = _make_state(trial_table, files_aligned=False)
         page.populate_from_state(state)
         QApplication.processEvents()
-        expected_max = trial_table["stop_time"].max()
-        assert page._total_duration == pytest.approx(expected_max, rel=1e-6)
+        assert page._total_duration == pytest.approx(40.0)
 
     def test_populate_aligned_table_mode_no_crash(self, page, trial_table):
         """files_aligned_to_trials=True → aligned table view, must not crash."""
@@ -104,7 +108,7 @@ class TestTimelinePageXxCsv:
         state = _make_state(trial_table, files_aligned=False)
         page.populate_from_state(state)
         QApplication.processEvents()
-        assert len(page._items) >= len(trial_table)
+        assert len(page._items) >= 4
 
     def test_repopulate_clears_previous_items(self, page, trial_table):
         """Calling populate_from_state twice should not accumulate items."""
@@ -218,10 +222,8 @@ class TestTimelinePageMoll2025:
         if not mp4s:
             pytest.skip("no .mp4 files in moll2025 dataset")
 
-        trial_table = pd.read_csv(XX_CSV)
-
         state = WizardState()
-        state.trial_table = trial_table
+        state.trial_table = _synthetic_trial_table()
         state.files_aligned_to_trials = False
 
         state.video = ModalityConfig(

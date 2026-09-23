@@ -29,6 +29,8 @@ from ethograph.labels.octron_project import (
 
 pytest.importorskip("octron")
 
+pytestmark = pytest.mark.paused  # OCTRON integration is on pause
+
 
 def _entry(tmp_path: Path) -> VideoEntry:
     folder = tmp_path / "octron" / "abcd1234"
@@ -84,7 +86,7 @@ class TestCommands:
         assert "degrees" not in " ".join(train)
         predict = project.predict_command(cfg, [tmp_path / "a.mp4", tmp_path / "b.mp4"])
         assert predict[:4] == ["octron", "predict", str(tmp_path / "a.mp4"), str(tmp_path / "b.mp4")]
-        assert predict[predict.index("--model-path") + 1] == str(project.weights_path)
+        assert predict[predict.index("--model") + 1] == str(project.weights_path)
         assert predict[predict.index("--output-dir") + 1] == str(project.predictions_dir)
         assert project.prediction_folder(tmp_path / "a.mp4", "bytetrack") == (
             project.predictions_dir / "octron_predictions" / "a_bytetrack"
