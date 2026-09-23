@@ -466,7 +466,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="refining-imported-poses">
 <span id="target-refine-imported"></span><h1>Refining imported poses<a class="headerlink" href="#refining-imported-poses" title="Link to this heading">#</a></h1>
-<p><strong>Tools ▸ Pose correction (DLC, SLEAP, …)…</strong> corrects a pose file another tool produced —
+<p><strong>Tools ▸ Pose refinement (DLC, SLEAP, …)…</strong> corrects a pose file another tool produced —
 DeepLabCut, SLEAP, LightningPose — on the video, and writes the result back
 <strong>in the source format</strong> as <code class="docutils literal notranslate"><span class="pre">{stem}_refined{ext}</span></code> beside the original
 (overwritten on every save — a refined file only gets more refined). Where the
@@ -508,9 +508,50 @@ observations too; the fill only bridges the gaps between them and your
 clicks, and never replaces a file point.</p></li>
 </ul>
 </section>
+<section id="two-purposes">
+<h2>Two purposes<a class="headerlink" href="#two-purposes" title="Link to this heading">#</a></h2>
+<p>The <strong>Fill and save</strong> tab starts with a <strong>Purpose</strong> choice, and the section
+below the fill follows it:</p>
+<ul class="simple">
+<li><p><strong>Export for downstream analysis</strong> — the refined pose file, every frame,
+filled frames included. This is the default and what the rest of this page
+describes.</p></li>
+<li><p><strong>Export for pose-estimation training</strong> — only the frames you clicked on,
+written as training labels for the next model (below). Under this purpose
+the fill group reads <em>not recommended</em> and asks before running: a filled
+point is an interpolation, never exported as a label, and a detector
+trained on one learns the interpolation’s mistakes as ground truth. The
+refined copies are still saved as usual.</p></li>
+</ul>
+<section id="training-labels">
+<h3>Training labels<a class="headerlink" href="#training-labels" title="Link to this heading">#</a></h3>
+<p>Every open camera exports <strong>the frames carrying at least one click of
+yours</strong>; each frame’s pose is your points over the file’s own — the frame as
+you reviewed and corrected it — and never a filled point. Approve a frame
+(<code class="docutils literal notranslate"><span class="pre">Shift+H</span></code>) to make all of its file points yours. Two layouts, both
+<strong>additive</strong>: exporting into a folder that already holds labels keeps every
+existing frame and replaces only the frames exported again, so a project
+grows over sessions.</p>
+<ul class="simple">
+<li><p><strong>DeepLabCut CollectedData</strong> — pick the DeepLabCut <em>project</em> folder (the one
+with <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>): frames land under <code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code> as
+<code class="docutils literal notranslate"><span class="pre">img&lt;frame&gt;.png</span></code> plus <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;.csv</span></code> and <code class="docutils literal notranslate"><span class="pre">.h5</span></code>, the layout
+<code class="docutils literal notranslate"><span class="pre">label_frames</span></code> produces, so <code class="docutils literal notranslate"><span class="pre">create_training_dataset</span></code> picks them up with the
+labels already there. The project’s <code class="docutils literal notranslate"><span class="pre">scorer</span></code> and single/multi-animal setting
+are read from its config; a folder that already holds a <code class="docutils literal notranslate"><span class="pre">CollectedData</span></code>
+file dictates both. Any other folder gets <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;/</span></code> directly.</p></li>
+<li><p><strong>COCO</strong> — one <code class="docutils literal notranslate"><span class="pre">images/</span></code> folder and one <code class="docutils literal notranslate"><span class="pre">annotations.json</span></code> with a single
+category whose <code class="docutils literal notranslate"><span class="pre">keypoints</span></code> are the file’s, one annotation per (image,
+individual), visibility 2 for a labelled point and 0 for a missing one.</p></li>
+</ul>
+<p>Frame images are decoded from the video at full resolution, and the image
+index is the frame’s index on the <strong>video</strong>, so several trials cut from one
+recording share a folder without colliding.</p>
+</section>
+</section>
 <section id="saving">
 <h2>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h2>
-<p>There is no export step — the last tab is <strong>Fill and save</strong> — and <strong>Save always means every edited camera</strong>. A
+<p>There is no export step under the analysis purpose — <strong>Save always means every edited camera</strong>. A
 camera’s <code class="docutils literal notranslate"><span class="pre">_refined</span></code> copy is created the moment it is first edited, and
 rewritten on every trial switch, on <strong>Save refined now</strong>, and on close — an
 untouched camera writes nothing, so the output folder records exactly what
@@ -574,6 +615,10 @@ yours.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cameras">Cameras</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fill">Fill</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-purposes">Two purposes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#training-labels">Training labels</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#saving">Saving</a></li>
 </ul>
   </nav></div>
