@@ -190,7 +190,7 @@ class TopBarBuilder:
         menu.addAction("Pose tracking (from scratch)…", self._open_keypoint_labelling)
         # Correcting an imported pose file (DLC/SLEAP/…) rather than labelling
         # from scratch — writes {stem}_refined copies beside the sources.
-        menu.addAction("Pose correction (DLC, SLEAP, …)…", self._open_pose_refinement)
+        menu.addAction("Pose refinement (DLC, SLEAP, …)…", self._open_pose_refinement)
         # Bounding boxes + tracking through the OCTRON fork, one time index
         # across every open camera — see dialog_box_labelling.py.
         box_action = menu.addAction("Box labelling (OCTRON) — paused", self._open_box_labelling)

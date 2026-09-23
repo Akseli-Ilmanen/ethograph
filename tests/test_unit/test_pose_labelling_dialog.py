@@ -1687,6 +1687,55 @@ def test_refinement_dialog_keeps_label_and_fill_only(qapp, tmp_path):
         dlg.close()
 
 
+def test_refinement_purpose_switches_save_for_training_export(qapp, tmp_path, monkeypatch):
+    """One tab, two purposes: the refined file, or the clicked frames as labels.
+
+    Under the training purpose the fill is marked not recommended and asks
+    first — a filled point is never a training label — and declining leaves
+    the store untouched.
+    """
+    from qtpy.QtWidgets import QMessageBox
+
+    from ethograph.gui.dialog_pose_refinement import (
+        FILL_TITLE,
+        FILL_TITLE_TRAINING,
+        PURPOSE_ANALYSIS,
+        PURPOSE_TRAINING,
+        PoseRefinementDialog,
+    )
+
+    state = ObservableAppState()
+    state._yaml_path = str(tmp_path / "gui_settings.yaml")
+    dlg = PoseRefinementDialog(_FakeDataWidget(state))
+    try:
+        fill_group = dlg.backend_combo.parentWidget()
+        assert dlg.purpose_combo.currentData() == PURPOSE_ANALYSIS
+        assert fill_group.title() == FILL_TITLE
+        assert not dlg.save_group.isHidden() and dlg.training_group.isHidden()
+
+        dlg.purpose_combo.setCurrentIndex(dlg.purpose_combo.findData(PURPOSE_TRAINING))
+        assert state.pose_refine_purpose == PURPOSE_TRAINING
+        assert fill_group.title() == FILL_TITLE_TRAINING
+        assert dlg.save_group.isHidden() and not dlg.training_group.isHidden()
+
+        asked = []
+        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: asked.append(a) or QMessageBox.No)
+        filled = []
+        monkeypatch.setattr(dlg, "_ensure_open_contexts", lambda: filled.append(1) or [])
+        dlg._on_fill()
+        assert len(asked) == 1 and not filled
+
+        # A DeepLabCut project folder dictates the scorer.
+        (tmp_path / "config.yaml").write_text("scorer: alice\n")
+        dlg.training_dir_edit.setText(str(tmp_path))
+        dlg._on_training_dir_edited()
+        assert dlg.scorer_edit.text() == "alice"
+        assert state.pose_training_scorer == "alice"
+        assert state.pose_training_export_dir == str(tmp_path)
+    finally:
+        dlg.close()
+
+
 def test_a_schema_change_changes_the_refinement_signature(dialog):
     """The delta is indexed by point row, so a renamed keypoint invalidates it."""
     dialog.store.set_point(0, "beak", (1.0, 2.0))

@@ -1,7 +1,7 @@
 (target-refine-imported)=
 # Refining imported poses
 
-**Tools ▸ Pose correction (DLC, SLEAP, …)…** corrects a pose file another tool produced —
+**Tools ▸ Pose refinement (DLC, SLEAP, …)…** corrects a pose file another tool produced —
 DeepLabCut, SLEAP, LightningPose — on the video, and writes the result back
 **in the source format** as `{stem}_refined{ext}` beside the original
 (overwritten on every save — a refined file only gets more refined). Where the
@@ -44,9 +44,49 @@ file — the same stretch is usually wrong on both views. The scope choice:
   observations too; the fill only bridges the gaps between them and your
   clicks, and never replaces a file point.
 
+## Two purposes
+
+The **Fill and save** tab starts with a **Purpose** choice, and the section
+below the fill follows it:
+
+- **Export for downstream analysis** — the refined pose file, every frame,
+  filled frames included. This is the default and what the rest of this page
+  describes.
+- **Export for pose-estimation training** — only the frames you clicked on,
+  written as training labels for the next model (below). Under this purpose
+  the fill group reads *not recommended* and asks before running: a filled
+  point is an interpolation, never exported as a label, and a detector
+  trained on one learns the interpolation's mistakes as ground truth. The
+  refined copies are still saved as usual.
+
+### Training labels
+
+Every open camera exports **the frames carrying at least one click of
+yours**; each frame's pose is your points over the file's own — the frame as
+you reviewed and corrected it — and never a filled point. Approve a frame
+(`Shift+H`) to make all of its file points yours. Two layouts, both
+**additive**: exporting into a folder that already holds labels keeps every
+existing frame and replaces only the frames exported again, so a project
+grows over sessions.
+
+- **DeepLabCut CollectedData** — pick the DeepLabCut *project* folder (the one
+  with `config.yaml`): frames land under `labeled-data/<video>/` as
+  `img<frame>.png` plus `CollectedData_<scorer>.csv` and `.h5`, the layout
+  `label_frames` produces, so `create_training_dataset` picks them up with the
+  labels already there. The project's `scorer` and single/multi-animal setting
+  are read from its config; a folder that already holds a `CollectedData`
+  file dictates both. Any other folder gets `<video>/` directly.
+- **COCO** — one `images/` folder and one `annotations.json` with a single
+  category whose `keypoints` are the file's, one annotation per (image,
+  individual), visibility 2 for a labelled point and 0 for a missing one.
+
+Frame images are decoded from the video at full resolution, and the image
+index is the frame's index on the **video**, so several trials cut from one
+recording share a folder without colliding.
+
 ## Saving
 
-There is no export step — the last tab is **Fill and save** — and **Save always means every edited camera**. A
+There is no export step under the analysis purpose — **Save always means every edited camera**. A
 camera's `_refined` copy is created the moment it is first edited, and
 rewritten on every trial switch, on **Save refined now**, and on close — an
 untouched camera writes nothing, so the output folder records exactly what

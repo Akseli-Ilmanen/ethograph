@@ -679,6 +679,11 @@ class VideoFrameSource:
         return self._n_frames
 
     @property
+    def video_frames(self) -> int:
+        """Frames in the whole video file, from the stream header (0 if unknown)."""
+        return int(self._stream.frames or 0)
+
+    @property
     def size(self) -> tuple[int, int]:
         """``(width, height)`` frames are **decoded** at, after ``max_side``.
 

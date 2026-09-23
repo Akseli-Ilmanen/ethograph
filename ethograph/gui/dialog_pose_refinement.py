@@ -48,6 +48,14 @@ grid) — and the sidecar is written **before** every refined-file write, so a
 failed write (a locked file, a full disk) can never take the labels with it.
 Without the sidecar, reopening would show every previous correction as
 machine output again.
+
+The Fill and save tab serves **two purposes**, chosen at its top. *Downstream
+analysis* is the above: the refined file, every frame. *Pose-estimation
+training* exports only the frames the user clicked on, as DeepLabCut
+``CollectedData`` or COCO labels added to a folder that may already hold some
+(:mod:`~ethograph.gui.pose_training_export`). Under that purpose the fill is
+marked not recommended and asks before running: a filled point is an
+interpolation, never exported, and a detector must not learn it as truth.
 """
 
 from __future__ import annotations
@@ -62,10 +70,21 @@ import xarray as xr
 from movement.io import load_dataset as load_movement_dataset
 from movement.io import save_poses
 from qtpy.QtCore import QTimer
-from qtpy.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from qtpy.QtWidgets import (
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ethograph.gui.dialog_busy_progress import BusyProgressDialog
 from ethograph.gui.dialog_pose_labelling import MAX_SIDE, PoseLabellingDialog
+from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.notify import notify
 from ethograph.gui.pose_annotate import (
     KeypointStore,
@@ -74,6 +93,15 @@ from ethograph.gui.pose_annotate import (
 )
 from ethograph.gui.pose_fill import VideoFrameSource, build_backend
 from ethograph.gui.pose_render import PoseRenderData, ask_pose_source_software
+from ethograph.gui.pose_training_export import (
+    FORMAT_COCO,
+    FORMAT_DLC,
+    ExportOutcome,
+    dlc_project_settings,
+    export_coco,
+    export_dlc,
+    training_frames,
+)
 from ethograph.io.netcdf import netcdf_engine
 
 #: Suffix inserted before the extension of the written copy.
@@ -85,6 +113,14 @@ REFINE_SIDECAR_SUFFIX = ".refine.json"
 #: The two fill scopes; see the module docstring.
 SCOPE_MY_LABELS = "my_labels"
 SCOPE_WITH_FILE = "with_file"
+
+#: What the Fill and save tab is for — the refined file (analysis) or the
+#: reviewed frames as a trainer's labels (training). See pose_training_export.
+PURPOSE_ANALYSIS = "analysis"
+PURPOSE_TRAINING = "training"
+
+FILL_TITLE = "Fill"
+FILL_TITLE_TRAINING = "Fill — not recommended for training data"
 
 
 # ----------------------------------------------------------------------
@@ -564,6 +600,8 @@ class PoseRefinementDialog(PoseLabellingDialog):
     # ------------------------------------------------------------------
 
     def _on_fill(self) -> None:
+        if self._purpose() == PURPOSE_TRAINING and not self._confirm_fill_for_training():
+            return
         contexts = self._ensure_open_contexts()
         if not contexts:
             notify("No pose file resolves for any open camera — nothing to fill.", "warning")
@@ -802,8 +840,8 @@ class PoseRefinementDialog(PoseLabellingDialog):
         scope_row.addStretch()
         fill_group.layout().addLayout(scope_row)
 
-        save_group = QGroupBox("Save")
-        save_box = QVBoxLayout(save_group)
+        self.save_group = QGroupBox("Save")
+        save_box = QVBoxLayout(self.save_group)
         note = QLabel(
             "Saved automatically for EVERY edited camera: refined copies are created "
             "on the first edit and rewritten on every trial switch and on close."
@@ -817,8 +855,13 @@ class PoseRefinementDialog(PoseLabellingDialog):
         save_btn.clicked.connect(self._flush_all)
         save_row.addWidget(save_btn)
         save_box.addLayout(save_row)
+        self.training_group = self._build_training_group()
+
         output_layout = output_page.layout()
-        output_layout.insertWidget(output_layout.count() - 1, save_group)
+        output_layout.insertWidget(output_layout.count() - 1, self.save_group)
+        output_layout.insertWidget(output_layout.count() - 1, self.training_group)
+        output_layout.insertWidget(0, self._build_purpose_row())
+        self._apply_purpose()
 
         self.context_label = QLabel("")
         self.context_label.setWordWrap(True)
@@ -840,6 +883,246 @@ class PoseRefinementDialog(PoseLabellingDialog):
         camera_row.addStretch()
         self.layout().insertLayout(1, camera_row)
         self._refresh_camera_combo()
+
+    # ------------------------------------------------------------------
+    # Purpose: the refined file, or the reviewed frames as training labels
+    # ------------------------------------------------------------------
+
+    def _build_purpose_row(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(QLabel("Purpose:"))
+        self.purpose_combo = QComboBox()
+        self.purpose_combo.addItem("Export for downstream analysis (refined pose file)", PURPOSE_ANALYSIS)
+        self.purpose_combo.addItem("Export for pose-estimation training (DeepLabCut / COCO)", PURPOSE_TRAINING)
+        self.purpose_combo.setToolTip(
+            "Downstream analysis: the corrected pose file, every frame — filled\n"
+            "frames included, which is what a fill is for.\n\n"
+            "Pose-estimation training: only the frames you clicked on, written as\n"
+            "training labels for the next model. Filled points are never exported\n"
+            "— an interpolation is a guess, not an observation — so filling is\n"
+            "not recommended under this purpose."
+        )
+        position = self.purpose_combo.findData(self.app_state.pose_refine_purpose)
+        self.purpose_combo.setCurrentIndex(position if position >= 0 else 0)
+        self.purpose_combo.currentIndexChanged.connect(self._on_purpose_changed)
+        layout.addWidget(self.purpose_combo, stretch=1)
+        return row
+
+    def _build_training_group(self) -> QGroupBox:
+        group = QGroupBox("Export training labels")
+        box = QVBoxLayout(group)
+        note = QLabel(
+            "Every frame you clicked on, for EVERY open camera: your points over the "
+            "file's own, never a filled point. Added to a folder that already holds "
+            "labels — existing frames are kept, the same frame is replaced."
+        )
+        note.setWordWrap(True)
+        box.addWidget(note)
+
+        format_row = QHBoxLayout()
+        format_row.addWidget(QLabel("Format:"))
+        self.training_format_combo = QComboBox()
+        self.training_format_combo.addItem("DeepLabCut CollectedData (labeled-data/<video>/)", FORMAT_DLC)
+        self.training_format_combo.addItem("COCO (images/ + annotations.json)", FORMAT_COCO)
+        self.training_format_combo.setToolTip(
+            "DeepLabCut: pick the project folder (the one with config.yaml) and\n"
+            "the frames land under its labeled-data/<video>/ as img<frame>.png +\n"
+            "CollectedData_<scorer>.csv/.h5 — the layout label_frames produces,\n"
+            "so create_training_dataset picks them up. Any other folder gets\n"
+            "<video>/ directly.\n\n"
+            "COCO: one images/ folder and one annotations.json with a single\n"
+            "category whose keypoints are the file's."
+        )
+        position = self.training_format_combo.findData(self.app_state.pose_training_export_format)
+        self.training_format_combo.setCurrentIndex(position if position >= 0 else 0)
+        self.training_format_combo.currentIndexChanged.connect(self._on_training_format_changed)
+        format_row.addWidget(self.training_format_combo, stretch=1)
+        box.addLayout(format_row)
+
+        folder_row = QHBoxLayout()
+        folder_row.addWidget(QLabel("Folder:"))
+        self.training_dir_edit = QLineEdit(self.app_state.pose_training_export_dir or "")
+        self.training_dir_edit.setPlaceholderText("An existing DeepLabCut project / COCO folder, or a new one")
+        self.training_dir_edit.editingFinished.connect(self._on_training_dir_edited)
+        folder_row.addWidget(self.training_dir_edit, stretch=1)
+        browse_btn = QPushButton("Browse…")
+        browse_btn.clicked.connect(self._on_browse_training_dir)
+        folder_row.addWidget(browse_btn)
+        box.addLayout(folder_row)
+
+        self.scorer_row = QWidget()
+        scorer_layout = QHBoxLayout(self.scorer_row)
+        scorer_layout.setContentsMargins(0, 0, 0, 0)
+        scorer_layout.addWidget(QLabel("Scorer:"))
+        self.scorer_edit = QLineEdit(self.app_state.pose_training_scorer)
+        self.scorer_edit.setToolTip(
+            "DeepLabCut names the labels file after who labelled: CollectedData_<scorer>.\n"
+            "Read from the project's config.yaml when the folder is a project; a\n"
+            "folder already holding a CollectedData file dictates it."
+        )
+        self.scorer_edit.editingFinished.connect(self._on_scorer_edited)
+        scorer_layout.addWidget(self.scorer_edit, stretch=1)
+        box.addWidget(self.scorer_row)
+
+        self.training_status = QLabel("")
+        self.training_status.setWordWrap(True)
+        box.addWidget(self.training_status)
+
+        export_row = QHBoxLayout()
+        export_row.addStretch()
+        export_btn = QPushButton("Export labelled frames…")
+        export_btn.setToolTip("Write the clicked frames of every open camera into the folder above.")
+        export_btn.clicked.connect(self._on_export_training)
+        export_row.addWidget(export_btn)
+        box.addLayout(export_row)
+        self._refresh_training_rows()
+        return group
+
+    def _purpose(self) -> str:
+        return str(self.purpose_combo.currentData())
+
+    def _on_purpose_changed(self, _index: int) -> None:
+        self.app_state.pose_refine_purpose = self._purpose()
+        self._apply_purpose()
+
+    def _apply_purpose(self) -> None:
+        training = self._purpose() == PURPOSE_TRAINING
+        fill_group = self.backend_combo.parentWidget()
+        fill_group.setTitle(FILL_TITLE_TRAINING if training else FILL_TITLE)
+        self.save_group.setVisible(not training)
+        self.training_group.setVisible(training)
+        if training:
+            self._refresh_training_status()
+
+    def _confirm_fill_for_training(self) -> bool:
+        answer = QMessageBox.warning(
+            self,
+            "Fill under the training purpose?",
+            "Filled frames are interpolated between your clicks, not observed. They are "
+            "never exported as training labels — a detector trained on them would learn "
+            "the interpolation's mistakes as ground truth — so a fill buys nothing here "
+            "and can hide which points you actually checked.\n\n"
+            "Switch the purpose to downstream analysis if the refined file is what you "
+            "want. Fill anyway?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        return answer == QMessageBox.Yes
+
+    def _on_training_format_changed(self, _index: int) -> None:
+        self.app_state.pose_training_export_format = str(self.training_format_combo.currentData())
+        self._refresh_training_rows()
+
+    def _refresh_training_rows(self) -> None:
+        self.scorer_row.setVisible(self.training_format_combo.currentData() == FORMAT_DLC)
+
+    def _on_browse_training_dir(self) -> None:
+        path = browse_open_dir(
+            self,
+            self.app_state,
+            "Training labels folder (existing or new)",
+            preferred_dir=self.training_dir_edit.text() or None,
+        )
+        if path:
+            self.training_dir_edit.setText(path)
+            self._on_training_dir_edited()
+
+    def _on_training_dir_edited(self) -> None:
+        text = self.training_dir_edit.text().strip()
+        self.app_state.pose_training_export_dir = text or None
+        if text:
+            scorer, _ = dlc_project_settings(Path(text))
+            if scorer:
+                # The project knows who labels; a typed scorer is only for
+                # folders that are not projects.
+                self.scorer_edit.setText(scorer)
+                self._on_scorer_edited()
+        self._refresh_training_status()
+
+    def _on_scorer_edited(self) -> None:
+        self.app_state.pose_training_scorer = self.scorer_edit.text().strip()
+
+    def _refresh_training_status(self) -> None:
+        counts = [
+            f"{context.camera}: {len(context.store.anchor_frames())}"
+            for context in self._contexts.values()
+            if context.store.anchor_frames()
+        ]
+        self.training_status.setText(
+            "Frames with your clicks — " + ", ".join(counts) if counts else "No frame carries a click of yours yet."
+        )
+
+    def _on_export_training(self) -> None:
+        target_text = self.training_dir_edit.text().strip()
+        if not target_text:
+            notify("Pick a folder for the training labels first.", "warning")
+            return
+        target = Path(target_text)
+        fmt = str(self.training_format_combo.currentData())
+        scorer = self.scorer_edit.text().strip()
+        if fmt == FORMAT_DLC and not scorer:
+            notify("DeepLabCut needs a scorer name — the CollectedData file is named after it.", "warning")
+            return
+        contexts = [c for c in self._ensure_open_contexts() if c.store.anchor_frames()]
+        if not contexts:
+            notify("No open camera carries a click of yours — nothing to export for training.", "warning")
+            return
+        # The sidecars first: an export is a review milestone, and the
+        # refined copies are what the analysis purpose already keeps current.
+        self._flush_all()
+
+        busy = BusyProgressDialog("Exporting labelled frames…", parent=self)
+        cancelled = False
+
+        def progress_for(camera: str):
+            def progress(fraction: float) -> bool:
+                nonlocal cancelled
+                busy.setLabelText(f"Exporting {camera}… {fraction:.0%}")
+                busy.pump_events()
+                cancelled = cancelled or busy.wasCanceled()
+                return not cancelled
+
+            return progress
+
+        exported: list[str] = []
+        for context in contexts:
+            outcome, error = busy.execute(
+                self._export_context, context, fmt, target, scorer, progress_for(context.camera)
+            )
+            if cancelled:
+                notify("Export cancelled — remaining cameras were left alone.", "info")
+                break
+            if error is None and outcome is not None:
+                exported.append(f"{context.camera} ({outcome.n_frames} frames)")
+        if exported:
+            notify(f"Exported {', '.join(exported)} → {target}", "info")
+
+    def _export_context(self, context: _CameraContext, fmt: str, target: Path, scorer: str, progress) -> ExportOutcome:
+        view = self._camera_view_for(context.camera)
+        video = getattr(view, "source_video_path", None) or self.app_state.video_path
+        if not video:
+            raise ValueError(f"No video for {context.camera} — the frames must be read from it.")
+        frames = training_frames(context.store, context.window_start)
+        source = VideoFrameSource(video, fps=context.fps, n_frames=context.window_start + context.store.n_frames)
+        # Image names are padded to the whole video's length, so one width
+        # serves every trial cut from it.
+        n_video_frames = source.video_frames or len(source)
+
+        def decode(video_frame: int) -> np.ndarray:
+            return source[video_frame]
+
+        try:
+            if fmt == FORMAT_DLC:
+                return export_dlc(
+                    frames, context.store, decode, target, Path(video).stem, scorer, n_video_frames, progress=progress
+                )
+            return export_coco(
+                frames, context.store, decode, target, Path(video).stem, n_video_frames, progress=progress
+            )
+        finally:
+            source.close()
 
     def _refresh_camera_combo(self) -> None:
         combo = getattr(self, "camera_combo", None)

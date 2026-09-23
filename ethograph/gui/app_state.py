@@ -433,6 +433,14 @@ class AppStateSpec:
         # to load is a user choice rather than a constant in pose_fill. Global:
         # it is a property of the machine's models, not of one dataset.
         "labelling_cotracker_checkpoint": (str, "", True),
+        # Pose refinement's Fill and save tab: the refined file ("analysis")
+        # or the reviewed frames as training labels ("training"); see
+        # dialog_pose_refinement. The training folder is a project's, so
+        # it is per dataset; the scorer name follows the user.
+        "pose_refine_purpose": (str, "analysis", True),
+        "pose_training_export_format": (str, "dlc", True, SCOPE_LOCAL),
+        "pose_training_export_dir": (str | None, None, True, SCOPE_LOCAL),
+        "pose_training_scorer": (str, "", True),
         # Point detection (Detect tab): which detector and how it is tuned. The
         # detections themselves are derived data cached next to the video, and
         # what each detector label *means* is project data in the anchor
@@ -608,6 +616,7 @@ class AppStateSpec:
         "project_path": "dir",
         "remote_backup_path": "dir",
         "labelling_cotracker_checkpoint": "file",
+        "pose_training_export_dir": "dir",
     }
 
     @classmethod
