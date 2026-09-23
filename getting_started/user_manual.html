@@ -592,8 +592,12 @@ automatically.</p>
 and paired one per trial, so <code class="docutils literal notranslate"><span class="pre">trial001.mp4</span></code> goes with <code class="docutils literal notranslate"><span class="pre">trial001.h5</span></code>. Every
 stream must hold the same number of files; the result is a multi-trial session
 you navigate trial by trial.</p>
-<p>In both layouts, pose files also gain velocity, acceleration and speed per
-keypoint on load.</p>
+<p>In both layouts a pose file’s <code class="docutils literal notranslate"><span class="pre">position</span></code> and <code class="docutils literal notranslate"><span class="pre">confidence</span></code> load as features
+you can plot beside the overlay, so noisy tracking shows in the traces too.
+Tick <strong>Compute speed per keypoint</strong> on the drop card for a <code class="docutils literal notranslate"><span class="pre">speed</span></code> feature
+(<a class="reference external" href="https://movement.neuroinformatics.dev/v0.13.0/api/movement.kinematics.compute_speed.html">movement’s <code class="docutils literal notranslate"><span class="pre">compute_speed</span></code></a>);
+a file that already holds <code class="docutils literal notranslate"><span class="pre">speed</span></code> keeps its own. Several trials of one device
+also gain velocity and acceleration on load.</p>
 <section id="project-folder-keep-your-drops">
 <h4>Project folder — keep your drops<a class="headerlink" href="#project-folder-keep-your-drops" title="Link to this heading">#</a></h4>
 <p>A drop is a quick look by default: the alignment it builds lives in a temp
