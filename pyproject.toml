@@ -160,6 +160,7 @@ dev = [
     "tox",
     "pre-commit",
     "ruff",
+    "mypy",
     "setuptools-scm",
 ]
 
@@ -216,12 +217,11 @@ git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--mat
 
 
 [tool.pytest.ini_options]
-addopts = "--cov=ethograph -m 'not slow and not paused'"
+addopts = "--cov=ethograph -m 'not slow'"
 testpaths = ["tests"]
-norecursedirs = ["pynaviz", "docs", "build", ".git"]
+norecursedirs = ["pynaviz", "docs", "build", ".git", "tests/old_tests"]
 markers = [
     "slow: marks tests that require network access or take >30s (deselect with '-m \"not slow\"')",
-    "paused: on-pause tests we may bring back later; list them with 'pytest -m paused --collect-only -q'",
 ]
 filterwarnings = [
     "error",

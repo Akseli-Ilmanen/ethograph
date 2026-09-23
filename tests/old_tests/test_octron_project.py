@@ -29,8 +29,6 @@ from ethograph.labels.octron_project import (
 
 pytest.importorskip("octron")
 
-pytestmark = pytest.mark.paused  # OCTRON integration is on pause
-
 
 def _entry(tmp_path: Path) -> VideoEntry:
     folder = tmp_path / "octron" / "abcd1234"
