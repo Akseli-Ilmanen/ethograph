@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from ethograph.io.nc_drop import concat_on_camera, positions_fit_frame
+from ethograph.io.nc_drop import add_speed, concat_on_camera, positions_fit_frame
 
 N = 10
 
@@ -103,3 +103,24 @@ def test_a_plain_features_file_joins_the_stack():
     assert {"position", "speed"} <= set(ds.data_vars)
     assert np.isnan(ds["speed"].sel(camera="cam-1")).all()
     assert (ds["speed"].sel(camera="arena") == 1).all()
+
+
+# ----------------------------------------------------------------------
+# add_speed
+# ----------------------------------------------------------------------
+
+
+def test_speed_is_the_norm_of_the_position_derivative_and_keeps_every_other_dim():
+    ds = _bboxes()
+    ds["position"].values[:, 0, :] = np.arange(N)[:, None] * 2.0  # x moves 2 px per frame at 25 fps
+    out = add_speed(ds)
+    assert out["speed"].dims == ("time", "individual")
+    np.testing.assert_allclose(out["speed"].values, 50.0)
+    assert "speed" not in ds.data_vars, "the input is not mutated"
+
+
+def test_a_file_that_already_has_speed_or_no_position_is_left_alone():
+    with_speed = _bboxes().assign(speed=(("time", "individual"), np.full((N, 2), 7.0)))
+    assert add_speed(with_speed)["speed"].values.tolist() == with_speed["speed"].values.tolist()
+    feats = xr.Dataset({"energy": ("time", np.ones(N))}, coords={"time": np.arange(N) / 25.0})
+    assert add_speed(feats) is feats

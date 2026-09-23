@@ -32,6 +32,7 @@ never opens.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -76,7 +77,7 @@ from ethograph.gui.project import (
 )
 from ethograph.gui.session_folder import source_folders
 from ethograph.io.audio_extract import ensure_extracted_audio, has_embedded_audio
-from ethograph.io.nc_drop import concat_on_camera, positions_fit_frame
+from ethograph.io.nc_drop import add_speed, concat_on_camera, positions_fit_frame
 from ethograph.io.netcdf import netcdf_engine
 from ethograph.io.validation import (
     AUDIO_EXTENSIONS,
@@ -245,6 +246,14 @@ def _audio_info(path: str) -> tuple[float, float]:
     with wave.open(path, "rb") as w:
         rate = float(w.getframerate())
         return rate, w.getnframes() / rate
+
+
+_COMPUTE_SPEED_DOCS = "https://movement.neuroinformatics.dev/v0.13.0/api/movement.kinematics.compute_speed.html"
+
+
+def _motion_videos(cam_map: Sequence[tuple[str | None, str | None]]) -> list[str]:
+    """The real videos of *cam_map*: motion energy needs a stream, not a still."""
+    return [v for v, _ in cam_map if v is not None and Path(v).suffix.lower() not in IMAGE_EXTENSIONS]
 
 
 @dataclass(frozen=True)
@@ -966,6 +975,24 @@ class CoverPage(QDialog):
         )
         layout.addWidget(self._video_motion_cb)
 
+        # A dropped pose file's position/confidence always load as features;
+        # speed is the one derived quantity offered here, because a speed
+        # trace is the quickest read of how smooth or noisy the tracking is.
+        speed_row = QHBoxLayout()
+        self._pose_speed_cb = QCheckBox("Compute speed per keypoint  (if available)")
+        self._pose_speed_cb.setToolTip(
+            "Adds a speed feature (time × keypoint × individual) from the dropped pose file's\n"
+            "positions — movement.kinematics.compute_speed. Skipped when the file already\n"
+            "holds a speed variable, or when no pose file is dropped."
+        )
+        speed_row.addWidget(self._pose_speed_cb)
+        speed_link = QLabel(f'<a href="{_COMPUTE_SPEED_DOCS}">movement docs</a>')
+        speed_link.setOpenExternalLinks(True)
+        speed_link.setToolTip(_COMPUTE_SPEED_DOCS)
+        speed_row.addWidget(speed_link)
+        speed_row.addStretch()
+        layout.addLayout(speed_row)
+
         clear_btn = QPushButton("Clear")
         clear_btn.clicked.connect(self._drop.clear_paths)
         layout.addWidget(clear_btn)
@@ -1346,12 +1373,15 @@ class CoverPage(QDialog):
             # A real session file was provided — use it directly.
             app_state.nc_file_path = other_sessions[0]
         elif feature_entries:
-            # Every dropped .nc — and any pose file with no camera to draw on —
-            # is the session's data: position/confidence/… become catalog
-            # features, one .nc per drop, stacked on a `camera` dim when there
-            # are several. The overlay reads the same files through the
-            # alignment's pose streams, so a file can be both.
-            app_state.nc_file_path = str(self._compute_session_nc(feature_entries, details))
+            # Every dropped .nc and every pose file is the session's data:
+            # position/confidence/… become catalog features, one .nc per
+            # drop, stacked on a `camera` dim when there are several. The
+            # overlay reads the same positions, so a file is both. Video
+            # motion and per-keypoint speed join the same file when asked.
+            motion_cams = cam_map if self._video_motion_cb.isChecked() else []
+            app_state.nc_file_path = str(
+                self._compute_session_nc(feature_entries, details, motion_cams, self._pose_speed_cb.isChecked())
+            )
         elif cam_map and self._video_motion_cb.isChecked():
             # Video motion requested → the session is an xarray .nc holding a
             # (time, camera) motion feature; media still comes from the tmp
@@ -1616,6 +1646,8 @@ class CoverPage(QDialog):
         cam_names: list[str] = []
         fps_used: float | None = None
         for i, (video, _pose) in enumerate(cam_map):
+            if video is None or Path(video).suffix.lower() in IMAGE_EXTENSIONS:
+                continue
             fps = probe_video(video).fps
             if not fps:
                 raise RuntimeError(f"Could not read frame rate from {Path(video).name}.")
@@ -1649,8 +1681,10 @@ class CoverPage(QDialog):
 
         Every dropped ``.nc`` is a feature source, named after its camera when
         it is paired with one (``cam-N``, the alignment's stream) and after
-        its file otherwise. A pose file with no video is a feature source too
-        (that is all it can be). A pose ``.nc`` paired with a video stays its
+        its file otherwise. Every pose file is a feature source too — a
+        tracking tool's own file (DLC, SLEAP, …) paired with a video is read
+        at that video's rate, so its position and confidence can be plotted
+        beside the overlay. A pose ``.nc`` paired with a video stays its
         overlay only while its positions plausibly are that video's pixels
         (:func:`positions_fit_frame`); otherwise the pairing is dropped in
         *cam_map* — features, never drawn — and the user is told.
@@ -1665,13 +1699,13 @@ class CoverPage(QDialog):
             if video is None:
                 entries.append(_FeatureEntry(camera, pose, None))
                 continue
-            if Path(pose).suffix.lower() != ".nc":
-                continue  # a tracking tool's own file with a video: overlay only, as before
             if Path(video).suffix.lower() in IMAGE_EXTENSIONS:
                 entries.append(_FeatureEntry(camera, pose, None))
                 continue
             probe = probe_video(video)
             entries.append(_FeatureEntry(camera, pose, probe.fps or None))
+            if Path(pose).suffix.lower() != ".nc":
+                continue  # a tracking tool's file is in its video's pixels by construction
             if probe.width and probe.height:
                 with xr.open_dataset(pose, engine=netcdf_engine(pose)) as ds:
                     fits = positions_fit_frame(ds, probe.width, probe.height)
@@ -1691,10 +1725,18 @@ class CoverPage(QDialog):
         """A single ``.nc`` is used in place; anything else is written to the drop dir."""
         return bool(entries) and not (len(entries) == 1 and Path(entries[0].path).suffix.lower() == ".nc")
 
-    def _compute_session_nc(self, entries: list[_FeatureEntry], details: dict) -> Path:
+    def _compute_session_nc(
+        self,
+        entries: list[_FeatureEntry],
+        details: dict,
+        motion_cam_map: Sequence[tuple[str | None, str | None]] = (),
+        compute_speed: bool = False,
+    ) -> Path:
         """The session ``.nc`` for *entries*: the file itself when it is one
-        ``.nc``, else the combined file, built behind a busy dialog."""
-        if not self._session_nc_is_written(entries):
+        ``.nc`` and nothing is added to it, else the combined file, built
+        behind a busy dialog."""
+        adds_something = bool(_motion_videos(motion_cam_map)) or compute_speed
+        if not self._session_nc_is_written(entries) and not adds_something:
             return Path(entries[0].path)
         from ethograph.gui.dialog_busy_progress import BusyProgressDialog
 
@@ -1705,6 +1747,8 @@ class CoverPage(QDialog):
             details.get("source_software"),
             details.get("pose_fps"),
             self._drop_session_dir,
+            motion_cam_map,
+            compute_speed,
         )
         if error or nc_path is None:
             raise RuntimeError(f"Could not read pose data: {error}")
@@ -1712,25 +1756,39 @@ class CoverPage(QDialog):
 
     @staticmethod
     def _build_session_nc(
-        entries: list[_FeatureEntry], source_software: str | None, fps: float | None, out_dir: Path
+        entries: list[_FeatureEntry],
+        source_software: str | None,
+        fps: float | None,
+        out_dir: Path,
+        motion_cam_map: Sequence[tuple[str | None, str | None]] = (),
+        compute_speed: bool = False,
     ) -> Path:
         """Write the drop's feature sources as one plottable ``.nc``.
 
         A ``.nc`` is opened as it is, a tracking tool's file is converted by
-        movement (which needs *fps*, the drop dialog's answer). A file
-        without a rate of its own takes its camera's, then *fps*. Several
-        stack on a ``camera`` dim matching the alignment's ``pose_cam-N``
-        streams (:func:`concat_on_camera`).
+        movement at its camera's rate, else *fps* (the drop dialog's answer).
+        A file without a rate of its own takes its camera's, then *fps*.
+        Several stack on a ``camera`` dim matching the alignment's
+        ``pose_cam-N`` streams (:func:`concat_on_camera`). With
+        *compute_speed*, a file holding ``position`` but no ``speed`` gets
+        one (:func:`add_speed`); the videos of *motion_cam_map* add a
+        ``(time, camera)`` ``video_motion`` feature.
         """
         datasets = []
         for entry in entries:
-            ds = _open_pose_dataset(entry.path, source_software, fps)
+            ds = _open_pose_dataset(entry.path, source_software, entry.fps or fps)
             if not ds.attrs.get("fps") and (entry.fps or fps):
                 ds.attrs["fps"] = float(entry.fps or fps)
+            if compute_speed:
+                ds = add_speed(ds)
             datasets.append(ds)
         ds = concat_on_camera(datasets, [e.camera for e in entries])
         if not ds.attrs.get("fps"):
             raise RuntimeError("A pose file dropped without a video needs its frame rate.")
+        if _motion_videos(motion_cam_map):
+            with xr.open_dataset(CoverPage._build_video_motion_nc(motion_cam_map, out_dir)) as motion:
+                motion_da = motion["video_motion"].load()
+            ds = xr.merge([ds, motion_da.to_dataset()], join="outer", combine_attrs="override")
         out_path = out_dir / "session.nc"
         ds.to_netcdf(out_path, engine=netcdf_engine(out_path))
         return out_path

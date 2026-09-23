@@ -14,9 +14,10 @@ from __future__ import annotations
 import pandas as pd
 import xarray as xr
 
+from ethograph.io import schema
 from ethograph.io.overlay_source import PIXEL_UNITS, fits_frame
 
-__all__ = ["PIXEL_UNITS", "concat_on_camera", "positions_fit_frame"]
+__all__ = ["PIXEL_UNITS", "add_speed", "concat_on_camera", "positions_fit_frame"]
 #: Coordinates whose order is meaningful (a palette is indexed by it).
 _NAMED_DIMS = ("individual", "individuals", "keypoint", "keypoints")
 
@@ -35,6 +36,23 @@ def positions_fit_frame(ds: xr.Dataset, width: int, height: int) -> bool:
     if "space_unit" in ds.attrs and "space_unit" not in pos.attrs:
         pos = pos.assign_attrs(space_unit=ds.attrs["space_unit"])
     return fits_frame(pos, ds["shape"] if "shape" in ds else None, width, height)
+
+
+def add_speed(ds: xr.Dataset) -> xr.Dataset:
+    """*ds* with a ``speed`` variable derived from its ``position``.
+
+    ``movement.kinematics.compute_speed``: the norm of the time derivative of
+    ``position`` over the ``time`` coordinate (seconds), so ``space`` drops
+    out and every other dim — keypoint, individual — stays. A dataset that
+    already holds ``speed``, or has no ``position`` to derive it from, is
+    returned unchanged: the drop dialog's "if available".
+    """
+    from movement.kinematics import compute_speed
+
+    if "speed" in ds.data_vars or "position" not in ds.data_vars or "space" not in ds["position"].dims:
+        return ds
+    speed = schema.describe(compute_speed(ds["position"]), schema.KINEMATIC_FEATURE, is_egocentric=False)
+    return ds.assign(speed=speed)
 
 
 def concat_on_camera(datasets: list[xr.Dataset], names: list[str]) -> xr.Dataset:

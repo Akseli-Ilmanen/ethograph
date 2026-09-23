@@ -9,6 +9,8 @@ it; and, like every dropped ``.nc``, it feeds the session dataset too
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import xarray as xr
 
@@ -108,3 +110,48 @@ def test_standalone_nc_poses_become_features_with_their_own_fps(tmp_path):
         assert ds.attrs["fps"] == FPS
         assert list(ds.coords["camera"].values) == ["cam-1", "cam-2"]
         assert "position" in ds.data_vars
+
+
+def _dlc_csv(path, fps: float = FPS):
+    from movement.io import save_poses
+
+    save_poses.to_dlc_file(_poses().assign_attrs(source_software="DeepLabCut", fps=fps), path, split_individuals=False)
+
+
+def test_a_tracking_tools_file_with_a_video_is_a_feature_read_at_the_videos_rate(tmp_path, monkeypatch):
+    """DLC/SLEAP files used to be overlay-only beside a video; now their
+    position/confidence plot too, and the rate is the video's, which the
+    drop dialog never asked for (no pose_fps)."""
+    import ethograph.gui.cover_page as cover_page
+
+    dlc = tmp_path / "trial_DLC.csv"
+    _dlc_csv(dlc)
+    monkeypatch.setattr(
+        cover_page, "probe_video", lambda _p: SimpleNamespace(fps=50.0, width=640, height=480, nframes=N), raising=False
+    )
+    monkeypatch.setattr("ethograph.gui.video_manager.probe_video", cover_page.probe_video)
+    cam_map = [(str(tmp_path / "trial.mp4"), str(dlc))]
+    entries = CoverPage._feature_entries(SimpleNamespace(), cam_map, [])
+    assert entries == [_FeatureEntry("cam-1", str(dlc), 50.0)]
+    assert cam_map == [(str(tmp_path / "trial.mp4"), str(dlc))], "still the camera's overlay"
+
+    out = CoverPage._build_session_nc(entries, "DeepLabCut", None, tmp_path)
+    with xr.open_dataset(out) as ds:
+        assert {"position", "confidence"} <= set(ds.data_vars)
+        assert ds.attrs["fps"] == 50.0
+        assert ds["time"].values[1] == 1 / 50.0
+
+
+def test_speed_is_added_once_and_only_when_asked(tmp_path):
+    poses, feats = tmp_path / "poses.nc", tmp_path / "feats.nc"
+    _poses().to_netcdf(poses)
+    _poses().assign(speed=(("time", "keypoint", "individual"), np.full((N, 2, 1), 3.0))).to_netcdf(feats)
+    entries = [_FeatureEntry("cam-1", str(poses), None), _FeatureEntry("cam-2", str(feats), None)]
+
+    (tmp_path / "plain").mkdir()
+    with xr.open_dataset(CoverPage._build_session_nc(entries, None, None, tmp_path / "plain")) as ds:
+        assert np.isnan(ds["speed"].sel(camera="cam-1")).all(), "only the file's own speed, padded"
+    with xr.open_dataset(CoverPage._build_session_nc(entries, None, None, tmp_path, compute_speed=True)) as ds:
+        assert ds["speed"].dims == ("camera", "time", "keypoint", "individual")
+        assert (ds["speed"].sel(camera="cam-2") == 3.0).all(), "a file's own speed is kept"
+        assert np.isfinite(ds["speed"].sel(camera="cam-1").values[1:-1]).all()
