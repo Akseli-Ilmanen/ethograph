@@ -36,7 +36,11 @@ pytest tests/test_integration --show               # show the GUI window for 15 
 pytest --lf                                        # rerun only what failed last time
 ```
 
-Integration tests skip themselves when a dataset is not downloaded (`is_dataset_downloaded`); download once via the GUI cover page or `ethograph.utils.download`.
+`pytest_configure` fetches BirdPark and Moll2025 on first run; every other template is skipped (`is_dataset_downloaded`) until downloaded, via the GUI cover page or once for all of them:
+
+```powershell
+python -c "from ethograph.datasets import DATASETS; from ethograph.utils.download import ensure_template_dataset; [ensure_template_dataset(k) for k in DATASETS]"
+```
 
 What earns a test, which fixture to take: see `CLAUDE.md` → *What earns a test*.
 

@@ -9,17 +9,11 @@ from ethograph.datasets import (
     DATASETS,
     DOWNLOAD_BASE,
     dataset_dir,
-    get_gui_assets,
     is_dataset_downloaded,
     resolve_dataset_paths,
 )
 from ethograph.io.catalog import catalog_from_xarray
-from ethograph.utils.download import (
-    download_assets,
-    ensure_alignment_nwb,
-    ensure_default_configs,
-    write_example_configs,
-)
+from ethograph.utils.download import ensure_alignment_nwb, ensure_template_dataset
 
 try:
     from qtpy.QtWidgets import QApplication, QMessageBox
@@ -125,15 +119,7 @@ def _load_template_gui(gui, key: str, downsample: bool = False):
 def _ensure_dataset(key: str):
     """Download example dataset if not already present."""
     if not is_dataset_downloaded(key):
-        dest = dataset_dir(key)
-        dest.mkdir(parents=True, exist_ok=True)
-        download_assets(
-            release_tag=DATASETS[key]["release_tag"],
-            assets=get_gui_assets(key),
-            dest=dest,
-        )
-        ensure_default_configs()
-        write_example_configs(key, dest)
+        ensure_template_dataset(key, verbose=False)
 
 
 def pytest_configure(config):

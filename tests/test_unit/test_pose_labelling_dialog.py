@@ -606,8 +606,6 @@ def test_the_dialog_is_split_into_stages(dialog):
         # Between labelling and filling, as in the pipeline: Detect produces
         # observations, and the fill bridges what is left.
         "Detect",
-        # Before the export, which is what a calibration changes.
-        "Calibrate",
         "Fill and export",
     ]
 
@@ -709,12 +707,10 @@ def test_leaving_the_label_tab_locks_the_pointer(dialog):
     mode = dialog._mode
     assert mode.locked is False
 
-    # The Calibrate tab is the exception: it takes the pointer for its own
-    # clicks (suspending the mode), so it is covered by its own tests instead.
     others = [
         dialog.tabs.widget(index)
         for index in range(dialog.tabs.count())
-        if dialog.tabs.widget(index) not in (dialog._label_page, dialog._calibrate_page)
+        if dialog.tabs.widget(index) is not dialog._label_page
     ]
     assert len(others) == 3, "Define keypoints, Detect, Fill and export"
     for page in others:
@@ -1656,193 +1652,14 @@ def test_labelling_another_frame_changes_the_refinement_signature(dialog):
     dialog.store.set_point(5, "beak", (3.0, 4.0))
     assert dialog._refinement_signature() != before
 
-
-# ----------------------------------------------------------------------
-# Calibrate tab: pixel → cm landmarks and the export's coordinate space
-# ----------------------------------------------------------------------
-
-#: Pixel corners of a 100×50 rectangle, mapped to a 200×100 cm world (scale 2).
-_CALIB_PX = [(0.0, 0.0), (100.0, 0.0), (0.0, 50.0), (100.0, 50.0)]
-_CALIB_CM = [(0.0, 0.0), (200.0, 0.0), (0.0, 100.0), (200.0, 100.0)]
-
-
-def _calibrate(dialog, n: int = 3) -> None:
-    """Give the store *n* ready landmarks, as clicking the Calibrate tab would."""
-    for i in range(n):
-        name = f"mark_{i}"
-        dialog.store.calibration.add(name)
-        dialog.store.calibration.set_world(name, _CALIB_CM[i])
-        dialog.store.calibration.add_click(name, 0, _CALIB_PX[i])
-    dialog._after_calibration_changed()
-
-
-def test_space_combo_starts_on_pixels_and_disabled(dialog):
-    assert dialog.space_combo.currentData() == "pixels"
-    assert not dialog.space_combo.isEnabled()
-
-
-def test_three_ready_landmarks_enable_the_cm_export(dialog):
-    _calibrate(dialog, n=2)
-    assert not dialog.space_combo.isEnabled()
-    dialog.store.calibration.add("mark_2")
-    dialog.store.calibration.set_world("mark_2", _CALIB_CM[2])
-    dialog.store.calibration.add_click("mark_2", 0, _CALIB_PX[2])
-    dialog._after_calibration_changed()
-    assert dialog.space_combo.isEnabled()
-
-
-def test_losing_the_calibration_snaps_the_combo_back_to_pixels(dialog):
-    _calibrate(dialog)
-    dialog.space_combo.setCurrentIndex(1)
-    assert dialog._cm_selected()
-
-    dialog.store.calibration.remove("mark_0")
-    dialog._after_calibration_changed()
-    assert dialog.space_combo.currentData() == "pixels"
-    assert not dialog.space_combo.isEnabled()
-
-
-def test_the_cm_choice_survives_a_transient_invalidation(dialog):
-    """A calibration briefly going invalid must not silently strand the export
-    on pixels — losing "cm" here is how someone exports 500 px believing they
-    exported 8 cm.
-    """
-    _calibrate(dialog)
-    dialog.space_combo.setCurrentIndex(1)
-    assert dialog._cm_selected()
-
-    dialog.store.calibration.remove("mark_2")
-    dialog._after_calibration_changed()
-    assert dialog.space_combo.currentData() == "pixels"  # honest while unusable
-
-    dialog.store.calibration.add("mark_2")
-    dialog.store.calibration.set_world("mark_2", _CALIB_CM[2])
-    dialog.store.calibration.add_click("mark_2", 0, _CALIB_PX[2])
-    dialog._after_calibration_changed()
-    assert dialog.space_combo.currentData() == "cm"  # the choice comes back
-    assert dialog._cm_selected()
-
-
-def test_editing_one_cell_never_wipes_the_other_coordinate(dialog):
-    """The table rebuilds after every edit, so a lone blank must not zero the pair."""
-    _calibrate(dialog)
-    dialog.calib_table.item(1, 1).setText("")  # blank x: y must survive
-    assert dialog.store.calibration.get("mark_1").world_xy == _CALIB_CM[1]
-
-    dialog.calib_table.item(1, 2).setText("42.0")  # new y: x must survive
-    assert dialog.store.calibration.get("mark_1").world_xy == (_CALIB_CM[1][0], 42.0)
-
-
-def test_picking_pixels_on_purpose_is_not_overridden(dialog):
-    _calibrate(dialog)
-    dialog.space_combo.setCurrentIndex(1)
-    dialog.space_combo.setCurrentIndex(0)  # the user changes their mind
-    dialog._after_calibration_changed()
-    assert dialog.space_combo.currentData() == "pixels"
-
-
-def test_the_flip_in_cm_mirrors_the_world_y(dialog):
-    """In cm the flip is a world-frame mirror composed after the fit — never a
-    pixel flip, which the fit was not made from."""
-    _calibrate(dialog)
-    dialog.store.set_point(0, "beak", (0.0, 50.0))  # world (0, 100)
-    dialog.space_combo.setCurrentIndex(1)
-    assert dialog.invert_y_check.isEnabled()
-
-    dialog.invert_y_check.setChecked(False)
-    plain = dialog._build_dataset()["position"].isel(time=0, individual=0).sel(keypoint="beak").values
-    dialog.invert_y_check.setChecked(True)
-    flipped_ds = dialog._build_dataset()
-    flipped = flipped_ds["position"].isel(time=0, individual=0).sel(keypoint="beak").values
-
-    np.testing.assert_allclose(plain, [0.0, 100.0], atol=1e-9)
-    np.testing.assert_allclose(flipped, [plain[0], -plain[1]], atol=1e-9)
-    assert flipped_ds.attrs["space_unit"] == "cm"
-
-
-def test_cm_export_carries_the_unit_and_the_transform(dialog):
-    _calibrate(dialog)
-    dialog.store.set_point(0, "beak", (100.0, 0.0))
-    dialog.space_combo.setCurrentIndex(1)
-
-    ds = dialog._build_dataset()
-    assert ds.attrs["space_unit"] == "cm"
-    np.testing.assert_allclose(
-        ds["position"].isel(time=0, individual=0).sel(keypoint="beak").values, [200.0, 0.0], atol=1e-9
-    )
-
-
-def test_pixel_export_is_untouched_by_a_calibration(dialog):
-    _calibrate(dialog)
-    dialog.store.set_point(0, "beak", (100.0, 0.0))
-    ds = dialog._build_dataset()
-    assert ds.attrs["space_unit"] == "pixels"
-
-
-def test_the_calibrate_tab_swaps_the_canvas_mode(dialog):
-    view = dialog._view
-    dialog.set_interaction_mode(SEQUENTIAL_MODE)
-    dialog._mode.set_active("tail")
-    assert view.label_mode is dialog._mode
-
-    dialog.tabs.setCurrentWidget(dialog._calibrate_page)
-    assert dialog._mode is None
-    assert dialog._calib_mode is not None
-    assert view.label_mode is dialog._calib_mode
-
-    dialog.tabs.setCurrentWidget(dialog._label_page)
-    assert dialog._calib_mode is None
-    assert dialog._mode is not None
-    assert dialog._mode.mode == SEQUENTIAL_MODE
-    assert dialog._mode.active_keypoint == "tail"  # the suspended pair survives
-
-
-def test_a_mode_button_on_the_calibrate_tab_wins_the_canvas_back(dialog):
-    dialog.tabs.setCurrentWidget(dialog._calibrate_page)
-    assert dialog._calib_mode is not None
-
-    dialog.set_interaction_mode(LOOP_MODE)
-    assert dialog._calib_mode is None
-    assert dialog._view.label_mode is dialog._mode
-    assert dialog.tabs.currentWidget() is dialog._label_page
-
-
-def test_backspace_while_calibrating_removes_this_frames_click(dialog):
-    _calibrate(dialog)
-    dialog.tabs.setCurrentWidget(dialog._calibrate_page)
-    dialog._calib_mode.set_active("mark_1")
-    assert dialog._delete_selected_point()
-    assert dialog.store.calibration.get("mark_1").clicks == {}
-    assert not dialog._delete_selected_point()
-
-
-def test_calibration_survives_reopening_via_the_sidecar(dialog, tmp_path):
-    _calibrate(dialog)
-    path = tmp_path / "video.mp4.keypoints.json"
-    dialog.store.save(path)
-    from ethograph.gui.pose_annotate import KeypointStore
-
-    assert KeypointStore.load(path).calibration == dialog.store.calibration
-
-
-def test_the_landmark_table_shows_clicks_and_means(dialog):
-    _calibrate(dialog)
-    table = dialog.calib_table
-    assert table.rowCount() == 3
-    assert table.item(0, 0).text() == "mark_0"
-    assert table.item(0, 3).text() == "1"
-    assert "0.0" in table.item(0, 4).text()
-
-
-def test_editing_a_table_cell_writes_the_world_coordinate(dialog):
-    _calibrate(dialog)
-    dialog.calib_table.item(1, 1).setText("123.5")
-    world = dialog.store.calibration.get("mark_1").world_xy
-    assert world == (123.5, _CALIB_CM[1][1])
+    # ...and moving a point counts just as much as adding one.
+    moved = dialog._refinement_signature()
+    dialog.store.set_point(5, "beak", (9.0, 9.0))
+    assert dialog._refinement_signature() != moved
 
 
 # ----------------------------------------------------------------------
-# The refinement subclass: the labelling dialog minus schema/Detect/Calibrate
+# The refinement subclass: the labelling dialog minus schema/Detect
 # ----------------------------------------------------------------------
 
 
@@ -1868,42 +1685,6 @@ def test_refinement_dialog_keeps_label_and_fill_only(qapp, tmp_path):
         assert dlg.tree is not None
     finally:
         dlg.close()
-
-
-def test_the_clicked_frames_table_lists_frames_per_landmark(dialog):
-    _calibrate(dialog)  # every landmark clicked on frame 0
-    dialog.store.calibration.add_click("mark_1", 5, (7.0, 8.0))
-    dialog._after_calibration_changed()
-
-    table = dialog.calib_frames_table
-    headers = [table.horizontalHeaderItem(c).text() for c in range(table.columnCount())]
-    assert headers == ["Frame", "mark_0", "mark_1", "mark_2"]
-    assert [table.item(r, 0).text() for r in range(table.rowCount())] == ["0", "5"]
-    assert table.item(1, 2).text() == "7.0, 8.0"
-    assert table.item(1, 1).text() == ""  # not clicked on frame 5
-
-
-def test_removing_a_click_drops_its_frame_row(dialog):
-    _calibrate(dialog)
-    dialog.store.calibration.add_click("mark_0", 7, (1.0, 1.0))
-    dialog._after_calibration_changed()
-    assert dialog.calib_frames_table.rowCount() == 2
-
-    dialog.store.calibration.remove_click("mark_0", 7)
-    dialog._after_calibration_changed()
-    assert dialog.calib_frames_table.rowCount() == 1
-
-
-def test_clicking_a_landmark_cell_makes_it_active(dialog):
-    _calibrate(dialog)
-    dialog.tabs.setCurrentWidget(dialog._calibrate_page)
-    dialog._on_calib_frame_clicked(0, 2)
-    assert dialog._calib_mode.active_landmark == "mark_1"
-
-    # ...and moving a point counts just as much as adding one.
-    moved = dialog._refinement_signature()
-    dialog.store.set_point(5, "beak", (9.0, 9.0))
-    assert dialog._refinement_signature() != moved
 
 
 def test_a_schema_change_changes_the_refinement_signature(dialog):

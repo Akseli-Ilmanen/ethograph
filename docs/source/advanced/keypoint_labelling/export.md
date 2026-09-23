@@ -26,16 +26,6 @@
   if ticked, is written alongside `position` as `head_direction` and `heading`.
 
 
-- **Coordinate space** — `pixels` (source-video image coordinates, the
-  default) or `cm (calibrated)`, offered once the {ref}`Calibrate
-  <target-calibration>` tab holds three ready landmarks. A cm export maps
-  positions — and everything derived from them — through the landmark fit,
-  records the unit as `attrs["space_unit"]` and the matrix as
-  `attrs["pixels_to_cm"]`. The y-flip then mirrors the world frame's y axis
-  (y → −y) after the transform, rather than the image's pixels — untick it if
-  your landmark coordinates already read the way you want. The `space`
-  dimension stays `x`/`y` either way.
-
 ```{note}
 Velocity, speed and acceleration are measured between the frames a point was
 actually *seen* on — labelled or filled. With a handful of labels and no fill

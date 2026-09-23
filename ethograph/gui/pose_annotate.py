@@ -30,11 +30,8 @@ Coordinate convention
 Everything here is ``(x, y)`` in **pixel coordinates of the source video**,
 ``NaN`` where unlabelled. Note that :func:`~ethograph.gui.pose_convert.poses_ds_to_points`
 emits ``(track_id, frame, y, x)`` — the axis swap lives in this module (in
-:func:`store_to_movement_ds`) and nowhere else. The one sanctioned way out of
-pixel space is the export's ``world_transform`` (see :class:`CalibrationTable`):
-a planar pixel→cm map fitted from clicked landmarks, applied only in
-:func:`store_to_movement_ds` — the store itself, the sidecar and the canvas
-overlay never hold anything but source-video pixels.
+:func:`store_to_movement_ds`) and nowhere else. The store itself, the sidecar
+and the canvas overlay never hold anything but source-video pixels.
 
 Naming follows the rest of the codebase (and movement ≥0.17): the *dimension*
 of a poses dataset is singular — ``keypoint``, ``individual`` — even though it
@@ -81,10 +78,7 @@ sidecar; they are cached separately (see :func:`detections_path`) only because
 re-running a detector over a long video costs minutes. What *is* user intent, and
 so does live in the sidecar beside the anchors, is the :class:`AssignmentTable`:
 what each detector label — tag ``7``, the orange dot — means in terms of an
-``(individual, keypoint)`` pair. The :class:`CalibrationTable` follows the same
-rule: the clicked landmark pixels and their cm coordinates are user intent and
-live in the sidecar; the fitted 3×3 matrix is derived data, recomputed on demand
-and never persisted.
+``(individual, keypoint)`` pair.
 """
 
 from __future__ import annotations
@@ -95,10 +89,7 @@ from pathlib import Path
 from typing import Sequence
 
 import numpy as np
-import pandas as pd
 import xarray as xr
-
-from ethograph.skeleton.shapes import fit_transform
 
 #: Sidecar suffix appended to the video path to persist anchors.
 SIDECAR_SUFFIX = ".keypoints.json"
@@ -361,317 +352,6 @@ class AssignmentTable:
         return cls([Assignment.from_dict(item) for item in (payload or ())])
 
 
-# ----------------------------------------------------------------------
-# Pixel → world calibration
-# ----------------------------------------------------------------------
-
-#: Fewest landmark correspondences a planar pixel→world fit can be made from.
-MIN_CALIBRATION_LANDMARKS = 3
-
-
-def _degenerate(pts: np.ndarray) -> bool:
-    """Whether *pts* ``(n, 2)`` are (nearly) collinear — no plane fit possible."""
-    centered = pts - pts.mean(axis=0)
-    scale = float(np.abs(centered).max())
-    if scale == 0.0:
-        return True
-    return np.linalg.matrix_rank(centered / scale, tol=1e-6) < 2
-
-
-def fit_calibration(pixel_pts: np.ndarray, world_pts: np.ndarray) -> np.ndarray:
-    """Fit a planar pixel→world map from point correspondences, as a 3×3 matrix.
-
-    Three correspondences fit an affine (least squares, via
-    :func:`~ethograph.skeleton.shapes.fit_transform`) embedded in the top rows of
-    the matrix; four or more fit a homography, which is the exact model for any
-    camera viewing a flat plane — an angled view foreshortens the floor, and only
-    the homography's perspective divide can express "far away is smaller". Both
-    shapes apply through :func:`apply_calibration`, so callers never branch.
-
-    Plain least squares, no RANSAC: the input is a handful of hand-clicked
-    landmarks, where every point is meant and an "outlier" is a mistake to fix,
-    not to silently discard.
-
-    Raises :class:`KeypointStoreError` on fewer than
-    :data:`MIN_CALIBRATION_LANDMARKS` points, non-finite input, or a degenerate
-    (collinear) configuration.
-    """
-    pixel = np.asarray(pixel_pts, dtype=np.float64)
-    world = np.asarray(world_pts, dtype=np.float64)
-    if pixel.shape != world.shape or pixel.ndim != 2 or pixel.shape[1] != 2:
-        raise KeypointStoreError(
-            f"Calibration points must be matching (n, 2) arrays; got {pixel.shape} and {world.shape}."
-        )
-    if len(pixel) < MIN_CALIBRATION_LANDMARKS:
-        raise KeypointStoreError(f"Calibration needs at least {MIN_CALIBRATION_LANDMARKS} landmarks; got {len(pixel)}.")
-    if not (np.isfinite(pixel).all() and np.isfinite(world).all()):
-        raise KeypointStoreError("Calibration points must be finite.")
-    if _degenerate(pixel) or _degenerate(world):
-        raise KeypointStoreError("Calibration landmarks are collinear — they must span a plane, not a line.")
-
-    if len(pixel) == MIN_CALIBRATION_LANDMARKS:
-        r_mat, t = fit_transform(pixel, world)
-        matrix = np.eye(3)
-        matrix[:2, :2] = r_mat
-        matrix[:2, 2] = t
-        return matrix
-
-    import cv2
-
-    matrix, _ = cv2.findHomography(pixel, world, method=0)
-    if matrix is None:
-        raise KeypointStoreError("Homography fit failed — check the landmarks are distinct and not collinear.")
-    return np.asarray(matrix, dtype=np.float64)
-
-
-def apply_calibration(matrix: np.ndarray, pts: np.ndarray) -> np.ndarray:
-    """Map ``(..., 2)`` points through a 3×3 calibration matrix.
-
-    Homogeneous multiply then perspective divide — for an affine the divisor is
-    identically 1, so one code path serves both fits. ``NaN`` points pass
-    through as ``NaN``.
-    """
-    matrix = np.asarray(matrix, dtype=np.float64)
-    if matrix.shape != (3, 3):
-        raise KeypointStoreError(f"Calibration matrix must be 3x3; got {matrix.shape}.")
-    pts_arr = np.asarray(pts, dtype=np.float64)
-    if pts_arr.shape[-1] != 2:
-        raise KeypointStoreError(f"Points must have a trailing xy axis; got shape {pts_arr.shape}.")
-    xy = pts_arr.reshape(-1, 2)
-    homogeneous = np.column_stack([xy, np.ones(len(xy))]) @ matrix.T
-    with np.errstate(invalid="ignore", divide="ignore"):
-        mapped = homogeneous[:, :2] / homogeneous[:, 2:3]
-    return mapped.reshape(pts_arr.shape)
-
-
-@dataclass
-class CalibrationLandmark:
-    """One static physical landmark: its cm position and where it was clicked.
-
-    Mutable, unlike :class:`Assignment` — clicks accrete over frames, and
-    :meth:`mean_pixel` averages them, which is what absorbs click jitter under
-    the static-camera assumption. One click per frame: re-clicking a landmark on
-    a frame replaces its click there.
-    """
-
-    name: str
-    world_xy: tuple[float, float] | None = None
-    clicks: dict[int, tuple[float, float]] = field(default_factory=dict)
-
-    def __post_init__(self):
-        self.name = str(self.name)
-        if self.world_xy is not None:
-            self.world_xy = (float(self.world_xy[0]), float(self.world_xy[1]))
-        self.clicks = {int(f): (float(xy[0]), float(xy[1])) for f, xy in self.clicks.items()}
-
-    @property
-    def is_ready(self) -> bool:
-        """Usable in a fit: cm coordinates set and clicked at least once."""
-        return self.world_xy is not None and bool(self.clicks)
-
-    def mean_pixel(self) -> tuple[float, float] | None:
-        if not self.clicks:
-            return None
-        mean = np.asarray(list(self.clicks.values()), dtype=np.float64).mean(axis=0)
-        return float(mean[0]), float(mean[1])
-
-    def to_dict(self) -> dict:
-        payload: dict = {"name": self.name}
-        if self.world_xy is not None:
-            payload["world_xy"] = [self.world_xy[0], self.world_xy[1]]
-        if self.clicks:
-            payload["clicks"] = {str(f): [x, y] for f, (x, y) in sorted(self.clicks.items())}
-        return payload
-
-    @classmethod
-    def from_dict(cls, payload: dict) -> CalibrationLandmark:
-        world = payload.get("world_xy")
-        return cls(
-            name=payload["name"],
-            world_xy=None if world is None else (world[0], world[1]),
-            clicks={int(f): (xy[0], xy[1]) for f, xy in (payload.get("clicks") or {}).items()},
-        )
-
-
-class CalibrationTable:
-    """The landmark correspondences a pixel→world fit is made from.
-
-    Keyed by landmark name, insertion-ordered — the dialog's row order. The
-    table is pure user intent (persisted in the sidecar); the fitted matrix is
-    derived data, recomputed by :meth:`fit` on demand and never stored, so it
-    can never silently disagree with its inputs.
-    """
-
-    def __init__(self, landmarks: Sequence[CalibrationLandmark] = ()):
-        self._by_name: dict[str, CalibrationLandmark] = {}
-        for landmark in landmarks:
-            self._by_name[landmark.name] = landmark
-
-    # -- reading -------------------------------------------------------
-
-    @property
-    def landmarks(self) -> list[CalibrationLandmark]:
-        return list(self._by_name.values())
-
-    def names(self) -> list[str]:
-        return list(self._by_name)
-
-    def get(self, name: str) -> CalibrationLandmark | None:
-        return self._by_name.get(str(name))
-
-    def __len__(self) -> int:
-        return len(self._by_name)
-
-    def __iter__(self):
-        return iter(self.landmarks)
-
-    def __contains__(self, name: object) -> bool:
-        return name in self._by_name
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, CalibrationTable) and self.landmarks == other.landmarks
-
-    def __repr__(self) -> str:
-        return f"CalibrationTable({self.landmarks!r})"
-
-    def ready(self) -> list[CalibrationLandmark]:
-        """Landmarks usable in a fit: cm coordinates set and clicked at least once."""
-        return [landmark for landmark in self.landmarks if landmark.is_ready]
-
-    def is_valid(self) -> bool:
-        """Whether :meth:`fit` has enough to work with (cheap — gates the UI)."""
-        return len(self.ready()) >= MIN_CALIBRATION_LANDMARKS
-
-    # -- editing -------------------------------------------------------
-
-    def _require(self, name: str) -> CalibrationLandmark:
-        landmark = self.get(name)
-        if landmark is None:
-            raise KeypointStoreError(f"Unknown calibration landmark {name!r}.")
-        return landmark
-
-    def add(self, name: str) -> CalibrationLandmark:
-        name = str(name)
-        if name in self._by_name:
-            raise KeypointStoreError(f"Calibration landmark {name!r} already exists.")
-        landmark = CalibrationLandmark(name)
-        self._by_name[name] = landmark
-        return landmark
-
-    def remove(self, name: str) -> bool:
-        return self._by_name.pop(str(name), None) is not None
-
-    def rename(self, old: str, new: str) -> None:
-        new = str(new)
-        if new in self._by_name and new != old:
-            raise KeypointStoreError(f"Calibration landmark {new!r} already exists.")
-        landmark = self._require(old)
-        landmark.name = new
-        # Rebuild rather than pop+insert to keep the row order stable.
-        self._by_name = {landmark.name: landmark for landmark in self._by_name.values()}
-
-    def set_world(self, name: str, world_xy: tuple[float, float] | None) -> None:
-        landmark = self._require(name)
-        landmark.world_xy = None if world_xy is None else (float(world_xy[0]), float(world_xy[1]))
-
-    def add_click(self, name: str, frame: int, xy: tuple[float, float]) -> None:
-        """Record where *name* sits on *frame*; re-clicking a frame replaces."""
-        self._require(name).clicks[int(frame)] = (float(xy[0]), float(xy[1]))
-
-    def remove_click(self, name: str, frame: int) -> bool:
-        return self._require(name).clicks.pop(int(frame), None) is not None
-
-    def clear_clicks(self, name: str | None = None) -> None:
-        for landmark in [self._require(name)] if name is not None else self.landmarks:
-            landmark.clicks.clear()
-
-    # -- fitting -------------------------------------------------------
-
-    def fit(self) -> np.ndarray:
-        """The pixel→world matrix from the ready landmarks' mean pixels.
-
-        Raises :class:`KeypointStoreError` when fewer than
-        :data:`MIN_CALIBRATION_LANDMARKS` landmarks are ready or the
-        configuration is degenerate — check :meth:`is_valid` first to gate UI.
-        """
-        ready = self.ready()
-        if len(ready) < MIN_CALIBRATION_LANDMARKS:
-            raise KeypointStoreError(
-                f"Calibration needs at least {MIN_CALIBRATION_LANDMARKS} landmarks with both "
-                f"cm coordinates and at least one click; {len(ready)} are ready."
-            )
-        pixel = np.asarray([landmark.mean_pixel() for landmark in ready], dtype=np.float64)
-        world = np.asarray([landmark.world_xy for landmark in ready], dtype=np.float64)
-        return fit_calibration(pixel, world)
-
-    # -- persistence ---------------------------------------------------
-
-    def to_list(self) -> list[dict]:
-        return [landmark.to_dict() for landmark in self.landmarks]
-
-    @classmethod
-    def from_list(cls, payload: Sequence[dict] | None) -> CalibrationTable:
-        """Rebuild from a sidecar; a missing key is simply an empty table."""
-        return cls([CalibrationLandmark.from_dict(item) for item in (payload or ())])
-
-
-def load_world_coordinates(path: str | Path, session: str | None = None) -> dict[str, tuple[float, float]] | list[str]:
-    """Read landmark world (cm) coordinates from a tabular file.
-
-    Two layouts are understood:
-
-    * **Long** — a name column (``name`` or ``landmark``) plus ``x`` and ``y``
-      columns, one row per landmark. Returns ``{name: (x, y)}`` directly.
-    * **Wide, session-keyed** — a ``session`` column plus ``{landmark}_x`` /
-      ``{landmark}_y`` columns, one row per session. With ``session=None`` the
-      caller gets the list of session IDs back and must ask which one; with a
-      ``session`` the matching row (the first, when duplicated) becomes
-      ``{landmark: (x, y)}``.
-
-    A ``z`` column (or ``{landmark}_z``) is **ignored**: a single-camera
-    calibration is planar, so only landmarks roughly coplanar with the plane the
-    animal moves on give an accurate fit.
-
-    Raises :class:`KeypointStoreError` on an unreadable file, an unrecognizable
-    layout, or an unknown session.
-    """
-    path = Path(path)
-    try:
-        table = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
-    except (OSError, ValueError, pd.errors.ParserError) as error:
-        raise KeypointStoreError(f"Could not read {path.name}: {error}") from error
-
-    columns = {str(c).strip().lower(): c for c in table.columns}
-
-    name_col = columns.get("name") or columns.get("landmark")
-    if name_col is not None and "x" in columns and "y" in columns:
-        coords: dict[str, tuple[float, float]] = {}
-        for _, row in table.iterrows():
-            coords[str(row[name_col])] = (float(row[columns["x"]]), float(row[columns["y"]]))
-        return coords
-
-    session_col = columns.get("session")
-    if session_col is not None:
-        stems = {
-            lower[: -len("_x")] for lower in columns if lower.endswith("_x") and lower[: -len("_x")] + "_y" in columns
-        }
-        if not stems:
-            raise KeypointStoreError(f"{path.name} has a 'session' column but no '<landmark>_x'/'<landmark>_y' pairs.")
-        sessions = [str(s) for s in dict.fromkeys(table[session_col].astype(str))]
-        if session is None:
-            return sessions
-        rows = table[table[session_col].astype(str) == str(session)]
-        if rows.empty:
-            raise KeypointStoreError(f"Session {session!r} is not in {path.name} (has: {', '.join(sessions)}).")
-        row = rows.iloc[0]
-        return {stem: (float(row[columns[stem + "_x"]]), float(row[columns[stem + "_y"]])) for stem in sorted(stems)}
-
-    raise KeypointStoreError(
-        f"{path.name} is neither a long landmark table (name/landmark, x, y) nor a "
-        "session-keyed wide table (session, <landmark>_x, <landmark>_y)."
-    )
-
-
 @dataclass
 class KeypointStore:
     """Per-frame keypoint coordinates: user anchors + backend fill.
@@ -722,10 +402,6 @@ class KeypointStore:
         What each detector label means — see :class:`AssignmentTable`. Persisted
         in the sidecar next to the anchors, because it is user intent rather
         than something recomputable from the video.
-    calibration
-        Static landmark correspondences for a pixel→world export — see
-        :class:`CalibrationTable`. Persisted in the sidecar for the same reason
-        as the assignment; the fitted matrix itself is derived and never stored.
     filled
         ``(n_frames, n_individuals, n_keypoints, 2)`` backend output, or
         ``None`` before the first fill. Anchor frames are copied through
@@ -759,7 +435,6 @@ class KeypointStore:
     detection_confidence: dict[int, np.ndarray] = field(default_factory=dict)
     detection_orientation: dict[int, np.ndarray] = field(default_factory=dict)
     assignment: AssignmentTable = field(default_factory=AssignmentTable)
-    calibration: CalibrationTable = field(default_factory=CalibrationTable)
     filled: np.ndarray | None = None
     confidence: np.ndarray | None = None
     fill_range: tuple[int, int] | None = None
@@ -1840,8 +1515,6 @@ class KeypointStore:
         # *means* is the part nothing can recompute, so that stays.
         if len(self.assignment):
             payload["assignment"] = self.assignment.to_list()
-        if len(self.calibration):
-            payload["calibration"] = self.calibration.to_list()
         return payload
 
     @classmethod
@@ -1886,7 +1559,6 @@ class KeypointStore:
             individual_color={str(k): str(v) for k, v in (payload.get("individual_color") or {}).items()},
             anchors=anchors,
             assignment=AssignmentTable.from_list(payload.get("assignment")),
-            calibration=CalibrationTable.from_list(payload.get("calibration")),
             static_keypoints=[str(k) for k in (payload.get("static") or []) if str(k) in keypoints],
         )
 
@@ -1990,7 +1662,6 @@ def store_to_movement_ds(
     store: KeypointStore,
     fps: float,
     image_height: float | None = None,
-    world_transform: np.ndarray | None = None,
 ) -> xr.Dataset:
     """Build a movement-format poses dataset from *store*.
 
@@ -2009,25 +1680,11 @@ def store_to_movement_ds(
     image coordinates, so the flip belongs only on the paths that hand data to a
     plot. Leave it ``None`` to keep image coordinates.
 
-    ``world_transform`` maps every position through a 3×3 pixel→world matrix
-    (see :meth:`CalibrationTable.fit`), putting the output in the user's own cm
-    frame; ``attrs["space_unit"]`` records which frame the file speaks. It is
-    **mutually exclusive** with ``image_height``: the fit was made from
-    unflipped pixel clicks, so a pixel-space flip underneath it would corrupt
-    the output rather than mirror it. A caller that wants the *world* frame
-    mirrored composes ``diag(1, -1, 1)`` into the matrix instead (as the
-    dialog's flip checkbox does in cm). The ``space`` coord stays
-    ``["x", "y"]`` either way.
     """
     if fps <= 0:
         raise KeypointStoreError("fps must be positive — read it from the video, do not default it.")
     if image_height is not None and image_height <= 0:
         raise KeypointStoreError("image_height must be positive — read it from the video, do not default it.")
-    if image_height is not None and world_transform is not None:
-        raise KeypointStoreError(
-            "image_height and world_transform are mutually exclusive — the world frame's "
-            "y orientation comes from the user's own coordinates, not a pixel flip."
-        )
 
     n_ind, n_kp = store.n_individuals, store.n_keypoints
     position = np.full((store.n_frames, 2, n_kp, n_ind), np.nan, dtype=np.float64)
@@ -2070,16 +1727,10 @@ def store_to_movement_ds(
 
     if image_height is not None:
         position[:, 1] = image_height - position[:, 1]
-    if world_transform is not None:
-        # (time, space, keypoint, individual) -> xy-last for the homogeneous
-        # multiply, then back. NaN frames pass through as NaN.
-        position = apply_calibration(world_transform, position.transpose(0, 2, 3, 1)).transpose(0, 3, 1, 2)
 
-    attrs = {"ds_type": "poses", "fps": float(fps), "source_software": "ethograph"}
-    attrs["space_unit"] = "pixels" if world_transform is None else "cm"
-    if world_transform is not None:
-        # Provenance: the fitted matrix, so the file says how it left pixel space.
-        attrs["pixels_to_cm"] = [float(v) for v in np.asarray(world_transform).ravel()]
+    # ``space_unit`` is what the overlay reads to know the data is in the
+    # camera's own pixels (see io/overlay_source).
+    attrs = {"ds_type": "poses", "fps": float(fps), "source_software": "ethograph", "space_unit": "pixels"}
 
     return xr.Dataset(
         data_vars={
@@ -2185,7 +1836,6 @@ def store_to_head_direction(
     store: KeypointStore,
     fps: float,
     y_flipped: bool = False,
-    world_transform: np.ndarray | None = None,
 ) -> dict[str, xr.DataArray]:
     """Forward vector and heading angle, read off each marker's own geometry.
 
@@ -2216,12 +1866,6 @@ def store_to_head_direction(
     way to the trajectory drawn under it; mirroring y negates the vector's y
     component and the angle follows from that.
 
-    ``world_transform`` rotates the vectors into the same cm frame the positions
-    were mapped to: a direction is a difference of positions, so only the
-    matrix's linear part applies (exact for an affine, first-order for a
-    homography), and the result is renormalized to unit length. Mutually
-    exclusive with ``y_flipped``, exactly like the position export.
-
     Angles are in **degrees**: this is read off a plot rather than fed into
     another calculation, and nobody eyeballs radians.
 
@@ -2231,11 +1875,6 @@ def store_to_head_direction(
     """
     if fps <= 0:
         raise KeypointStoreError("fps must be positive — read it from the video, do not default it.")
-    if y_flipped and world_transform is not None:
-        raise KeypointStoreError(
-            "y_flipped and world_transform are mutually exclusive — the world frame's "
-            "y orientation comes from the user's own coordinates, not a pixel flip."
-        )
 
     n_ind, n_kp = store.n_individuals, store.n_keypoints
     vectors = np.full((store.n_frames, 2, n_kp, n_ind), np.nan, dtype=np.float64)
@@ -2246,11 +1885,6 @@ def store_to_head_direction(
 
     if y_flipped:
         vectors[:, 1] *= -1.0
-    if world_transform is not None:
-        linear = np.asarray(world_transform, dtype=np.float64)[:2, :2]
-        rotated = np.einsum("ab,tbki->taki", linear, vectors)
-        with np.errstate(invalid="ignore"):
-            vectors = rotated / np.linalg.norm(rotated, axis=1, keepdims=True)
 
     # atan2 on a NaN pair yields NaN, so unmeasured frames stay unmeasured.
     with np.errstate(invalid="ignore"):
@@ -2281,7 +1915,6 @@ def store_to_dataset(
     image_height: float | None = None,
     kinematics: Sequence[str] = (),
     head_direction: bool = False,
-    world_transform: np.ndarray | None = None,
 ) -> xr.Dataset:
     """The whole result of a labelling session as ONE movement poses dataset.
 
@@ -2297,12 +1930,10 @@ def store_to_dataset(
     dimensions rather than names that have to be kept from colliding with
     whatever the session already had.
     """
-    ds = store_to_movement_ds(store, fps, image_height, world_transform=world_transform)
+    ds = store_to_movement_ds(store, fps, image_height)
     derived = dict(store_to_kinematics(ds, kinematics))
     if head_direction:
-        derived.update(
-            store_to_head_direction(store, fps, y_flipped=image_height is not None, world_transform=world_transform)
-        )
+        derived.update(store_to_head_direction(store, fps, y_flipped=image_height is not None))
     return ds.assign(derived) if derived else ds
 
 
