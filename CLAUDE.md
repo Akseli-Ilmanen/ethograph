@@ -63,6 +63,7 @@ ethograph/gui/
     pose_{annotate,fill,refine,detect,detect_preview,tagsheet,edit_mixin}.py   # keypoint labelling + fill
     box_annotate.py, box_overlay.py, dialog_box_labelling.py                    # box labelling (OCTRON)
     dialog_{pose_labelling,skeleton_editor,pose_refinement,tag_sheet}.py
+    pose_project_mode.py, widgets_frame_extract.py, dialog_collected_data.py, pose_static_group.py   # pose-project mode
     dialog_{label_gridview,video_grid,label_table,onset_model,curation_workflow}.py
     right_context.py, main_window.py, top_bar.py, cover_page.py, table_filter.py, file_dialogs.py
     nwb_alignment.py, shortcuts.py
@@ -73,6 +74,7 @@ ethograph/labels/
     onset_curves.py           # Per-run prediction curves (every model writes through it)
     curation.py, workflow.py  # labeling_method transitions + curation workflows (Qt-free)
     octron_project.py         # The OCTRON project folder in OCTRON's own layout
+    pose_project.py           # A DeepLabCut/LightningPose project folder as two sessions (extract frames, refine pose)
     ml.py, tsv_store.py, predictions.py, crowsetta_format.py, converters.py, export.py
 
 ethograph/io/
@@ -81,6 +83,7 @@ ethograph/io/
     trialtree.py              # TrialTree (xr.DataTree subclass)
     time_model.py             # TimeRange, RestrictionWindow, TimeSource, SourceCollection
     time_sources.py, overlay_source.py, video_feature_files.py, audio_extract.py, nc_drop.py
+    image_sequence.py         # A folder of images as a video (the refine-pose stage's trials)
     schema.py                 # Variable schema attrs (movement#978)
     dataset.py, validation.py, pynapple.py, metadata_table.py, metadata_edit.py, ephys_loader.py
 
@@ -150,6 +153,7 @@ THIRD_PARTY_NOTICES.md        # Index of every vendored tree and adapted file
 - **Drag & drop = single-trial loading** (`cover_page.classify_files()`). A dropped `.nc` is always features; a pose overlay only in its video's pixels.
 - **Video features from files attach in memory, matched by video name** (`io/video_feature_files.py`), sampled onto the trial clock through the alignment; never written back by `TrialTree.save`.
 - **Video-container audio is decoded once to a cached WAV** (`io/audio_extract.py`). Never add a video extension to `AUDIO_EXTENSIONS`.
+- **A folder of images is a video** (`io/image_sequence.py`): media existence is `media_exists`, never a bare `isfile`. A pose project is never a backend of its own — it is two ordinary sessions under `<project>/.ethograph/` (`labels/pose_project.py`).
 
 ### Pose rendering + keypoint labelling
 

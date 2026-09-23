@@ -18,6 +18,11 @@ log = logging.getLogger(__name__)
 
 
 def get_video_duration(path: str) -> float | None:
+    if Path(path).is_dir():
+        from ethograph.io.image_sequence import IMAGE_SEQUENCE_RATE, image_files
+
+        images = image_files(path)
+        return len(images) / IMAGE_SEQUENCE_RATE if images else None
     try:
         import av
     except ImportError:

@@ -502,6 +502,13 @@ class LabelsWidget(QWidget):
         """
         if self._body is None:
             return
+        mode_widget = getattr(self, "_mode_widget", None)
+        if mode_widget is not None:
+            # A mode's own face: the gate and the body are its concern, not the user's.
+            self._body.setVisible(False)
+            self._gate.setVisible(False)
+            return
+        self._body.setVisible(True)
         missing_individuals, missing_labels = not self.has_individuals(), not self.has_labels()
         ready = not (missing_individuals or missing_labels)
         self._body.setEnabled(ready)
@@ -654,6 +661,37 @@ class LabelsWidget(QWidget):
         layout.addWidget(self.curation_panel)
         # Spare height collects at the bottom, not between the sections.
         layout.addStretch(1)
+
+        #: A mode's own face for this section (a pose project's stage panel),
+        #: shown instead of the gate and the body while set.
+        self._mode_widget: QWidget | None = None
+
+    def set_mode_widget(self, widget: QWidget | None) -> None:
+        """Show *widget* in place of the labelling UI (``None`` restores it).
+
+        The gate and the body stay alive underneath: the label machinery —
+        mappings, shortcuts, placement — keeps working for a mode that labels
+        through its own controls.
+        """
+        if self._mode_widget is not None and self._mode_widget is not widget:
+            self.layout().removeWidget(self._mode_widget)
+            self._mode_widget.setParent(None)
+        self._mode_widget = widget
+        if widget is not None:
+            self.layout().addWidget(widget, stretch=1)
+            widget.setVisible(True)
+        self.refresh_gate()
+
+    def place_label_now(self, label_id: int) -> None:
+        """Place *label_id* at the frame on screen, whatever the labelling mode.
+
+        A point class lands at once; a state class starts or ends there. What
+        the frame-labelling mode does on every key, for a mode that wants it
+        on one key without switching the user's mode.
+        """
+        if not self.can_label() or label_id not in self._mappings:
+            return
+        self._place_at_current_frame(label_id)
 
     _TABLE_STYLE = """
         QTableWidget { gridline-color: transparent; background: #444; color: #fff; }
@@ -1377,7 +1415,12 @@ class LabelsWidget(QWidget):
         if label_branch != self.app_state._active_branch:
             return
 
-        if self.frame_labelling:
+        point_under_mode = (
+            getattr(self, "_mode_widget", None) is not None
+            and self._mappings[_id].get("event_type", EVENT_TYPE_STATE) == EVENT_TYPE_POINT
+        )
+        if self.frame_labelling or point_under_mode:
+            # A mode's point class (ExtractFrame) means "this frame": no click to wait for.
             self._place_at_current_frame(_id)
             return
 

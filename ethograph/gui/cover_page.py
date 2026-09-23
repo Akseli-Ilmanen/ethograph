@@ -641,8 +641,31 @@ class CoverPage(QDialog):
         exclude.setToolTip("File names or globs never loaded from a session folder (e.g. *_old.nc)")
         exclude.clicked.connect(self._open_excluded_files)
         row.addWidget(exclude)
+
+        # A pose project is neither a session nor a drop: its own entry.
+        refine = QPushButton("🦴  Refine DLC / LightningPose training data…")
+        refine.setToolTip(
+            "Open a DeepLabCut or LightningPose project folder (the one with videos/ and\n"
+            "labeled-data/): pick training frames off the model's curves, then correct\n"
+            "every extracted frame with draggable keypoints."
+        )
+        refine.clicked.connect(self._open_pose_project)
+        row.addWidget(refine)
         row.addStretch()
         return row
+
+    def _open_pose_project(self) -> None:
+        """Refine a DeepLabCut / LightningPose project: its root folder becomes the mode."""
+        from ethograph.gui.file_dialogs import browse_open_dir
+
+        root = browse_open_dir(self, self.app_state, "Choose the DeepLabCut / LightningPose project folder")
+        if not root:
+            return
+        mode = getattr(self.shell.meta_widget, "pose_project", None)
+        if mode is None:
+            return
+        if mode.enter(root, parent=self):
+            self._close_if_loaded()
 
     def _open_excluded_files(self) -> None:
         from ethograph.gui.dialog_settings import IgnoredFilesDialog

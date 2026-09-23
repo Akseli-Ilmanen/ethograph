@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 import numpy as np
 import pandas as pd
 
+from ethograph.io.image_sequence import media_exists
+
 logger = logging.getLogger(__name__)
 
 _EPOCH_GAP = 1e-4
@@ -390,7 +392,7 @@ class NWBAlignment:
                 continue
             for file in getattr(acq, "external_file", None) or []:
                 path = Path(str(file))
-                if path.is_absolute() and path.is_file():
+                if path.is_absolute() and media_exists(path):
                     folders[stream] = path.parent
                     break
         return folders
@@ -800,6 +802,9 @@ class NWBAlignment:
         1. Try the ImageSeries ``external_file`` path for this trial (if on disk).
         2. Fallback: trial table filename + ``fallback_folder``.
         3. Returns ``None`` if unresolvable.
+
+        A video may be an image folder (``io/image_sequence.py``), so "on disk"
+        means :func:`media_exists`, never a bare ``isfile``.
         """
         acq = self._find_acquisition(stream, device)
 
@@ -824,21 +829,21 @@ class NWBAlignment:
                     if fallback_folder:
                         filename = _filename_from_url_or_path(raw_path)
                         candidate = os.path.normpath(os.path.join(fallback_folder, filename))
-                        if os.path.isfile(candidate):
+                        if media_exists(candidate):
                             return candidate
                     return raw_path
                 # Try the stored path directly
-                if os.path.isfile(raw_path):
+                if media_exists(raw_path):
                     return raw_path
                 # Try relative to NWB file location
                 rel = nwb_base_dir / raw_path
-                if rel.is_file():
+                if media_exists(rel):
                     return str(rel)
                 # Fallback: filename + folder
                 filename = _filename_from_url_or_path(raw_path)
                 if fallback_folder:
                     candidate = os.path.normpath(os.path.join(fallback_folder, filename))
-                    if os.path.isfile(candidate):
+                    if media_exists(candidate):
                         return candidate
 
         # Last resort: trial table filename + fallback_folder
@@ -846,12 +851,12 @@ class NWBAlignment:
         if media_file:
             if _is_url(media_file):
                 return media_file
-            if os.path.isfile(media_file):
+            if media_exists(media_file):
                 return media_file
             if fallback_folder:
                 filename = _filename_from_url_or_path(media_file)
                 candidate = os.path.normpath(os.path.join(fallback_folder, filename))
-                if os.path.isfile(candidate):
+                if media_exists(candidate):
                     return candidate
 
         return None

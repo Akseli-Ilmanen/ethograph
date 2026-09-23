@@ -17,6 +17,7 @@ Seeking model:
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import time
 from types import MethodType
@@ -25,9 +26,12 @@ from typing import Optional
 import numpy as np
 import pygfx as gfx
 from pynaviz.audiovideo import PlotVideo
+from pynaviz.audiovideo.video_plot import PlotTsdTensor
 from pynaviz.utils import RenderTriggerSource
 from qtpy.QtCore import QEvent, Qt, QTimer, Signal
 from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+
+from ethograph.io.image_sequence import IMAGE_SEQUENCE_RATE, ImageSequence
 
 from .app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
 from .pose_overlay import PoseOverlay
@@ -231,6 +235,56 @@ class _StaticImagePlot:
         try:
             self.canvas.close()
         except Exception:
+            pass
+
+
+class _LazyImageStack:
+    """An :class:`ImageSequence` in the shape pynaviz reads a ``TsdTensor`` in.
+
+    ``values[i]`` is the i-th image as the float texture the plot copies
+    (flipped and scaled like pynaviz's own decoder), read from disk on
+    access; ``index``/``t`` is the image-sequence clock.
+    """
+
+    def __init__(self, sequence: ImageSequence):
+        self._sequence = sequence
+        self.index = np.arange(len(sequence), dtype=np.float64) / IMAGE_SEQUENCE_RATE
+        self.t = self.index
+        self.shape = (len(sequence), sequence.height, sequence.width, 3)
+
+    @property
+    def values(self) -> "_LazyImageStack":
+        return self
+
+    def __len__(self) -> int:
+        return len(self._sequence)
+
+    def __getitem__(self, index: int) -> np.ndarray:
+        image = self._sequence[int(index)]
+        return image[::-1].astype("float32") / 255.0
+
+    def get_slice(self, t: float) -> slice:
+        start = int(np.clip(np.searchsorted(self.index, t, side="right") - 1, 0, len(self) - 1))
+        return slice(start, start + 1)
+
+
+class ImageSequencePlot(PlotTsdTensor):
+    """pynaviz's in-memory tensor plot over an image folder, without the memory.
+
+    No decoder process and no shared memory: :class:`CameraView` seeks it
+    synchronously (it has no ``request_queue``), which is exactly right for a
+    folder of a few dozen training frames.
+    """
+
+    def __init__(self, folder: str, parent=None):
+        self.sequence = ImageSequence(folder)
+        super().__init__(_LazyImageStack(self.sequence), parent=parent)
+
+    def close(self) -> None:
+        _disarm_present(self.canvas)
+        try:
+            self.canvas.close()
+        except Exception:  # noqa: BLE001 - the canvas may already be gone
             pass
 
 
@@ -439,7 +493,11 @@ class CameraView(QWidget):
             self._detach_load_state()
         else:
             self.clear()
-            self._plot = PlotVideo(video=video_path, parent=self)
+            if os.path.isdir(video_path):
+                # A folder of training frames stands in for a video.
+                self._plot = ImageSequencePlot(video_path, parent=self)
+            else:
+                self._plot = PlotVideo(video=video_path, parent=self)
             install_animate_guard(self._plot)
             self.layout().addWidget(self._plot.canvas)
             # Fresh worker: arm the liveness sentinel. The shm buffer is

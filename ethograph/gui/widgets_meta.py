@@ -94,6 +94,11 @@ class MetaWidget(GridSectionContainer):
 
         self._bind_global_shortcuts(self.labels_widget, self.data_widget)
 
+        # A DeepLabCut / LightningPose project opened for refinement (cover page).
+        from .pose_project_mode import PoseProjectMode
+
+        self.pose_project = PoseProjectMode(self)
+
         # Set sidebar to 30% of the window by default (user can resize freely)
         self._set_sidebar_default_width()
 
@@ -305,6 +310,14 @@ class MetaWidget(GridSectionContainer):
         panel = RightContextPanel(sections)
         panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         return panel
+
+    def curate_current_trial(self) -> None:
+        """Ctrl+C: the pose project's folder verdict while refining, else the labels'."""
+        mode = getattr(self, "pose_project", None)
+        if mode is not None and mode.active and mode.stage == "refine":
+            mode.curate_current_trial()
+            return
+        self.labels_widget.curation_panel.curate_current_trial()
 
     def _add_feature_view_switch(self):
         """Add a per-panel "Feature plot type" combo (Lineplot/Heatmap) to the
@@ -1014,6 +1027,9 @@ class MetaWidget(GridSectionContainer):
 
     def flush_pending_writes(self):
         """Write out anything still sitting in a debounce timer (app close)."""
+        mode = getattr(self, "pose_project", None)
+        if mode is not None:
+            mode.flush()
         self.trials_widget.flush_metadata()
 
     def _check_unsaved_changes(self, event):

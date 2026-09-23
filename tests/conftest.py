@@ -392,3 +392,62 @@ def moll2025_pynapple_gui(gui, qtbot):
 
     assert meta.app_state.ready, "Failed to load Moll2025 pynapple"
     return viewer, meta
+
+
+# ---------------------------------------------------------------------------
+# A synthetic DeepLabCut project (labels/pose_project.py)
+# ---------------------------------------------------------------------------
+
+POSE_KEYPOINTS = ["nose", "tail"]
+POSE_N_FRAMES = 20
+POSE_FPS = 10
+
+
+def write_test_video(path, n_frames: int = POSE_N_FRAMES, fps: int = POSE_FPS, size: int = 32):
+    """Synthetic video whose frame *i* is a uniform gray of value ``i * 10``."""
+    import numpy as np
+
+    av = pytest.importorskip("av")
+    with av.open(str(path), "w") as container:
+        stream = container.add_stream("mpeg4", rate=fps)
+        stream.width = stream.height = size
+        stream.pix_fmt = "yuv420p"
+        for i in range(n_frames):
+            frame = av.VideoFrame.from_ndarray(np.full((size, size, 3), i * 10, dtype=np.uint8), format="rgb24")
+            frame.pts = i
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode(None):
+            container.mux(packet)
+    return path
+
+
+def write_dlc_predictions(path, n_frames: int = POSE_N_FRAMES):
+    """A DeepLabCut prediction file: keypoint k of frame t sits at ``(t, 10 * k)``."""
+    import numpy as np
+    from movement.io import load_poses, save_poses
+
+    position = np.zeros((n_frames, 2, len(POSE_KEYPOINTS), 1))
+    for t in range(n_frames):
+        for k in range(len(POSE_KEYPOINTS)):
+            position[t, :, k, 0] = (t, 10 * k)
+    ds = load_poses.from_numpy(position, np.ones((n_frames, len(POSE_KEYPOINTS), 1)), keypoint_names=POSE_KEYPOINTS)
+    save_poses.to_dlc_file(ds, path, split_individuals=False)
+    return path
+
+
+@pytest.fixture
+def pose_project_root(tmp_path):
+    """``my_dlc_project/`` with two videos, predictions for the first, and a config naming the scorer."""
+    import yaml
+
+    root = tmp_path / "my_dlc_project"
+    (root / "videos").mkdir(parents=True)
+    (root / "labeled-data").mkdir()
+    (root / "config.yaml").write_text(
+        yaml.safe_dump({"scorer": "alice", "bodyparts": POSE_KEYPOINTS}), encoding="utf-8"
+    )
+    write_test_video(root / "videos" / "2024-02-05_33_cam-1.mp4")
+    write_test_video(root / "videos" / "2024-02-06_34_cam-1.mp4")
+    write_dlc_predictions(root / "videos" / "2024-02-05_33_cam-1DLC_resnet50_testMar1shuffle1_500.h5")
+    return root

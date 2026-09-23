@@ -38,6 +38,7 @@ from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, i
 from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec
 from ethograph.io.data_loader import AmbiguousSessionError, load_features_dataset
 from ethograph.io.derived import DerivedLoader
+from ethograph.io.image_sequence import media_exists
 from ethograph.io.plot_sources import FileSource
 from ethograph.io.session_layout import session_dir_of
 from ethograph.io.time_model import compute_trial_video_bounds
@@ -3139,7 +3140,11 @@ class DataWidget(QWidget):
                 if not vid or is_url(vid):
                     continue
                 path = os.path.join(video_folder, vid)
-                if not os.path.isfile(path):
+                # A video may be an image folder (io/image_sequence.py), and the
+                # alignment's own full path counts as much as the folder's copy.
+                if not media_exists(path) and not sio.resolve_media_path(
+                    first_trial, "video", device=cam, fallback_folder=video_folder
+                ):
                     missing.append(f"Video: {path}")
 
         if audio_folder:

@@ -147,6 +147,18 @@ class TopBarBuilder:
     def build(self):
         menu_bar = self.shell.menuBar()
         menu_bar.clear()
+        from .pose_project_mode import PoseProjectMode
+
+        mode = getattr(self.meta, "pose_project", None)
+        if isinstance(mode, PoseProjectMode) and mode.active:
+            # A pose project: only the two stages, Docs and Help. File, Settings,
+            # Changepoints, Tools and Model are about sessions and models this
+            # mode neither has nor wants.
+            self._build_pose_project_bar(menu_bar)
+            self._build_docs_menu(menu_bar)
+            self._build_help_menu(menu_bar)
+            self._add_sidebar_toggle_button(menu_bar)
+            return
         self._build_file_menu(menu_bar)
         self._build_settings_menu(menu_bar)
         self._build_changepoints_menu(menu_bar)
@@ -155,6 +167,23 @@ class TopBarBuilder:
         self._build_docs_menu(menu_bar)
         self._build_help_menu(menu_bar)
         self._add_sidebar_toggle_button(menu_bar)
+
+    def _build_pose_project_bar(self, menu_bar):
+        """The two stages of a pose project as top-level buttons; the open one is marked."""
+        from .pose_project_mode import STAGE_TITLES
+
+        mode = self.meta.pose_project
+        for stage, title in STAGE_TITLES.items():
+            current = stage == mode.stage
+            action = menu_bar.addAction(f"{'▶ ' if current else ''}{title}")
+            action.setCheckable(True)
+            action.setChecked(current)
+            action.setToolTip(
+                "Pick frames off the model's curves, video by video"
+                if stage == "extract"
+                else "Correct every extracted frame, folder by folder"
+            )
+            action.triggered.connect(lambda _checked=False, s=stage: mode.switch(s, parent=self.shell))
 
     def _build_tools_menu(self, menu_bar):
         """Tools menu — screen recorder + neural (PSTH / firing rates) actions."""
@@ -325,13 +354,21 @@ class TopBarBuilder:
     def _add_sidebar_toggle_button(self, menu_bar):
         """Checkable button at the far right of the menu bar toggling the
         right control sidebar — a discoverable alternative to Shift+Z."""
+        sidebar_action = getattr(self.shell, "_sidebar_toggle", None)
+        visible = (sidebar_action is None or sidebar_action.isChecked()) and not getattr(self.shell, "_zen_mode", False)
+        btn = getattr(self.shell, "_sidebar_corner_btn", None)
+        if btn is not None:
+            # A rebuilt bar (a mode switch) keeps its one button: clear() leaves the
+            # corner widget in place, and a second one would sit at the far left.
+            btn.blockSignals(True)
+            btn.setChecked(visible)
+            btn.blockSignals(False)
+            return
         btn = QToolButton(menu_bar)
         btn.setText("◨ Sidebar")
         btn.setToolTip("Show/hide the right sidebar (Shift+Z)")
         btn.setCheckable(True)
         btn.setAutoRaise(True)
-        sidebar_action = getattr(self.shell, "_sidebar_toggle", None)
-        visible = (sidebar_action is None or sidebar_action.isChecked()) and not getattr(self.shell, "_zen_mode", False)
         btn.setChecked(visible)
         btn.toggled.connect(lambda vis: self.shell.set_zen_mode(not vis))
         menu_bar.setCornerWidget(btn, Qt.TopRightCorner)

@@ -165,6 +165,8 @@ class GridSectionContainer(QWidget):
         outer.addWidget(self._stack, 0, Qt.AlignTop)
 
         self._buttons: list[QPushButton] = []
+        #: Section index -> button text a mode put in place of the default.
+        self._label_overrides: dict[int, str | None] = {}
         self._content_widgets: list[QWidget] = []
         self._active: int | None = None
 
@@ -198,6 +200,13 @@ class GridSectionContainer(QWidget):
 
         proxy = SectionProxy(self, index)
         self.collapsible_widgets.append(proxy)
+
+    def set_short_label(self, index: int, label: str | None) -> None:
+        """Rename a section button (``None`` restores the default)."""
+        if not (0 <= index < len(self._buttons)):
+            return
+        self._label_overrides[index] = label
+        self._update_button_label(index, self._buttons[index].toolTip())
 
     def notify_content_resized(self) -> None:
         """Call this when the active section's content changes height.
@@ -242,7 +251,7 @@ class GridSectionContainer(QWidget):
         """Keep the short base label but append a trailing status character."""
         if not (0 <= index < len(self._buttons)):
             return
-        base = _SHORT_LABELS[index] if index < len(_SHORT_LABELS) else ""
+        base = self._label_overrides.get(index) or (_SHORT_LABELS[index] if index < len(_SHORT_LABELS) else "")
         label = f"{base} {full_title[-1]}" if full_title and full_title[-1] in _STATUS_CHARS else base
         self._buttons[index].setText(label)
         self._buttons[index].setToolTip(full_title)

@@ -442,7 +442,7 @@ class VideoManager:
         """
         if getattr(self.app_state, "video_quality_mode", "full") != "proxy":
             return video_path
-        if Path(video_path).suffix.lower() in IMAGE_EXTENSIONS or is_url(video_path):
+        if Path(video_path).suffix.lower() in IMAGE_EXTENSIONS or is_url(video_path) or Path(video_path).is_dir():
             return video_path
         try:
             proxy = proxy_cache_path(video_path, proxy_cache_dir(video_path))
@@ -464,7 +464,7 @@ class VideoManager:
             src = getattr(view, "source_video_path", None)
             if not src or src in seen:
                 continue
-            if Path(src).suffix.lower() in IMAGE_EXTENSIONS or is_url(src):
+            if Path(src).suffix.lower() in IMAGE_EXTENSIONS or is_url(src) or Path(src).is_dir():
                 continue
             seen.add(src)
             sources.append(src)

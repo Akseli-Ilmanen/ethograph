@@ -122,7 +122,7 @@ def bind_global_shortcuts(meta_widget):
     bind("Ctrl+L", toggle_lock)
     # Curate the current trial: every automated label in scope becomes curated
     # (manual ones stay manual). Auto-guarded — Ctrl+C is copy in a text field.
-    bind("Ctrl+C", labels_widget.curation_panel.curate_current_trial)
+    bind("Ctrl+C", meta_widget.curate_current_trial)
 
     def toggle_changepoint_correction():
         checkbox = changepoints_widget.changepoint_correction_checkbox

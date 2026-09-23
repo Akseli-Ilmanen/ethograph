@@ -438,6 +438,19 @@ class AppStateSpec:
         # dialog_pose_refinement. The training folder is a project's, so
         # it is per dataset; the scorer name follows the user.
         "pose_refine_purpose": (str, "analysis", True),
+        # The DeepLabCut / LightningPose project being refined (labels/pose_project.py)
+        # and which of its two stages is open. Session-only: the mode is
+        # entered from the cover page, never restored.
+        "pose_project_root": (str | None, None, False),
+        "pose_project_stage": (str, "extract", False),
+        # Extract-frames stage: how frames are picked inside a marked segment
+        # and what share of its frames to take.
+        "pose_extract_method": (str, "uniform", True),
+        "pose_extract_coverage": (float, 10.0, True),
+        # Refine-pose stage: leaving a folder for the next one marks it curated.
+        "pose_refine_next_curates": (bool, True, True),
+        # Who labels, for a project whose config names no scorer (LightningPose).
+        "pose_project_scorer": (str, "", True),
         "pose_training_export_format": (str, "dlc", True, SCOPE_LOCAL),
         "pose_training_export_dir": (str | None, None, True, SCOPE_LOCAL),
         "pose_training_scorer": (str, "", True),
@@ -681,6 +694,10 @@ class ObservableAppState(QObject):
         # written back on save, so an unplugged drive does not permanently
         # erase the folder from the settings file.
         object.__setattr__(self, "_unavailable_paths", {})
+        #: ``{str(trial): curated?}`` supplied by a mode whose trials are not
+        #: judged by their labels (see :meth:`trial_curation_status`); ``None``
+        #: means the labels decide.
+        self.curation_status_override: dict[str, bool] | None = None
 
         self.audio_source_map: dict[str, tuple[str, int]] = {}
         # mic device label -> ordered audio_source_map keys (one per channel)
@@ -1084,6 +1101,7 @@ class ObservableAppState(QObject):
             "_label_mappings",
             "_active_branch",
             "_branch_shown",
+            "curation_status_override",
         ):
             super().__setattr__(name, value)
             return
@@ -1875,11 +1893,22 @@ class ObservableAppState(QObject):
         return {int(i) for i in ids} if ids else None
 
     def trial_curation_status(self) -> dict[str, bool]:
-        """``{str(trial): curated?}`` over the trials the table shows."""
+        """``{str(trial): curated?}`` over the trials the table shows.
+
+        Normally read off the labels; a mode whose trials carry their own
+        verdict (refining a pose project's frame folders) sets
+        :attr:`curation_status_override` and is read instead.
+        """
+        override = self.curation_status_override
+        if override is not None:
+            return {str(t): bool(override.get(str(t), False)) for t in (self.trials or [])}
         return trial_curation_status(self._all_labels_df, self.trials or [])
 
     def trial_is_curated(self, trial) -> bool:
         """Whether no label of *trial* is still automated."""
+        override = self.curation_status_override
+        if override is not None:
+            return bool(override.get(str(trial), False))
         return trial_curation_status(self._all_labels_df, [trial])[str(trial)]
 
     def replace_all_labels(self, df: pd.DataFrame | None) -> None:

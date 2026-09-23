@@ -330,6 +330,30 @@ def suggest_detection_gaps(
     return enforce_min_gap(ranked, gap, count)
 
 
+def suggest_within(method: str, count: int, candidates: Sequence[int], frames=None) -> list[int]:
+    """*count* of *candidates* by *method* — ``uniform`` or ``diverse`` — for one segment.
+
+    :func:`suggest_frames` spreads over a whole video; this picks inside a
+    span the user marked. ``diverse`` clusters thumbnails of the candidates
+    (*frames* indexable by frame index) and takes one per cluster.
+    """
+    indices = np.asarray(sorted(int(c) for c in candidates), dtype=int)
+    count = min(int(count), len(indices))
+    if count <= 0 or not len(indices):
+        return []
+    if method == "uniform":
+        picks = np.linspace(0, len(indices) - 1, count)
+        return sorted({int(indices[int(round(p))]) for p in picks})
+    if method == "diverse":
+        if frames is None:
+            raise ValueError("'diverse' needs the frames to cluster")
+        step = max(1, int(np.ceil(len(indices) / MAX_CANDIDATES)))
+        strided = indices[::step]
+        features = _thumbnails(frames, strided, None)
+        return _suggest_diverse(features, strided[: len(features)], count)
+    raise ValueError(f"method must be 'uniform' or 'diverse', got {method!r}")
+
+
 def suggest_frames(
     method: str,
     count: int,
