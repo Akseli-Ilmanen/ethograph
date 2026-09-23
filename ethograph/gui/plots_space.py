@@ -871,7 +871,10 @@ class SpacePlot(IndividualPinMixin, QWidget):
             "x": self.x_combo.currentText() or None,
             "y": self.y_combo.currentText() or None,
             "z": self.z_combo.currentText() or None,
-            "dims": {d: c.currentText() for d, c in self._dim_combos.items() if c.currentText()},
+            # The individual is the pin (or the sidebar's), never a saved selection.
+            "dims": {
+                d: c.currentText() for d, c in self._dim_combos.items() if c.currentText() and d not in INDIVIDUAL_DIMS
+            },
             "color": self.color_combo.currentText() or None,
             **({"individual": self.pinned_individual} if self.pinned_individual else {}),
         }
@@ -898,7 +901,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
         _set(self.z_combo, settings.get("z"))
         for dim, val in (settings.get("dims") or {}).items():
             combo = self._dim_combos.get(dim)
-            if combo is not None:
+            if combo is not None and dim not in INDIVIDUAL_DIMS:
                 _set(combo, val)
                 self._current_dim_values[dim] = combo.currentText()
         _set(self.color_combo, settings.get("color"))
