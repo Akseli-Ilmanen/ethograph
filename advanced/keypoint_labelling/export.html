@@ -391,7 +391,6 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
 <li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
-<li class="toctree-l2"><a class="reference internal" href="calibration.html">4. Calibrate — optional, for trajectories in cm</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
 <li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">7. Visualizing &amp; exporting</a></li>
@@ -486,14 +485,6 @@ poses dataset covering every frame of the video; frames outside the filled
 span carry <code class="docutils literal notranslate"><span class="pre">NaN</span></code> position and <code class="docutils literal notranslate"><span class="pre">NaN</span></code> confidence, which is how movement
 represents a missing point (see <a class="reference internal" href="fill.html#target-labelled-span"><span class="std std-ref">Everything happens between your labels</span></a>). Head direction,
 if ticked, is written alongside <code class="docutils literal notranslate"><span class="pre">position</span></code> as <code class="docutils literal notranslate"><span class="pre">head_direction</span></code> and <code class="docutils literal notranslate"><span class="pre">heading</span></code>.</p></li>
-<li><p><strong>Coordinate space</strong> — <code class="docutils literal notranslate"><span class="pre">pixels</span></code> (source-video image coordinates, the
-default) or <code class="docutils literal notranslate"><span class="pre">cm</span> <span class="pre">(calibrated)</span></code>, offered once the <a class="reference internal" href="calibration.html#target-calibration"><span class="std std-ref">Calibrate</span></a> tab holds three ready landmarks. A cm export maps
-positions — and everything derived from them — through the landmark fit,
-records the unit as <code class="docutils literal notranslate"><span class="pre">attrs[&quot;space_unit&quot;]</span></code> and the matrix as
-<code class="docutils literal notranslate"><span class="pre">attrs[&quot;pixels_to_cm&quot;]</span></code>. The y-flip then mirrors the world frame’s y axis
-(y → −y) after the transform, rather than the image’s pixels — untick it if
-your landmark coordinates already read the way you want. The <code class="docutils literal notranslate"><span class="pre">space</span></code>
-dimension stays <code class="docutils literal notranslate"><span class="pre">x</span></code>/<code class="docutils literal notranslate"><span class="pre">y</span></code> either way.</p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

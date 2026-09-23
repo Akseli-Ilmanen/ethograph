@@ -81,7 +81,6 @@ follow the same order, with correction and refining imported poses at the end.
 
 labelling
 detect
-calibration
 fill
 correction
 export

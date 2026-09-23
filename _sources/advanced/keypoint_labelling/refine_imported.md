@@ -10,8 +10,8 @@ starts from your files and follows the loaded session: **multi-trial**, with
 each trial resolving its pose file through the alignment exactly as the pose
 overlay does.
 
-The dialog **is** the labelling dialog with the Define keypoints, Detect and
-Calibrate tabs removed: the whole {doc}`Label & Edit tab <labelling>` — modes,
+The dialog **is** the labelling dialog with the Define keypoints and Detect
+tabs removed: the whole {doc}`Label & Edit tab <labelling>` — modes,
 the points table with its funnel filters, frame suggestions, `Shift+H`
 approval, `Tab`/`1`–`9`/`Backspace`/`Ctrl+Z` — works unchanged. The file's
 keypoints and individuals *are* the schema; its points appear as machine

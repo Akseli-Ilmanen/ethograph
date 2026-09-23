@@ -460,10 +460,50 @@ clear description of the problem and steps to reproduce it. Please:</p>
 </section>
 <section id="development-installation">
 <h2>Development installation<a class="headerlink" href="#development-installation" title="Link to this heading">#</a></h2>
-<p>To install ethograph in editable mode with all optional dependencies and
-development tools:</p>
+<p>To work on ethograph itself, clone the repository and install it in editable
+mode with every optional dependency plus the development tools (pytest,
+pytest-qt, ruff, pre-commit) and the docs toolchain:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Akseli-Ilmanen/ethograph.git
+<span class="nb">cd</span><span class="w"> </span>ethograph
+conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>ethograph-dev<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12
+conda<span class="w"> </span>activate<span class="w"> </span>ethograph-dev
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[gui,audio,model,dandi,dev,docs]"</span>
+pre-commit<span class="w"> </span>install
+</pre></div>
+</div>
+<p>conda only creates the environment; ethograph itself is installed with uv.
+PyTorch is installed first, separately, so that uv picks the right build for
+your GPU. If you only want the GUI and its tests, <code class="docutils literal notranslate"><span class="pre">&quot;.[gui,audio,dev]&quot;</span></code> is
+enough. Then check everything works:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># downloads all template datasets for the real-data integration tests (can be quite slow)</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ethograph.datasets import DATASETS; from ethograph.utils.download import ensure_template_dataset; [ensure_template_dataset(k) for k in DATASETS]"</span>
+pytest<span class="w">                        </span><span class="c1"># unit + integration tests</span>
+pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files<span class="w">    </span><span class="c1"># what CI runs; run twice, the first pass fixes in place</span>
+</pre></div>
+</div>
 <p>See <a class="reference internal" href="../getting_started/installation.html"><span class="doc">Installation</span></a> for details on setting up a virtual
 environment and installing uv.</p>
+</section>
+<section id="pull-requests">
+<h2>Pull requests<a class="headerlink" href="#pull-requests" title="Link to this heading">#</a></h2>
+<p>Please open pull requests as <strong>drafts</strong> rather than ready-for-review. Draft
+PRs make it easy to discuss the approach early, before time goes into
+polishing. Mark it ready for review once tests pass, <code class="docutils literal notranslate"><span class="pre">pre-commit</span></code> is clean
+and you consider it finished.</p>
+</section>
+<section id="add-your-workflow-dataset-example">
+<span id="target-add-your-example"></span><h2>Add your workflow/dataset example!<a class="headerlink" href="#add-your-workflow-dataset-example" title="Link to this heading">#</a></h2>
+<p>If you develop a workflow with ethograph that others could re-use (a dataset
+conversion, a feature-extraction recipe, a training setup), please share it. Any of these works:</p>
+<ul class="simple">
+<li><p><strong>Open a pull request</strong> that adds your Jupyter notebook to the
+<a class="reference external" href="https://github.com/Akseli-Ilmanen/ethograph/tree/main/examples"><code class="docutils literal notranslate"><span class="pre">examples/</span></code> folder</a>.
+It is picked up by the docs build and shown in the <a class="reference internal" href="../examples/index.html"><span class="doc">Examples</span></a>.</p></li>
+<li><p><strong>Email the notebook</strong> to <a class="reference external" href="mailto:akseli&#46;ilmanen&#37;&#52;&#48;gmail&#46;com">akseli<span>&#46;</span>ilmanen<span>&#64;</span>gmail<span>&#46;</span>com</a> and I will add it for you.</p></li>
+<li><p><strong>Open a GitHub issue</strong> first if you would like to discuss it a bit before
+writing it up.</p></li>
+</ul>
 </section>
 </section>
 
@@ -516,6 +556,8 @@ environment and installing uv.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reporting-issues">Reporting issues</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#development-installation">Development installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pull-requests">Pull requests</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#add-your-workflow-dataset-example">Add your workflow/dataset example!</a></li>
 </ul>
   </nav></div>
 

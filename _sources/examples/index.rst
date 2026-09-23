@@ -15,6 +15,10 @@ in the right-hand sidebar, or browse the whole folder on GitHub.
 
    :octicon:`mark-github` Examples on GitHub
 
+Have a workflow or dataset others could re-use? See
+:ref:`Add your workflow/dataset example! <target-add-your-example>` in the
+contributing guide.
+
 .. grid:: 1 2 2 3
    :gutter: 4
    :class-container: examples-gallery
