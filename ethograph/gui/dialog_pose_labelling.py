@@ -195,6 +195,7 @@ from ethograph.gui.table_filter import (
     FilterHeaderView,
     MultiColumnFilterProxy,
 )
+from ethograph.io.netcdf import netcdf_engine
 
 logger = logging.getLogger(__name__)
 
@@ -2586,7 +2587,7 @@ class PoseLabellingDialog(QDialog):
 
         path = keypoints_dataset_path(video)
         try:
-            ds.to_netcdf(path)
+            ds.to_netcdf(path, engine=netcdf_engine(path))
         except OSError as e:
             notify(f"Loaded, but could not save a copy to {path.name}: {e}", "warning")
 
@@ -4772,7 +4773,7 @@ class PoseLabellingDialog(QDialog):
         path, _ = QFileDialog.getSaveFileName(self, "Export poses", "keypoints.nc", "NetCDF (*.nc)")
         if not path:
             return
-        ds.to_netcdf(path)
+        ds.to_netcdf(path, engine=netcdf_engine(path))
         notify(f"Wrote {path} ({ds.attrs['space_unit']})", "info")
 
     # ------------------------------------------------------------------

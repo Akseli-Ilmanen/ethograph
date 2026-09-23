@@ -77,6 +77,7 @@ from ethograph.gui.project import (
 from ethograph.gui.session_folder import source_folders
 from ethograph.io.audio_extract import ensure_extracted_audio, has_embedded_audio
 from ethograph.io.nc_drop import concat_on_camera, positions_fit_frame
+from ethograph.io.netcdf import netcdf_engine
 from ethograph.io.validation import (
     AUDIO_EXTENSIONS,
     EPHYS_EXTENSIONS,
@@ -259,7 +260,7 @@ class _FeatureEntry:
 def _is_trial_tree(nc_path: str) -> bool:
     """A ``.nc`` saved by ethograph holds one child per trial: a session, not a feature file."""
     try:
-        with xr.open_datatree(nc_path, engine="netcdf4") as tree:
+        with xr.open_datatree(nc_path, engine=netcdf_engine(nc_path)) as tree:
             return bool(tree.children)
     except (OSError, ValueError):
         return False
@@ -277,7 +278,7 @@ def _open_pose_dataset(pose_path: str, source_software: str | None, fps: float |
     from movement.io import load_dataset
 
     if Path(pose_path).suffix.lower() == ".nc":
-        with xr.open_dataset(pose_path) as opened:
+        with xr.open_dataset(pose_path, engine=netcdf_engine(pose_path)) as opened:
             return opened.load()
     if not fps:
         raise RuntimeError("A pose file dropped without a video needs its frame rate.")
@@ -1487,7 +1488,7 @@ class CoverPage(QDialog):
 
         app_state = self.app_state
         if any(len(ds.data_vars) for _, ds in dt.trial_items()):
-            dt.to_netcdf(state.output_path)
+            dt.to_netcdf(state.output_path, engine=netcdf_engine(state.output_path))
             app_state.nc_file_path = state.output_path
         else:
             # Media only: the trials live in .ethograph/alignment.nwb and the
@@ -1532,7 +1533,7 @@ class CoverPage(QDialog):
             data_sr=details["data_sr"],
             output_nc_path=output_path,
         )
-        dt.to_netcdf(output_path)
+        dt.to_netcdf(output_path, engine=netcdf_engine(output_path))
 
         app_state = self.app_state
         app_state.nc_file_path = output_path
@@ -1561,7 +1562,7 @@ class CoverPage(QDialog):
             ephys_path=ephys_path,
             neurons_path=neurons_path,
         )
-        dt.to_netcdf(output_path)
+        dt.to_netcdf(output_path, engine=netcdf_engine(output_path))
 
         app_state = self.app_state
         app_state.nc_file_path = output_path
@@ -1638,7 +1639,7 @@ class CoverPage(QDialog):
         ds.attrs["fps"] = fps_used
 
         out_path = out_dir / "session.nc"
-        ds.to_netcdf(out_path)
+        ds.to_netcdf(out_path, engine=netcdf_engine(out_path))
         return out_path
 
     def _feature_entries(
@@ -1672,7 +1673,7 @@ class CoverPage(QDialog):
             probe = probe_video(video)
             entries.append(_FeatureEntry(camera, pose, probe.fps or None))
             if probe.width and probe.height:
-                with xr.open_dataset(pose) as ds:
+                with xr.open_dataset(pose, engine=netcdf_engine(pose)) as ds:
                     fits = positions_fit_frame(ds, probe.width, probe.height)
                 if not fits:
                     cam_map[i] = (video, None)
@@ -1731,7 +1732,7 @@ class CoverPage(QDialog):
         if not ds.attrs.get("fps"):
             raise RuntimeError("A pose file dropped without a video needs its frame rate.")
         out_path = out_dir / "session.nc"
-        ds.to_netcdf(out_path)
+        ds.to_netcdf(out_path, engine=netcdf_engine(out_path))
         return out_path
 
     def _build_tmp_alignment(self, cam_map, audio_files, details: dict | None = None) -> Path:

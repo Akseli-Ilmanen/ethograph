@@ -29,6 +29,7 @@ dependencies = [
     "pandas",
     "xarray",
     "netcdf4",
+    "h5netcdf",
     "scipy",
     "matplotlib",
     "pynapple>=0.10",

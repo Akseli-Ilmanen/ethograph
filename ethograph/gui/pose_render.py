@@ -36,6 +36,7 @@ from ethograph.gui.pose_convert import (
 )
 from ethograph.gui.pose_overlay import OverlayStyle, PoseOverlayData
 from ethograph.io.derived import derived_loader_for
+from ethograph.io.netcdf import netcdf_engine
 from ethograph.io.nwb_alignment import pose_keys_for_cameras, pose_video_links_from_nwb
 from ethograph.io.nwb_import import _get_absolute_timestamps
 from ethograph.io.overlay_source import (
@@ -145,7 +146,7 @@ def load_pose_from_file(file_path: str, source_software: str, fps: float) -> Pos
     if Path(file_path).suffix.lower() == POSES_DATASET_SUFFIX:
         # Read into memory and close: an open NetCDF handle per pose load leaks
         # one for every camera, every trial change and every re-render.
-        with xr.open_dataset(file_path) as opened:
+        with xr.open_dataset(file_path, engine=netcdf_engine(file_path)) as opened:
             ds = opened.load()
     else:
         ds = load_dataset(file_path, source_software, fps)

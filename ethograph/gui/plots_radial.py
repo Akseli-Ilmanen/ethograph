@@ -45,9 +45,11 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.io.time_model import TimeRange
 
 from .app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH, MULTIDIM_COLORS
+from .plots_base import IndividualPinMixin
 
 logger = logging.getLogger(__name__)
 
@@ -167,18 +169,25 @@ def feature_angular_unit(app_state, feature: str, selections: dict[str, str] | N
     return probe_angular_unit(app_state, feature, selections)
 
 
-class RadialPlot(QWidget):
+class RadialPlot(IndividualPinMixin, QWidget):
     """One heading, drawn as an arrow on a compass rose.
 
     Instances behave like space plots: any number can be open, each in its own
     dock, each rendering purely from its own controls (feature + "Up") rather
-    than from any global ``*_sel`` state.
+    than from any global ``*_sel`` state. The one exception is the individual
+    combo, which is the panel's pin: it shows the pin, else the sidebar's
+    individual, and picking a name in it pins the panel (:pyattr:`pin_changed`).
+    Freeing the individual dim ("All") draws every individual and leaves the
+    pin — whose labels a click on the panel creates — untouched.
     """
 
     #: Emitted on any mouse press → switches the sidebar to the Radial context.
     clicked = Signal()
     #: Emitted with ``self`` when the user closes this panel's dock.
     closed = Signal(object)
+    #: Emitted with ``self`` when the user pinned this panel through its own
+    #: individual combo; the owner re-titles it and moves the labelling subject.
+    pin_changed = Signal(object)
 
     #: Monotonic counter so every instance's dock gets a unique objectName.
     _dock_seq = 0
@@ -192,6 +201,7 @@ class RadialPlot(QWidget):
         self.app_state = app_state
         self.dock_widget = None
         self.dock_object_name: str | None = None
+        self._dock_name = "Radial Plot"
         self._apply_default_width = True
 
         self._store = None
@@ -298,6 +308,7 @@ class RadialPlot(QWidget):
             RadialPlot._dock_seq += 1
             seq = RadialPlot._dock_seq
             name = "Radial Plot" if seq == 1 else f"Radial Plot {seq}"
+            self._dock_name = name
             self.dock_widget = self.shell.add_dock_widget(
                 self, area="top", name=name, object_name=self.dock_object_name
             )
@@ -306,9 +317,62 @@ class RadialPlot(QWidget):
             if not self.dock_widget.restored_from_state and self._apply_default_width:
                 QTimer.singleShot(0, self._apply_default_dock_width)
             self.dock_widget.installEventFilter(self)
+            self.refresh_title()
         else:
             self.dock_widget.setVisible(True)
         super().show()
+
+    def refresh_title(self) -> None:
+        """Re-title the dock: its name, then which individual it shows and why."""
+        if self.dock_widget is not None:
+            self.dock_widget.setWindowTitle(self._dock_name + self.app_state.panel_mode_suffix(self))
+
+    # ------------------------------------------------------------------
+    # The panel's individual
+    # ------------------------------------------------------------------
+
+    def set_pinned_individual(self, individual: str | None) -> None:
+        super().set_pinned_individual(individual)
+        self.sync_individual(unfree=individual is not None)
+
+    def sync_individual(self, *, unfree: bool = False) -> None:
+        """Point the individual combo at this panel's individual (its pin, else the sidebar's).
+
+        A freed individual dim ("All") is left free unless *unfree*: an
+        explicit pin names one individual to draw.
+        """
+        target = self.app_state.panel_individual(self)
+        if target is None:
+            return
+        changed = False
+        for dim, combo in self._dim_combos.items():
+            if dim not in INDIVIDUAL_DIMS:
+                continue
+            check = self._dim_all_checks[dim]
+            if check.isChecked():
+                if not unfree:
+                    continue
+                check.blockSignals(True)
+                check.setChecked(False)
+                check.blockSignals(False)
+                combo.setEnabled(True)
+                changed = True
+            index = combo.findText(str(target))
+            if index >= 0 and combo.currentIndex() != index:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(index)
+                combo.blockSignals(False)
+                changed = True
+        if changed:
+            self._on_selection_changed()
+
+    def _pin_through_combo(self, individual: str) -> None:
+        """Picking an individual in the panel's own combo pins the panel to it."""
+        if individual == self.app_state.panel_individual(self):
+            return
+        IndividualPinMixin.set_pinned_individual(self, individual)
+        self.refresh_title()
+        self.pin_changed.emit(self)
 
     def _apply_default_dock_width(self):
         dock = self.dock_widget
@@ -381,6 +445,12 @@ class RadialPlot(QWidget):
         self._invalidate()
         self.refresh()
 
+    def _on_dim_combo_changed(self, dim: str) -> None:
+        self._on_selection_changed()
+        combo = self._dim_combos.get(dim)
+        if dim in INDIVIDUAL_DIMS and combo is not None and combo.currentText():
+            self._pin_through_combo(combo.currentText())
+
     # ------------------------------------------------------------------
     # Dim combos
     # ------------------------------------------------------------------
@@ -410,6 +480,9 @@ class RadialPlot(QWidget):
         "no saved state", where every dim starts pinned.
         """
         self._clear_dim_combos()
+        # The individual is never one of the panel's own selections: it is
+        # the pin, or the sidebar's individual for a panel that follows it.
+        individual = self.app_state.panel_individual(self)
         for dim, values in self._feature_dims().items():
             if not values:
                 continue
@@ -422,10 +495,14 @@ class RadialPlot(QWidget):
             combo = QComboBox()
             combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             combo.addItems(values)
-            index = combo.findText(str((preset or {}).get(dim, "")))
+            preset_value = (preset or {}).get(dim, "")
+            # A saved layout that left the individual dim free keeps it free.
+            if dim in INDIVIDUAL_DIMS and individual is not None and (preset is None or dim in preset):
+                preset_value = individual
+            index = combo.findText(str(preset_value))
             if index >= 0:
                 combo.setCurrentIndex(index)
-            combo.currentIndexChanged.connect(self._on_selection_changed)
+            combo.currentIndexChanged.connect(lambda _i, d=dim: self._on_dim_combo_changed(d))
             layout.addWidget(combo)
 
             all_check = QCheckBox("All")
@@ -687,6 +764,7 @@ class RadialPlot(QWidget):
             "selections": self.selections(),
             "up": self.up_spin.value(),
             "clockwise": self.cw_check.isChecked(),
+            **({"individual": self.pinned_individual} if self.pinned_individual else {}),
         }
 
     def apply_radial_settings(self, settings: dict) -> None:
@@ -699,4 +777,6 @@ class RadialPlot(QWidget):
             widget.blockSignals(True)
             setter(value)
             widget.blockSignals(False)
+        # Before the combos: the individual combo is built from the pin.
+        IndividualPinMixin.set_pinned_individual(self, settings.get("individual"))
         self.configure(feature=settings.get("feature"), selections=settings.get("selections"))

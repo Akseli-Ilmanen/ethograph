@@ -418,7 +418,9 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         self._panel_docks: dict[str, QDockWidget] = {}
         prev = None
         for name, _ in _PANEL_ORDER:
-            dock = self._make_dock(name, self._get_panel_widget(name), closers[name])
+            widget = self._get_panel_widget(name)
+            widget.base_title = name
+            dock = self._make_dock(name, widget, closers[name])
             dock.setObjectName(f"panel_{name}")
             self._panel_docks[name] = dock
             if prev is None:
@@ -539,9 +541,23 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         self._add_pin_actions(menu, dock)
         menu.exec_(QCursor.pos())
 
+    def _plot_of_dock(self, dock: QDockWidget):
+        """The panel *dock* holds — dynamic or fixed — or ``None``."""
+        for plot, d in self._dyn_docks.items():
+            if d is dock:
+                return plot
+        for name, d in self._panel_docks.items():
+            if d is dock:
+                return self._get_panel_widget(name)
+        return None
+
+    def pinnable_panels(self) -> list:
+        """Every panel of this container: any of them can be pinned to an individual."""
+        return [*self._dyn_panels, *(self._get_panel_widget(name) for name, _ in _PANEL_ORDER)]
+
     def _add_pin_actions(self, menu: QMenu, dock: QDockWidget) -> None:
-        """Pin / unpin entries for a feature panel's dock, when the dataset has several individuals."""
-        plot = next((p for p, d in self._dyn_docks.items() if d is dock), None)
+        """Pin / unpin entries for any panel's dock, when the dataset has several individuals."""
+        plot = self._plot_of_dock(dock)
         if plot is None or not hasattr(plot, "set_pinned_individual"):
             return
         names = self.app_state.label_individuals()
@@ -554,24 +570,33 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         )
 
     def pin_panel(self, plot, individual: str | None) -> None:
-        """Pin *plot* to *individual* (``None`` unpins): it re-renders, re-titles and redraws its labels."""
+        """Pin *plot* to *individual* (``None`` unpins): it re-titles and redraws its labels.
+
+        A feature panel also re-renders: its data has an individual dim to
+        select from. Every other panel's data is not per individual, so only
+        its labels (and the subject a click on it labels) change.
+        """
         plot.set_pinned_individual(individual)
         self.set_panel_title(plot, self.panel_title(plot))
-        if self.app_state.ready:
-            plot.update_plot()
-        self.panel_content_changed.emit(plot)
+        if getattr(plot, "panel_group", None) == "feature":
+            if self.app_state.ready:
+                plot.update_plot()
+            self.panel_content_changed.emit(plot)
         self.app_state.refresh_labelling_subject()
         self.schedule_labels_redraw()
 
     def panel_title(self, plot) -> str:
-        """A feature panel's title: its feature, then which individual it shows and why."""
+        """A panel's title: its feature (or what it was created for), then which individual it shows and why."""
         feature = plot._effective_feature() if hasattr(plot, "_effective_feature") else None
-        title = str(feature) if feature else str(getattr(plot, "panel_type", "panel"))
+        if feature:
+            title = str(feature)
+        else:
+            title = str(getattr(plot, "base_title", None) or getattr(plot, "panel_type", "panel"))
         return title + self.app_state.panel_mode_suffix(plot)
 
     def refresh_panel_titles(self) -> None:
-        """Re-title every feature panel — after the sidebar's individual changed."""
-        for plot in self._panels_of_group("feature"):
+        """Re-title every panel — after the sidebar's individual changed."""
+        for plot in self.pinnable_panels():
             self.set_panel_title(plot, self.panel_title(plot))
 
     def _dock_of(self, plot) -> QDockWidget | None:
@@ -670,8 +695,9 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             plot.mic_name = mic_name
             title = f"{panel_type} — {mic_name}" if mic_name else panel_type
 
+        plot.base_title = title
         self._dyn_counter += 1
-        dock = self._make_dock(title, plot, lambda: self.remove_panel(plot))
+        dock = self._make_dock(self.panel_title(plot), plot, lambda: self.remove_panel(plot))
         dock.setObjectName(f"panel_{panel_type}_{self._dyn_counter}")
         self._dyn_docks[plot] = dock
         anchor = self._anchor_dock_for_group(group)
@@ -909,13 +935,8 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         panel_type = plot.panel_type
         plot.mic_name = mic_name
         plot.set_source(build_audio_source(self.app_state, mic_name))
-        dock = self._dyn_docks.get(plot)
-        if dock is not None:
-            title = f"{panel_type} — {mic_name}" if mic_name else panel_type
-            dock.setWindowTitle(title)
-            bar = dock.titleBarWidget()
-            if bar is not None:
-                bar.set_title(title)
+        plot.base_title = f"{panel_type} — {mic_name}" if mic_name else panel_type
+        self.set_panel_title(plot, self.panel_title(plot))
         t0, t1 = self.get_current_xlim()
         plot.update_plot(t0=t0, t1=t1)
         self.schedule_labels_redraw()
@@ -940,23 +961,29 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         arrangement (positions, sizes, tabs, floating)."""
         self._canonicalize_dock_names()
         panels = []
+
+        def _pin(plot) -> dict:
+            pin = plot.pinned_individual
+            return {"individual": pin} if pin else {}
+
         for plot in self._audio_plots():
-            panels.append({"type": plot.panel_type, "mic": plot.mic_name})
+            panels.append({"type": plot.panel_type, "mic": plot.mic_name, **_pin(plot)})
         for plot in self._neo_plots():
             panels.append(
                 {
                     "type": "neo",
                     "stream_name": getattr(plot, "neo_stream_name", None),
                     "channels": getattr(plot, "neo_channels", None),
+                    **_pin(plot),
                 }
             )
         for name, _ in _PANEL_ORDER:
             if self._panel_visible[name]:
-                panels.append({"type": name})
+                panels.append({"type": name, **_pin(self._get_panel_widget(name))})
         for plot in self._panels_of_group("feature"):
             panels.append({"type": plot.panel_type, **plot.panel_settings()})
         for plot in self._label_ribbons():
-            panels.append({"type": plot.panel_type})
+            panels.append({"type": plot.panel_type, **_pin(plot)})
         return {
             "panels": panels,
             "dock_state_b64": base64.b64encode(bytes(self._dock_host.saveState())).decode("ascii"),
@@ -974,11 +1001,17 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             self.remove_panel(plot)
         for e in entries:
             if e.get("type") in ("audiotrace", "spectrogram"):
-                self.add_panel(e["type"], mic_name=e.get("mic"))
+                plot = self.add_panel(e["type"], mic_name=e.get("mic"))
             elif e.get("type") == "neo":
-                self.add_panel("neo", stream_name=e.get("stream_name"), channels=e.get("channels"))
+                plot = self.add_panel("neo", stream_name=e.get("stream_name"), channels=e.get("channels"))
             elif e.get("type") == "labels":
-                self.add_panel("labels")
+                plot = self.add_panel("labels")
+            elif e.get("type") in _PANEL_PLOT_ATTR:
+                plot = self._get_panel_widget(e["type"])
+            else:
+                continue
+            if plot is not None:
+                self.pin_panel(plot, e.get("individual"))
         if "raster" in types:
             self.set_neural_panel_mode("raster")
         elif "ephys" in types:

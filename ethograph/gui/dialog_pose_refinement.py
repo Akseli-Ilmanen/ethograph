@@ -74,6 +74,7 @@ from ethograph.gui.pose_annotate import (
 )
 from ethograph.gui.pose_fill import VideoFrameSource, build_backend
 from ethograph.gui.pose_render import PoseRenderData, ask_pose_source_software
+from ethograph.io.netcdf import netcdf_engine
 
 #: Suffix inserted before the extension of the written copy.
 REFINED_SUFFIX = "_refined"
@@ -218,7 +219,7 @@ def save_refined_ds(ds: xr.Dataset, path: str | Path, source_software: str) -> N
     temp.unlink(missing_ok=True)
     try:
         if suffix == ".nc":
-            ds.to_netcdf(temp)
+            ds.to_netcdf(temp, engine=netcdf_engine(temp))
         elif software == "lightningpose" and suffix == ".csv":
             save_poses.to_lp_file(ds, temp)
         elif software == "sleap" and suffix == ".h5":
@@ -350,7 +351,7 @@ class PoseRefinementDialog(PoseLabellingDialog):
             load_software = "SLEAP"  # .slp refined to an analysis .h5
         try:
             if load_path.suffix.lower() == ".nc":
-                ds = xr.open_dataset(load_path).load()
+                ds = xr.open_dataset(load_path, engine=netcdf_engine(load_path)).load()
             else:
                 ds = load_movement_dataset(str(load_path), load_software, float(fps))
         except (OSError, ValueError, KeyError) as e:

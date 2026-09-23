@@ -2495,9 +2495,7 @@ class DataWidget(QWidget):
             pin_btn = QToolButton()
             pin_btn.setObjectName("individual_pin_button")
             pin_btn.setText("\U0001f4cc")
-            pin_btn.setToolTip(
-                "The panel you last clicked (a plot or a camera view): follow this combo, or pin it to one individual"
-            )
+            pin_btn.setToolTip("The panel you last clicked: follow this combo, or pin it to one individual")
             pin_btn.setPopupMode(QToolButton.InstantPopup)
             pin_menu = QMenu(pin_btn)
             pin_menu.aboutToShow.connect(lambda m=pin_menu: self._fill_pin_menu(m))
@@ -2634,18 +2632,20 @@ class DataWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _pinnable_widget(self):
-        """The last clicked panel, if it is one that can be pinned: a feature plot or a camera view."""
-        from .active_panel import PanelKind
-
+        """The last clicked panel: any panel can be pinned, only the console cannot."""
         manager = getattr(self.plot_container, "active_panels", None)
         reg = manager.active if manager is not None else None
-        if reg is None:
+        if reg is None or reg.kind == "console":
             return None
-        if reg.kind in PanelKind.FEATURE:
-            return reg.plot
-        if reg.kind == PanelKind.VIDEO:
-            return reg.widget
-        return None
+        return reg.plot if reg.plot is not None else reg.widget
+
+    def _panel_label(self, widget) -> str:
+        """*widget*'s title as its dock shows it, for the pin menu."""
+        if widget in self.space_plots or widget in self.radial_plots:
+            return widget._dock_name + self.app_state.panel_mode_suffix(widget)
+        if self.plot_container is not None and widget in self.plot_container.pinnable_panels():
+            return self.plot_container.panel_title(widget)
+        return "camera" + self.app_state.panel_mode_suffix(widget)
 
     def _fill_pin_menu(self, menu: QMenu) -> None:
         from .plots_container import add_pin_choices
@@ -2659,8 +2659,7 @@ class DataWidget(QWidget):
         if target is None:
             menu.addAction("Click a plot or camera panel first").setEnabled(False)
         else:
-            title = self.plot_container.panel_title(target) if hasattr(target, "set_pinned_individual") else "camera"
-            menu.addAction(f"Panel: {title}").setEnabled(False)
+            menu.addAction(f"Panel: {self._panel_label(target)}").setEnabled(False)
             add_pin_choices(
                 menu,
                 names,
@@ -2672,11 +2671,15 @@ class DataWidget(QWidget):
         unpin_all = menu.addAction("Unpin all panels (follow sidebar)", self.unpin_all_panels)
         unpin_all.setEnabled(self._any_pinned())
 
-    def _pinned_widgets(self) -> list:
+    def _pinnable_widgets(self) -> list:
+        """Every panel on screen: the container's, the space and radial plots, the camera views."""
         pc = self.plot_container
-        plots = list(pc._panels_of_group("feature")) if pc is not None else []
+        plots = pc.pinnable_panels() if pc is not None else []
         views = [self.video_mgr.primary_view, *self.video_mgr.extra_widgets.values()] if self.video_mgr else []
-        return [w for w in [*plots, *views] if self.app_state.pinned_individual_of(w) is not None]
+        return [*plots, *self.space_plots, *self.radial_plots, *views]
+
+    def _pinned_widgets(self) -> list:
+        return [w for w in self._pinnable_widgets() if self.app_state.pinned_individual_of(w) is not None]
 
     def _any_pinned(self) -> bool:
         return bool(self._pinned_widgets())
@@ -2687,11 +2690,25 @@ class DataWidget(QWidget):
             self.pin_panel(widget, None)
 
     def pin_panel(self, widget, individual: str | None) -> None:
-        """Pin *widget* — a feature plot or a camera view — to *individual* (``None`` unpins)."""
-        if hasattr(widget, "set_pinned_individual"):
+        """Pin *widget* — any panel — to *individual* (``None`` unpins).
+
+        A feature, space or radial panel selects that individual from its
+        data; a camera view filters its pose overlay; every panel draws that
+        individual's labels and makes it the subject when clicked.
+        """
+        if widget in self.space_plots or widget in self.radial_plots:
+            widget.set_pinned_individual(individual)
+            widget.refresh_title()
+            self.app_state.refresh_labelling_subject()
+        elif hasattr(widget, "set_pinned_individual"):
             self.plot_container.pin_panel(widget, individual)
         else:
             self.pin_camera_view(widget, individual)
+        self.app_state.refresh_labelling_subject()
+        self.on_labelling_subject_changed()
+
+    def _on_panel_pinned_itself(self, widget) -> None:
+        """A space or radial plot pinned itself through its own individual combo."""
         self.app_state.refresh_labelling_subject()
         self.on_labelling_subject_changed()
 
@@ -2734,6 +2751,11 @@ class DataWidget(QWidget):
             if self.app_state.pinned_individual_of(plot) is None:
                 plot.update_plot()
                 pc.panel_content_changed.emit(plot)
+        panels: list[SpacePlot | RadialPlot] = [*self.space_plots, *self.radial_plots]
+        for panel in panels:
+            if self.app_state.pinned_individual_of(panel) is None:
+                panel.sync_individual()
+            panel.refresh_title()
         pc.refresh_panel_titles()
         self.video_mgr.refresh_view_titles()
         self.update_pose()
@@ -3856,6 +3878,7 @@ class DataWidget(QWidget):
         sp.set_plot_container(self.plot_container)
         sp.closed.connect(self.remove_space_plot)
         sp.view_changed.connect(self._on_space_plot_view_changed)
+        sp.pin_changed.connect(self._on_panel_pinned_itself)
         self.space_plots.append(sp)
         # Canonical objectName BEFORE the dock exists: dock creation tries
         # shell.restoreDockWidget() with it, so a saved window state places
@@ -3982,6 +4005,7 @@ class DataWidget(QWidget):
         rp = RadialPlot(self.shell, self.app_state)
         rp._apply_default_width = default_width
         rp.closed.connect(self.remove_radial_plot)
+        rp.pin_changed.connect(self._on_panel_pinned_itself)
         self.radial_plots.append(rp)
         self._canonicalize_radial_dock_names()
         rp.dock_object_name = f"RadialPlotDock_{len(self.radial_plots) - 1}"

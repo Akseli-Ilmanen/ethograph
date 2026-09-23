@@ -10,6 +10,7 @@ import numpy as np
 import xarray as xr
 
 from ethograph.io import schema
+from ethograph.io.netcdf import netcdf_engine
 
 if TYPE_CHECKING:
     from ethograph.io.trialtree import TrialTree
@@ -55,7 +56,7 @@ def movement_dataset_info(path: str | Path) -> tuple[str, float | None] | None:
     if p.suffix.lower() != ".nc" or not p.is_file():
         return None
     try:
-        with xr.open_dataset(p) as ds:
+        with xr.open_dataset(p, engine=netcdf_engine(p)) as ds:
             if ds.attrs.get("ds_type") not in MOVEMENT_DS_TYPES or "position" not in ds.data_vars:
                 return None
             fps = ds.attrs.get("fps")
