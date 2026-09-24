@@ -247,6 +247,8 @@ def _infer_trials(
             "run": run.name,
             "run_dir": str(run.run_dir),
             "session": str(session.source),
+            "prediction_source": run.name,
+            "tolerance_s": None,
             "infer": config_to_dict(config)["infer"],
         },
     )

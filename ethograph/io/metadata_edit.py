@@ -34,6 +34,7 @@ from ethograph.io.metadata_table import (
     stored_columns,
 )
 from ethograph.labels.curation import CURATED_COLUMN
+from ethograph.labels.review_metrics import DIFFICULTY_COLUMN, REVIEW_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ TARGET_NWB = "nwb"
 
 #: Columns Ethograph derives rather than reads. Written to a tabular file
 #: only — see the module docstring.
-DERIVED_COLUMNS = frozenset({CURATED_COLUMN})
+DERIVED_COLUMNS = frozenset({CURATED_COLUMN, DIFFICULTY_COLUMN, *REVIEW_COLUMNS})
 
 
 @dataclass(frozen=True)

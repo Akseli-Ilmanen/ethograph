@@ -363,12 +363,8 @@ def infer_session(
     if config.infer.flag_out_of_order:
         events = flag_out_of_order(events, config)
     out_dir.mkdir(parents=True, exist_ok=True)
-    df = to_labels_frame(
-        events,
-        trials,
-        source=f"{MODEL_NAME}:{run_label(run_dir)}@{epoch}",
-        individual=individual,
-    )
+    source = f"{MODEL_NAME}:{run_label(run_dir)}@{epoch}"
+    df = to_labels_frame(events, trials, source=source, individual=individual)
     tsv_path = out_dir / f"{session.stem}_predictions.tsv"
     save_labels_tsv(tsv_path, df)
     onset_curves.write_curves(out_dir / onset_curves.CURVES_FILE, per_trial)
@@ -383,6 +379,10 @@ def infer_session(
             "checkpoint": f"checkpoint_{epoch:03d}.pt",
             "session": str(session.source),
             "trials": len(records),
+            "prediction_source": source,
+            # The focus window is around the peak; either side of it is the
+            # precision the model claims — what the review judges it at.
+            "tolerance_s": float(config.infer.focus_window_ms) / 2000.0,
             "infer": config_to_dict(config)["infer"],
         },
     )

@@ -866,6 +866,38 @@ class SplitConfig:
 
 
 @dataclass
+class OversampleConfig:
+    """Show some trials more often: a metadata column and a weight per value.
+
+    The column is read from each session's metadata table at training time
+    — the GUI's ``difficulty`` column (``hard`` / ``normal``, set during
+    curation) is the one this exists for::
+
+        train:
+          oversample:
+            column: difficulty
+            weights: {hard: 3.0}
+
+    A trial whose value the mapping does not name keeps weight ``1``. The
+    training loader then draws samples with these odds (``epoch`` still means
+    as many draws as there are training samples); validation and test are
+    never reweighted. Run-level like ``drop_kinds``: one materialised
+    dataset serves every weighting.
+    """
+
+    column: str | None = None
+    weights: dict[str, float] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.weights and self.column is None:
+            raise ValueError("train.oversample.weights needs train.oversample.column — the metadata column to read")
+        self.weights = {str(k): float(v) for k, v in self.weights.items()}
+        for value, weight in self.weights.items():
+            if weight <= 0:
+                raise ValueError(f"train.oversample.weights[{value!r}] = {weight} — a sampling weight is positive")
+
+
+@dataclass
 class TrainConfig:
     #: Base run name; ``None`` derives one from architecture + features name.
     #: Every call to :func:`~ethograph.segment.train.train` creates its own,
@@ -914,6 +946,9 @@ class TrainConfig:
     frame_weight: float = 1.0
     augment: AugmentConfig = field(default_factory=AugmentConfig)
     split: SplitConfig = field(default_factory=SplitConfig)
+    #: Draw some trials more often, by a metadata column (the GUI's
+    #: ``difficulty``). Run-level like :attr:`drop_kinds`.
+    oversample: OversampleConfig = field(default_factory=OversampleConfig)
 
 
 @dataclass
@@ -1263,6 +1298,7 @@ SCHEMA = Schema(
         "model": ModelConfig,
         "augment": AugmentConfig,
         "split": SplitConfig,
+        "oversample": OversampleConfig,
         "train": TrainConfig,
         "search": SearchConfig,
         "postprocess": PostprocessConfig,

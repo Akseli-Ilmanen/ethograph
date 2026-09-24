@@ -12,6 +12,7 @@ from ethograph.gui.app_state import ObservableAppState
 from ethograph.gui.widgets_curation import CurationPanel, drag_label_ids
 from ethograph.gui.widgets_navigation import NavigationWidget
 from ethograph.labels import onset_curves
+from ethograph.labels import review_metrics as rm
 from ethograph.labels.curation import CURATED_COLUMN
 from ethograph.labels.intervals import (
     HUMAN_CONFIDENCE,
@@ -21,6 +22,7 @@ from ethograph.labels.intervals import (
     add_interval,
     empty_intervals,
 )
+from ethograph.labels.tsv_store import save_labels_tsv
 
 
 @pytest.fixture(scope="module")
@@ -844,3 +846,84 @@ def test_qt_key_names(qapp):
     from qtpy.QtGui import QKeySequence
 
     assert QKeySequence(Qt.Key_Backspace).toString() == "Backspace"
+
+
+class TestHardTrialsAndReview:
+    """Ctrl+T writes the difficulty column; finishing the curation scores the
+    session exactly once and flags what scored badly (labels/review_metrics.py)."""
+
+    def test_toggle_difficulty_writes_the_column_and_arms_curation(self, panel):
+        state = panel.app_state
+        state.metadata_df = pd.DataFrame({"trial": ["0", "1"]})
+        panel.toggle_difficulty()
+        assert state.curation_active
+        assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_HARD})
+        # The table now says hard (the stub does not write back) → the box follows, and the next press clears.
+        state.metadata_df[rm.DIFFICULTY_COLUMN] = ["hard", ""]
+        panel._sync_hard_checkbox()
+        assert panel.hard_cb.isChecked()
+        panel.toggle_difficulty()
+        assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_NORMAL})
+
+    def test_the_review_fires_once_when_the_last_trial_is_curated(self, panel, monkeypatch):
+        calls = []
+        monkeypatch.setattr(panel, "run_review", lambda: calls.append(1) or {})
+        panel.activate("test")
+        panel.sync_metadata()
+        panel.curate_current_trial()  # trial 0 done, trial 1 still automated
+        panel.sync_metadata()
+        assert calls == []
+        panel.curate_trial_labels("filtered")
+        panel.sync_metadata()
+        panel.sync_metadata()
+        assert calls == [1]
+        # A new prediction run re-arms it.
+        panel.app_state._all_labels_df.loc[0, "labeling_method"] = LABELING_AUTOMATED
+        panel.sync_metadata()
+        panel.curate_trial_labels("filtered")
+        panel.sync_metadata()
+        assert calls == [1, 1]
+
+    def test_a_session_already_curated_when_curation_arms_is_not_scored(self, panel, monkeypatch):
+        calls = []
+        monkeypatch.setattr(panel, "run_review", lambda: calls.append(1) or {})
+        panel.app_state._all_labels_df["labeling_method"] = LABELING_MANUAL
+        panel.activate("test")
+        panel.sync_metadata()
+        assert calls == []
+
+    def test_run_review_writes_scores_and_flags_hard(self, panel, tmp_path):
+        state = panel.app_state
+        session = tmp_path / "s" / "s.nc"
+        session.parent.mkdir()
+        session.write_bytes(b"")
+        state.nc_file_path = str(session)
+        state.metadata_df = pd.DataFrame({"trial": ["0", "1"]})
+        folder = onset_curves.run_dir(session, "20260101_000001")
+        folder.mkdir(parents=True)
+        # Trial 0's run said: 4@1.0 (kept), 6@2.5 (kept), 4@9.0 (deleted by the
+        # reviewer); it never predicted the state label 8 the reviewer drew.
+        predicted = pd.DataFrame(
+            {
+                "trial": [0, 0, 0],
+                "labels": [4, 6, 4],
+                "onset_s": [1.0, 2.5, 9.0],
+                "offset_s": [np.nan] * 3,
+                "event_type": ["point"] * 3,
+                "individual": ["a"] * 3,
+                "individual_rec": [""] * 3,
+                "confidence": [0.5] * 3,
+                "labeling_method": [LABELING_AUTOMATED] * 3,
+            }
+        )
+        save_labels_tsv(folder / f"s{onset_curves.PREDICTIONS_SUFFIX}", predicted)
+        onset_curves.write_provenance(folder, model_config={}, inference={"tolerance_s": 0.05})
+        reviews = panel.run_review()
+        assert set(reviews) == {"0"}
+        assert reviews["0"].f1_point == pytest.approx(0.8)
+        assert reviews["0"].f1_state == 0.0
+        written = dict(panel._trials_stub.written)
+        assert written[rm.REVIEW_F1_POINT] == {"0": pytest.approx(0.8)}
+        assert written[rm.REVIEW_F1_STATE] == {"0": 0.0}
+        assert written[rm.DIFFICULTY_COLUMN] == {"0": rm.DIFFICULTY_HARD}
+        assert "1 of 1" in panel.review_label.text()

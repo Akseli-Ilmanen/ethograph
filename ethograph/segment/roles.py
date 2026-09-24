@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import pandas as pd
 
+from ethograph.io.metadata_table import load_metadata_df, load_metadata_tsv, metadata_tsv_path
 from ethograph.segment.config import SegmentConfig
 
 
@@ -93,3 +95,42 @@ def assign_roles(config: SegmentConfig, index: pd.DataFrame) -> dict[str, str]:
     for key, trial in trial_of.items():
         roles[key] = by_trial[trial]
     return roles
+
+
+def _metadata_table(source: str) -> pd.DataFrame:
+    """The session's metadata table as the GUI would show it.
+
+    The sidecar ``metadata.tsv`` first — where curation writes its derived
+    columns whatever the source's format — else whatever the source carries.
+    """
+    sidecar = metadata_tsv_path(source)
+    if sidecar.is_file():
+        return load_metadata_tsv(sidecar)
+    return load_metadata_df(source_path=Path(source))[0]
+
+
+def sample_weights(config: SegmentConfig, index: pd.DataFrame) -> dict[str, float]:
+    """Sample key → sampling weight, from ``train.oversample`` and each session's metadata table.
+
+    ``1.0`` everywhere when no column is configured. A configured column the
+    table does not have is an error naming the session and its columns — a
+    weighting that silently applied to nothing would look like a run that
+    did not help.
+    """
+    cfg = config.train.oversample
+    if cfg.column is None:
+        return {str(k): 1.0 for k in index["key"]}
+    value_of: dict[tuple[str, str], str] = {}
+    for source in index["source"].astype(str).unique():
+        table = _metadata_table(source)
+        if "trial" not in table.columns or cfg.column not in table.columns:
+            raise ValueError(
+                f"{source}: train.oversample.column={cfg.column!r} but the metadata table has no such "
+                f"column (columns: {list(table.columns)})"
+            )
+        for trial, value in zip(table["trial"].astype(str), table[cfg.column]):
+            value_of[(source, trial)] = "" if pd.isna(value) else str(value)
+    out: dict[str, float] = {}
+    for key, source, trial in zip(index["key"], index["source"].astype(str), index["trial"].astype(str)):
+        out[str(key)] = cfg.weights.get(value_of.get((source, trial), ""), 1.0)
+    return out

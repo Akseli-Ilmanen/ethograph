@@ -65,6 +65,7 @@ Curation section), wherever the key is pressed.
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+C` | Curate the current trial: every automated label in scope becomes curated (manual ones stay manual) |
+| `Ctrl+T` | Flag the current trial as hard in the metadata table's `difficulty` column, or back to normal — see the curation page's hard-trials section |
 | `Enter` | Confirm the frame on screen as the boundary — the label becomes manual if it moved, curated if not — and move on |
 | `Backspace` / `Delete` | Delete the event being reviewed and move on |
 | `N` | Next boundary (curates the one you leave when **Click N curates current** is ticked) |

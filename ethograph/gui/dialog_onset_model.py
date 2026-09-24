@@ -75,12 +75,13 @@ from ethograph.labels.curve_confidence import DESCRIPTIONS
 from ethograph.labels.intervals import (
     EVENT_TYPE_POINT,
     EVENT_TYPE_STATE,
+    INTERVAL_COLUMNS,
     LABELING_AUTOMATED,
     NO_RECIPIENT,
     add_point,
 )
 from ethograph.labels.label_inputs import POINT_SIGMAS_S, LabelInput
-from ethograph.labels.tsv_store import get_trial_from_tsv
+from ethograph.labels.tsv_store import get_trial_from_tsv, save_labels_tsv
 from ethograph.labels.workflow import DEFAULT_CONFIDENCE
 from ethograph.utils.paths import session_id
 
@@ -184,22 +185,28 @@ class PredictionOutcome:
         return " ".join(parts)
 
 
-def _save_curves(app_state, curves_by_trial: dict, config: om.OnsetModelConfig, applied: dict) -> Path | None:
-    """Write this run's probability curves to its own folder under ``labels/``.
+def _save_run(
+    app_state, curves_by_trial: dict, written_rows: pd.DataFrame, config: om.OnsetModelConfig, applied: dict
+) -> Path | None:
+    """Write this run's probability curves and the labels it wrote to its own folder under ``labels/``.
 
     An aid to review, not part of the prediction: a session with no path on
     disk yet simply keeps none, and a failed write is logged rather than
     losing the predictions it belongs to. *config* is the trained bundle's —
     what actually ran, not the model folder's editable ``config.yaml`` — and
     *applied* how it was run; both land beside the curves so the folder
-    says what produced it.
+    says what produced it. *written_rows* are the events as they went into
+    the labels — what the post-curation review compares against once the
+    user has moved or deleted them (``labels/review_metrics.py``).
     """
     if not curves_by_trial or not app_state.nc_file_path:
         return None
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder = onset_curves.run_dir(app_state.nc_file_path, timestamp)
+    stem = Path(app_state.nc_file_path).stem
     try:
         written = onset_curves.write_curves(folder / onset_curves.CURVES_FILE, curves_by_trial)
+        save_labels_tsv(folder / f"{stem}{onset_curves.PREDICTIONS_SUFFIX}", written_rows)
         onset_curves.write_provenance(folder, model_config=asdict(config), inference=applied)
         return written
     except OSError as exc:
@@ -311,6 +318,8 @@ def predict_onsets(
     #: Every trial's probability curves, written beside the labels once the
     #: run is over — what frame-by-frame review draws under each label.
     curves_by_trial: dict[object, tuple[np.ndarray, dict[int, np.ndarray]]] = {}
+    source = f"lightgbm:{name}"
+    written_rows: list[dict] = []
     QApplication.setOverrideCursor(Qt.WaitCursor)
     try:
         for tid, loader, t0, t1, shift in _iter_trial_windows(app_state):
@@ -350,19 +359,34 @@ def predict_onsets(
                     labeling_method=LABELING_AUTOMATED,
                 )
                 app_state.set_trial_intervals(tid, trial_df)
+                written_rows.append(
+                    {
+                        "trial": tid,
+                        "onset_s": float(prediction.time),
+                        "offset_s": np.nan,
+                        "labels": int(label),
+                        "individual": individual,
+                        "individual_rec": NO_RECIPIENT,
+                        "event_type": EVENT_TYPE_POINT,
+                        "confidence": float(prediction.confidence),
+                        "labeling_method": LABELING_AUTOMATED,
+                        "prediction_source": source,
+                    }
+                )
                 outcome.per_target[label] += 1
                 outcome.n_predicted += 1
                 written = True
                 outcome.trials.add(str(tid))
                 df = app_state._all_labels_df
             if written:
-                app_state.set_trial_meta_attr(tid, "prediction_source", f"lightgbm:{name}")
+                app_state.set_trial_meta_attr(tid, "prediction_source", source)
     finally:
         QApplication.restoreOverrideCursor()
 
-    _save_curves(
+    _save_run(
         app_state,
         curves_by_trial,
+        pd.DataFrame(written_rows, columns=["trial", *INTERVAL_COLUMNS, "prediction_source"]),
         config,
         {
             "model": onset_curves.LIGHTGBM,
@@ -370,6 +394,8 @@ def predict_onsets(
             "individual": individual,
             "min_confidence": float(min_confidence),
             "session": str(app_state.nc_file_path),
+            "prediction_source": source,
+            "tolerance_s": float(config.tolerance_s),
         },
     )
     if outcome.n_predicted:

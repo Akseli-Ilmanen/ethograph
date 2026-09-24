@@ -123,6 +123,9 @@ def bind_global_shortcuts(meta_widget):
     # Curate the current trial: every automated label in scope becomes curated
     # (manual ones stay manual). Auto-guarded — Ctrl+C is copy in a text field.
     bind("Ctrl+C", meta_widget.curate_current_trial)
+    # Flag the current trial as hard (or back to normal) in the metadata
+    # table's difficulty column — a trial the model should see more often.
+    bind("Ctrl+T", labels_widget.curation_panel.toggle_difficulty)
 
     def toggle_changepoint_correction():
         checkbox = changepoints_widget.changepoint_correction_checkbox

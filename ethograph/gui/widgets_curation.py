@@ -95,6 +95,7 @@ from ethograph.gui.notify import notify
 from ethograph.gui.shortcuts import typing_in_text_field
 from ethograph.io.time_model import TimeRange
 from ethograph.labels import onset_curves
+from ethograph.labels import review_metrics as rm
 from ethograph.labels import workflow as wf
 from ethograph.labels.curation import (
     CURATED_COLUMN,
@@ -307,6 +308,7 @@ class ShortcutsPopup(QDialog):
             ("N", "next boundary (curates the one you leave when the box is ticked)"),
             ("Space", "play / pause"),
             ("Ctrl+C", "curate every automated label in scope of this trial"),
+            ("Ctrl+T", "flag this trial as hard (again: back to normal) — shown more often when training"),
         ]
         for key, what in rows:
             row = QHBoxLayout()
@@ -369,6 +371,11 @@ class CurationPanel(QGroupBox):
         self._curve_source: Path | None = None
         self._curves: dict[str, onset_curves.TrialCurves] = {}
         self._curves_key: tuple | None = None
+        #: The review has run for the current "every trial curated" state;
+        #: cleared the moment any trial is automated again (a new prediction
+        #: run), so finishing the curation fires it exactly once.
+        self._review_done = False
+        self._syncing_hard = False
 
         self._build_ui()
 
@@ -548,6 +555,68 @@ class CurationPanel(QGroupBox):
         self.video_grid_btn.clicked.connect(self.open_video_grid)
         tools_row.addWidget(self.video_grid_btn)
         lay.addLayout(tools_row)
+
+        # ── Hard trials + post-curation review ──────────────────────
+        review_row = QHBoxLayout()
+        self.hard_cb = QCheckBox("Hard trial (Ctrl+T)")
+        self.hard_cb.setToolTip(
+            "Flag this trial as hard in the metadata table's difficulty column —\n"
+            "the model barely managed it, or it is just difficult. A training run\n"
+            "with train.oversample draws hard trials more often."
+        )
+        self.hard_cb.toggled.connect(self._on_hard_toggled)
+        review_row.addWidget(self.hard_cb)
+        review_row.addStretch(1)
+        review_row.addWidget(QLabel("Flag below F1:"))
+        self.review_threshold_spin = QDoubleSpinBox()
+        self.review_threshold_spin.setRange(0.0, 1.0)
+        self.review_threshold_spin.setDecimals(2)
+        self.review_threshold_spin.setSingleStep(0.05)
+        self.review_threshold_spin.setToolTip(
+            "Once every trial is curated, each trial's final labels are scored against\n"
+            "what its prediction run wrote (state labels at IoU ≥ 0.5, point labels within\n"
+            "the run's own tolerance). A trial whose F1 falls below this is flagged hard."
+        )
+        self.review_threshold_spin.setValue(float(self.app_state.get_with_default("review_flag_threshold")))
+        self.review_threshold_spin.valueChanged.connect(
+            lambda v: setattr(self.app_state, "review_flag_threshold", float(v))
+        )
+        self.review_threshold_spin.editingFinished.connect(self.review_threshold_spin.clearFocus)
+        review_row.addWidget(self.review_threshold_spin)
+        review_row.addWidget(QLabel("Tolerance:"))
+        self.review_tolerance_spin = QDoubleSpinBox()
+        self.review_tolerance_spin.setRange(0.0, 10.0)
+        self.review_tolerance_spin.setDecimals(3)
+        self.review_tolerance_spin.setSingleStep(0.01)
+        self.review_tolerance_spin.setSpecialValueText("run's own")
+        self.review_tolerance_spin.setSuffix(" s")
+        self.review_tolerance_spin.setToolTip(
+            'Point-event tolerance for the review. Left at "run\'s own", each run is judged\n'
+            "at the tolerance its model was trained to (read from the run folder). Set it to\n"
+            "compare runs trained at different tolerances, or for a run folder that carries none."
+        )
+        override = self.app_state.get_with_default("review_tolerance_s")
+        self.review_tolerance_spin.setValue(float(override) if override else 0.0)
+        self.review_tolerance_spin.valueChanged.connect(
+            lambda v: setattr(self.app_state, "review_tolerance_s", float(v) if v > 0 else None)
+        )
+        self.review_tolerance_spin.editingFinished.connect(self.review_tolerance_spin.clearFocus)
+        review_row.addWidget(self.review_tolerance_spin)
+        self.review_btn = QPushButton("Score now")
+        self.review_btn.setAutoDefault(False)
+        self.review_btn.setToolTip(
+            "Run the post-curation review over the trials the table shows without waiting\n"
+            "for the last trial to be curated."
+        )
+        self.review_btn.clicked.connect(lambda: self.run_review())
+        review_row.addWidget(self.review_btn)
+        lay.addLayout(review_row)
+
+        self.review_label = QLabel("")
+        self.review_label.setTextFormat(Qt.PlainText)
+        self.review_label.setWordWrap(True)
+        self.review_label.setStyleSheet("font-size: 10px; color: #bbb;")
+        lay.addWidget(self.review_label)
 
         self.status_label = QLabel("")
         self.status_label.setTextFormat(Qt.RichText)
@@ -1062,6 +1131,7 @@ class CurationPanel(QGroupBox):
         self.app_state.curation_active = True
         logger.info("Curation active (%s) — per-trial verdicts will be saved.", reason)
         self._ensure_metadata_file()
+        self._review_done = self._all_curated(self.app_state.trial_curation_status())
         self._metadata_timer.start()
 
     def deactivate(self) -> None:
@@ -1102,11 +1172,106 @@ class CurationPanel(QGroupBox):
             mdf = getattr(trials_widget, "_metadata_df", None)
         if mdf is None or mdf.empty:
             return
-        if not curated_column_differs(mdf, status):
+        if curated_column_differs(mdf, status):
+            trials_widget.set_column_values(
+                CURATED_COLUMN, {t: (CURATED_YES if v else CURATED_NO) for t, v in status.items()}
+            )
+        self._review_when_done(status)
+
+    # ------------------------------------------------------------------
+    # Hard trials + post-curation review (labels/review_metrics.py)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _all_curated(status: dict[str, bool]) -> bool:
+        return bool(status) and all(status.values())
+
+    def _review_when_done(self, status: dict[str, bool]) -> None:
+        """The last trial was just curated → score the session, once."""
+        if not self._all_curated(status):
+            self._review_done = False
             return
-        trials_widget.set_column_values(
-            CURATED_COLUMN, {t: (CURATED_YES if v else CURATED_NO) for t, v in status.items()}
+        if self._review_done:
+            return
+        self._review_done = True
+        self.run_review()
+
+    def run_review(self) -> dict[str, rm.TrialReview]:
+        """Score every trial the table shows against the run that predicted it.
+
+        Writes ``review_f1_state`` / ``review_f1_point`` into the metadata
+        table, flags trials below the threshold as hard (never un-flagging a
+        hand-set one), and says what it found.
+        """
+        trials_widget = self._trials_widget()
+        session = getattr(self.app_state, "nc_file_path", None)
+        if trials_widget is None or not self.app_state.ready or not session:
+            return {}
+        reviews = rm.review_session(
+            session,
+            self.app_state._all_labels_df,
+            self.app_state.trials or [],
+            tolerance_override_s=self.app_state.review_tolerance_s,
         )
+        if not reviews:
+            message = rm.summary(reviews, set())
+            self.review_label.setText(message)
+            notify(message)
+            return reviews
+        self.activate("review scored")
+        hard = rm.flag_hard(reviews, float(self.app_state.review_flag_threshold))
+        for column, values in rm.review_columns(reviews).items():
+            scored = {t: v for t, v in values.items() if not math.isnan(v)}
+            if scored:
+                trials_widget.set_column_values(column, scored)
+        difficulty = rm.difficulty_values(getattr(self.app_state, "metadata_df", None), hard, reviews.keys())
+        if difficulty:
+            trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, difficulty)
+        message = rm.summary(reviews, hard)
+        self.review_label.setText(message)
+        notify(message)
+        self._sync_hard_checkbox()
+        return reviews
+
+    def _trial_is_hard(self, trial) -> bool:
+        mdf = getattr(self.app_state, "metadata_df", None)
+        if mdf is None or mdf.empty or rm.DIFFICULTY_COLUMN not in mdf.columns:
+            return False
+        hit = mdf["trial"].astype(str) == str(trial)
+        return bool(hit.any()) and rm.is_hard(mdf.loc[hit, rm.DIFFICULTY_COLUMN].iloc[0])
+
+    def _sync_hard_checkbox(self) -> None:
+        trial = getattr(self.app_state, "trials_sel", None)
+        self._syncing_hard = True
+        try:
+            self.hard_cb.setEnabled(trial is not None and self.app_state.ready)
+            self.hard_cb.setChecked(trial is not None and self._trial_is_hard(trial))
+        finally:
+            self._syncing_hard = False
+
+    def _on_hard_toggled(self, checked: bool) -> None:
+        if not self._syncing_hard:
+            self.set_difficulty(bool(checked))
+
+    def set_difficulty(self, hard: bool, trial=None) -> None:
+        """Write *trial*'s (default: the current one) difficulty to the metadata table."""
+        if trial is None:
+            trial = getattr(self.app_state, "trials_sel", None)
+        trials_widget = self._trials_widget()
+        if trial is None or trials_widget is None or not self.app_state.ready:
+            return
+        self.activate("trial flagged")
+        value = rm.DIFFICULTY_HARD if hard else rm.DIFFICULTY_NORMAL
+        trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, {str(trial): value})
+        notify(f"Trial {trial}: {value}.")
+        self._sync_hard_checkbox()
+
+    def toggle_difficulty(self) -> None:
+        """Ctrl+T: the current trial hard ↔ normal."""
+        trial = getattr(self.app_state, "trials_sel", None)
+        if trial is None or not self.app_state.ready:
+            return
+        self.set_difficulty(not self._trial_is_hard(trial))
 
     # ------------------------------------------------------------------
     # Trial changes
@@ -1116,6 +1281,9 @@ class CurationPanel(QGroupBox):
         """A dataset came or went — curation starts off again."""
         self.deactivate()
         self.app_state.curve_run_path = None
+        self._review_done = False
+        self.review_label.setText("")
+        self._sync_hard_checkbox()
 
     def _on_trial_changed(self) -> None:
         if not self.app_state.ready:
@@ -1125,6 +1293,7 @@ class CurationPanel(QGroupBox):
             # settle before the trial's labels are restamped and redrawn.
             QTimer.singleShot(0, lambda: self.curate_current_trial(quiet=True))
         self._refresh_status()
+        self._sync_hard_checkbox()
         if self._session_active and not self._jumping:
             self._follow_trial()
 

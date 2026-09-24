@@ -69,7 +69,16 @@ CURVES_FILE = "onset_curves.npz"
 #: The model's own config, copied into the run folder as it was trained.
 CONFIG_FILE = "config.yaml"
 #: How that model was applied here: run, epoch, the inference settings.
+#: Two keys every model writes: ``prediction_source`` (the string stamped
+#: into its rows, so a trial's rows find their run again) and
+#: ``tolerance_s`` (the point tolerance the model was trained to, ``None``
+#: for a model predicting no point events) — what the post-curation review
+#: (:mod:`ethograph.labels.review_metrics`) judges the run at.
 INFERENCE_FILE = "inference.yaml"
+#: The labels a run wrote, in its folder: ``{stem}_predictions.tsv``. What
+#: the review compares the curated labels against — a deleted prediction
+#: survives only here.
+PREDICTIONS_SUFFIX = "_predictions.tsv"
 
 
 def write_provenance(folder: str | Path, model_config: Path | dict, inference: dict) -> Path:
@@ -121,6 +130,20 @@ def run_dirs(session_path: str | Path) -> list[Path]:
     if not root.is_dir():
         return []
     return sorted((p for p in root.glob(f"{RUN_PREFIX}*") if (p / CURVES_FILE).is_file()), key=run_timestamp)
+
+
+def predictions_file(folder: str | Path) -> Path | None:
+    """The one ``*_predictions.tsv`` of a run folder, or ``None``."""
+    found = sorted(Path(folder).glob(f"*{PREDICTIONS_SUFFIX}"))
+    return found[0] if found else None
+
+
+def prediction_run_dirs(session_path: str | Path) -> list[Path]:
+    """Every prediction run's folder that holds the labels it wrote, oldest first."""
+    root = labels_dir(session_path)
+    if not root.is_dir():
+        return []
+    return sorted((p for p in root.glob(f"{RUN_PREFIX}*") if predictions_file(p) is not None), key=run_timestamp)
 
 
 def read_curves(path: str | Path) -> dict[str, TrialCurves]:

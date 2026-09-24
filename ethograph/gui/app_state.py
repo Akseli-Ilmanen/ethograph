@@ -167,6 +167,15 @@ class AppStateSpec:
         # than one run exists (labels/onset_curves.py), so review itself never
         # has to ask — asking there re-fired on every restart_review().
         "curve_run_path": (str | None, None, False),
+        # Post-curation review (labels/review_metrics.py): once every trial
+        # the table shows is curated, each trial's final labels are scored
+        # against the run that predicted them, and a trial whose F1 falls
+        # below review_flag_threshold is flagged "hard" in the metadata
+        # table's difficulty column. review_tolerance_s replaces every run's
+        # own point tolerance when set (None = the tolerance the model was
+        # trained to). Reviewing preferences, so global.
+        "review_flag_threshold": (float, 0.5, True),
+        "review_tolerance_s": (float | None, None, True),
         # How the plot x-limits are derived: "interval" (follows slider scope:
         # trial/label/sequence extent + before/after padding) or "fixed"
         # (fixed-size window from t=0). User preference, not tied to how the

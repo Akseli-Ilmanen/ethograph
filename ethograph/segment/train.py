@@ -39,7 +39,7 @@ import numpy as np
 import pandas as pd
 import torch
 import yaml
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from ethograph.segment.config import PostprocessConfig, SegmentConfig, TrainConfig, save_config
 from ethograph.segment.dataset import MaterialisedStore, SampleDataset, collate
@@ -57,7 +57,7 @@ from ethograph.segment.metrics import (
 from ethograph.segment.models import as_output, build_model
 from ethograph.segment.postprocess import postprocess_channels, postprocess_dense
 from ethograph.segment.preprocess import NormStats
-from ethograph.segment.roles import assign_roles
+from ethograph.segment.roles import assign_roles, sample_weights
 from ethograph.segment.samples import ChannelTable, TargetTable, is_multilabel
 from ethograph.utils.device import resolve_device
 from ethograph.utils.logging import log_to_file
@@ -313,10 +313,31 @@ def _train_run(
     def _dataset(subset: list[str], augment_cfg=None) -> SampleDataset:
         return SampleDataset(store, subset, stats, augment_cfg, seed=tcfg.seed, keep=keep_mask, layout=layout)
 
+    # train.oversample: hard trials are drawn more often. The epoch keeps
+    # its length (one draw per training sample), only the odds change, and
+    # only for training — a reweighted validation score would mean nothing.
+    weights = sample_weights(config, store.index)
+    train_weights = [weights[k] for k in keys["train"]]
+    sampler = None
+    if any(w != 1.0 for w in train_weights):
+        sampler = WeightedRandomSampler(
+            train_weights,
+            num_samples=len(train_weights),
+            replacement=True,
+            generator=torch.Generator().manual_seed(tcfg.seed),
+        )
+        logger.info(
+            "Oversampling by %s: %d of %d training samples weighted (total weight %.1f)",
+            tcfg.oversample.column,
+            sum(1 for w in train_weights if w != 1.0),
+            len(train_weights),
+            sum(train_weights),
+        )
     train_loader = DataLoader(
         _dataset(keys["train"], tcfg.augment),
         batch_size=tcfg.batch_size,
-        shuffle=True,
+        shuffle=sampler is None,
+        sampler=sampler,
         collate_fn=collate,
     )
     val_loader = DataLoader(_dataset(keys["val"]), batch_size=1, collate_fn=collate) if keys["val"] else None

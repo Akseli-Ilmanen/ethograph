@@ -611,6 +611,8 @@ def _import_predictions(config: SegmentConfig, folder: Path, sessions: list[Sess
                 "run": name,
                 "run_dir": str(folder),
                 "session": str(session.source),
+                "prediction_source": name,
+                "tolerance_s": None,
                 "infer": config_to_dict(config)["infer"],
             },
         )

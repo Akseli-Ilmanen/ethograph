@@ -73,6 +73,7 @@ ethograph/labels/
     onset_model.py            # GradBoost point-event onset detection
     onset_curves.py           # Per-run prediction curves (every model writes through it)
     curation.py, workflow.py  # labeling_method transitions + curation workflows (Qt-free)
+    review_metrics.py         # Curated labels vs a run's predictions → per-trial F1, the `difficulty` column (Qt-free)
     octron_project.py         # The OCTRON project folder in OCTRON's own layout
     pose_project.py           # A DeepLabCut/LightningPose project folder as two sessions (extract frames, refine pose)
     ml.py, tsv_store.py, predictions.py, crowsetta_format.py, converters.py, export.py
