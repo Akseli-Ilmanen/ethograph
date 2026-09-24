@@ -670,6 +670,38 @@ reduced size, so opening long events takes a moment; while a screenful is
 showing, the next one is already decoding in the background, so stepping on
 is quick. Clicks mean the same as in the label grid.</p>
 </section>
+<section id="hard-trials-and-how-the-model-did">
+<h2>Hard trials, and how the model did<a class="headerlink" href="#hard-trials-and-how-the-model-did" title="Link to this heading">#</a></h2>
+<p>Some trials are simply difficult, and some the model barely managed. Both are
+worth showing it more often next time. <code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code> (or the <strong>Hard trial</strong> box in
+the section) flags the current trial as <code class="docutils literal notranslate"><span class="pre">hard</span></code> in the metadata table’s
+<code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column, and again puts it back to <code class="docutils literal notranslate"><span class="pre">normal</span></code>. The column is a
+checklist in the trials table’s filter like <code class="docutils literal notranslate"><span class="pre">curated</span></code>, so “show me the hard
+trials” is one click, and a training run reads it back: in the segmentation
+pipeline, <code class="docutils literal notranslate"><span class="pre">train.oversample:</span> <span class="pre">{column:</span> <span class="pre">difficulty,</span> <span class="pre">weights:</span> <span class="pre">{hard:</span> <span class="pre">3.0}}</span></code> draws a
+hard trial three times as often (<a class="reference internal" href="segment/config.html"><span class="doc">Config reference</span></a>).</p>
+<p>Which trials the model barely managed is measured, not guessed. Every
+prediction run keeps the labels it wrote in its folder under <code class="docutils literal notranslate"><span class="pre">labels/</span></code>
+(<code class="docutils literal notranslate"><span class="pre">{stem}_predictions.tsv</span></code>, beside <code class="docutils literal notranslate"><span class="pre">onset_curves.npz</span></code>), and the moment the last
+trial the table shows becomes curated, each trial’s final labels are scored
+against what its run said — an F1 per trial and event type:</p>
+<ul class="simple">
+<li><p><strong>State labels</strong> match at IoU ≥ 0.5, the <code class="docutils literal notranslate"><span class="pre">f1&#64;50</span></code> the pipeline selects its
+checkpoints on.</p></li>
+<li><p><strong>Point labels</strong> match within the run’s own <strong>tolerance</strong> — the precision the
+model was trained to, read from the run folder (the onset model’s
+<code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, half of spot’s <code class="docutils literal notranslate"><span class="pre">focus_window_ms</span></code>). Nothing to pick; set the
+section’s <strong>Tolerance</strong> only to judge every run at one number, or for an old
+run folder that carries none.</p></li>
+</ul>
+<p>The scores land in the metadata table as <code class="docutils literal notranslate"><span class="pre">review_f1_state</span></code> and
+<code class="docutils literal notranslate"><span class="pre">review_f1_point</span></code> (blank where a trial had nothing of that type), a message
+says how the session did, and every trial scoring <strong>below the threshold</strong>
+(the section’s <em>Flag below F1</em>, default 0.5) is flagged <code class="docutils literal notranslate"><span class="pre">hard</span></code>. Auto-flagging
+only ever adds: a trial you flagged by hand stays hard whatever it scored.
+A trial no run predicted into is not scored. <strong>Score now</strong> runs the same
+comparison without waiting for the last trial.</p>
+</section>
 <section id="doing-all-of-that-again-next-session">
 <h2>Doing all of that again next session<a class="headerlink" href="#doing-all-of-that-again-next-session" title="Link to this heading">#</a></h2>
 <p>Scope, mode, grid layout and review window are settings you will set the same
@@ -731,6 +763,7 @@ review, save — and replays it in one press. See
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope-which-labels">Scope: which labels</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#modes-how-a-label-gets-curated">Modes: how a label gets curated</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-grids">The grids</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hard-trials-and-how-the-model-did">Hard trials, and how the model did</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#doing-all-of-that-again-next-session">Doing all of that again next session</a></li>
 </ul>
   </nav></div>
