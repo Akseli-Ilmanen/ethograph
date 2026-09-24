@@ -7,7 +7,7 @@ They are rendered in the documentation under
 
 ## Add your workflow/dataset example!
 
-If you develop a workflow with ethograph that others could re-use (a dataset
+If you develop a workflow with ethograph that others could reuse (a dataset
 conversion, a feature-extraction recipe, a training setup), please share it.
 Any of these works:
 

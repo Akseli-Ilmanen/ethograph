@@ -54,7 +54,7 @@ and you consider it finished.
 (target-add-your-example)=
 ## Add your workflow/dataset example!
 
-If you develop a workflow with ethograph that others could re-use (a dataset
+If you develop a workflow with ethograph that others could reuse (a dataset
 conversion, a feature-extraction recipe, a training setup), please share it. Any of these works:
 
 - **Open a pull request** that adds your Jupyter notebook to the
