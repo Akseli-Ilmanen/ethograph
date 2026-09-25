@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ethograph.labels.curve_confidence import CurveStats
+from ethograph.labels.confidence import CurveStats
 from ethograph.labels.intervals import LABELING_AUTOMATED, LABELING_CURATED, LABELING_MANUAL
 from ethograph.labels.rescore import RULES, confidence_of, curve_rate, rescore_labels, rule_value, yaml_snippet
 

@@ -49,7 +49,7 @@ Entropy across classes says nothing useful about this: the question is not
 "which class" but "**where** on the curve", and the alternatives are other
 *moments*, not other classes. So the confidence is a statistic of the
 curve's **shape around its peak**, read within a window $w$ of the peak
-(`ethograph/labels/curve_confidence.py`):
+(`ethograph/labels/confidence.py`):
 
 $$
 \text{peak} = p(t^\ast), \qquad

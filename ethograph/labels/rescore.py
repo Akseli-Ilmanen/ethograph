@@ -1,7 +1,7 @@
 """Re-reading a run's curves under a rule the reviewer chose — the confidence knob, Qt-free.
 
 A point-event model writes one ``confidence`` per label from its curve
-(:mod:`ethograph.labels.curve_confidence`), under a rule the model fixed. How
+(:mod:`ethograph.labels.confidence`), under a rule the model fixed. How
 much a smeared bump should count against a second candidate is a review
 preference, not a model constant, and the reviewer has the histogram in
 front of them — so the rule is set in the grids' ``Histogram…`` popup, where
@@ -19,7 +19,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ethograph.labels.curve_confidence import CurveStats, curve_stats, window_samples
+from ethograph.labels.confidence import CurveStats, curve_stats, window_samples
 from ethograph.labels.intervals import LABELING_AUTOMATED
 from ethograph.labels.onset_curves import TrialCurves
 

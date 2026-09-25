@@ -103,7 +103,7 @@ def spot_entry(
     clock, for entries that do not state their own.
 
     A class's curve is read as ``infer.max_events_per_trial`` events at most
-    (:func:`~ethograph.labels.curve_confidence.curve_events`), in time order.
+    (:func:`~ethograph.labels.confidence.curve_events`), in time order.
     """
     by_class: dict[str, list[tuple[int, float]]] = {}
     for event in entry.get("events", []):

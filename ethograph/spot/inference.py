@@ -38,7 +38,7 @@ from ethograph.labels.tsv_store import save_labels_tsv
 from ethograph.segment.sessions import Session
 from ethograph.spot import dataset as dataset_stage
 from ethograph.spot.config import ResolvedClip, SpotConfig, config_to_dict
-from ethograph.spot.predict import SpottedEvent, flagged, read_predictions, spot_entry, to_labels_frame
+from ethograph.spot.prediction_sets import SpottedEvent, flagged, read_predictions, spot_entry, to_labels_frame
 from ethograph.spot.vendored import run_logged, script_command
 
 logger = logging.getLogger(__name__)

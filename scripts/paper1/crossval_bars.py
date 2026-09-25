@@ -4,7 +4,7 @@ Reads every ``cv_{bird}_{arch}_all_loss`` cross-validation folder under
 :data:`ROOT`; each fold in ``folds.tsv`` is one held-out session. Nested
 bars: bird → metric (frame F1, F1@50, F1@75, F1@90) → architecture. Bar
 height is the mean over folds, the error bar its SEM, and the dots are the
-individual folds. Writes ``crossval_bars.{pdf,png}`` into :data:`ROOT`.
+individual folds. Writes ``crossval_bars.{pdf,svg,png}`` into :data:`ROOT`.
 
     python scripts/paper1/crossval_bars.py
 """
@@ -14,9 +14,26 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Export settings CorelDRAW opens cleanly (same as scripts/paper1/session.py::save_pdf):
+# TrueType (42) rather than Type 3 fonts, SVG text as outlines, no path simplification.
+mpl.rcParams.update(
+    {
+        # SVG: real <text> elements (Corel ignores the <use>-referenced glyph outlines "path" writes).
+        "svg.fonttype": "none",
+        # PDF: the 14 core fonts are never embedded, so Corel does not meet matplotlib's CID subsets.
+        "pdf.use14corefonts": True,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "text.usetex": False,
+        "path.simplify": False,
+    }
+)
 
 ROOT = Path(r"C:\Users\aksel\Documents\Code\ethograph\projects\paper\crossval_birds")
 #: ``raw`` or ``postprocessed`` — which column family of ``folds.tsv`` to plot.
@@ -24,9 +41,9 @@ STAGE = "postprocessed"
 #: ``folds.tsv`` column suffix → tick label, in plotting order.
 METRICS = {"frame_f1": "F1@frame", "f1@50": "F1@50", "f1@75": "F1@75", "f1@90": "F1@90"}
 FOLDER_RE = re.compile(r"^cv_(?P<bird>[^_]+)_(?P<arch>.+)_all_loss$")
-ARCH_NAMES = {"mlp": "MLP", "c2f_tcn": "C2F-TCN"}
+ARCH_NAMES = {"mlp": "MLP (per-frame baseline)", "c2f_tcn": "C2F-TCN"}
 COLORS = {"mlp": "#b0b7c3", "c2f_tcn": "#2a6fdb"}
-BIRD_NAMES = {"crow1": "Bird 1", "crow2": "Bird 2", "crow3": "Bird 3"}
+BIRD_NAMES = {"crow1": "Crow 1", "crow2": "Crow 2", "crow3": "Crow 3"}
 
 
 def load_folds(root: Path) -> pd.DataFrame:
@@ -103,7 +120,7 @@ def plot(df: pd.DataFrame) -> plt.Figure:
             va="top",
             fontsize=12,
         )
-    ax.set_ylabel("F1 (%)", fontsize=13)
+    ax.set_ylabel("F1 Score (%)", fontsize=13)
     ax.tick_params(axis="y", labelsize=12)
     ax.set_ylim(0, 100)
     ax.spines[["top", "right"]].set_visible(False)
@@ -119,6 +136,9 @@ def plot(df: pd.DataFrame) -> plt.Figure:
         ncols=len(archs),
         fontsize=12,
     )
+    # CorelDRAW drops SVG groups that carry a clip-path, so nothing may be clipped.
+    for artist in [*ax.patches, *ax.collections, *ax.lines]:
+        artist.set_clip_on(False)
     fig.tight_layout()
     return fig
 
@@ -128,10 +148,13 @@ def main() -> None:
     summary = df.groupby(["bird", "metric", "arch"])["score"].agg(["mean", "std", "count"])
     print(summary.round(2).to_string())
     fig = plot(df)
-    for ext in ("pdf", "png"):
-        out = ROOT / f"crossval_bars.{ext}"
-        fig.savefig(out, dpi=300, bbox_inches="tight")
-        print(f"Wrote {out}")
+    stem = ROOT / "crossval_bars"
+    with PdfPages(stem.with_suffix(".pdf")) as pdf:
+        pdf.savefig(fig, dpi=300, bbox_inches=None, metadata={"Creator": "matplotlib"})
+    fig.savefig(stem.with_suffix(".svg"), format="svg")
+    fig.savefig(stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
+    for ext in ("pdf", "svg", "png"):
+        print(f"Wrote {stem.with_suffix('.' + ext)}")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ This module is that path. It mirrors the vendored ``test_e2e.py`` exactly:
 the same window starts (``ActionSpotVideoDataset``), the same padding, the
 same evaluation transform (centre crop + ImageNet normalisation), the same
 score accumulation over overlapping windows, and the same high-recall entry
-the rest of the pipeline reads (:func:`~ethograph.spot.predict.spot_entry`).
+the rest of the pipeline reads (:func:`~ethograph.spot.prediction_sets.spot_entry`).
 Frames are kept in a rolling buffer of one window, so memory is bounded
 whatever the trial's length.
 

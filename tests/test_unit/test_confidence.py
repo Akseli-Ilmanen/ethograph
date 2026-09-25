@@ -11,14 +11,16 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from ethograph.labels.curve_confidence import (
+from ethograph.labels.confidence import (
     STATISTICS,
     CurveStats,
     choose_statistic,
     curve_stats,
+    entropy_confidence,
     focus_window_s,
     rank_auc,
     rank_statistics,
+    segment_confidence,
     window_samples,
 )
 
@@ -26,6 +28,22 @@ from ethograph.labels.curve_confidence import (
 def _bump(length, centre, height, width=3):
     x = np.arange(length)
     return height * np.exp(-0.5 * ((x - centre) / width) ** 2)
+
+
+class TestFrameWise:
+    def test_entropy_confidence_is_one_when_certain_and_zero_when_uniform(self):
+        probs = np.array([[1.0, 0.0, 0.0], [1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0.0]])
+        conf = entropy_confidence(probs)
+        assert conf.dtype == np.float32
+        assert conf[0] == pytest.approx(1.0, abs=1e-6)
+        assert conf[1] == pytest.approx(0.0, abs=1e-6)
+        assert 0.0 < conf[2] < 1.0
+
+    def test_segment_confidence_is_the_mean_inside_else_the_peak(self):
+        time = np.arange(5, dtype=float)
+        conf = np.array([0.1, 0.2, 0.4, 0.6, 0.9])
+        assert segment_confidence(conf, time, 1.0, 3.0) == pytest.approx(0.4)
+        assert segment_confidence(conf, time, 10.0, 11.0) == pytest.approx(0.9)
 
 
 class TestStats:
@@ -119,13 +137,13 @@ class TestSeveralEvents:
     a neighbour is neither a rival nor a smear."""
 
     def test_one_event_is_curve_stats_exactly(self):
-        from ethograph.labels.curve_confidence import curve_events
+        from ethograph.labels.confidence import curve_events
 
         curve = _bump(500, 250, 0.9) + _bump(500, 100, 0.85)
         assert curve_events(curve, window=10, gap=50, max_events=1) == [curve_stats(curve, window=10)]
 
     def test_peaks_within_the_gap_are_one_event_and_the_cap_holds(self):
-        from ethograph.labels.curve_confidence import event_peaks
+        from ethograph.labels.confidence import event_peaks
 
         curve = _bump(500, 100, 0.9) + _bump(500, 120, 0.8) + _bump(500, 300, 0.7) + _bump(500, 450, 0.6)
         assert event_peaks(curve, gap=50, max_events=10) == [100, 300, 450]  # 120 is within 50 of a taller peak
@@ -133,7 +151,7 @@ class TestSeveralEvents:
         assert event_peaks(_bump(500, 250, 0.02), gap=50, max_events=3) == []  # a blip is not an event
 
     def test_a_neighbouring_event_is_not_a_rival_or_a_smear(self):
-        from ethograph.labels.curve_confidence import curve_events
+        from ethograph.labels.confidence import curve_events
 
         curve = _bump(500, 100, 0.9) + _bump(500, 350, 0.85)
         alone = curve_stats(_bump(500, 100, 0.9), window=10)
@@ -143,7 +161,7 @@ class TestSeveralEvents:
         assert second.found and second.focus > 0.8
 
     def test_a_curve_with_no_peak_still_reads_as_one_not_found_event(self):
-        from ethograph.labels.curve_confidence import curve_events
+        from ethograph.labels.confidence import curve_events
 
         events = curve_events(np.linspace(0.0, 0.9, 500), window=10, gap=50, max_events=3)
         assert len(events) == 1 and not events[0].found

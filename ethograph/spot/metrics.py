@@ -26,7 +26,7 @@ import pandas as pd
 import yaml
 
 from ethograph.spot.config import ResolvedClip, SpotConfig
-from ethograph.spot.predict import read_predictions, spot_entry
+from ethograph.spot.prediction_sets import read_predictions, spot_entry
 
 logger = logging.getLogger(__name__)
 

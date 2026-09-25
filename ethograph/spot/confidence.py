@@ -1,6 +1,6 @@
 """How confident a spotted event is: the curve's shape, not its height.
 
-The statistics themselves live in :mod:`ethograph.labels.curve_confidence`,
+The statistics themselves live in :mod:`ethograph.labels.confidence`,
 shared with the lightgbm model; this module fixes which one the pixel spotter
 writes and adds the one helper only it needs (:func:`densify`).
 
@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ethograph.labels.curve_confidence import (
+from ethograph.labels.confidence import (
     CurveStats,
     curve_events,
     curve_stats,

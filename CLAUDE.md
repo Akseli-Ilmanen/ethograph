@@ -45,6 +45,7 @@ data, filt = eto.sel_valid(da, kwargs)
 - **Never special-case a `dataset_key` in GUI code** — per-dataset settings live in `DATASETS` metadata.
 - **Never call `QFileDialog` directly** — go through `gui/file_dialogs.py` (wizard tabs excepted: they hold no `app_state`).
 - **Never hand-roll `trial_offset + t`.** Conversions go through `app_state.to_display` / `from_display`.
+- **Paper figures are exported for CorelDRAW**: the rcParams + `clip_on` recipe in `scripts/paper1/README.md`, never matplotlib's defaults.
 
 ## File Structure
 
@@ -76,6 +77,7 @@ ethograph/labels/
     review_metrics.py         # Curated labels vs a run's predictions → per-trial F1, the `difficulty` column (Qt-free)
     octron_project.py         # The OCTRON project folder in OCTRON's own layout
     pose_project.py           # A DeepLabCut/LightningPose project folder as two sessions (extract frames, refine pose)
+    confidence.py             # Every confidence a model writes: frame entropy, segment mean, curve shape
     ml.py, tsv_store.py, predictions.py, crowsetta_format.py, converters.py, export.py
 
 ethograph/io/
@@ -103,7 +105,7 @@ ethograph/segment/            # Segmentation pipeline (docs: docs/source/models/
     dlc2action/, specscalpel/, lady/   # Vendored — see each NOTICE.md; excluded from ruff/mypy
 
 ethograph/spot/               # Pixel point-event spotting (docs: docs/source/models/spot/)
-    config.py, dataset.py, features.py, project.py, inference.py, stream.py, predict.py, confidence.py, metrics.py, pose_batch.py
+    config.py, dataset.py, features.py, project.py, inference.py, stream.py, prediction_sets.py, crossval.py, confidence.py, metrics.py, pose_batch.py
     vendored.py               # Driving the vendored E2E-Spot (python -m subprocesses, retries, logs)
     e2espot/                  # Vendored E2E-Spot in upstream's layout — see its NOTICE.md; excluded from ruff/mypy
     msagsm.py                 # MultiScaleGatedShift, written from the paper

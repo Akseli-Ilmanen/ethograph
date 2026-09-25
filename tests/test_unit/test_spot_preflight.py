@@ -9,7 +9,7 @@ import pytest
 from ethograph.spot.confidence import CurveStats
 from ethograph.spot.config import config_from_dict
 from ethograph.spot.inference import flag_out_of_order
-from ethograph.spot.predict import SpottedEvent
+from ethograph.spot.prediction_sets import SpottedEvent
 from ethograph.spot.vendored import check_vram
 
 

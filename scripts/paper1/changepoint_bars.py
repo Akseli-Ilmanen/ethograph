@@ -8,7 +8,7 @@ one held-out session.
 Architectures in :data:`EXCLUDE` are skipped. Nested bars: architecture →
 metric (F1@50, F1@90) → with / without changepoint features. Bar height is
 the mean over folds, the error bar its SEM, and the dots are the individual
-folds. Writes ``changepoint_bars.{pdf,png}`` into
+folds. Writes ``changepoint_bars.{pdf,svg,png}`` into
 :data:`ROOT`.
 
     python scripts/paper1/changepoint_bars.py
@@ -19,9 +19,26 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Export settings CorelDRAW opens cleanly (same as scripts/paper1/session.py::save_pdf):
+# TrueType (42) rather than Type 3 fonts, SVG text as outlines, no path simplification.
+mpl.rcParams.update(
+    {
+        # SVG: real <text> elements (Corel ignores the <use>-referenced glyph outlines "path" writes).
+        "svg.fonttype": "none",
+        # PDF: the 14 core fonts are never embedded, so Corel does not meet matplotlib's CID subsets.
+        "pdf.use14corefonts": True,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "text.usetex": False,
+        "path.simplify": False,
+    }
+)
 
 ROOT = Path(r"C:\Users\aksel\Documents\Code\ethograph\projects\paper\changepoint")
 #: ``raw`` or ``postprocessed`` — which column family of ``folds.tsv`` to plot.
@@ -30,7 +47,7 @@ METRICS = ("f1@50", "f1@90")
 FOLDER_RE = re.compile(r"^cv_(?P<dataset>[^_]+)_(?P<arch>.+)_all(?P<no_cp>_no_cp)?_loss$")
 CONDITIONS = (("with changepoint features", False), ("without changepoint features", True))
 COLORS = {False: "#2a6fdb", True: "#b0b7c3"}
-ARCH_NAMES = {"mlp": "MLP", "mstcn": "MS-TCN", "c2f_tcn": "C2F-TCN"}
+ARCH_NAMES = {"mlp": "MLP (per-frame baseline)", "mstcn": "MS-TCN", "c2f_tcn": "C2F-TCN"}
 EXCLUDE = {"c2f_transformer"}
 
 
@@ -123,6 +140,9 @@ def plot(df: pd.DataFrame) -> plt.Figure:
         ncols=2,
         fontsize=12,
     )
+    # CorelDRAW drops SVG groups that carry a clip-path, so nothing may be clipped.
+    for artist in [*ax.patches, *ax.collections, *ax.lines]:
+        artist.set_clip_on(False)
     fig.tight_layout()
     return fig
 
@@ -132,10 +152,13 @@ def main() -> None:
     summary = df.groupby(["arch", "metric", "no_cp"])["score"].agg(["mean", "std", "count"])
     print(summary.round(2).to_string())
     fig = plot(df)
-    for ext in ("pdf", "png"):
-        out = ROOT / f"changepoint_bars.{ext}"
-        fig.savefig(out, dpi=300, bbox_inches="tight")
-        print(f"Wrote {out}")
+    stem = ROOT / "changepoint_bars"
+    with PdfPages(stem.with_suffix(".pdf")) as pdf:
+        pdf.savefig(fig, dpi=300, bbox_inches=None, metadata={"Creator": "matplotlib"})
+    fig.savefig(stem.with_suffix(".svg"), format="svg")
+    fig.savefig(stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
+    for ext in ("pdf", "svg", "png"):
+        print(f"Wrote {stem.with_suffix('.' + ext)}")
 
 
 if __name__ == "__main__":

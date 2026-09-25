@@ -13,7 +13,7 @@ pipelines differ in what they read, not in how a run is expressed.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -241,32 +241,13 @@ class Project:
     ) -> list[RunResult]:
         """Stage 3: one fold per session, each predicting the session it held out.
 
-        The fold's split is written the way the segmentation pipeline writes
-        it — ``train.split.holdout_sessions`` — so "held out" means the same
-        thing in both. Every fold is a project of its own under
-        ``cross_validation/{session}/``: the same frames (never decoded twice),
-        its own ``dataset/`` with the held-out session as the whole test split,
-        its own ``runs/fold_{session}``. A fold ends by scoring that test split
-        (``test_metrics.yaml`` — the trained-on-the-others number) and writing
-        its predictions into the held-out session's ``labels/``, so what the
-        GUI opens was never trained on.
+        Every fold is a project of its own under ``cross_validation/{session}/``
+        (see :mod:`ethograph.spot.crossval`), so what the GUI opens was never
+        trained on.
         """
-        cfg = self._config
-        folds: list[RunResult] = []
-        specs = cfg.select_sessions(sessions)
-        for spec in specs:
-            stem = spec.label
-            split = replace(cfg.train.split, holdout_sessions=[spec.source])
-            train = replace(cfg.train, split=split, run_name=f"fold_{stem}")
-            fold_cfg = replace(cfg, train=train, root=cfg.cross_validation_dir / stem, frames=cfg.frames_dir)
-            fold = Project(fold_cfg)
-            logger.info("Fold %d/%d: holding out %s", len(folds) + 1, len(specs), stem)
-            fold.materialise(workers=workers)
-            result = fold.train()
-            fold.evaluate(run=result.run_dir)
-            fold.inference(run=result.run_dir, sessions=[spec.source], workers=workers)
-            folds.append(result)
-        return folds
+        from ethograph.spot.crossval import cross_validate
+
+        return cross_validate(self._config, sessions=sessions, workers=workers)
 
     def inference(
         self, run: str | Path | None = None, sessions: Iterable[str | Path] | None = None, workers: int | None = None

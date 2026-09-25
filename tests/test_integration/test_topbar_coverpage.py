@@ -1318,19 +1318,3 @@ def test_without_a_project_folder_your_own_data_is_shut_out(gui, tmp_path):
 
     assert not any(w.isEnabled() for w in page._needs_project)
     assert "choose a folder" in page._project_hint.text()
-
-
-def test_a_template_adopts_its_own_download_folder(gui, tmp_path):
-    """Its mapping.txt sits beside its data, so that folder is the project."""
-    from ethograph.gui.cover_page import CoverPage
-
-    shell, meta = gui
-    page = CoverPage(shell, meta.io_widget)
-    session = tmp_path / "moll2025"
-    session.mkdir()
-    (session / "session.nc").touch()
-
-    meta.app_state.project_path = None
-    meta.app_state.nc_file_path = str(session / "session.nc")
-    page._adopt_template_project()
-    assert page._project_dir() == session

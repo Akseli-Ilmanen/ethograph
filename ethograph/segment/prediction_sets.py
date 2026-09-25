@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ethograph.labels.confidence import segment_confidence
 from ethograph.labels.intervals import LABELING_AUTOMATED, NO_RECIPIENT
 from ethograph.labels.onset_curves import labels_dir, write_provenance
 from ethograph.labels.tsv_store import save_labels_tsv
@@ -24,11 +25,6 @@ def prediction_run_dir(session_path: Path, run_name: str, timestamp: str) -> Pat
     ``infer()`` calls never overwrite each other's predictions.
     """
     return labels_dir(session_path) / f"{PREDICTIONS_PREFIX}_{run_name}_{timestamp}"
-
-
-def _segment_confidence(conf: np.ndarray, time: np.ndarray, onset: float, offset: float) -> float:
-    m = (time >= onset) & (time <= offset)
-    return float(conf[m].mean()) if m.any() else float(conf.max())
 
 
 PREDICTION_COLUMNS = [
@@ -69,7 +65,7 @@ def label_rows(
                 "onset_s": onset,
                 "offset_s": offset,
                 "event_type": "state",
-                "confidence": _segment_confidence(curves[lid], time, onset, offset),
+                "confidence": segment_confidence(curves[lid], time, onset, offset),
                 "labeling_method": LABELING_AUTOMATED,
                 "changepoint_corrected": int(corrected),
                 "prediction_source": source,

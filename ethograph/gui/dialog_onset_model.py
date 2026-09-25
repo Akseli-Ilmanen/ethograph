@@ -71,7 +71,7 @@ from ethograph.gui.notify import notify
 from ethograph.io.catalog import PynappleLoader, XarrayLoader
 from ethograph.labels import onset_curves
 from ethograph.labels import onset_model as om
-from ethograph.labels.curve_confidence import DESCRIPTIONS
+from ethograph.labels.confidence import DESCRIPTIONS
 from ethograph.labels.intervals import (
     EVENT_TYPE_POINT,
     EVENT_TYPE_STATE,

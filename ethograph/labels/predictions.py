@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ethograph.labels.confidence import entropy_confidence
 from ethograph.labels.intervals import SUBJECT_COLUMNS
 
 logger = logging.getLogger(__name__)
@@ -50,14 +51,7 @@ def prediction_to_labels_and_confidence(
     pred = np.asarray(pred)
 
     if pred.ndim == 2:
-        n_classes = pred.shape[1]
-        labels = np.argmax(pred, axis=1)
-        # 1 - normalized entropy: 1.0 = certain, 0.0 = uniform
-        eps = 1e-10
-        entropy = -np.sum(pred * np.log(pred + eps), axis=1)
-        max_entropy = np.log(n_classes)
-        confidence = 1.0 - (entropy / max_entropy) if max_entropy > 0 else np.ones(len(pred))
-        return labels, confidence.astype(np.float32)
+        return np.argmax(pred, axis=1), entropy_confidence(pred)
 
     # Shape (T,) — already dense labels
     return pred.astype(int), None

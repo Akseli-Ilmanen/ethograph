@@ -68,9 +68,9 @@ from ethograph.gui.dialog_session_folder import choose_session_folder
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.project import (
     DropRecord,
+    chosen_project_dir,
     is_foreign_session,
     list_drops,
-    project_dir_of,
     record_drop,
     register_session,
     restore_drop,
@@ -590,7 +590,7 @@ class CoverPage(QDialog):
         live from the start; moving to a folder of one's own is what a real study
         does, and the bar says so.
         """
-        if project_dir_of(self.app_state) is not None:
+        if chosen_project_dir(self.app_state) is not None:
             return
         seed_defaults()
         starter = defaults_dir()
@@ -765,7 +765,7 @@ class CoverPage(QDialog):
         self._refresh_project_ui()
 
     def _project_dir(self) -> Path | None:
-        return project_dir_of(self.app_state)
+        return chosen_project_dir(self.app_state)
 
     def _refresh_project_ui(self) -> None:
         """Mirror ``app_state.project_path`` into the bar, the reopen list and the gate."""
@@ -1120,25 +1120,12 @@ class CoverPage(QDialog):
     def _on_template(self):
         """A template is exempt from the project gate: it brings its own folder.
 
-        The downloaded session folder becomes the project, because that is where the
-        template's own ``mapping.txt`` sits — so editing the label names edits *that*
-        file, next to the data it describes, instead of asking the user to pick a
-        folder before they have even seen the GUI.
+        While it is loaded its download folder is the project (``project_dir_of``),
+        so editing the label names edits the template's own ``mapping.txt``. The
+        user's chosen project is left alone and is what the next start opens on.
         """
         self.io_widget._on_select_template_clicked()
-        self._adopt_template_project()
         self._close_if_loaded()
-
-    def _adopt_template_project(self) -> None:
-        from ethograph.io.session_layout import session_dir_of
-
-        source = getattr(self.app_state, "nc_file_path", None) or getattr(self.app_state, "nwb_file_path", None)
-        if not source:
-            return
-        folder = session_dir_of(source)
-        if folder.is_dir():
-            self.app_state.project_path = str(folder)
-            self._refresh_project_ui()
 
     def _on_wizard(self):
         self.io_widget._on_create_nc_clicked()

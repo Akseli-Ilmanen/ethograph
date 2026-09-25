@@ -39,6 +39,8 @@ from pathlib import Path
 
 import yaml
 
+from ethograph.datasets import DOWNLOAD_BASE
+from ethograph.io.session_layout import session_dir_of
 from ethograph.utils.paths import SETTINGS_DIR
 
 logger = logging.getLogger(__name__)
@@ -65,13 +67,42 @@ DROP_STATE_FIELDS: tuple[str, ...] = (
 )
 
 
-def project_dir_of(app_state) -> Path | None:
-    """The chosen project folder, or ``None`` when none is set or it no longer exists."""
+def chosen_project_dir(app_state) -> Path | None:
+    """The user's own project folder, or ``None`` when none is set or it no longer exists.
+
+    This is the persisted ``app_state.project_path``; a loaded template never
+    touches it, so the next start opens on the user's study, not a template.
+    """
     value = getattr(app_state, "project_path", None)
     if not isinstance(value, str) or not value:
         return None
     path = Path(value)
-    return path if path.is_dir() else None
+    # Older versions saved a template's folder here; it is never the user's study.
+    return path if path.is_dir() and not _is_template_path(path) else None
+
+
+def _is_template_path(path: str | Path) -> bool:
+    return DOWNLOAD_BASE.resolve() in Path(path).resolve().parents
+
+
+def template_session_dir(app_state) -> Path | None:
+    """The loaded template's download folder, or ``None`` when the data is not a template."""
+    source = getattr(app_state, "nc_file_path", None) or getattr(app_state, "nwb_file_path", None)
+    if not isinstance(source, str) or not source:
+        return None
+    if not _is_template_path(source):
+        return None
+    folder = session_dir_of(source)
+    return folder if folder.is_dir() else None
+
+
+def project_dir_of(app_state) -> Path | None:
+    """The project the loaded data works in.
+
+    A template is its own project — its ``mapping.txt`` sits beside its data — for
+    as long as it is loaded; anything else works in :func:`chosen_project_dir`.
+    """
+    return template_session_dir(app_state) or chosen_project_dir(app_state)
 
 
 #: The settings file older versions kept in the project folder. Nothing reads it
@@ -89,7 +120,7 @@ def migrate_project_yaml(app_state) -> list[str]:
     so; ``[]`` when there is nothing to migrate. The file is left on disk — it is
     the user's, and deleting something we no longer own is not our call.
     """
-    project = project_dir_of(app_state)
+    project = chosen_project_dir(app_state)
     if project is None:
         return []
     path = project / LEGACY_SETTINGS_FILENAME

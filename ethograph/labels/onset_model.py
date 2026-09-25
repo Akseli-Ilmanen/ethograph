@@ -25,7 +25,7 @@ frame. At inference the per-frame probability is Gaussian-smoothed with the
 same tolerance and its tallest peak becomes the predicted onset.
 
 Confidence is a statistic of that curve around its tallest peak
-(:mod:`ethograph.labels.curve_confidence`): the peak's **height** by default,
+(:mod:`ethograph.labels.confidence`): the peak's **height** by default,
 or — when the model's own held-out record says it separates hits from misses
 clearly better — the curve's **shape** (how much of it sits under that one
 bump, and whether a rival stands elsewhere). Every candidate is readable
@@ -109,7 +109,7 @@ from ethograph.features.columns import (
     sampling_rate,
 )
 from ethograph.io.catalog import INDIVIDUAL_DIMS
-from ethograph.labels.curve_confidence import (
+from ethograph.labels.confidence import (
     DESCRIPTIONS,
     CurveStats,
     choose_statistic,
@@ -821,7 +821,7 @@ def read_curve(curve: np.ndarray, fs: float, tolerance_s: float) -> CurveStats:
     """The curve's statistics around its tallest peak.
 
     The focus window is the model's own ``tolerance_s`` twice over
-    (:func:`~ethograph.labels.curve_confidence.focus_window_s`) — the
+    (:func:`~ethograph.labels.confidence.focus_window_s`) — the
     timescale the user declared, in this clock's samples.
     """
     return curve_stats(curve, window_samples(focus_window_s(tolerance_s), fs))
@@ -855,7 +855,7 @@ class TargetCalibration:
 
     ``statistic`` is the one thing here that *is* applied to a label: which
     reading of the curve is written as its confidence. Chosen on the held-out
-    record (:func:`~ethograph.labels.curve_confidence.choose_statistic`) —
+    record (:func:`~ethograph.labels.confidence.choose_statistic`) —
     ``peak`` unless a shape statistic separates hits from misses clearly
     better; ``aucs`` is the record of every candidate, so the choice can be
     read.

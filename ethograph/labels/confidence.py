@@ -1,4 +1,9 @@
-"""How much to trust an event read off a per-frame curve — the statistics, shared.
+"""How much to trust a prediction — every confidence number the models write, in one place.
+
+Two kinds live here. The frame-wise kind belongs to the segmentation models:
+:func:`entropy_confidence` reads a per-frame class distribution and
+:func:`segment_confidence` averages it over a predicted interval. The rest of
+the module is the curve kind, for point-event models.
 
 Every point-event model here ends the same way: a per-frame curve per class,
 the tallest peak is the event, and one number beside it says how much to
@@ -28,6 +33,31 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.stats import rankdata
+
+# -- frame-wise: segmentation models ------------------------------------
+
+
+def entropy_confidence(probs: np.ndarray) -> np.ndarray:
+    """Per-frame confidence of a ``(T, C)`` class distribution: ``1 - normalised entropy``.
+
+    1.0 = one class certain, 0.0 = uniform over the classes.
+    """
+    probs = np.asarray(probs)
+    eps = 1e-10
+    max_entropy = np.log(probs.shape[1])
+    if max_entropy <= 0:
+        return np.ones(len(probs), dtype=np.float32)
+    entropy = -np.sum(probs * np.log(probs + eps), axis=1)
+    return (1.0 - entropy / max_entropy).astype(np.float32)
+
+
+def segment_confidence(conf: np.ndarray, time: np.ndarray, onset: float, offset: float) -> float:
+    """Mean frame confidence over ``[onset, offset]``; the curve's maximum when no frame falls inside."""
+    m = (time >= onset) & (time <= offset)
+    return float(conf[m].mean()) if m.any() else float(conf.max())
+
+
+# -- curve statistics: point-event models --------------------------------
 
 #: The neighbourhood of the peak that counts as "the same event" for
 #: :attr:`CurveStats.focus` and :attr:`CurveStats.ratio`, as a multiple of
@@ -274,7 +304,7 @@ def choose_statistic(aucs: dict[str, float], default: str = "peak") -> str:
     base = aucs.get(default)
     if base is None or not np.isfinite(base):
         finite = {k: v for k, v in aucs.items() if np.isfinite(v)}
-        return max(finite, key=finite.get) if finite else default
+        return max(finite, key=lambda k: finite[k]) if finite else default
     best = max((k for k in aucs if np.isfinite(aucs[k])), key=lambda k: aucs[k])
     return best if aucs[best] > base + MIN_AUC_GAIN else default
 

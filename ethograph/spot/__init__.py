@@ -39,7 +39,7 @@ from ethograph.spot.config import (
 from ethograph.spot.dataset import TrialRecord, materialise
 from ethograph.spot.features import export_block, export_features
 from ethograph.spot.pose_batch import fill_and_export_video, merge_keypoints
-from ethograph.spot.predict import SpottedEvent, read_predictions, spot_entry
+from ethograph.spot.prediction_sets import SpottedEvent, read_predictions, spot_entry
 from ethograph.spot.project import Project, RunResult, architectures
 from ethograph.spot.vendored import describe_architecture
 from ethograph.utils.logging import enable_console_logging

@@ -68,12 +68,12 @@ class TestToLabelsFrame:
 
     def _event(self):
         from ethograph.spot.confidence import CurveStats
-        from ethograph.spot.predict import SpottedEvent
+        from ethograph.spot.prediction_sets import SpottedEvent
 
         return SpottedEvent(video_id="v", label=31, frame=10.0, video_s=0.1, stats=CurveStats(0, 0.9, 0.9, 0.9))
 
     def test_configured_individual_is_stamped_on_every_row(self):
-        from ethograph.spot.predict import to_labels_frame
+        from ethograph.spot.prediction_sets import to_labels_frame
 
         df = to_labels_frame([self._event()], {"v": (1, 0.0)}, source="s", individual="A")
         assert df["individual"].tolist() == ["A"]
@@ -153,7 +153,7 @@ class TestValTruth:
 class TestCurveLength:
     def test_every_class_spans_the_whole_trial(self, tmp_path):
         """Upstream's recall entries state no length; the trial's own is used."""
-        from ethograph.spot.predict import spot_entry
+        from ethograph.spot.prediction_sets import spot_entry
 
         config = config_from_dict(
             {"sessions": [str(tmp_path / "s.nc")], "labels": {"classes": [31, 32]}, "root": str(tmp_path)}, tmp_path
@@ -192,7 +192,7 @@ class TestPredictionIndividual:
 
     def test_exported_rows_load_as_a_labels_tsv(self, tmp_path):
         from ethograph.labels.tsv_store import load_labels_tsv, save_labels_tsv
-        from ethograph.spot.predict import to_labels_frame
+        from ethograph.spot.prediction_sets import to_labels_frame
 
         event = TestToLabelsFrame()._event()
         path = tmp_path / "ses_predictions.tsv"

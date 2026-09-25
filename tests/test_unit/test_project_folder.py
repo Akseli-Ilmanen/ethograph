@@ -8,9 +8,11 @@ An old file is folded into the settings that replaced it, once.
 
 from pathlib import Path
 
+import pytest
 import yaml
 
-from ethograph.gui.project import migrate_project_yaml
+from ethograph.gui import project as project_mod
+from ethograph.gui.project import chosen_project_dir, migrate_project_yaml, project_dir_of
 
 
 def _write(project: Path, **settings) -> Path:
@@ -76,3 +78,25 @@ def test_migration_survives_a_file_that_is_not_project_settings(app_state, tmp_p
 
     (project / "project.yaml").write_text("just a string", encoding="utf-8")
     assert migrate_project_yaml(app_state) == []
+
+
+def test_a_template_is_the_project_only_while_loaded(app_state, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A template works in its own folder but is never remembered as the user's project."""
+    downloads = tmp_path / "example_data"
+    template = downloads / "moll2025"
+    template.mkdir(parents=True)
+    (template / "session.nc").touch()
+    study = tmp_path / "my_study"
+    study.mkdir()
+    monkeypatch.setattr(project_mod, "DOWNLOAD_BASE", downloads)
+
+    app_state.project_path = str(study)
+    app_state.nc_file_path = str(template / "session.nc")
+    assert project_dir_of(app_state) == template
+    assert chosen_project_dir(app_state) == study
+
+    app_state.nc_file_path = str(study / "session.nc")
+    assert project_dir_of(app_state) == study
+
+    app_state.project_path = str(template)  # saved by an older version
+    assert chosen_project_dir(app_state) is None

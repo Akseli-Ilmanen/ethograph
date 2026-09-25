@@ -58,7 +58,7 @@ MAPPING = Path(r"C:\Users\aksel\Documents\Code\ethograph\projects\crowlab\mappin
 #: The trial drawn. ``None`` takes the first trial with ground truth.
 TRIAL: int | None = 33
 INDIVIDUAL = "Freddy"
-PIN = {"keypoint": "beakTip", "individual": INDIVIDUAL}
+PIN = {"keypoint": "stickTip", "individual": INDIVIDUAL}
 #: Edges of the movement part's time axis (s); ``None`` runs to that end of the trial. The axis
 #: is shifted so ``T_START`` reads 0.
 T_START: float | None = 0.35
