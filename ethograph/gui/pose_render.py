@@ -352,6 +352,51 @@ def _resolve_skeleton_colors(config: dict | None, base_color: str | None) -> dic
     return {**config, "connections": connections, "shapes": shapes}
 
 
+def resolve_skeleton_config(app_state, data_config: dict | None) -> dict | None:
+    """The skeleton every surface draws, after override / library / data precedence.
+
+    *data_config* is the skeleton the pose data itself carries (an NWB
+    ``Skeleton``), or ``None``. Precedence: the user's own drawing
+    (``skeleton_config_override``), then the data's and the library's in the
+    order ``skeleton_source`` asks for (the data's by default). With
+    ``skeleton_use_base`` every edge is recoloured with ``skeleton_base_color``.
+    Shared by the video overlay and the skeleton panel, so both draw the same
+    bones in the same colours.
+    """
+    from ethograph.gui.project import project_dir_of
+    from ethograph.skeleton.library import resolve_skeleton
+
+    override = getattr(app_state, "skeleton_config_override", None)
+    if override is not None:
+        config = override
+    else:
+        library = resolve_skeleton(getattr(app_state, "skeleton_name", None), project_dir_of(app_state))
+        if getattr(app_state, "skeleton_source", "nwb") == "library":
+            config = library or data_config
+        else:
+            config = data_config or library
+    if getattr(app_state, "skeleton_use_base", True):
+        config = _resolve_skeleton_colors(config, getattr(app_state, "skeleton_base_color", None))
+    return config
+
+
+def pose_color_map(app_state, color_prop: str, values: list[str]) -> dict[str, tuple]:
+    """One RGBA per *value* of *color_prop* (``"keypoint"`` or ``"individual"``).
+
+    The pose overlay's colours, so a body part or an animal is the same colour
+    on every surface that draws it: the base colour when ``pose_points_use_base``
+    is on, else the individual palette (with the user's overrides) or the turbo
+    colormap sampled over *values* in order.
+    """
+    if getattr(app_state, "pose_points_use_base", False):
+        base = getattr(app_state, "pose_points_base_color", None) or "#FF3333"
+        rgba = hex_to_rgba(base)
+        return {v: rgba for v in values}
+    if color_prop == "individual":
+        return individual_color_map(values, getattr(app_state, "pose_individual_colors", None))
+    return dict(zip(values, sample_colormap(len(values), "turbo")))
+
+
 def pose_render_to_movement_ds(pr: PoseRenderData) -> xr.Dataset:
     """Rebuild a movement-format poses ``xr.Dataset`` from a ``PoseRenderData``.
 
@@ -759,23 +804,7 @@ class PoseDisplayManager:
         """Skeleton + shapes config after override/base-colour resolution."""
         if not self._skeleton_enabled():
             return None
-        # Precedence: the user's own drawing, then the data's and the library's in
-        # the order ``skeleton_source`` asks for (the data's by default).
-        from ethograph.gui.project import project_dir_of
-        from ethograph.skeleton.library import resolve_skeleton
-
-        override = getattr(self.app_state, "skeleton_config_override", None)
-        if override is not None:
-            config = override
-        else:
-            library = resolve_skeleton(getattr(self.app_state, "skeleton_name", None), project_dir_of(self.app_state))
-            if getattr(self.app_state, "skeleton_source", "nwb") == "library":
-                config = library or pr.skeleton_config
-            else:
-                config = pr.skeleton_config or library
-        if getattr(self.app_state, "skeleton_use_base", True):
-            config = _resolve_skeleton_colors(config, getattr(self.app_state, "skeleton_base_color", None))
-        return config
+        return resolve_skeleton_config(self.app_state, pr.skeleton_config)
 
     def _points_visible(self) -> bool:
         checkbox = getattr(self._data_widget, "pose_show_keypoints_checkbox", None)
@@ -812,20 +841,11 @@ class PoseDisplayManager:
             values += [v for v in properties["individual"].astype(str).unique().tolist() if v not in values]
         else:
             values = properties[color_prop].unique().tolist()
-        if getattr(self.app_state, "pose_points_use_base", False):
-            base = getattr(self.app_state, "pose_points_base_color", None) or "#FF3333"
-            rgba = hex_to_rgba(base)
-            color_map = {v: rgba for v in values}
-        elif color_prop == "individual":
-            color_map = individual_color_map(values, getattr(self.app_state, "pose_individual_colors", None))
-        else:
-            cycle = sample_colormap(len(values), "turbo")
-            color_map = dict(zip(values, cycle))
 
         return OverlayStyle(
             color_prop=color_prop,
             text_prop=text_prop,
-            color_map=color_map,
+            color_map=pose_color_map(self.app_state, color_prop, values),
             point_size=self._data_widget.pose_point_size_spin.value(),
             points_visible=self._points_visible(),
             text_size=self._data_widget.pose_text_size_spin.value(),

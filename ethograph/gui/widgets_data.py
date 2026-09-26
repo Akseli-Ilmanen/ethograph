@@ -60,8 +60,10 @@ from .app_constants import (
     SIDEBAR_AFTER_LOAD_WIDTH_RATIO,
 )
 from .dialog_keypoint_filter import KeypointFilterDialog
+from .individual_colors import decorate_individual_combo
 from .make_pretty import clean_display_labels
 from .plots_radial import RadialPlot
+from .plots_skeleton import SkeletonPlot
 from .plots_space import SpacePlot
 from .plots_spectrogram import SharedAudioCache
 from .pose_render import (
@@ -757,6 +759,9 @@ class DataWidget(QWidget):
         self.radial_plots: list[RadialPlot] = []
         self.active_radial_plot: RadialPlot | None = None
         self._radial_signals_connected = False
+        self.skeleton_plots: list[SkeletonPlot] = []
+        self.active_skeleton_plot: SkeletonPlot | None = None
+        self._skeleton_signals_connected = False
         #: While True, trial changes skip video/extra-camera/pose loading —
         #: set by the label-frames dialog while it captures panel screenshots
         #: (the plots need the trial's data, never its video). Whoever sets it
@@ -1008,6 +1013,11 @@ class DataWidget(QWidget):
         self.app_state.pose_individual_colors = overrides
         self.bbox_color_buttons[name].setIcon(_color_swatch_icon(overrides[name]))
         self.pose_mgr.refresh_skeleton()
+        # The swatches beside the names follow the pick everywhere they are shown.
+        actor = self.combos.get(self._individual_actor_key())
+        if actor is not None:
+            decorate_individual_combo(actor, self.app_state)
+        self._populate_receiver_combo()
 
     def _on_pose_text_toggled(self, state: int):
         self.app_state.pose_show_text = self.pose_show_text_checkbox.isChecked()
@@ -2613,6 +2623,7 @@ class DataWidget(QWidget):
             self._refill_combo(combo, names)
         self._set_combo_row_visible(key, True)
         self.populate_bbox_colors(names)
+        decorate_individual_combo(combo, self.app_state, names)
         # One animal: nothing to pin, so the control is not there to puzzle over.
         pin_btn = getattr(self, "individual_pin_button", None)
         if pin_btn is not None:
@@ -2642,6 +2653,7 @@ class DataWidget(QWidget):
         combo.setCurrentIndex(idx if idx >= 0 else 0)
         combo.blockSignals(False)
         combo.setEnabled(bool(names))
+        decorate_individual_combo(combo, self.app_state)
         # A receiver this actor cannot have is dropped, not kept as a filter
         # that silently matches nothing.
         self.app_state.individual_receiver = get_combo_value(combo) or ""
@@ -2660,7 +2672,7 @@ class DataWidget(QWidget):
 
     def _panel_label(self, widget) -> str:
         """*widget*'s title as its dock shows it, for the pin menu."""
-        if widget in self.space_plots or widget in self.radial_plots:
+        if widget in self._instance_panels():
             return widget._dock_name + self.app_state.panel_mode_suffix(widget)
         if self.plot_container is not None and widget in self.plot_container.pinnable_panels():
             return self.plot_container.panel_title(widget)
@@ -2685,6 +2697,7 @@ class DataWidget(QWidget):
                 self.app_state.pinned_individual_of(target),
                 self.app_state.sidebar_individual(),
                 lambda n, t=target: self.pin_panel(t, n),
+                app_state=self.app_state,
             )
         menu.addSeparator()
         unpin_all = menu.addAction("Unpin all panels (follow sidebar)", self.unpin_all_panels)
@@ -2695,7 +2708,11 @@ class DataWidget(QWidget):
         pc = self.plot_container
         plots = pc.pinnable_panels() if pc is not None else []
         views = [self.video_mgr.primary_view, *self.video_mgr.extra_widgets.values()] if self.video_mgr else []
-        return [*plots, *self.space_plots, *self.radial_plots, *views]
+        return [*plots, *self._instance_panels(), *views]
+
+    def _instance_panels(self) -> list:
+        """The dock-instance panels outside the container: space, radial and skeleton plots."""
+        return [*self.space_plots, *self.radial_plots, *self.skeleton_plots]
 
     def _pinned_widgets(self) -> list:
         return [w for w in self._pinnable_widgets() if self.app_state.pinned_individual_of(w) is not None]
@@ -2715,7 +2732,7 @@ class DataWidget(QWidget):
         data; a camera view filters its pose overlay; every panel draws that
         individual's labels and makes it the subject when clicked.
         """
-        if widget in self.space_plots or widget in self.radial_plots:
+        if widget in self._instance_panels():
             widget.set_pinned_individual(individual)
             widget.refresh_title()
             self.app_state.refresh_labelling_subject()
@@ -2770,8 +2787,7 @@ class DataWidget(QWidget):
             if self.app_state.pinned_individual_of(plot) is None:
                 plot.update_plot()
                 pc.panel_content_changed.emit(plot)
-        panels: list[SpacePlot | RadialPlot] = [*self.space_plots, *self.radial_plots]
-        for panel in panels:
+        for panel in self._instance_panels():
             if self.app_state.pinned_individual_of(panel) is None:
                 panel.sync_individual()
             panel.refresh_title()
@@ -3328,6 +3344,7 @@ class DataWidget(QWidget):
         except Exception:
             logger.debug("update_space_plot failed", exc_info=True)
         self.refresh_radial_plots()
+        self.refresh_skeleton_plots()
 
         # Trial start in the display clock — 0.0 only in trial basis; in
         # session basis the trial starts at its session offset. Marker-driven
@@ -4109,6 +4126,96 @@ class DataWidget(QWidget):
         for rp, entry in zip(self.radial_plots, entries):
             rp._apply_default_width = False
             rp.apply_radial_settings(entry)
+
+    # ------------------------------------------------------------------
+    # Skeleton plots — the pose at the marker; instances like radial plots
+    # ------------------------------------------------------------------
+
+    def add_skeleton_plot(self, view_3d: bool = False, focus: bool = True, default_width: bool = True):
+        """Create a new skeleton-plot panel: ``position``'s keypoints + bones at the time marker."""
+        kp = SkeletonPlot(self.shell, self.app_state)
+        kp._apply_default_width = default_width
+        kp.closed.connect(self.remove_skeleton_plot)
+        kp.pin_changed.connect(self._on_panel_pinned_itself)
+        self.skeleton_plots.append(kp)
+        self._canonicalize_skeleton_dock_names()
+        kp.dock_object_name = f"SkeletonPlotDock_{len(self.skeleton_plots) - 1}"
+
+        if not self._skeleton_signals_connected:
+            self._skeleton_signals_connected = True
+            self.plot_container.time_marker_updated.connect(self._on_time_for_skeleton_plots)
+
+        ps = getattr(self, "plot_settings_widget", None)
+        if ps is not None and getattr(ps, "skeletonplot_panel", None) is not None:
+            ps.skeletonplot_panel.layout().insertWidget(0, kp.controls_widget)
+        mgr = getattr(self.meta_widget, "active_panels", None)
+        if mgr is not None:
+            mgr.register(kp, "skeleton", clicked_signal=kp.clicked)
+
+        kp.set_store(self._space_store())
+        kp.show()
+        kp.configure(view_3d=view_3d)
+
+        self.set_active_skeleton_plot(kp)
+        if focus and self.meta_widget is not None and hasattr(self.meta_widget, "_on_plot_focus"):
+            self.meta_widget._on_plot_focus("skeleton")
+        return kp
+
+    def remove_skeleton_plot(self, kp) -> None:
+        if kp not in self.skeleton_plots:
+            return
+        self.skeleton_plots.remove(kp)
+        mgr = getattr(self.meta_widget, "active_panels", None)
+        if mgr is not None:
+            mgr.unregister(kp)
+        if kp.controls_widget is not None:
+            kp.controls_widget.setParent(None)
+        dock = kp.dock_widget
+        if dock is not None:
+            # hide + deleteLater, NOT shell.removeDockWidget(): see remove_space_plot.
+            dock.hide()
+            dock.deleteLater()
+        kp.dock_widget = None
+        kp.deleteLater()
+        if self.active_skeleton_plot is kp:
+            self.set_active_skeleton_plot(self.skeleton_plots[-1] if self.skeleton_plots else None)
+        self._canonicalize_skeleton_dock_names()
+
+    def set_active_skeleton_plot(self, kp) -> None:
+        self.active_skeleton_plot = kp
+        for other in self.skeleton_plots:
+            other.controls_widget.setVisible(other is kp)
+
+    def _canonicalize_skeleton_dock_names(self):
+        for i, kp in enumerate(self.skeleton_plots):
+            if kp.dock_widget is not None:
+                kp.dock_widget.setObjectName(f"SkeletonPlotDock_{i}")
+
+    def _on_time_for_skeleton_plots(self, time_s: float):
+        for kp in self.skeleton_plots:
+            if kp.isVisible():
+                kp.set_time(time_s)
+
+    def refresh_skeleton_plots(self) -> None:
+        """Re-read the data (trial change): the loader's dataset moved on."""
+        for kp in self.skeleton_plots:
+            kp.set_store(self._space_store())
+            kp.refresh()
+
+    def skeleton_layout_state(self) -> list[dict]:
+        self._canonicalize_skeleton_dock_names()
+        return [kp.skeleton_settings() for kp in self.skeleton_plots]
+
+    def apply_skeleton_layout_state(self, entries) -> None:
+        if not isinstance(entries, list):
+            return
+        while len(self.skeleton_plots) > len(entries):
+            self.remove_skeleton_plot(self.skeleton_plots[-1])
+        while len(self.skeleton_plots) < len(entries):
+            self.add_skeleton_plot(focus=False, default_width=False)
+        for kp, entry in zip(self.skeleton_plots, entries):
+            kp._apply_default_width = False
+            kp.apply_skeleton_settings(entry)
 
     def set_active_space_plot(self, sp: SpacePlot | None):
         """Track the active instance and show only its controls in the

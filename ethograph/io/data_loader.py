@@ -294,7 +294,7 @@ def _load_trialtree(
     labels_path: str | None = None,
 ) -> LoadResult:
     """Load a TrialTree or xarray.Dataset from a .nc file."""
-    return _load_trialtree_from(_open_trialtree(file_path), file_path, metadata_path, alignment_path, labels_path)
+    return _load_trialtree_from(file_path, metadata_path, alignment_path, labels_path)
 
 
 def _check_individuals_against_session(catalog: DataCatalog, sio, file_path: str) -> None:
@@ -316,12 +316,21 @@ def _check_individuals_against_session(catalog: DataCatalog, sio, file_path: str
         )
 
 
-def _open_trialtree(file_path: str) -> TrialTree:
-    """A ``.nc`` as a TrialTree; a plain Dataset (a movement file, say) becomes one trial."""
+def _open_trialtree(file_path: str, trials: pd.DataFrame | None = None) -> TrialTree:
+    """A ``.nc`` as a TrialTree.
+
+    A plain Dataset (no trial nodes) is on the session clock: given the alignment's
+    *trials* table with several distinct starts, it is sliced into those trials
+    (one long recording, one video per trial); otherwise it is one trial (a movement
+    file, say).
+    """
     dt = eto.open(file_path)
     if not dt.children or not any(node.ds is not None and "trial" in node.ds.attrs for node in dt.children.values()):
         ds = xr.open_dataset(file_path, engine=netcdf_engine(file_path))
-        dt = _wizard_ds_to_continuous_dt(ds)
+        if trials is not None and len(trials) > 1 and trials["start_time"].nunique() > 1:
+            dt = TrialTree.from_continuous(ds, trials)
+        else:
+            dt = _wizard_ds_to_continuous_dt(ds)
         dt._source_path = file_path
     return dt
 
@@ -351,13 +360,13 @@ def _not_ignored(files: list[Path], ignore: Sequence[str]) -> list[Path]:
 
 
 def _load_trialtree_from(
-    dt: TrialTree,
     file_path: str,
     metadata_path: str | None,
     alignment_path: str | None,
     labels_path: str | None,
 ) -> LoadResult:
     sio = _resolve_alignment(file_path, alignment_path=alignment_path)
+    dt = _open_trialtree(file_path, sio.trials_df)
     resolved_metadata_df, resolved_metadata_path = load_metadata_df(
         source_path=file_path,
         metadata_path=metadata_path,
@@ -481,7 +490,7 @@ def _load_session_folder(
     if len(ncs) > 1:
         raise AmbiguousSessionError(folder, ncs)
     if ncs:
-        return _load_trialtree_from(_open_trialtree(str(ncs[0])), str(ncs[0]), **kwargs)
+        return _load_trialtree_from(str(ncs[0]), **kwargs)
     if pynapple:
         return _load_pynapple_dataset(str(folder), **kwargs)
     if alignment_path and Path(alignment_path).exists() or alignment_path_of(folder).is_file():

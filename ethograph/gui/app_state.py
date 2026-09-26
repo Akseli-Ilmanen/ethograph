@@ -531,6 +531,9 @@ class AppStateSpec:
         "space_hide_zeros": (bool, False, True),
         "space_show_references": (bool, True, True),
         "space_library_geometry": (str | None, None, True, SCOPE_LOCAL),
+        # The Edit space geometry dialog's unsaved geometry, {"name": stem, "config": yaml dict}:
+        # drawn instead of that file while the dialog is open. Never saved.
+        "space_geometry_preview": (dict | None, None, False),
         "primary_camera": (str | None, None, True),
         "primary_camera_previous": (str | None, None, False),
         "extra_cameras": (list[str], [], True),

@@ -76,6 +76,7 @@ class PlotSettingsWidget(QWidget):
         self._create_lineplot_panel(main_layout)
         self._create_spaceplot_panel(main_layout)
         self._create_radialplot_panel(main_layout)
+        self._create_skeletonplot_panel(main_layout)
         self._create_spectrogram_panel(main_layout)
         self._create_heatmap_panel(main_layout)
         self._create_audio_channel_group(main_layout)
@@ -417,6 +418,23 @@ class PlotSettingsWidget(QWidget):
         main_layout.addWidget(self.radialplot_panel)
         self.radialplot_panel.hide()
 
+    def _create_skeletonplot_panel(self, main_layout):
+        """Host for the active skeleton plot's own controls (see the radial
+        panel: everything is per instance, inserted by ``DataWidget.add_skeleton_plot``)."""
+        self.skeletonplot_panel = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(2)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.skeletonplot_panel.setLayout(layout)
+
+        group_box = QGroupBox("Skeleton Plot Controls")
+        group_layout = QVBoxLayout()
+        group_layout.setSpacing(2)
+        group_box.setLayout(group_layout)
+        layout.addWidget(group_box)
+        main_layout.addWidget(self.skeletonplot_panel)
+        self.skeletonplot_panel.hide()
+
     def _create_spaceplot_panel(self, main_layout):
         self.spaceplot_panel = QWidget()
         layout = QVBoxLayout()
@@ -491,7 +509,7 @@ class PlotSettingsWidget(QWidget):
             self.app_state.nwb_file_path_changed,
             self.app_state.project_path_changed,
         ):
-            signal.connect(lambda *_: self._populate_space_library_combo())
+            signal.connect(lambda *_: self.populate_space_library_combo())
         group_layout.addWidget(self.space_library_combo, row, 1, 1, 3)
 
         main_layout.addWidget(self.spaceplot_panel)
@@ -510,9 +528,9 @@ class PlotSettingsWidget(QWidget):
 
         self.space_show_references_checkbox.setChecked(self.app_state.get_with_default("space_show_references"))
 
-        self._populate_space_library_combo()
+        self.populate_space_library_combo()
 
-    def _populate_space_library_combo(self):
+    def populate_space_library_combo(self):
         """Re-scan the geometry library of the loaded session and restore the saved selection."""
         from ethograph.gui.plots_space import geometry_dirs_of, load_library_geometries
 

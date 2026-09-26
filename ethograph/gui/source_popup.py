@@ -20,6 +20,8 @@ typing. Feature plot-type options are gated by data shape ``(T, N)``:
 * ``Radial`` — needs the feature's dims to pin down to ONE column whose values
   span a full turn (360° or 2π), which is what distinguishes a heading from any
   other 1-D signal.
+* ``Skeleton (2D)`` / ``Skeleton (3D)`` — only the dataset's ``position``
+  (a ``space`` dim with x/y(/z) and a keypoint dim): the pose at one instant.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ from qtpy.QtWidgets import (
 from ethograph.io.video_feature_files import video_feature_sources
 
 from .plots_radial import feature_angular_unit
+from .plots_skeleton import skeleton_plot_types
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +128,9 @@ def allowed_plot_types(kind: str, name: str, app_state) -> list[str]:
         # feature, and gating on N == 1 hid the option from exactly those.
         if feature_angular_unit(app_state, name) is not None:
             options.append("Radial")
+        # The pose itself, drawn as points + bones at the time marker — only
+        # for the dataset's ``position``; any other variable is a trajectory.
+        options += skeleton_plot_types(app_state, name)
         return options
     return []
 

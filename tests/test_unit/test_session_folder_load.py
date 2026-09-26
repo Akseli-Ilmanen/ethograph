@@ -72,6 +72,26 @@ def test_alignment_only_folder_is_a_session_with_trials_and_no_features(tmp_path
     assert result.catalog.feature_choices() == []
 
 
+def test_one_long_dataset_is_sliced_into_the_alignments_trials(tmp_path: Path):
+    folder = tmp_path / "sess"
+    folder.mkdir()
+    fps = 10.0
+    ds = xr.Dataset(
+        {"speed": (("time", "individual"), np.arange(100, dtype=float)[:, None])},
+        coords={"time": np.arange(100) / fps, "individual": ["A"]},
+        attrs={"fps": fps},
+    )
+    ds.to_netcdf(folder / "data.nc")
+    table = pd.DataFrame({"trial": [1, 2], "start_time": [2.0, 6.0], "stop_time": [4.0, 9.0]})
+    pair_media(table, output_path=folder / ".ethograph" / "alignment.nwb")
+
+    result = load_features_dataset(str(folder))
+    assert result.trial_ids == [1, 2]
+    second = result.dt.trial(2)
+    assert float(second.time[0]) == 0.0
+    assert float(second.speed[0, 0]) == 60.0
+
+
 def test_a_folder_with_nothing_is_not_a_session(tmp_path: Path):
     with pytest.raises(ValueError, match="not a session"):
         load_features_dataset(str(tmp_path))

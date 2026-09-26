@@ -27,6 +27,7 @@ class PanelKind:
     HEATMAP = "heatmap"
     SPACE = "space"
     RADIAL = "radial"
+    SKELETON = "skeleton"
     EPHYS = "ephys"
     NEO = "neo"
     RASTER = "raster"
