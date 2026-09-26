@@ -949,10 +949,8 @@ class TestHardTrialsAndReview:
         panel.toggle_difficulty()
         assert state.curation_active
         assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_HARD})
-        # The table now says hard (the stub does not write back) → the box follows, and the next press clears.
+        # The table now says hard (the stub does not write back) → the next press clears.
         state.metadata_df[rm.DIFFICULTY_COLUMN] = ["hard", ""]
-        panel._sync_hard_checkbox()
-        assert panel.hard_cb.isChecked()
         panel.toggle_difficulty()
         assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_NORMAL})
 
@@ -1018,7 +1016,7 @@ class TestHardTrialsAndReview:
         assert written[rm.REVIEW_F1_STATE] == {"0": 0.0}
         # A score is a measurement; the hard flag is the human's, from the histogram.
         assert rm.DIFFICULTY_COLUMN not in written
-        assert "Scored 1" in panel.review_label.text()
+        assert "Scored 1" in panel.review_message
 
     def test_confidence_curves_write_the_trial_mean_and_never_difficulty(self, panel, monkeypatch, tmp_path):
         """The curves button measures: model_confidence per trial from the run
@@ -1086,6 +1084,21 @@ class TestHardTrialsAndReview:
         try:
             assert dialog.flagged() == set()
             assert not dialog.flag_btn.isEnabled()
+        finally:
+            dialog.close()
+
+    def test_feedback_dialog_sets_the_tolerance_and_follows_the_score_summary(self, panel):
+        """The popup holds the tolerance override and shows what the panel last scored."""
+        from ethograph.gui.dialog_curator_feedback import CuratorFeedbackDialog
+
+        dialog = CuratorFeedbackDialog(panel)
+        try:
+            dialog.tolerance_spin.setValue(0.25)
+            assert panel.app_state.review_tolerance_s == 0.25
+            dialog.tolerance_spin.setValue(0.0)
+            assert panel.app_state.review_tolerance_s is None
+            panel._report_review("Scored 3 trial(s)")
+            assert dialog.status_label.text() == "Scored 3 trial(s)"
         finally:
             dialog.close()
 

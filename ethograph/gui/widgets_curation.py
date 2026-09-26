@@ -96,6 +96,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from ethograph.gui.dialog_curator_feedback import CuratorFeedbackDialog
 from ethograph.gui.dialog_label_gridview import confidence_display
 from ethograph.gui.label_drawing_mixin import draw_key
 from ethograph.gui.notify import notify
@@ -375,6 +376,9 @@ class CurationPanel(QGroupBox):
     #: or torn down. How a curation workflow knows the reviewer is done.
     review_finished = Signal()
 
+    #: The score summary changed (Model ▸ Curator feedback shows it).
+    review_scored = Signal(str)
+
     def __init__(self, app_state, labels_widget, parent=None):
         super().__init__("Curation", parent)
         self.app_state = app_state
@@ -411,7 +415,8 @@ class CurationPanel(QGroupBox):
         #: cleared the moment any trial is automated again (a new prediction
         #: run), so finishing the curation fires it exactly once.
         self._review_done = False
-        self._syncing_hard = False
+        self.review_message = ""
+        self._feedback_dialog = None
 
         self._build_ui()
 
@@ -550,7 +555,7 @@ class CurationPanel(QGroupBox):
         self.automated_only_cb.toggled.connect(lambda v: setattr(self.app_state, "frame_review_automated_only", v))
         review_opts_row.addWidget(self.automated_only_cb)
 
-        self.auto_advance_cb = QCheckBox("Jump to next after Enter/Backspace")
+        self.auto_advance_cb = QCheckBox("Jump to next after ↵/⌫")
         self.auto_advance_cb.setToolTip(
             "Ticked: confirming (Enter) or deleting (Backspace) a boundary\n"
             "moves on to the next target automatically. Untick to stay put."
@@ -560,16 +565,18 @@ class CurationPanel(QGroupBox):
         review_opts_row.addWidget(self.auto_advance_cb)
         frame_lay.addLayout(review_opts_row)
 
+        review_btns_row = QHBoxLayout()
         self.shortcuts_btn = QPushButton("Shortcuts…")
         self.shortcuts_btn.setAutoDefault(False)
         self.shortcuts_btn.clicked.connect(self._show_shortcuts)
-        frame_lay.addWidget(self.shortcuts_btn)
+        review_btns_row.addWidget(self.shortcuts_btn)
 
         self.start_stop_btn = QPushButton("Start review")
         self.start_stop_btn.setAutoDefault(False)
         self.start_stop_btn.setDefault(False)
         self.start_stop_btn.clicked.connect(self._toggle_session)
-        frame_lay.addWidget(self.start_stop_btn)
+        review_btns_row.addWidget(self.start_stop_btn)
+        frame_lay.addLayout(review_btns_row)
         lay.addWidget(self.frame_group)
 
         # ── Tools ───────────────────────────────────────────────────
@@ -600,75 +607,6 @@ class CurationPanel(QGroupBox):
         self.curves_pdf_btn.clicked.connect(self.export_confidence_pdf)
         tools_row.addWidget(self.curves_pdf_btn)
         lay.addLayout(tools_row)
-
-        # ── Curator feedback: where the human overruled the model ──────
-        # Only a human writes the hard flag: by hand, or once from the F1
-        # histogram after looking at the distribution. Score now measures
-        # and never flags; confidence plays no part at all — a
-        # confident-and-wrong trial is exactly the one to catch here.
-        feedback_title = QLabel("<b>Curator feedback</b>")
-        feedback_title.setToolTip(
-            "Where you overruled the model, it should pay extra attention next time.\n"
-            "Flag a trial hard by hand (the box), or score every trial against its\n"
-            "prediction run and flag the worst from the histogram, once — into the\n"
-            "metadata table's difficulty column, which a training run reads back\n"
-            "(train.oversample; off unless set)."
-        )
-        lay.addWidget(feedback_title)
-        review_row = QHBoxLayout()
-        self.hard_cb = QCheckBox("Hard trial (Ctrl+T)")
-        self.hard_cb.setToolTip(
-            "Flag this trial as hard in the metadata table's difficulty column —\n"
-            "the model barely managed it, or it is just difficult. A training run\n"
-            "with train.oversample draws hard trials more often."
-        )
-        self.hard_cb.toggled.connect(self._on_hard_toggled)
-        review_row.addWidget(self.hard_cb)
-        review_row.addStretch(1)
-        review_row.addWidget(QLabel("Tolerance:"))
-        self.review_tolerance_spin = QDoubleSpinBox()
-        self.review_tolerance_spin.setRange(0.0, 10.0)
-        self.review_tolerance_spin.setDecimals(3)
-        self.review_tolerance_spin.setSingleStep(0.01)
-        self.review_tolerance_spin.setSpecialValueText("run's own")
-        self.review_tolerance_spin.setSuffix(" s")
-        self.review_tolerance_spin.setToolTip(
-            'Point-event tolerance for the review. Left at "run\'s own", each run is judged\n'
-            "at the tolerance its model was trained to (read from the run folder). Set it to\n"
-            "compare runs trained at different tolerances, or for a run folder that carries none."
-        )
-        override = self.app_state.get_with_default("review_tolerance_s")
-        self.review_tolerance_spin.setValue(float(override) if override else 0.0)
-        self.review_tolerance_spin.valueChanged.connect(
-            lambda v: setattr(self.app_state, "review_tolerance_s", float(v) if v > 0 else None)
-        )
-        self.review_tolerance_spin.editingFinished.connect(self.review_tolerance_spin.clearFocus)
-        review_row.addWidget(self.review_tolerance_spin)
-        self.review_btn = QPushButton("Score now")
-        self.review_btn.setAutoDefault(False)
-        self.review_btn.setToolTip(
-            "Score the trials the table shows against each one's prediction run — an F1 per\n"
-            "trial and event type into the metadata table (state labels at IoU ≥ 0.5, point\n"
-            "labels within the run's own tolerance). Measures only; runs by itself once the\n"
-            "last trial is curated."
-        )
-        self.review_btn.clicked.connect(lambda: self.run_review())
-        review_row.addWidget(self.review_btn)
-        self.review_hist_btn = QPushButton("Histogram…")
-        self.review_hist_btn.setAutoDefault(False)
-        self.review_hist_btn.setToolTip(
-            "The scored trials' F1 as a histogram. Look for the split, set the threshold in\n"
-            "the gap, and flag everything below it hard — once, by your decision."
-        )
-        self.review_hist_btn.clicked.connect(self.open_review_histogram)
-        review_row.addWidget(self.review_hist_btn)
-        lay.addLayout(review_row)
-
-        self.review_label = QLabel("")
-        self.review_label.setTextFormat(Qt.PlainText)
-        self.review_label.setWordWrap(True)
-        self.review_label.setStyleSheet("font-size: 10px; color: #bbb;")
-        lay.addWidget(self.review_label)
 
         self.status_label = QLabel("")
         self.status_label.setTextFormat(Qt.RichText)
@@ -783,9 +721,7 @@ class CurationPanel(QGroupBox):
         self.mode_combo.setToolTip(_MODE_HINTS[key])
         self.frame_group.setVisible(key in REVIEW_MODES)
         self.window_row.setVisible(key == "frame")
-        self.auto_advance_cb.setText(
-            "Jump to next after Backspace" if key == "segment" else "Jump to next after Enter/Backspace"
-        )
+        self.auto_advance_cb.setText("Jump to next after ⌫" if key == "segment" else "Jump to next after ↵/⌫")
         # The queue is the mode's (boundaries vs whole labels): leaving the
         # mode a session started in ends it.
         if self._session_active and key != self._session_mode:
@@ -1292,7 +1228,7 @@ class CurationPanel(QGroupBox):
         Writes ``review_f1_state`` / ``review_f1_point`` into the metadata
         table — a measurement, nothing more. Which of those trials the next
         training run should see more often is decided by a human, from the
-        histogram (:meth:`open_review_histogram`) or by hand.
+        histogram (Model ▸ Curator feedback) or by hand.
         """
         trials_widget = self._trials_widget()
         session = getattr(self.app_state, "nc_file_path", None)
@@ -1305,26 +1241,20 @@ class CurationPanel(QGroupBox):
             tolerance_override_s=self.app_state.review_tolerance_s,
         )
         if not reviews:
-            message = rm.summary(reviews)
-            self.review_label.setText(message)
-            notify(message)
+            self._report_review(rm.summary(reviews))
             return reviews
         self.activate("review scored")
         for column, values in rm.review_columns(reviews).items():
             scored = {t: v for t, v in values.items() if not math.isnan(v)}
             if scored:
                 trials_widget.set_column_values(column, scored)
-        message = rm.summary(reviews)
-        self.review_label.setText(message)
-        notify(message)
+        self._report_review(rm.summary(reviews))
         return reviews
 
-    def open_review_histogram(self) -> None:
-        """The F1 histogram: the human picks the threshold and flags once."""
-        from ethograph.gui.dialog_review_histogram import ReviewHistogramDialog
-
-        dialog = ReviewHistogramDialog(self.app_state, self.flag_trials_hard, parent=self.window())
-        dialog.exec()
+    def _report_review(self, message: str) -> None:
+        self.review_message = message
+        self.review_scored.emit(message)
+        notify(message)
 
     def flag_trials_hard(self, trials: set[str]) -> int:
         """Flag *trials* hard in the metadata table — the histogram's one
@@ -1338,7 +1268,6 @@ class CurationPanel(QGroupBox):
         if values:
             trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, values)
         notify(f"Flagged {len(values)} trial(s) hard.")
-        self._sync_hard_checkbox()
         return len(values)
 
     # ------------------------------------------------------------------
@@ -1418,19 +1347,6 @@ class CurationPanel(QGroupBox):
         hit = mdf["trial"].astype(str) == str(trial)
         return bool(hit.any()) and rm.is_hard(mdf.loc[hit, rm.DIFFICULTY_COLUMN].iloc[0])
 
-    def _sync_hard_checkbox(self) -> None:
-        trial = getattr(self.app_state, "trials_sel", None)
-        self._syncing_hard = True
-        try:
-            self.hard_cb.setEnabled(trial is not None and self.app_state.ready)
-            self.hard_cb.setChecked(trial is not None and self._trial_is_hard(trial))
-        finally:
-            self._syncing_hard = False
-
-    def _on_hard_toggled(self, checked: bool) -> None:
-        if not self._syncing_hard:
-            self.set_difficulty(bool(checked))
-
     def set_difficulty(self, hard: bool, trial=None) -> None:
         """Write *trial*'s (default: the current one) difficulty to the metadata table."""
         if trial is None:
@@ -1442,7 +1358,6 @@ class CurationPanel(QGroupBox):
         value = rm.DIFFICULTY_HARD if hard else rm.DIFFICULTY_NORMAL
         trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, {str(trial): value})
         notify(f"Trial {trial}: {value}.")
-        self._sync_hard_checkbox()
 
     def toggle_difficulty(self) -> None:
         """Ctrl+T: the current trial hard ↔ normal."""
@@ -1460,8 +1375,8 @@ class CurationPanel(QGroupBox):
         self.deactivate()
         self.app_state.curve_run_path = None
         self._review_done = False
-        self.review_label.setText("")
-        self._sync_hard_checkbox()
+        self.review_message = ""
+        self.review_scored.emit("")
 
     def _on_trial_changed(self) -> None:
         if not self.app_state.ready:
@@ -1471,7 +1386,6 @@ class CurationPanel(QGroupBox):
             # settle before the trial's labels are restamped and redrawn.
             QTimer.singleShot(0, lambda: self.curate_current_trial(quiet=True))
         self._refresh_status()
-        self._sync_hard_checkbox()
         if self._session_active and not self._jumping:
             self._follow_trial()
 
@@ -1516,6 +1430,16 @@ class CurationPanel(QGroupBox):
         self._workflow_dialog.show()
         self._workflow_dialog.raise_()
         self._workflow_dialog.activateWindow()
+
+    def open_feedback(self) -> None:
+        """Model ▸ Curator feedback…: score the trials, flag the hard ones."""
+        if self.meta is None:
+            return
+        if self._feedback_dialog is None or not self._feedback_dialog.isVisible():
+            self._feedback_dialog = CuratorFeedbackDialog(self, parent=self.window())
+        self._feedback_dialog.show()
+        self._feedback_dialog.raise_()
+        self._feedback_dialog.activateWindow()
 
     # ==================================================================
     # Frame-by-frame review session

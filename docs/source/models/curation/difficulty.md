@@ -2,8 +2,7 @@
 # Curator feedback
 
 Where you overruled the model, it should pay extra attention next time. That
-is the whole idea of the **Curator feedback** block at the bottom of the
-Curation section: a trial you had to correct is flagged `hard` in the
+is the whole idea of **Model ▸ Curator feedback…**: a trial you had to correct is flagged `hard` in the
 metadata table's `difficulty` column, and the next training run draws it
 more often. The column is a checklist in the trials table's filter like
 `curated`, so "show me the trials the model got wrong" is one click, and the
@@ -24,8 +23,8 @@ confidence guides the review, disagreement guides the training.
 
 ## By hand
 
-`Ctrl+T` (or the **Hard trial** box) flags the current trial, and again puts
-it back to `normal`. Use it for a trial that is simply difficult — an odd
+`Ctrl+T` flags the current trial, and again puts it back to `normal`; the
+`difficulty` column of the trials table shows where you stand. Use it for a trial that is simply difficult — an odd
 posture, an occlusion, a rare variant — whether or not the model got it right
 this time.
 
@@ -43,7 +42,7 @@ per trial and event type:
 - **Point labels** match within the run's own **tolerance** — the precision the
   model was trained to, read from the run folder (the onset model's
   `tolerance_s`, half of spot's `focus_window_ms`). Nothing to pick; set the
-  block's **Tolerance** only to judge every run at one number, or for an old
+  popup's **Tolerance** only to judge every run at one number, or for an old
   run folder that carries none.
 
 The scores land in the metadata table as `review_f1_state` and

@@ -1,6 +1,6 @@
 """The per-trial F1 histogram: where the human decides which trials were bad.
 
-**Score now** (``widgets_curation``) writes each trial's F1 against the run
+**Score now** (Model ▸ Curator feedback) writes each trial's F1 against the run
 that predicted it into the metadata table and nothing else. Which of those
 trials the next training run should see more often is a decision, not a
 rule: this popup draws the distribution, the reviewer looks for the split,

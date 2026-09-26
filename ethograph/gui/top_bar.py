@@ -258,6 +258,7 @@ class TopBarBuilder:
         menu.addAction("LightGBM: Predict…", self._open_onset_predict)
         menu.addSeparator()
         menu.addAction("Curation workflows…", self._open_curation_workflows)
+        menu.addAction("Curator feedback…", self._open_curator_feedback)
 
     def _open_onset_train(self):
         from .dialog_onset_model import TrainOnsetDialog
@@ -289,6 +290,13 @@ class TopBarBuilder:
         if panel is None:
             return
         panel.open_workflows()
+
+    def _open_curator_feedback(self):
+        """Score the curated trials against the model and flag the hard ones."""
+        panel = getattr(getattr(self.meta, "labels_widget", None), "curation_panel", None)
+        if panel is None:
+            return
+        panel.open_feedback()
 
     def _open_label_inconsistencies(self):
         """Filter the trials table by what the labels do (Tools)."""

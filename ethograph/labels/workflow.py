@@ -548,7 +548,7 @@ STEP_KINDS: dict[str, StepKind] = {
         StepKind(
             key="score_trials",
             title="Score trials against the model",
-            summary="Press the Curation section's Score now: each trial's curated labels against what its "
+            summary="Press Score now in Model ▸ Curator feedback: each trial's curated labels against what its "
             "prediction run wrote, an F1 per trial into the metadata table. Flagging trials hard from those "
             "scores is a decision the reviewer makes in the histogram, never a step.",
         ),
