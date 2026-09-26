@@ -476,6 +476,7 @@
 
 <span class="n">SESSION</span> <span class="o">=</span> <span class="s2">"20210119_Recording_SR1_SR2_social_vidtwo"</span>
 
+
 <span class="c1"># The project folder holds what spans sessions (mapping.txt, pipeline configs);</span>
 <span class="c1"># each session folder sits inside it. Choose PROJECT_DIR on the GUI's start page.</span>
 <span class="n">PROJECT_DIR</span> <span class="o">=</span> <span class="n">_here</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"pair24"</span>
@@ -486,7 +487,6 @@
 <span class="n">path</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">"markerDataset.csv"</span>
 
 <span class="n">CAMERAS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Camera1"</span><span class="p">,</span> <span class="s2">"Camera2"</span><span class="p">,</span> <span class="s2">"Camera3"</span><span class="p">,</span> <span class="s2">"Camera4"</span><span class="p">,</span> <span class="s2">"Camera5"</span><span class="p">,</span> <span class="s2">"Camera6"</span><span class="p">]</span>
-<span class="n">CHUNK_SIZE</span> <span class="o">=</span> <span class="mi">3500</span>
 <span class="n">FPS</span> <span class="o">=</span> <span class="mi">120</span>
 </pre></div>
 </div>
@@ -496,8 +496,9 @@
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">from_pair24_csv</span><span class="p">(</span>
     <span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">fps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The whole recording as one dataset on the session clock (frame i at i / fps)."""</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
     <span class="n">keypoint_names</span> <span class="o">=</span> <span class="p">[</span>
@@ -564,94 +565,1243 @@
                 <span class="n">com_data</span><span class="p">[:,</span> <span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
     <span class="n">ds</span><span class="p">[</span><span class="s2">"center_of_mass"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">com_data</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"space"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">])</span>
 
+    <span class="n">ds</span><span class="p">[</span><span class="s2">"pairwise_distance"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_norm</span><span class="p">(</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">center_of_mass</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 1"</span><span class="p">)</span> <span class="o">-</span> <span class="n">ds</span><span class="o">.</span><span class="n">center_of_mass</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 2"</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">ds</span><span class="p">[</span><span class="s2">"nose_nose_distance"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_norm</span><span class="p">(</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">keypoints</span><span class="o">=</span><span class="s2">"HeadF"</span><span class="p">,</span> <span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 1"</span><span class="p">,</span> <span class="n">position_type</span><span class="o">=</span><span class="s2">"absolute"</span><span class="p">)</span>
+        <span class="o">-</span> <span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">keypoints</span><span class="o">=</span><span class="s2">"HeadF"</span><span class="p">,</span> <span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 2"</span><span class="p">,</span> <span class="n">position_type</span><span class="o">=</span><span class="s2">"absolute"</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">ds</span><span class="p">[</span><span class="s2">"velocity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_velocity</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">position_type</span><span class="o">=</span><span class="s2">"aligned"</span><span class="p">))</span>
+    <span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_speed</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">position_type</span><span class="o">=</span><span class="s2">"aligned"</span><span class="p">))</span>
+
     <span class="k">return</span> <span class="n">ds</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">split_into_chunks</span><span class="p">(</span>
-    <span class="n">ds_full</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
-    <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">cameras</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-    <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">trial_table_from_videos</span><span class="p">(</span>
     <span class="n">video_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
-    <span class="n">n_frames</span> <span class="o">=</span> <span class="n">ds_full</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
-    <span class="n">n_chunks</span> <span class="o">=</span> <span class="n">n_frames</span> <span class="o">//</span> <span class="n">chunk_size</span>
+    <span class="n">cameras</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">n_frames</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One trial per video chunk; each file is named by its first frame on the session clock.</span>
 
-    <span class="n">datasets</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="sd">    A chunk that starts after the mocap's last frame has no data and is dropped, and the</span>
+<span class="sd">    last trial ends where the mocap does. The timing goes into the alignment, which is</span>
+<span class="sd">    the one source of trial timing: the GUI slices the long dataset by it.</span>
+<span class="sd">    """</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">stem</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="n">video_dir</span> <span class="o">/</span> <span class="n">cameras</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.mp4"</span><span class="p">))</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">starts</span> <span class="k">if</span> <span class="n">s</span> <span class="o">&lt;</span> <span class="n">n_frames</span><span class="p">]</span>
+    <span class="n">stops</span> <span class="o">=</span> <span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">+</span> <span class="p">[</span><span class="n">n_frames</span><span class="p">]</span>
+
     <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_chunks</span><span class="p">):</span>
-        <span class="n">start_idx</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">chunk_size</span>
-        <span class="n">end_idx</span> <span class="o">=</span> <span class="n">start_idx</span> <span class="o">+</span> <span class="n">chunk_size</span>
-        <span class="n">start_frame</span> <span class="o">=</span> <span class="n">start_idx</span>
-
-        <span class="n">ds_chunk</span> <span class="o">=</span> <span class="n">ds_full</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="n">start_idx</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">))</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">ds_chunk</span> <span class="o">=</span> <span class="n">ds_chunk</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span> <span class="o">/</span> <span class="n">fps</span><span class="p">)</span>
-        <span class="n">ds_chunk</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-
-        <span class="n">ds_chunk</span><span class="p">[</span><span class="s2">"pairwise_distance"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_norm</span><span class="p">(</span>
-            <span class="n">ds_chunk</span><span class="o">.</span><span class="n">center_of_mass</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 1"</span><span class="p">)</span> <span class="o">-</span> <span class="n">ds_chunk</span><span class="o">.</span><span class="n">center_of_mass</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 2"</span><span class="p">)</span>
-        <span class="p">)</span>
-        <span class="n">ds_chunk</span><span class="p">[</span><span class="s2">"nose_nose_distance"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_norm</span><span class="p">(</span>
-            <span class="n">ds_chunk</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">keypoints</span><span class="o">=</span><span class="s2">"HeadF"</span><span class="p">,</span> <span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 1"</span><span class="p">,</span> <span class="n">position_type</span><span class="o">=</span><span class="s2">"absolute"</span><span class="p">)</span>
-            <span class="o">-</span> <span class="n">ds_chunk</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">keypoints</span><span class="o">=</span><span class="s2">"HeadF"</span><span class="p">,</span> <span class="n">individual</span><span class="o">=</span><span class="s2">"mouse 2"</span><span class="p">,</span> <span class="n">position_type</span><span class="o">=</span><span class="s2">"absolute"</span><span class="p">)</span>
-        <span class="p">)</span>
-        <span class="n">ds_chunk</span><span class="p">[</span><span class="s2">"velocity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_velocity</span><span class="p">(</span><span class="n">ds_chunk</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">position_type</span><span class="o">=</span><span class="s2">"aligned"</span><span class="p">))</span>
-        <span class="n">ds_chunk</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_speed</span><span class="p">(</span><span class="n">ds_chunk</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">position_type</span><span class="o">=</span><span class="s2">"aligned"</span><span class="p">))</span>
-
-        <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"nose_nose_distance"</span><span class="p">,</span> <span class="s2">"velocity"</span><span class="p">,</span> <span class="s2">"speed"</span><span class="p">]:</span>
-            <span class="n">ds_chunk</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"features"</span>
-
-        <span class="n">datasets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ds_chunk</span><span class="p">)</span>
-
-        <span class="n">row</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"trial"</span><span class="p">:</span> <span class="n">i</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">trial</span><span class="p">,</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="n">stops</span><span class="p">),</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># Full path: pair_media stores the basename per trial and the path per stream.</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"trial"</span><span class="p">:</span> <span class="n">trial</span><span class="p">,</span> <span class="s2">"start_time"</span><span class="p">:</span> <span class="n">start</span> <span class="o">/</span> <span class="n">fps</span><span class="p">,</span> <span class="s2">"stop_time"</span><span class="p">:</span> <span class="n">stop</span> <span class="o">/</span> <span class="n">fps</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">cam</span> <span class="ow">in</span> <span class="n">cameras</span><span class="p">:</span>
-            <span class="c1"># Full path: pair_media stores the basename per trial and the path per stream.</span>
-            <span class="n">row</span><span class="p">[</span><span class="sa">f</span><span class="s2">"video_</span><span class="si">{</span><span class="n">cam</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">video_dir</span> <span class="o">/</span> <span class="n">cam</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start_frame</span><span class="si">}</span><span class="s2">.mp4"</span><span class="p">)</span>
+            <span class="n">row</span><span class="p">[</span><span class="sa">f</span><span class="s2">"video_</span><span class="si">{</span><span class="n">cam</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">video_dir</span> <span class="o">/</span> <span class="n">cam</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">.mp4"</span><span class="p">)</span>
         <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
-
-    <span class="n">remaining</span> <span class="o">=</span> <span class="n">n_frames</span> <span class="o">%</span> <span class="n">chunk_size</span>
-    <span class="k">if</span> <span class="n">remaining</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Discarded </span><span class="si">{</span><span class="n">remaining</span><span class="si">}</span><span class="s2"> frames at the end (not a full chunk)"</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Created </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks of </span><span class="si">{</span><span class="n">chunk_size</span><span class="si">}</span><span class="s2"> frames each"</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds_full</span> <span class="o">=</span> <span class="n">from_pair24_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">FPS</span><span class="p">)</span>
-<span class="n">ds_full</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span> <span class="o">=</span> <span class="n">from_pair24_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">FPS</span><span class="p">)</span>
+<span class="n">ds</span>
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div><svg style="position: absolute; width: 0; height: 0; overflow: hidden">
+<defs>
+<symbol id="icon-database" viewBox="0 0 32 32">
+<path d="M16 0c-8.837 0-16 2.239-16 5v4c0 2.761 7.163 5 16 5s16-2.239 16-5v-4c0-2.761-7.163-5-16-5z"></path>
+<path d="M16 17c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+<path d="M16 26c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+</symbol>
+<symbol id="icon-file-text2" viewBox="0 0 32 32">
+<path d="M28.681 7.159c-0.694-0.947-1.662-2.053-2.724-3.116s-2.169-2.030-3.116-2.724c-1.612-1.182-2.393-1.319-2.841-1.319h-15.5c-1.378 0-2.5 1.121-2.5 2.5v27c0 1.378 1.122 2.5 2.5 2.5h23c1.378 0 2.5-1.122 2.5-2.5v-19.5c0-0.448-0.137-1.23-1.319-2.841zM24.543 5.457c0.959 0.959 1.712 1.825 2.268 2.543h-4.811v-4.811c0.718 0.556 1.584 1.309 2.543 2.268zM28 29.5c0 0.271-0.229 0.5-0.5 0.5h-23c-0.271 0-0.5-0.229-0.5-0.5v-27c0-0.271 0.229-0.5 0.5-0.5 0 0 15.499-0 15.5 0v7c0 0.552 0.448 1 1 1h7v19.5z"></path>
+<path d="M23 26h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 22h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 18h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+</symbol>
+</defs>
+</svg>
+<style>/* CSS stylesheet for displaying xarray objects in notebooks */
+
+:root {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base rgba(0, 0, 0, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, white)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+  );
+}
+
+html[theme="dark"],
+html[data-theme="dark"],
+body[data-theme="dark"],
+body.vscode-dark {
+  --xr-font-color0: var(
+    --jp-content-font-color0,
+    var(--pst-color-text-base, rgba(255, 255, 255, 1))
+  );
+  --xr-font-color2: var(
+    --jp-content-font-color2,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.54))
+  );
+  --xr-font-color3: var(
+    --jp-content-font-color3,
+    var(--pst-color-text-base, rgba(255, 255, 255, 0.38))
+  );
+  --xr-border-color: var(
+    --jp-border-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+  );
+  --xr-disabled-color: var(
+    --jp-layout-color3,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 40))
+  );
+  --xr-background-color: var(
+    --jp-layout-color0,
+    var(--pst-color-on-background, #111111)
+  );
+  --xr-background-color-row-even: var(
+    --jp-layout-color1,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
+  );
+  --xr-background-color-row-odd: var(
+    --jp-layout-color2,
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
+  );
+}
+
+.xr-wrap {
+  display: block !important;
+  min-width: 300px;
+  max-width: 700px;
+  line-height: 1.6;
+  padding-bottom: 4px;
+}
+
+.xr-text-repr-fallback {
+  /* fallback to plain text repr when CSS is not injected (untrusted notebook) */
+  display: none;
+}
+
+.xr-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.xr-header {
+  border-bottom: solid 1px var(--xr-border-color);
+  margin-bottom: 4px;
+}
+
+.xr-header > div,
+.xr-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xr-obj-type,
+.xr-obj-name {
+  margin-left: 2px;
+  margin-right: 10px;
+}
+
+.xr-obj-type,
+.xr-group-box-contents > label {
+  color: var(--xr-font-color2);
+  display: block;
+}
+
+.xr-sections {
+  padding-left: 0 !important;
+  display: grid;
+  grid-template-columns: 150px auto auto 1fr 0 20px 0 20px;
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+.xr-section-item {
+  display: contents;
+}
+
+.xr-section-item > input,
+.xr-group-box-contents > input,
+.xr-array-wrap > input {
+  display: block;
+  opacity: 0;
+  height: 0;
+  margin: 0;
+}
+
+.xr-section-item > input + label,
+.xr-var-item > input + label {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-item > input:enabled + label,
+.xr-var-item > input:enabled + label,
+.xr-array-wrap > input:enabled + label,
+.xr-group-box-contents > input:enabled + label {
+  cursor: pointer;
+  color: var(--xr-font-color2);
+}
+
+.xr-section-item > input:focus-visible + label,
+.xr-var-item > input:focus-visible + label,
+.xr-array-wrap > input:focus-visible + label,
+.xr-group-box-contents > input:focus-visible + label {
+  outline: auto;
+}
+
+.xr-section-item > input:enabled + label:hover,
+.xr-var-item > input:enabled + label:hover,
+.xr-array-wrap > input:enabled + label:hover,
+.xr-group-box-contents > input:enabled + label:hover {
+  color: var(--xr-font-color0);
+}
+
+.xr-section-summary {
+  grid-column: 1;
+  color: var(--xr-font-color2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.xr-section-summary > em {
+  font-weight: normal;
+}
+
+.xr-span-grid {
+  grid-column-end: -1;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label > span {
+  display: inline-block;
+  padding-left: 0.6em;
+}
+
+.xr-section-summary-in:disabled + label {
+  color: var(--xr-font-color2);
+}
+
+.xr-section-summary-in + label:before {
+  display: inline-block;
+  content: "►";
+  font-size: 11px;
+  width: 15px;
+  text-align: center;
+}
+
+.xr-section-summary-in:disabled + label:before {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-summary-in:checked + label:before {
+  content: "▼";
+}
+
+.xr-section-summary-in:checked + label > span {
+  display: none;
+}
+
+.xr-section-summary,
+.xr-section-inline-details,
+.xr-group-box-contents > label {
+  padding-top: 4px;
+}
+
+.xr-section-inline-details {
+  grid-column: 2 / -1;
+}
+
+.xr-section-details {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  margin-bottom: 5px;
+}
+
+.xr-section-summary-in ~ .xr-section-details {
+  display: none;
+}
+
+.xr-section-summary-in:checked ~ .xr-section-details {
+  display: contents;
+}
+
+.xr-children {
+  display: inline-grid;
+  grid-template-columns: 100%;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.xr-group-box {
+  display: inline-grid;
+  grid-template-columns: 0px 30px auto;
+}
+
+.xr-group-box-vline {
+  grid-column-start: 1;
+  border-right: 0.2em solid;
+  border-color: var(--xr-border-color);
+  width: 0px;
+}
+
+.xr-group-box-hline {
+  grid-column-start: 2;
+  grid-row-start: 1;
+  height: 1em;
+  width: 26px;
+  border-bottom: 0.2em solid;
+  border-color: var(--xr-border-color);
+}
+
+.xr-group-box-contents {
+  grid-column-start: 3;
+  padding-bottom: 4px;
+}
+
+.xr-group-box-contents > label::before {
+  content: "📂";
+  padding-right: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label::before {
+  content: "📁";
+}
+
+.xr-group-box-contents > input:checked + label {
+  padding-bottom: 0px;
+}
+
+.xr-group-box-contents > input:checked ~ .xr-sections {
+  display: none;
+}
+
+.xr-group-box-contents > input + label > span {
+  display: none;
+}
+
+.xr-group-box-ellipsis {
+  font-size: 1.4em;
+  font-weight: 900;
+  color: var(--xr-font-color2);
+  letter-spacing: 0.15em;
+  cursor: default;
+}
+
+.xr-array-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.xr-array-wrap > label {
+  grid-column: 1;
+  vertical-align: top;
+}
+
+.xr-preview {
+  color: var(--xr-font-color3);
+}
+
+.xr-array-preview,
+.xr-array-data {
+  padding: 0 5px !important;
+  grid-column: 2;
+}
+
+.xr-array-data,
+.xr-array-in:checked ~ .xr-array-preview {
+  display: none;
+}
+
+.xr-array-in:checked ~ .xr-array-data,
+.xr-array-preview {
+  display: inline-block;
+}
+
+.xr-dim-list {
+  display: inline-block !important;
+  list-style: none;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.xr-dim-list li {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.xr-dim-list:before {
+  content: "(";
+}
+
+.xr-dim-list:after {
+  content: ")";
+}
+
+.xr-dim-list li:not(:last-child):after {
+  content: ",";
+  padding-right: 5px;
+}
+
+.xr-has-index {
+  font-weight: bold;
+}
+
+.xr-var-list,
+.xr-var-item {
+  display: contents;
+}
+
+.xr-var-item > div,
+.xr-var-item label,
+.xr-var-item > .xr-var-name span {
+  background-color: var(--xr-background-color-row-even);
+  border-color: var(--xr-background-color-row-odd);
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.xr-var-item > .xr-var-name:hover span {
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(odd) > div,
+.xr-var-list > li:nth-child(odd) > label,
+.xr-var-list > li:nth-child(odd) > .xr-var-name span {
+  background-color: var(--xr-background-color-row-odd);
+  border-color: var(--xr-background-color-row-even);
+}
+
+.xr-var-name {
+  grid-column: 1;
+}
+
+.xr-var-dims {
+  grid-column: 2;
+}
+
+.xr-var-dtype {
+  grid-column: 3;
+  text-align: right;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-preview {
+  grid-column: 4;
+}
+
+.xr-index-preview {
+  grid-column: 2 / 5;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-name,
+.xr-var-dims,
+.xr-var-dtype,
+.xr-preview,
+.xr-attrs dt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
+  overflow: visible;
+  width: auto;
+  z-index: 1;
+}
+
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  display: none;
+  border-top: 2px dotted var(--xr-background-color);
+  padding-bottom: 20px !important;
+  padding-top: 10px !important;
+}
+
+.xr-var-attrs-in + label,
+.xr-var-data-in + label,
+.xr-index-data-in + label {
+  padding: 0 1px;
+}
+
+.xr-var-attrs-in:checked ~ .xr-var-attrs,
+.xr-var-data-in:checked ~ .xr-var-data,
+.xr-index-data-in:checked ~ .xr-index-data {
+  display: block;
+}
+
+.xr-var-data > table {
+  float: right;
+}
+
+.xr-var-data > pre,
+.xr-index-data > pre,
+.xr-var-data > table > tbody > tr {
+  background-color: transparent !important;
+}
+
+.xr-var-name span,
+.xr-var-data,
+.xr-index-name div,
+.xr-index-data,
+.xr-attrs {
+  padding-left: 25px !important;
+}
+
+.xr-attrs,
+.xr-var-attrs,
+.xr-var-data,
+.xr-index-data {
+  grid-column: 1 / -1;
+}
+
+dl.xr-attrs {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt,
+.xr-attrs dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+  width: auto;
+}
+
+.xr-attrs dt {
+  font-weight: normal;
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: var(--xr-background-color);
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.xr-icon-database,
+.xr-icon-file-text2,
+.xr-no-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1.5em !important;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.xr-var-attrs-in:checked + label > .xr-icon-file-text2,
+.xr-var-data-in:checked + label > .xr-icon-database,
+.xr-index-data-in:checked + label > .xr-icon-database {
+  color: var(--xr-font-color0);
+  filter: drop-shadow(1px 1px 5px var(--xr-font-color2));
+  stroke-width: 0.8px;
+}
+</style><pre class='xr-text-repr-fallback'>&lt;xarray.Dataset&gt; Size: 257MB
+Dimensions:             (time: 108000, position_type: 2, space: 3,
+                         keypoints: 12, individual: 2)
+Coordinates:
+  * time                (time) float64 864kB 0.0 0.008333 ... 900.0 900.0
+  * position_type       (position_type) &lt;U8 64B &#x27;aligned&#x27; &#x27;absolute&#x27;
+  * space               (space) &lt;U1 12B &#x27;x&#x27; &#x27;y&#x27; &#x27;z&#x27;
+  * keypoints           (keypoints) &lt;U9 432B &#x27;HeadF&#x27; &#x27;HeadB&#x27; ... &#x27;ShoulderR&#x27;
+  * individual          (individual) &lt;U7 56B &#x27;mouse 1&#x27; &#x27;mouse 2&#x27;
+Data variables:
+    position            (time, position_type, space, keypoints, individual) float64 124MB ...
+    confidence          (time, position_type, keypoints, individual) float64 41MB ...
+    center_of_mass      (time, space, individual) float64 5MB -183.0 ... 83.7
+    pairwise_distance   (time) float64 864kB 56.41 54.29 52.29 ... 273.1 273.1
+    nose_nose_distance  (time) float64 864kB 110.6 110.3 109.4 ... 129.3 129.2
+    velocity            (time, space, keypoints, individual) float64 62MB 1.5...
+    speed               (time, keypoints, individual) float64 21MB 2.017e+03 ...
+Attributes:
+    source_software:  DeepLabCut
+    fps:              120</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-e15422b4-8762-411f-936e-80f9989d273f' class='xr-section-summary-in' type='checkbox' disabled /><label for='section-e15422b4-8762-411f-936e-80f9989d273f' class='xr-section-summary'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>time</span>: 108000</li><li><span class='xr-has-index'>position_type</span>: 2</li><li><span class='xr-has-index'>space</span>: 3</li><li><span class='xr-has-index'>keypoints</span>: 12</li><li><span class='xr-has-index'>individual</span>: 2</li></ul></div></li><li class='xr-section-item'><input id='section-881206da-c40f-4215-8512-d5dc5e8445d7' class='xr-section-summary-in' type='checkbox' checked /><label for='section-881206da-c40f-4215-8512-d5dc5e8445d7' class='xr-section-summary' title='Expand/collapse section'>Coordinates: <span>(5)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 0.008333 ... 900.0 900.0</div><input id='attrs-44aedb9a-ffd0-4d1f-84fa-044bc598faa2' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-44aedb9a-ffd0-4d1f-84fa-044bc598faa2' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-b9728668-520c-439e-a136-c939b5e034cd' class='xr-var-data-in' type='checkbox'><label for='data-b9728668-520c-439e-a136-c939b5e034cd' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([0.000000e+00, 8.333333e-03, 1.666667e-02, ..., 8.999750e+02,
+       8.999833e+02, 8.999917e+02], shape=(108000,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>position_type</span></div><div class='xr-var-dims'>(position_type)</div><div class='xr-var-dtype'>&lt;U8</div><div class='xr-var-preview xr-preview'>&#x27;aligned&#x27; &#x27;absolute&#x27;</div><input id='attrs-6813c9f7-570f-4958-89f0-6cbe0e31f413' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-6813c9f7-570f-4958-89f0-6cbe0e31f413' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-f42ff2e5-672b-411f-9c8e-606ba28e3d2d' class='xr-var-data-in' type='checkbox'><label for='data-f42ff2e5-672b-411f-9c8e-606ba28e3d2d' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;aligned&#x27;, &#x27;absolute&#x27;], dtype=&#x27;&lt;U8&#x27;)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>space</span></div><div class='xr-var-dims'>(space)</div><div class='xr-var-dtype'>&lt;U1</div><div class='xr-var-preview xr-preview'>&#x27;x&#x27; &#x27;y&#x27; &#x27;z&#x27;</div><input id='attrs-c518c227-ddd9-4cb7-b6ca-012e6bbbdd86' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-c518c227-ddd9-4cb7-b6ca-012e6bbbdd86' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-a02b6dfd-20e6-4a57-b6d6-ce299a1ee077' class='xr-var-data-in' type='checkbox'><label for='data-a02b6dfd-20e6-4a57-b6d6-ce299a1ee077' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;x&#x27;, &#x27;y&#x27;, &#x27;z&#x27;], dtype=&#x27;&lt;U1&#x27;)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>keypoints</span></div><div class='xr-var-dims'>(keypoints)</div><div class='xr-var-dtype'>&lt;U9</div><div class='xr-var-preview xr-preview'>&#x27;HeadF&#x27; &#x27;HeadB&#x27; ... &#x27;ShoulderR&#x27;</div><input id='attrs-16e02041-8623-46b5-b167-c4aba4dd5046' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-16e02041-8623-46b5-b167-c4aba4dd5046' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-a7a839b7-b830-46ef-a314-df8a3b60f4f3' class='xr-var-data-in' type='checkbox'><label for='data-a7a839b7-b830-46ef-a314-df8a3b60f4f3' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;HeadF&#x27;, &#x27;HeadB&#x27;, &#x27;HeadL&#x27;, &#x27;SpineF&#x27;, &#x27;SpineM&#x27;, &#x27;SpineL&#x27;, &#x27;Offset1&#x27;,
+       &#x27;Offset2&#x27;, &#x27;HipL&#x27;, &#x27;HipR&#x27;, &#x27;ShoulderL&#x27;, &#x27;ShoulderR&#x27;], dtype=&#x27;&lt;U9&#x27;)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>individual</span></div><div class='xr-var-dims'>(individual)</div><div class='xr-var-dtype'>&lt;U7</div><div class='xr-var-preview xr-preview'>&#x27;mouse 1&#x27; &#x27;mouse 2&#x27;</div><input id='attrs-e21b889d-72a0-4c55-b931-3fd8bfd8d2b3' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-e21b889d-72a0-4c55-b931-3fd8bfd8d2b3' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-407762f6-eedc-43a7-adf8-b89a4e8f7e72' class='xr-var-data-in' type='checkbox'><label for='data-407762f6-eedc-43a7-adf8-b89a4e8f7e72' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([&#x27;mouse 1&#x27;, &#x27;mouse 2&#x27;], dtype=&#x27;&lt;U7&#x27;)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-2f632771-5211-4104-a005-c3b8b8a71bb5' class='xr-section-summary-in' type='checkbox' checked /><label for='section-2f632771-5211-4104-a005-c3b8b8a71bb5' class='xr-section-summary' title='Expand/collapse section'>Data variables: <span>(7)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>position</span></div><div class='xr-var-dims'>(time, position_type, space, keypoints, individual)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>8.894 65.87 28.57 ... 59.06 77.87</div><input id='attrs-611036a5-4199-4731-8187-e1b5d3f8b3b6' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-611036a5-4199-4731-8187-e1b5d3f8b3b6' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-e7549cee-9252-4d7f-a2f3-ad118df9cacb' class='xr-var-data-in' type='checkbox'><label for='data-e7549cee-9252-4d7f-a2f3-ad118df9cacb' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[[[[   8.8943,   65.8716],
+          [  28.5729,   64.2633],
+          [  19.6265,   96.7276],
+          ...,
+          [ -34.2271,  -35.9181],
+          [  29.5824,   47.0403],
+          [  50.6629,   58.5094]],
+
+         [[ -58.3473,  -31.4978],
+          [ -63.798 ,   -9.1094],
+          [ -93.9395,   -7.6287],
+          ...,
+          [  25.1788,   -1.9506],
+          [ -47.425 ,   11.4397],
+          [ -55.2706,  -29.489 ]],
+
+         [[  99.307 ,   35.204 ],
+          [ 100.3162,   38.6597],
+          [ 103.384 ,   41.9998],
+          ...,
+...
+          ...,
+          [-179.2119,  196.8752],
+          [-135.6385,  104.9639],
+          [-114.7841,  104.3388]],
+
+         [[ 225.5575,  234.0467],
+          [ 214.7093,  253.6258],
+          [ 240.3268,  232.9687],
+          ...,
+          [ 143.3633,  291.3705],
+          [ 219.0641,  255.9356],
+          [ 197.3991,  235.5416]],
+
+         [[  72.402 ,  128.5318],
+          [  86.8094,  126.8345],
+          [  92.2306,  122.445 ],
+          ...,
+          [  52.4245,   94.9396],
+          [  70.0688,   86.4606],
+          [  59.063 ,   77.8738]]]]], shape=(108000, 2, 3, 12, 2))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>confidence</span></div><div class='xr-var-dims'>(time, position_type, keypoints, individual)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>1.0 1.0 1.0 1.0 ... 1.0 1.0 1.0 1.0</div><input id='attrs-40a803f0-f01b-4ce8-92ee-848b76475509' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-40a803f0-f01b-4ce8-92ee-848b76475509' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-fb243e6b-96a3-4711-bd38-6105cb189dd0' class='xr-var-data-in' type='checkbox'><label for='data-fb243e6b-96a3-4711-bd38-6105cb189dd0' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[[[1., 1.],
+         [1., 1.],
+         [1., 1.],
+         ...,
+         [1., 1.],
+         [1., 1.],
+         [1., 1.]],
+
+        [[1., 1.],
+         [1., 1.],
+         [1., 1.],
+         ...,
+         [1., 1.],
+         [1., 1.],
+         [1., 1.]]],
+
+
+       [[[1., 1.],
+         [1., 1.],
+         [1., 1.],
+...
+         [1., 1.],
+         [1., 1.],
+         [1., 1.]]],
+
+
+       [[[1., 1.],
+         [1., 1.],
+         [1., 1.],
+         ...,
+         [1., 1.],
+         [1., 1.],
+         [1., 1.]],
+
+        [[1., 1.],
+         [1., 1.],
+         [1., 1.],
+         ...,
+         [1., 1.],
+         [1., 1.],
+         [1., 1.]]]], shape=(108000, 2, 12, 2))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>center_of_mass</span></div><div class='xr-var-dims'>(time, space, individual)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>-183.0 -159.1 79.43 ... 69.09 83.7</div><input id='attrs-233a2b80-aa8f-47b2-be99-283bf8fdbb91' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-233a2b80-aa8f-47b2-be99-283bf8fdbb91' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-7da3309b-b192-453f-a4e1-2a5fade50a55' class='xr-var-data-in' type='checkbox'><label for='data-7da3309b-b192-453f-a4e1-2a5fade50a55' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[[-182.9787, -159.0734],
+        [  79.4335,   92.7444],
+        [ 133.4506,   84.117 ]],
+
+       [[-182.4447, -159.0734],
+        [  77.8203,   92.7444],
+        [ 130.796 ,   84.117 ]],
+
+       [[-181.9461, -159.0734],
+        [  75.348 ,   92.7444],
+        [ 127.8015,   84.117 ]],
+
+       ...,
+
+       [[-137.3451,  130.0556],
+        [ 199.5074,  253.0207],
+        [  69.0118,   83.7335]],
+
+       [[-137.2748,  130.1094],
+        [ 199.5858,  253.0745],
+        [  69.0317,   83.7185]],
+
+       [[-137.3372,  130.1343],
+        [ 199.7095,  253.0938],
+        [  69.094 ,   83.6964]]], shape=(108000, 3, 2))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>pairwise_distance</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>56.41 54.29 52.29 ... 273.1 273.1</div><input id='attrs-4f9da8fd-b6bc-4266-91d8-b7d645549190' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-4f9da8fd-b6bc-4266-91d8-b7d645549190' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-c56823d2-02f7-41e2-908e-ccf6f05578ef' class='xr-var-data-in' type='checkbox'><label for='data-c56823d2-02f7-41e2-908e-ccf6f05578ef' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([ 56.41318566,  54.29434101,  52.28891545, ..., 273.09986468,
+       273.07701026, 273.13754206], shape=(108000,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>nose_nose_distance</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>110.6 110.3 109.4 ... 129.3 129.2</div><input id='attrs-5f90b321-b8af-4670-b00f-dd82622e4cc4' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-5f90b321-b8af-4670-b00f-dd82622e4cc4' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-91adb003-544c-47e7-8b7c-598fe947ded5' class='xr-var-data-in' type='checkbox'><label for='data-91adb003-544c-47e7-8b7c-598fe947ded5' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([110.59782041, 110.29885952, 109.44711895, ..., 129.72260594,
+       129.32525991, 129.19379175], shape=(108000,))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>velocity</span></div><div class='xr-var-dims'>(time, space, keypoints, individual)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>1.521e+03 645.2 ... 31.67 3.564</div><input id='attrs-e989af25-2bd9-49b9-a62a-7495efbd4e7e' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-e989af25-2bd9-49b9-a62a-7495efbd4e7e' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-08c8619b-cac6-46e2-ab6c-8da893578d70' class='xr-var-data-in' type='checkbox'><label for='data-08c8619b-cac6-46e2-ab6c-8da893578d70' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[[[ 1.52053200e+03,  6.45168000e+02],
+         [ 1.55894400e+03,  4.91160000e+01],
+         [ 2.92957200e+03, -8.93400000e+01],
+         ...,
+         [-1.20877200e+03,  1.61568000e+02],
+         [ 1.82876400e+03, -4.50072000e+02],
+         [ 1.39372800e+03,  6.13632000e+02]],
+
+        [[ 1.25462400e+03,  1.86386400e+03],
+         [ 2.16883200e+03,  1.75262400e+03],
+         [ 2.01997200e+03,  2.61951600e+03],
+         ...,
+         [-1.29308400e+03, -9.58164000e+02],
+         [ 1.48429200e+03,  1.22785200e+03],
+         [ 2.35950000e+03,  1.66015200e+03]],
+
+        [[ 4.28256000e+02,  0.00000000e+00],
+         [ 4.26840000e+02,  0.00000000e+00],
+         [ 5.12544000e+02,  0.00000000e+00],
+         ...,
+...
+         ...,
+         [ 1.98960000e+01,  3.49200000e+00],
+         [ 5.91600000e+00, -7.08000000e+00],
+         [ 1.47720000e+01, -6.00000000e+00]],
+
+        [[ 2.98920000e+01,  9.78000000e+00],
+         [ 5.70600000e+01,  1.18200000e+01],
+         [ 5.79240000e+01,  9.63600000e+00],
+         ...,
+         [-5.61600000e+00,  3.90000000e+00],
+         [ 1.38360000e+01,  7.17600000e+00],
+         [ 2.88960000e+01,  6.15600000e+00]],
+
+        [[ 2.28840000e+01,  1.68000000e-01],
+         [ 5.97840000e+01,  1.30800000e+00],
+         [-1.65600000e+00,  4.05600000e+00],
+         ...,
+         [ 5.84400000e+00,  4.20000000e+00],
+         [ 1.50240000e+01,  9.36000000e-01],
+         [ 3.16680000e+01,  3.56400000e+00]]]], shape=(108000, 3, 12, 2))</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>speed</span></div><div class='xr-var-dims'>(time, keypoints, individual)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>2.017e+03 1.972e+03 ... 45.34 9.306</div><input id='attrs-08fce8c9-6592-4e5b-bde7-d96672b102b0' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-08fce8c9-6592-4e5b-bde7-d96672b102b0' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-56b9955d-354b-460d-aef7-5c1472597bc0' class='xr-var-data-in' type='checkbox'><label for='data-56b9955d-354b-460d-aef7-5c1472597bc0' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([[[2.01730071e+03, 1.97236679e+03],
+        [2.70487172e+03, 1.75331208e+03],
+        [3.59518850e+03, 2.62103905e+03],
+        ...,
+        [1.86807529e+03, 9.71690521e+02],
+        [2.41180414e+03, 1.30774055e+03],
+        [2.76849308e+03, 1.76992906e+03]],
+
+       [[1.18087476e+03, 9.86183396e+02],
+        [1.53828584e+03, 8.76656042e+02],
+        [1.85793241e+03, 1.31051953e+03],
+        ...,
+        [1.24277109e+03, 4.85845261e+02],
+        [1.33474971e+03, 6.53870274e+02],
+        [1.19706450e+03, 8.84964532e+02]],
+
+       [[9.01524795e+02, 9.16572588e-13],
+        [8.25195781e+02, 6.43109871e-13],
+        [7.97542511e+02, 1.13686838e-13],
+        ...,
+...
+        ...,
+        [1.09915841e+01, 1.28441979e+01],
+        [3.09727218e+01, 6.89281191e+00],
+        [3.37142653e+01, 9.31467101e+00]],
+
+       [[5.61813642e+01, 8.93028600e+00],
+        [5.68751549e+01, 9.77912021e+00],
+        [3.72259501e+01, 1.07792551e+01],
+        ...,
+        [1.29527563e+01, 9.52205860e+00],
+        [2.16091855e+01, 9.80135582e+00],
+        [1.57638099e+01, 9.87004742e+00]],
+
+       [[5.11850713e+01, 1.00093956e+01],
+        [9.22034257e+01, 1.19940345e+01],
+        [7.72496419e+01, 1.04552785e+01],
+        ...,
+        [2.14835427e+01, 6.71148747e+00],
+        [2.12639255e+01, 1.01241035e+01],
+        [4.53437209e+01, 9.30582785e+00]]], shape=(108000, 12, 2))</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-8f86b318-fde4-4a1a-b697-479ed4ddad3b' class='xr-section-summary-in' type='checkbox' checked /><label for='section-8f86b318-fde4-4a1a-b697-479ed4ddad3b' class='xr-section-summary' title='Expand/collapse section'>Attributes: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>source_software :</span></dt><dd>DeepLabCut</dd><dt><span>fps :</span></dt><dd>120</dd></dl></div></li></ul></div></div></div></div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">datasets</span><span class="p">,</span> <span class="n">session_table</span> <span class="o">=</span> <span class="n">split_into_chunks</span><span class="p">(</span><span class="n">ds_full</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="n">CHUNK_SIZE</span><span class="p">,</span> <span class="n">cameras</span><span class="o">=</span><span class="n">CAMERAS</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">FPS</span><span class="p">,</span> <span class="n">video_dir</span><span class="o">=</span><span class="n">VIDEO_DIR</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">session_table</span> <span class="o">=</span> <span class="n">trial_table_from_videos</span><span class="p">(</span><span class="n">VIDEO_DIR</span><span class="p">,</span> <span class="n">CAMERAS</span><span class="p">,</span> <span class="n">n_frames</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">fps</span><span class="o">=</span><span class="n">FPS</span><span class="p">)</span>
+<span class="n">session_table</span>
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>trial</th>
+      <th>start_time</th>
+      <th>stop_time</th>
+      <th>video_Camera1</th>
+      <th>video_Camera2</th>
+      <th>video_Camera3</th>
+      <th>video_Camera4</th>
+      <th>video_Camera5</th>
+      <th>video_Camera6</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>0.000000</td>
+      <td>29.166667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>29.166667</td>
+      <td>58.333333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>58.333333</td>
+      <td>87.500000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>87.500000</td>
+      <td>116.666667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>116.666667</td>
+      <td>145.833333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>145.833333</td>
+      <td>175.000000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>175.000000</td>
+      <td>204.166667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>204.166667</td>
+      <td>233.333333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>233.333333</td>
+      <td>262.500000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>262.500000</td>
+      <td>291.666667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>291.666667</td>
+      <td>320.833333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>320.833333</td>
+      <td>350.000000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>350.000000</td>
+      <td>379.166667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>379.166667</td>
+      <td>408.333333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>408.333333</td>
+      <td>437.500000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>437.500000</td>
+      <td>466.666667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>466.666667</td>
+      <td>495.833333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>495.833333</td>
+      <td>525.000000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>525.000000</td>
+      <td>554.166667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>554.166667</td>
+      <td>583.333333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>583.333333</td>
+      <td>612.500000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>612.500000</td>
+      <td>641.666667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>641.666667</td>
+      <td>670.833333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>670.833333</td>
+      <td>700.000000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>700.000000</td>
+      <td>729.166667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>729.166667</td>
+      <td>758.333333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>758.333333</td>
+      <td>787.500000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>787.500000</td>
+      <td>816.666667</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>816.666667</td>
+      <td>845.833333</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>845.833333</td>
+      <td>875.000000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>875.000000</td>
+      <td>900.000000</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+      <td>c:\Users\aksel\Documents\Code\ethograph\data\p...</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_path</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">"Trial_data.nc"</span>
 <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="c1"># Build NWB alignment</span>
-<span class="n">nwb_path</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"alignment.nwb"</span>
+<span class="c1"># The alignment holds the trials (start/stop on the session clock) and the videos per trial.</span>
+<span class="n">nwb_path</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"alignment.nwb"</span>
 <span class="n">pair_media</span><span class="p">(</span>
     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">FPS</span><span class="p">)},</span>
     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
+    <span class="n">individuals</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">individual</span><span class="o">.</span><span class="n">values</span><span class="p">],</span>
+    <span class="n">on_existing</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="c1"># Build and save TrialTree</span>
-<span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">from_datasets</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span>
-<span class="n">dt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+<span class="c1"># The dataset stays one long recording; no per-trial split.</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved dataset to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Saved dataset to c:\Users\aksel\Documents\Code\ethograph\data\pair24\20210119_Recording_SR1_SR2_social_vidtwo\Trial_data.nc
 </pre></div>
 </div>
 </div>
@@ -677,9 +1827,14 @@
 
 <span class="c1"># The label vocabulary belongs to the project, shared by every session in it.</span>
 <span class="c1"># A {session}/.ethograph/mapping.txt would override it for that session only.</span>
-<span class="n">mapping_path</span> <span class="o">=</span> <span class="n">PROJECT_DIR</span> <span class="o">/</span> <span class="s2">"mapping.txt"</span>
+<span class="n">mapping_path</span> <span class="o">=</span> <span class="n">PROJECT_DIR</span> <span class="o">/</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"mapping.txt"</span>
 <span class="n">write_mapping_file</span><span class="p">(</span><span class="n">mapping_path</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved mapping to </span><span class="si">{</span><span class="n">mapping_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Saved mapping to c:\Users\aksel\Documents\Code\ethograph\data\pair24\mapping.txt
 </pre></div>
 </div>
 </div>
