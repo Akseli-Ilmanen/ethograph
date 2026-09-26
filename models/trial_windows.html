@@ -392,11 +392,13 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/peaks.html">From probabilities to events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="curation/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/confidence.html">Model confidence</a></li>
@@ -503,7 +505,9 @@ this way in <code class="docutils literal notranslate"><span class="pre">alignme
 (trial, individual) pair, and for <a class="reference internal" href="spot/index.html"><span class="doc">event spotting</span></a>, which
 shares the same sessions, trial filter and train/val/test split drawn by
 whole trial. (E2E-Spot then draws its clips of <code class="docutils literal notranslate"><span class="pre">context_s</span></code> inside each trial;
-see <a class="reference internal" href="spot/guide.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.)</p>
+see <a class="reference internal" href="spot/guide.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.) For event spotting the trial is also the
+unit of the prediction rule — one event per class per trial, so cut the
+trials that way (<a class="reference internal" href="spot/peaks.html#target-spot-peaks"><span class="std std-ref">From probabilities to events</span></a>).</p>
 <p>Both read a trial as <strong>its window of the video</strong>, not the video file: a trial
 carved out of a longer video gives the model only the frames between its start
 and stop, and a video file that already matches its trial is read whole.</p>

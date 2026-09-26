@@ -59,8 +59,9 @@ Labels come out of the GUI as they always do: `labels.tsv` in the session folder
 
 ## 2. `segment.yaml`
 
-Put this beside your data. It is the whole config — every key not written
-here has a default that is fine for a first run.
+Put this in a folder of its own, `segment/` in your project folder: the file's
+folder is the pipeline's `root`, where `data/` and `runs/` land. It is the whole
+config — every key not written here has a default that is fine for a first run.
 
 ```yaml
 sessions:

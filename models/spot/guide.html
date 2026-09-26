@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/spot/guide.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Pixels + Pose (extra features)" href="multimodal.html" />
+    <link rel="next" title="From probabilities to events" href="peaks.html" />
     <link rel="prev" title="Quickstart" href="quickstart.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -392,11 +392,13 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peaks.html">From probabilities to events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../curation/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
@@ -664,13 +666,10 @@ path per trial, its frame rate, its offset — so a session is one line:</p>
 <p>There is no preprocessing and no individuals. A point event’s subject comes
 from the labels; the pixels are whatever the camera saw. <strong>By default each
 class happens at most once per trial</strong>: the prediction is the tallest peak
-of the class’s curve, and its confidence reads a second peak as doubt, not
-as a second event. A recording in which the event repeats is either cut into
-trials at the alignment, or spotted with <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> raised
-— then peaks at least <code class="docutils literal notranslate"><span class="pre">infer.min_event_gap_s</span></code> apart are separate events, the
-confidence rule has to be <code class="docutils literal notranslate"><span class="pre">focus</span></code> or <code class="docutils literal notranslate"><span class="pre">peak</span></code>, and the threshold you flag below
-needs calibrating, since the model now returns spurious events as well as
-real ones (see <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>).</p>
+of the class’s curve, a curve below <code class="docutils literal notranslate"><span class="pre">infer.min_peak</span></code> means the class is
+absent, and a second peak is doubt, not a second event. A recording in which
+the event repeats is either cut into trials at the alignment or spotted with
+<code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> raised; <a class="reference internal" href="peaks.html"><span class="doc">From probabilities to events</span></a> has the whole rule.</p>
 <section id="the-session-lines">
 <span id="target-spot-session-lines"></span><h3>The session lines<a class="headerlink" href="#the-session-lines" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">sessions:</span></code> is read the same way by both pipelines (<code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code>, shared
@@ -895,11 +894,11 @@ are the paper’s (<code class="docutils literal notranslate"><span class="pre">
       </div>
     </a>
     <a class="right-next"
-       href="multimodal.html"
+       href="peaks.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Pixels + Pose (extra features)</p>
+        <p class="prev-next-title">From probabilities to events</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

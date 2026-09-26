@@ -392,11 +392,13 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/peaks.html">From probabilities to events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../curation/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
@@ -520,8 +522,9 @@ is this, end to end, with video and audio alignment).</p>
 </section>
 <section id="segment-yaml">
 <h2>2. <code class="docutils literal notranslate"><span class="pre">segment.yaml</span></code><a class="headerlink" href="#segment-yaml" title="Link to this heading">#</a></h2>
-<p>Put this beside your data. It is the whole config — every key not written
-here has a default that is fine for a first run.</p>
+<p>Put this in a folder of its own, <code class="docutils literal notranslate"><span class="pre">segment/</span></code> in your project folder: the file’s
+folder is the pipeline’s <code class="docutils literal notranslate"><span class="pre">root</span></code>, where <code class="docutils literal notranslate"><span class="pre">data/</span></code> and <code class="docutils literal notranslate"><span class="pre">runs/</span></code> land. It is the whole
+config — every key not written here has a default that is fine for a first run.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-01</span><span class="w">      </span><span class="c1"># a session folder: its .nc, .ethograph/, labels.tsv</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-02</span><span class="w">      </span><span class="c1"># absolute, or relative to this file's folder</span>

@@ -34,7 +34,9 @@ No features, and no preprocessing. The model reads the frames.
 
 ## 2. `spot.yaml`
 
-Put this beside your data. It is the whole config:
+Put this in a folder of its own, `spot/` in your project folder: the file's folder
+is the pipeline's `root`, where `dataset/`, `features/` and `runs/` land. It is the
+whole config:
 
 ```yaml
 sessions:

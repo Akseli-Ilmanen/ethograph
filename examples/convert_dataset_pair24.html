@@ -474,12 +474,17 @@
 <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
     <span class="n">_here</span> <span class="o">=</span> <span class="n">Path</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
-<span class="c1"># TODO: adjust to your local copy of the PAIR-R24M dataset</span>
-<span class="n">path</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"C:\Users\aksel\Documents\Code\Ethograph\data\20210119_Recording_SR1_SR2_social_vidtwo\markerDataset.csv"</span>
-
 <span class="n">SESSION</span> <span class="o">=</span> <span class="s2">"20210119_Recording_SR1_SR2_social_vidtwo"</span>
-<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">_here</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="n">SESSION</span>
+
+<span class="c1"># The project folder holds what spans sessions (mapping.txt, pipeline configs);</span>
+<span class="c1"># each session folder sits inside it. Choose PROJECT_DIR on the GUI's start page.</span>
+<span class="n">PROJECT_DIR</span> <span class="o">=</span> <span class="n">_here</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"pair24"</span>
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">PROJECT_DIR</span> <span class="o">/</span> <span class="n">SESSION</span>
 <span class="n">VIDEO_DIR</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">"videos"</span>
+
+<span class="c1"># TODO: adjust to your local copy of the PAIR-R24M dataset</span>
+<span class="n">path</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">"markerDataset.csv"</span>
+
 <span class="n">CAMERAS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Camera1"</span><span class="p">,</span> <span class="s2">"Camera2"</span><span class="p">,</span> <span class="s2">"Camera3"</span><span class="p">,</span> <span class="s2">"Camera4"</span><span class="p">,</span> <span class="s2">"Camera5"</span><span class="p">,</span> <span class="s2">"Camera6"</span><span class="p">]</span>
 <span class="n">CHUNK_SIZE</span> <span class="o">=</span> <span class="mi">3500</span>
 <span class="n">FPS</span> <span class="o">=</span> <span class="mi">120</span>
@@ -654,7 +659,6 @@
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.converters</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_mapping_file</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">SETTINGS_DIR</span>
 
 <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">"Background"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
@@ -671,7 +675,9 @@
     <span class="s2">"Locomotion"</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>
 <span class="p">}</span>
 
-<span class="n">mapping_path</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">SETTINGS_DIR</span> <span class="o">/</span> <span class="s2">"mapping.txt"</span>
+<span class="c1"># The label vocabulary belongs to the project, shared by every session in it.</span>
+<span class="c1"># A {session}/.ethograph/mapping.txt would override it for that session only.</span>
+<span class="n">mapping_path</span> <span class="o">=</span> <span class="n">PROJECT_DIR</span> <span class="o">/</span> <span class="s2">"mapping.txt"</span>
 <span class="n">write_mapping_file</span><span class="p">(</span><span class="n">mapping_path</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved mapping to </span><span class="si">{</span><span class="n">mapping_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>

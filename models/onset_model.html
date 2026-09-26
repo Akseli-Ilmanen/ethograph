@@ -392,11 +392,13 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/peaks.html">From probabilities to events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="curation/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/confidence.html">Model confidence</a></li>
@@ -551,7 +553,11 @@ dialog has no filters of its own and says how many trials it will run over.</p><
 at the bottom of the dialog opens the label grid view on exactly what the run
 just wrote, so you can check the video frame at each one and fix it or mark it
 curated. Each prediction also carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, explained on
-<a class="reference internal" href="curation/confidence.html"><span class="doc">the confidence page</span></a>.</p>
+<a class="reference internal" href="curation/confidence.html"><span class="doc">the confidence page</span></a>. The model places one event
+per class in every trial it runs over; <strong>Min confidence</strong> in the dialog is
+where a class is instead left absent, and it is near zero by default because
+a wrong label costs one keypress to delete while a missing one cannot be
+reviewed (<a class="reference internal" href="spot/peaks.html#target-spot-peaks"><span class="std std-ref">From probabilities to events</span></a> has the reasoning).</p>
 </section>
 </section>
 

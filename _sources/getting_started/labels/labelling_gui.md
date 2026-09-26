@@ -1,13 +1,28 @@
 (target-labelling-gui)=
 # Labelling in the GUI
 
-## Creating labels
+## Before you can label
 
-Until there is somebody to label and something to label them with, the Labels
-tab shows what is missing and the button that fixes it — **Define individuals…**
-(Settings' individuals dialog) or **Define labels…** (the `mapping.txt` editor).
-Data that names its own individuals answers the first half for you; you can
-still add more. Only the missing half is offered.
+Every label is attributed to a class and to an individual, so two things must
+exist before the Labels tab wakes up:
+
+1. **A `mapping.txt` with at least one class** — the label vocabulary, resolved
+   from the session folder, then the project folder ({ref}`target-label-mapping`).
+2. **At least one individual.** Either the data declares them — a
+   [movement](https://movement.neuroinformatics.dev)-style dataset with an
+   `individual` dimension (`position (time, individual, keypoint, space)`), a
+   pose file, or the session record — or you name them yourself in
+   **Settings ▸ Create / edit individuals…**. Your own names are stored as
+   `extra_individuals` in `gui_settings.yaml` and are *added* to whatever the
+   data declares; the dialog shows the data's names greyed out on top and yours
+   editable below.
+
+Until both are there, the Labels tab is greyed out and the label keys refuse to
+place anything. The tab says which half is missing and offers the button that
+fixes it — **Define individuals…** or **Define labels…** (the `mapping.txt`
+editor).
+
+## Creating labels
 
 Once past that, the top row of the Labels tab holds the two choices every label
 answers: **Mode** — where a new label's boundaries come from — and **Overlay** — how

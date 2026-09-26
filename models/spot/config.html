@@ -392,11 +392,13 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peaks.html">From probabilities to events</a></li>
 <li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Config reference</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../curation/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
@@ -832,35 +834,39 @@ together — contributes.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">100</span></code></p></td>
 <td><p>± this around the tallest peak counts as the same event when reading <code class="docutils literal notranslate"><span class="pre">focus</span></code>/<code class="docutils literal notranslate"><span class="pre">ratio</span></code> off a curve — twice the precision you believe your labels to (the lightgbm model takes it from its <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>). See the confidence page.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_events_per_trial</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
-<td><p>How many events of one class a trial may hold. <code class="docutils literal notranslate"><span class="pre">1</span></code>: the tallest peak of the class’s curve is the event, no threshold needed — the best candidate wins. Above 1: every peak at least <code class="docutils literal notranslate"><span class="pre">min_event_gap_s</span></code> from a taller one is an event, up to this many, and the model now returns spurious ones too, so calibrate the confidence you flag below on the grid’s histogram before reviewing. <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and the rules built on it (<code class="docutils literal notranslate"><span class="pre">product</span></code>, <code class="docutils literal notranslate"><span class="pre">custom</span></code>) are refused — a second peak is another event, not a rival — so set <code class="docutils literal notranslate"><span class="pre">confidence:</span> <span class="pre">focus</span></code> or <code class="docutils literal notranslate"><span class="pre">peak</span></code>. <code class="docutils literal notranslate"><span class="pre">flag_out_of_order</span></code> is refused, since order between classes is undefined. Training refuses a trial labelled more often than this.</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">min_peak</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0.05</span></code></p></td>
+<td><p>A class whose curve never rises above this in a trial is absent from it: no label is written. Deliberately low — a false positive is one keypress in review, a missed event is invisible, and a curve this low scores near 0 anyway. Raise it for a class that is often absent; <code class="docutils literal notranslate"><span class="pre">0</span></code> writes every curve. See <a class="reference internal" href="peaks.html"><span class="doc">From probabilities to events</span></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">min_event_gap_s</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_events_per_trial</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>How many events of one class a trial may hold. <code class="docutils literal notranslate"><span class="pre">1</span></code>: the tallest peak of the class’s curve is the event, no threshold needed — the best candidate wins. Above 1: every peak at least <code class="docutils literal notranslate"><span class="pre">min_event_gap_s</span></code> from a taller one is an event, up to this many, and the model now returns spurious ones too, so calibrate the confidence you flag below on the grid’s histogram before reviewing. <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and the rules built on it (<code class="docutils literal notranslate"><span class="pre">product</span></code>, <code class="docutils literal notranslate"><span class="pre">custom</span></code>) are refused — a second peak is another event, not a rival — so set <code class="docutils literal notranslate"><span class="pre">confidence:</span> <span class="pre">focus</span></code> or <code class="docutils literal notranslate"><span class="pre">peak</span></code>. <code class="docutils literal notranslate"><span class="pre">flag_out_of_order</span></code> is refused, since order between classes is undefined. Training refuses a trial labelled more often than this. See <a class="reference internal" href="peaks.html"><span class="doc">From probabilities to events</span></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">min_event_gap_s</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
 <td><p>With several events per trial, two peaks closer than this are one event, the taller. Read only when <code class="docutils literal notranslate"><span class="pre">max_events_per_trial</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">flag_out_of_order</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">flag_out_of_order</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
 <td><p>A trial whose predicted events are not in <code class="docutils literal notranslate"><span class="pre">labels.classes</span></code> order has every event’s confidence set to 0 — flagged, never reordered or dropped. One event per class only.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">source</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">source</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">spot:{run}&#64;{epoch}</span></code></p></td>
 <td><p>Currently unused: every predicted row’s <code class="docutils literal notranslate"><span class="pre">prediction_source</span></code> is always <code class="docutils literal notranslate"><span class="pre">spot:{run}&#64;{epoch}</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">flag_confidence_below</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">flag_confidence_below</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0.01</span></code></p></td>
-<td><p>Events below this confidence are logged as flagged, never dropped.</p></td>
+<td><p>Events below this <em>confidence</em> are logged as flagged, never dropped: doubt is reviewed. Absence is <code class="docutils literal notranslate"><span class="pre">min_peak</span></code>’s job.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">jpeg_roundtrip</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jpeg_roundtrip</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
 <td><p>Inference decodes the video straight into the model; each frame passes through JPEG in memory first, so the model sees what training saw (the export writes JPEGs). Off = an ablation.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">confidence</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">confidence</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">product</span></code></p></td>
 <td><p>Which reading of a prediction’s curve is written as its <code class="docutils literal notranslate"><span class="pre">confidence</span></code>: <code class="docutils literal notranslate"><span class="pre">product</span></code> (focus × ratio), <code class="docutils literal notranslate"><span class="pre">ratio</span></code> (one candidate or two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> (sharp or smeared), <code class="docutils literal notranslate"><span class="pre">peak</span></code>, or <code class="docutils literal notranslate"><span class="pre">custom</span></code> = <code class="docutils literal notranslate"><span class="pre">ratio</span> <span class="pre">×</span> <span class="pre">(α</span> <span class="pre">+</span> <span class="pre">(1</span> <span class="pre">−</span> <span class="pre">α)·focus)</span></code>. The grids’ histogram popup previews these on a session’s curves and its <strong>Copy for project.yaml</strong> button hands you these lines.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">confidence_alpha</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">confidence_alpha</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
 <td><p>α of the <code class="docutils literal notranslate"><span class="pre">custom</span></code> rule; ignored otherwise.</p></td>
 </tr>
