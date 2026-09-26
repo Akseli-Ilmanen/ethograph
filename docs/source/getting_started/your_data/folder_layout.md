@@ -14,7 +14,7 @@ you:
 ```
 my_project/                            # chosen on the start page
     ├── mapping.txt                    # the project's label_id → name vocabulary
-    │ 
+    │
     ├── skeleton/                      # one YAML per skeleton (crow.yaml, mouse.yaml, …)
     ├── space/                         # reference geometries for the Space plot, one YAML each
     ├── workflows/                     # curation workflows

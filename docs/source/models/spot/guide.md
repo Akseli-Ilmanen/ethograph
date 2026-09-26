@@ -389,4 +389,3 @@ clock. Three choices the paper leaves open are made deliberately: the branch
 weights are a softmax; the module starts as the identity up to a uniform
 scale, so a pretrained backbone is not perturbed at step 0; and the defaults
 are the paper's (`{1, 2, 3}`, 2 groups).
-
