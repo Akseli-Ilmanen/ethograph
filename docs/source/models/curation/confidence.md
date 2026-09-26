@@ -71,7 +71,7 @@ $$
 - **confidence** — both at once: a lone sharp bump reads near `1`, a rival
   or a smeared bump pulls it down.
 
-![peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival](../_static/media/confidence_curve_stats.png)
+![peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival](../../_static/media/confidence_curve_stats.png)
 
 **Two curves read `0` whatever their shape**: one that is nearly nothing
 everywhere (its tallest peak below 0.05 — otherwise a single surviving blip
@@ -125,6 +125,7 @@ label sits on, the rival that pulled `ratio` down, the smear that pulled
 Training reports the held-out hit rate per class (*peck: 6/8 within
 0.05 s*); it is never folded into any label's confidence.
 
+(target-confidence-rule)=
 ## Changing the rule in the GUI
 
 Which reading is the confidence is a review preference, so it is set where
@@ -163,23 +164,5 @@ and the grid and the pipeline never disagree about what the number means
 
 ## Reviewing by confidence
 
-**Label grid view…** (Labels tab ▸ Curation) puts each label's confidence
-and `labeling_method` on its tile and outlines everything below **Flag
-confidence below** in red, in the grid and in the exported PDF. The threshold
-is typed in full rather than stepped, so a model whose scores sit at the
-bottom of the range can be flagged at `0.0002` as easily as at `0.6`;
-**Histogram…** beside it shows where the scores actually sit, per class,
-before you commit — with a bimodal statistic such as `ratio` the gap is
-where the threshold goes.
-
-In the *Click = uncurated, rest = curated* mode, **Mark low-confidence
-as uncurated** pre-clicks exactly the outlined tiles; click any other tile
-that looks wrong, and **Done** curates everything else in one go. With the
-Curation section in frame-by-frame review, a tile click drops straight into
-that boundary instead: `Enter` moves the event onto the right frame,
-`Backspace` deletes one that never happened, `N` marks it curated (with **Click N curates current** ticked).
-
-Judge a cutoff by what it buys: on a session with curated labels, "reviewing
-everything below *t* catches what share of the errors?" is the question the
-confidence exists to answer, and it is a better guide than how the histogram
-looks.
+How the grids sort, flag and pre-click on this number is on the
+{doc}`review grids page <grids>`, under *Reviewing by confidence*.

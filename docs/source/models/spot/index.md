@@ -358,7 +358,7 @@ tools threshold on it. For this model the number is by default **`focus × ratio
 times one minus the tallest *rival* peak over it. A lone sharp bump reads
 near 1; a second candidate or a smeared bump pulls it down. Why not the
 peak's height, the equations, and how this compares with the segmentation
-pipeline's entropy confidence are on {doc}`the confidence page <../confidence>`.
+pipeline's entropy confidence are on {doc}`the confidence page <../curation/confidence>`.
 
 Curves are written through `ethograph.labels.onset_curves` — `(time, {label:
 curve})`, numpy only, model-agnostic — so frame-by-frame review draws them

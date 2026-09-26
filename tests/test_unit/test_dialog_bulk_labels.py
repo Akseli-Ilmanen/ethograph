@@ -156,12 +156,3 @@ class TestGuardedActions:
         monkeypatch.setattr(dialog.panel, "delete_trial_labels", lambda *a, **kw: called.append(True))
         dialog._delete()  # default state: All off, nothing ticked
         assert called == []
-
-    def test_correct_offsets_reaches_the_panel_and_ignores_the_checklist(self, dialog, monkeypatch):
-        """Offset correction is never label-scoped, so it must run even with
-        the checklist empty — unlike curate/delete/purge."""
-        calls = []
-        monkeypatch.setattr(dialog.panel, "correct_offsets", lambda *a, **kw: calls.append((a, kw)) or 2)
-        dialog.trial_scope_combo.setCurrentIndex(dialog.trial_scope_combo.findData("single"))
-        dialog._correct_offsets()
-        assert calls == [(("single",), {"confirm": True})]

@@ -131,7 +131,7 @@ class AppStateSpec:
         # Decoupled from the navigation Before/After padding — a reviewing
         # preference, so global like autoplay_on_navigate.
         "refine_window_s": (float, 0.5, True),
-        # Curation (widgets_curation, docs models/curation.md).
+        # Curation (widgets_curation, docs models/curation/).
         # curation_mode: "manual" | "inspect" | "frame" — SCOPE_LOCAL, because
         # "inspect is enough" curates a trial by merely opening it and must not
         # silently follow the user into the next dataset. curation_label_ids:

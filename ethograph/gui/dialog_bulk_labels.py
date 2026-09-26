@@ -1,16 +1,15 @@
-"""Label bulk editing: curate / delete / purge / correct-offsets across a
-chosen trial and label scope.
+"""Label bulk editing: curate / delete / purge across a chosen trial and
+label scope.
 
 Opened from **Tools ▸ Label bulk editing…** (`top_bar.py`). Everything here
 drives :class:`~ethograph.gui.widgets_curation.CurationPanel`'s own bulk
-methods (`curate_trial_labels`, `delete_trial_labels`, `purge_trial_labels`,
-`correct_offsets`) — this dialog is a form in front of them, not a second
-implementation. Every one of these is also a :mod:`~ethograph.labels.workflow`
-step (``curate_trials``, ``delete_labels``, ``purge_labels``,
-``correct_offsets``), so anything doable here can be recorded and replayed.
+methods (`curate_trial_labels`, `delete_trial_labels`, `purge_trial_labels`)
+— this dialog is a form in front of them, not a second implementation. Every
+one of these is also a :mod:`~ethograph.labels.workflow` step
+(``curate_trials``, ``delete_labels``, ``purge_labels``), so anything doable
+here can be recorded and replayed.
 
-Two choices apply to curate/delete/purge (offset correction is never scoped
-by label class — see below):
+Two choices apply to every action:
 
 * **Trials** — one of :data:`~ethograph.labels.workflow.TRIAL_SCOPE_CHOICES`
   (current trial / all trials / the trials table's filtered set / what its
@@ -89,7 +88,6 @@ class LabelBulkEditDialog(QDialog):
         lay.addWidget(self._build_curate_group())
         lay.addWidget(self._build_delete_group())
         lay.addWidget(self._build_purge_group())
-        lay.addWidget(self._build_correct_offsets_group())
 
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.reject)
@@ -187,24 +185,6 @@ class LabelBulkEditDialog(QDialog):
         lay.addLayout(row)
         return group
 
-    def _build_correct_offsets_group(self) -> QGroupBox:
-        group = QGroupBox("Correct offsets")
-        lay = QVBoxLayout(group)
-        hint = QLabel(
-            "Pulls back each label's offset across a near-zero gap to the next onset of the\n"
-            "same subject, so every interval is strictly separated (pynapple can then resolve\n"
-            "them). Not scoped by label class above — a subject's whole sequence has to be\n"
-            "seen together to find a gap."
-        )
-        hint.setWordWrap(True)
-        hint.setStyleSheet("color: grey; font-size: 10px;")
-        lay.addWidget(hint)
-        self.correct_offsets_btn = QPushButton("Correct offsets…")
-        self.correct_offsets_btn.setAutoDefault(False)
-        self.correct_offsets_btn.clicked.connect(self._correct_offsets)
-        lay.addWidget(self.correct_offsets_btn)
-        return group
-
     # ------------------------------------------------------------------
     # Reading the form
     # ------------------------------------------------------------------
@@ -256,11 +236,3 @@ class LabelBulkEditDialog(QDialog):
                 self._trial_scope(), self.purge_spin.value(), label_ids, confirm=True
             )
         )
-
-    def _correct_offsets(self) -> None:
-        # No label-class guard: offset correction reads a whole subject's
-        # sequence, so the checklist above does not apply to it.
-        if self.panel is None:
-            notify("No Curation section in this window.", severity="warning")
-            return
-        self.panel.correct_offsets(self._trial_scope(), confirm=True)

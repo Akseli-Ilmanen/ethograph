@@ -605,7 +605,7 @@ folds, so the numbers are paired.
 
 A prediction set is a labels TSV in the GUI's own format, every row
 `labeling_method = automated` with the model's confidence. Load it with
-**File ▸ Import labels…** and it enters the {doc}`curation <../curation>`
+**File ▸ Import labels…** and it enters the {doc}`curation <../curation/index>`
 workflow: automated labels draw dotted, the grid views rank them by
 confidence, and every label you confirm becomes `curated`. Loading several
 runs side by side for comparison is noted in {doc}`later`.

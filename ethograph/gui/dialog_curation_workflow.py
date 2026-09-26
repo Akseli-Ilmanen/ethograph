@@ -520,13 +520,6 @@ def _run_purge_labels(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
     return False
 
 
-def _run_correct_offsets(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
-    panel = _require_panel(runner.meta)
-    n = panel.correct_offsets(str(step.value("which")))
-    runner.note.emit(f"Corrected {n} offset(s).")
-    return False
-
-
 def _run_save_labels(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
     io_widget = getattr(runner.meta, "io_widget", None)
     if io_widget is None:
@@ -548,7 +541,6 @@ _HANDLERS: dict[str, Callable[[WorkflowRunner, wf.WorkflowStep], bool]] = {
     "curate_trials": _run_curate_trials,
     "delete_labels": _run_delete_labels,
     "purge_labels": _run_purge_labels,
-    "correct_offsets": _run_correct_offsets,
     "save_labels": _run_save_labels,
 }
 
@@ -647,8 +639,6 @@ def describe_step(step: wf.WorkflowStep) -> str:
         ids = step.value("label_ids") or []
         classes = ", ".join(str(i) for i in ids) if ids else "the curation scope"
         return f"{noun} · {classes} · shorter than {float(step.value('min_duration_s')):g} s"
-    if step.kind == "correct_offsets":
-        return wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
     return step.spec().summary
 
 

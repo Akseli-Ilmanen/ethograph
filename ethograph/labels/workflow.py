@@ -459,14 +459,6 @@ STEP_KINDS: dict[str, StepKind] = {
             ),
         ),
         StepKind(
-            key="correct_offsets",
-            title="Correct offsets",
-            summary="Pull back each label's offset across a near-zero gap to the next onset of the same "
-            "subject, in the chosen trials — makes every interval strictly separated so pynapple can "
-            "resolve them. Not scoped by label class: a subject's whole sequence has to be seen together.",
-            params=(_TRIALS_PARAM,),
-        ),
-        StepKind(
             key="save_labels",
             title="Save labels",
             summary="Write the labels TSV, exactly as Ctrl+S does.",

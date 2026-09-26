@@ -20,7 +20,6 @@ from ethograph.labels.intervals import (
     LABELING_CURATED,
     LABELING_MANUAL,
     add_interval,
-    empty_intervals,
 )
 from ethograph.labels.tsv_store import save_labels_tsv
 
@@ -427,53 +426,6 @@ class TestPurgeScoped:
         assert len(panel.app_state._all_labels_df) == 3
         assert panel.app_state.undo_label_edit() is not None
         assert len(panel.app_state._all_labels_df) == 4
-
-
-class TestCorrectOffsetsScoped:
-    """``correct_offsets_trial`` looks at *every* row of a subject's sequence,
-    points included, so these replace trial 0 with a clean, controlled pair
-    of states rather than building on the shared fixture's point events."""
-
-    def _set_two_states(self, panel, gap: float):
-        df = add_interval(empty_intervals(), 2.0, 3.0, 8, "a")
-        df = add_interval(df, 3.0 + gap, 5.0, 8, "a")
-        panel.app_state.set_trial_intervals("0", df)
-        panel.app_state.label_intervals = df
-
-    def test_pulls_back_the_offset_across_a_near_zero_gap(self, panel):
-        self._set_two_states(panel, gap=0.00003)  # under the 1e-4 s eps
-        assert panel.correct_offsets("filtered") == 1
-        df = panel.app_state._all_labels_df
-        first = df[(df["trial"] == "0") & (df["onset_s"] == 2.0)].iloc[0]
-        assert first["offset_s"] == pytest.approx(3.00003 - 1e-4)
-
-    def test_no_gaps_is_a_no_op(self, panel):
-        self._set_two_states(panel, gap=1.0)  # well clear of the eps
-        assert panel.correct_offsets("filtered") == 0
-
-    def test_confirm_asks_before_correcting(self, panel, monkeypatch):
-        self._set_two_states(panel, gap=0.00003)
-        asked = []
-        monkeypatch.setattr(panel, "_confirm_bulk_correct", lambda which, n: asked.append((which, n)) or False)
-        assert panel.correct_offsets("filtered", confirm=True) == 0
-        assert asked == [("filtered", 2)]
-        # Declined: nothing moved.
-        df = panel.app_state._all_labels_df
-        first = df[(df["trial"] == "0") & (df["onset_s"] == 2.0)].iloc[0]
-        assert first["offset_s"] == 3.0
-
-    def test_a_workflow_step_does_not_ask(self, panel, monkeypatch):
-        monkeypatch.setattr(panel, "_confirm_bulk_correct", lambda *a: pytest.fail("must not ask"))
-        self._set_two_states(panel, gap=0.00003)
-        assert panel.correct_offsets("filtered") == 1
-
-    def test_correction_is_undoable_per_trial(self, panel):
-        self._set_two_states(panel, gap=0.00003)
-        panel.correct_offsets("filtered")
-        assert panel.app_state.undo_label_edit() is not None
-        df = panel.app_state._all_labels_df
-        first = df[(df["trial"] == "0") & (df["onset_s"] == 2.0)].iloc[0]
-        assert first["offset_s"] == 3.0
 
 
 # ---------------------------------------------------------------------------

@@ -17,7 +17,6 @@ from pathlib import Path
 import pandas as pd
 
 from ethograph.labels.exporters import ExportContext, Exporter, run
-from ethograph.labels.intervals import TRACK_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -147,49 +146,3 @@ def enrich_labels_df(
         df = run(exporter, df, context)
 
     return df.sort_values(["trial", "onset_s"]).reset_index(drop=True)
-
-
-def correct_offsets_trial(df: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
-    """Apply gap correction to a single trial's interval DataFrame.
-
-    For each actor (``TRACK_COLUMNS`` --- the recipient is an attribute, not a
-    second track), pulls back ``offset_s`` when the gap to the next onset is
-    smaller than ``eps`` so pynapple can resolve all intervals.
-
-    Works on the per-trial format (columns: trial, onset_s, offset_s, labels,
-    individual) returned by ``app_state.get_trial_intervals()``.
-
-    Returns
-    -------
-    tuple[pd.DataFrame, int, int]
-        Corrected DataFrame, number of offsets corrected, number of negative gaps found.
-    """
-    if df.empty:
-        return df, 0, 0
-    eps = 1e-4
-    subject = [c for c in TRACK_COLUMNS if c in df.columns]
-    df = df.copy().sort_values([*subject, "onset_s"]).reset_index(drop=True)
-
-    corrected = 0
-    negative_gaps = 0
-    for _, group in df.groupby(subject):
-        idx = group.index.tolist()
-        for i in range(len(idx) - 1):
-            gap = df.loc[idx[i + 1], "onset_s"] - df.loc[idx[i], "offset_s"]
-
-            if gap < 0:
-                negative_gaps += 1
-
-            if gap < eps:
-                corrected += 1
-                df.loc[idx[i], "offset_s"] = df.loc[idx[i + 1], "onset_s"] - eps
-                df.loc[idx[i], "duration"] = df.loc[idx[i], "offset_s"] - df.loc[idx[i], "onset_s"]
-
-                if "offset_global" in df.columns and "onset_global" in df.columns:
-                    df.loc[idx[i], "offset_global"] = df.loc[idx[i + 1], "onset_global"] - eps
-                    df.loc[idx[i], "duration"] = df.loc[idx[i], "offset_s"] - df.loc[idx[i], "onset_s"]
-
-    if "onset_global" in df.columns:
-        df.sort_values([*subject, "onset_global"], inplace=True)
-
-    return df, corrected, negative_gaps

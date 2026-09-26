@@ -114,7 +114,6 @@ from ethograph.labels.curation import (
     row_mask,
     targets_from_seeds,
 )
-from ethograph.labels.export import correct_offsets_trial
 from ethograph.labels.intervals import (
     HUMAN_CONFIDENCE,
     LABELING_AUTOMATED,
@@ -1012,70 +1011,6 @@ class CurationPanel(QGroupBox):
         )
         box.setInformativeText(
             "Point events have no duration and are never touched.\n\n"
-            "Ctrl+Z can take it back one trial at a time while this session is open. Nothing\n"
-            "reaches disk until you save, so closing without saving still discards it."
-        )
-        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        box.setDefaultButton(QMessageBox.No)
-        return box.exec() == QMessageBox.Yes
-
-    def correct_offsets(self, which: str = wf.TRIAL_SCOPE_FILTERED, confirm: bool = False) -> int:
-        """Pull back each label's offset across a near-zero gap to the next onset
-        of the same subject, in the trials *which* names — the export step that
-        makes every interval strictly separated so pynapple can resolve them.
-
-        Unlike curate/delete/purge this is never scoped by label class: a
-        subject's whole sequence of labels has to be seen together to find a
-        gap between two of them. Each touched trial is snapshotted first, so
-        Ctrl+Z can take a trial's correction back.
-        """
-        if not self.app_state.ready:
-            return 0
-        trials = self.trials_for_scope(which)
-        if not trials:
-            notify(f"No trials to correct across the {_TRIAL_SCOPE_NOUN[which]}.")
-            return 0
-        if confirm and not self._confirm_bulk_correct(which, len(trials)):
-            return 0
-        total_corrected = 0
-        total_negative = 0
-        touched = []
-        for trial in trials:
-            corrected_df, corrected, negative = correct_offsets_trial(self.app_state.get_trial_intervals(trial))
-            total_negative += negative
-            if not corrected:
-                continue
-            self.app_state.record_label_edit(f"Correct offsets: {which} (trial {trial})", trial=trial)
-            self.app_state.set_trial_intervals(trial, corrected_df)
-            touched.append(trial)
-            total_corrected += corrected
-        if self.app_state.trials_sel is not None:
-            self.app_state.label_intervals = self.app_state.get_trial_intervals(self.app_state.trials_sel)
-        if not total_corrected:
-            notify(f"Nothing to correct across the {_TRIAL_SCOPE_NOUN[which]}.")
-            return 0
-        message = f"Corrected {total_corrected} offset(s) across {len(touched)} trial(s)."
-        if total_negative:
-            message += f" {total_negative} negative gap(s) found — check for overlapping intervals."
-        notify(message, "warning" if total_negative else None)
-        self.app_state.changes_saved = False
-        self.app_state.curation_changed.emit()
-        self._refresh_status()
-        if self.plot_container is not None:
-            self.plot_container.schedule_labels_redraw()
-        if self.data_widget is not None:
-            self.data_widget.update_main_plot(preserve_x_range=True)
-        return total_corrected
-
-    def _confirm_bulk_correct(self, which: str, n_trials: int) -> bool:
-        """Ask before correcting offsets across many trials — a low-risk fix, but still an edit."""
-        noun = _TRIAL_SCOPE_NOUN[which]
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Warning)
-        box.setWindowTitle(f"Correct offsets: {noun}")
-        box.setText(f"Pull back offsets across near-zero gaps, in {n_trials} {noun}?")
-        box.setInformativeText(
-            "Every subject's whole sequence is affected, not just the classes in scope.\n\n"
             "Ctrl+Z can take it back one trial at a time while this session is open. Nothing\n"
             "reaches disk until you save, so closing without saving still discards it."
         )

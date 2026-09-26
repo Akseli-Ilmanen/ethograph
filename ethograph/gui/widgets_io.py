@@ -275,11 +275,10 @@ class IOWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.export_panel.setLayout(layout)
 
-        # Offset correction and short-label purging moved to Tools ▸ Label
-        # bulk editing… (gui/dialog_bulk_labels.py, CurationPanel.correct_offsets
-        # / .purge_trial_labels) — scoped by the same trial-scope vocabulary
-        # every other bulk action uses, not a single_trial/all_trials pair
-        # local to this panel.
+        # Short-label purging moved to Tools ▸ Label bulk editing…
+        # (gui/dialog_bulk_labels.py, CurationPanel.purge_trial_labels) —
+        # scoped by the same trial-scope vocabulary every other bulk action
+        # uses, not a single_trial/all_trials pair local to this panel.
 
         # Save button
         self.save_labels_button = QPushButton("Save labels (Ctrl+S)")
