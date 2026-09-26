@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/spot/quickstart.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Pixels + Pose (extra features)" href="multimodal.html" />
+    <link rel="next" title="Full guide" href="guide.html" />
     <link rel="prev" title="Precise event spotting (PES) from pixels" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -468,10 +470,10 @@
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-spot-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimal setup for spotting point events from video: three sessions
-with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
+with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id292" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
 on pixels only. It trains on two sessions, is scored on the third, and writes
 predictions you then open in the GUI next to the labels you drew.</p>
-<p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a> is the same pipeline with the
+<p>Everything here is a default. <a class="reference internal" href="guide.html"><span class="doc">Full guide</span></a> is the same pipeline with the
 choices put back in: pose features, MSAGSM.</p>
 <p>ethograph does not install PyTorch for you. Install it first, then the extra
 (see <em>Train models</em> in <a class="reference internal" href="../../getting_started/installation.html"><span class="doc">Installation</span></a>):</p>
@@ -522,14 +524,14 @@ beside the source, which is where the GUI writes it.</p></li>
 (<code class="docutils literal notranslate"><span class="pre">context_s</span></code>). The label grid (<code class="docutils literal notranslate"><span class="pre">resolution_ms</span></code>) is left unset, so it is as
 fine as your GPU’s memory allows. Both are durations and are converted using
 each video’s own frame rate, so the same file works at 60 fps and at 200 fps.
-See <a class="reference internal" href="index.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.</p></li>
+See <a class="reference internal" href="guide.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.</p></li>
 <li><p><strong>No <code class="docutils literal notranslate"><span class="pre">individual:</span></code> key.</strong> Every predicted label names the session’s one
 individual, so it lands on the same track as the labels you drew. With
 several individuals in a session, say whose events these are
 (<code class="docutils literal notranslate"><span class="pre">individual:</span> <span class="pre">crow_1</span></code>). The GUI draws a label only for the individual it
 names, and inference stops with an error rather than guess.</p></li>
 <li><p><strong>No <code class="docutils literal notranslate"><span class="pre">features:</span></code> section.</strong> That is what makes this option 2 in
-<a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>: pixels in, events out.</p></li>
+<a class="reference internal" href="guide.html"><span class="doc">Full guide</span></a>: pixels in, events out.</p></li>
 </ul>
 </section>
 <section id="train-and-score">
@@ -579,7 +581,7 @@ video the model sees at once, the grid a label can land on, and how wide a
 labelled event counts as positive. Fit them to how fast your events are
 before changing anything else. See <a class="reference internal" href="config.html#spot-config-clip"><span class="std std-ref">clip</span></a>.</p></li>
 <li><p><strong>A wider temporal aperture</strong>: <code class="docutils literal notranslate"><span class="pre">model.architecture=rny008_msagsm</span></code>, then
-<code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> shows the two runs side by side (see <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>).</p></li>
+<code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> shows the two runs side by side (see <a class="reference internal" href="guide.html"><span class="doc">Full guide</span></a>).</p></li>
 <li><p><strong>You have pose</strong>: list pose variables under <code class="docutils literal notranslate"><span class="pre">features:</span></code> and the model reads
 them next to the pixels. See <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features)</span></a>.</p></li>
 <li><p><strong>Every session held out in turn</strong>: <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code>, so each
@@ -609,11 +611,11 @@ session gets predictions from a model that never saw it.</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="multimodal.html"
+       href="guide.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Pixels + Pose (extra features)</p>
+        <p class="prev-next-title">Full guide</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

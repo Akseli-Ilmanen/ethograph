@@ -5,7 +5,7 @@ Here is a minimalistic setup for training an action segmentation model: Three cu
 features, one `c2f_tcn` {cite:p}`singhania2021c2ftcn` trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.
 
-Everything here is a default. {doc}`index` is the same pipeline with the
+Everything here is a default. {doc}`guide` is the same pipeline with the
 choices put back in.
 
 ethograph does not install PyTorch for you. Install it first, then the extra
@@ -167,9 +167,9 @@ next to your curated labels, and confirming one makes it `curated`. See
   temporal context is actually buying you.
 - **Better features**: distances between individuals, headings and changepoint
   proximity, all built with the session — see
-  {doc}`index` and {mod}`ethograph.features.geometry`.
+  {doc}`guide` and {mod}`ethograph.features.geometry`.
 - **The real workflow**: `project.search()` to find hyperparameters on a
   validation split, then `project.cross_validate()` to hold out each session
   in turn — so every session ends up with predictions from a model that never
-  saw it, not just ses-03. That is {doc}`index`.
+  saw it, not just ses-03. That is {doc}`guide`.
 - **Every key**, with its default: {doc}`config`.

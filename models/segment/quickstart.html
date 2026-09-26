@@ -50,8 +50,8 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/segment/quickstart.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Config reference" href="config.html" />
-    <link rel="prev" title="Segmentation pipeline" href="index.html" />
+    <link rel="next" title="Full guide" href="guide.html" />
+    <link rel="prev" title="Action segmentation" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Action segmentation (state events)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -446,7 +448,7 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Models</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Segmentation pipeline</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Action segmentation</a></li>
     
     <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Quickstart</span></li>
   </ul>
@@ -468,9 +470,9 @@
   <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
 <span id="target-segment-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimalistic setup for training an action segmentation model: Three curated sessions, a few kinematic
-features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id339" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
+features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id364" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.</p>
-<p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a> is the same pipeline with the
+<p>Everything here is a default. <a class="reference internal" href="guide.html"><span class="doc">Full guide</span></a> is the same pipeline with the
 choices put back in.</p>
 <p>ethograph does not install PyTorch for you. Install it first, then the extra
 (see <em>Train models</em> in <a class="reference internal" href="../../getting_started/installation.html"><span class="doc">Installation</span></a>):</p>
@@ -582,7 +584,7 @@ split it drew, the weights, <code class="docutils literal notranslate"><span cla
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> needs trials of at least 384 frames — it pools the time axis in
-half six times. If yours are shorter, <code class="docutils literal notranslate"><span class="pre">model.architecture:</span> <span class="pre">mstcn</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id335" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>, <a class="reference internal" href="../../community/references.html#id337" title="Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020. URL: https://arxiv.org/abs/2006.09220, arXiv:2006.09220.">Li <em>et al.</em>, 2020</a>]</span> works at any
+half six times. If yours are shorter, <code class="docutils literal notranslate"><span class="pre">model.architecture:</span> <span class="pre">mstcn</span></code> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id360" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a>, <a class="reference internal" href="../../community/references.html#id362" title="Shijie Li, Yazan Abu Farha, Yun Liu, Ming-Ming Cheng, and Juergen Gall. MS-TCN++: multi-stage temporal convolutional network for action segmentation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2020. URL: https://arxiv.org/abs/2006.09220, arXiv:2006.09220.">Li <em>et al.</em>, 2020</a>]</span> works at any
 length and is the usual baseline; nothing else in the config changes.</p>
 </div>
 </section>
@@ -622,11 +624,11 @@ temporal context is actually buying you.</p>
 </li>
 <li><p><strong>Better features</strong>: distances between individuals, headings and changepoint
 proximity, all built with the session — see
-<a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a> and <code class="xref py py-mod docutils literal notranslate"><span class="pre">ethograph.features.geometry</span></code>.</p></li>
+<a class="reference internal" href="guide.html"><span class="doc">Full guide</span></a> and <code class="xref py py-mod docutils literal notranslate"><span class="pre">ethograph.features.geometry</span></code>.</p></li>
 <li><p><strong>The real workflow</strong>: <code class="docutils literal notranslate"><span class="pre">project.search()</span></code> to find hyperparameters on a
 validation split, then <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code> to hold out each session
 in turn — so every session ends up with predictions from a model that never
-saw it, not just ses-03. That is <a class="reference internal" href="index.html"><span class="doc">Segmentation pipeline</span></a>.</p></li>
+saw it, not just ses-03. That is <a class="reference internal" href="guide.html"><span class="doc">Full guide</span></a>.</p></li>
 <li><p><strong>Every key</strong>, with its default: <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p></li>
 </ul>
 </section>
@@ -648,15 +650,15 @@ saw it, not just ses-03. That is <a class="reference internal" href="index.html"
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Segmentation pipeline</p>
+        <p class="prev-next-title">Action segmentation</p>
       </div>
     </a>
     <a class="right-next"
-       href="config.html"
+       href="guide.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Config reference</p>
+        <p class="prev-next-title">Full guide</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

@@ -602,9 +602,12 @@ useful guide when guessing a binding.</p>
 </section>
 <section id="curation">
 <h2>Curation<a class="headerlink" href="#curation" title="Link to this heading">#</a></h2>
-<p>See <a class="reference internal" href="../models/curation/modes.html#target-curation-frame"><span class="std std-ref">frame-by-frame review</span></a>. <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> is always bound; the others are live
-only while a frame-by-frame review runs (started from the Labels tab’s
-Curation section), wherever the key is pressed.</p>
+<p>See <a class="reference internal" href="../models/curation/modes.html#target-curation-segment"><span class="std std-ref">segment review</span></a> and
+<a class="reference internal" href="../models/curation/modes.html#target-curation-frame"><span class="std std-ref">frame-by-frame review</span></a>. <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> and <code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code>
+are always bound; the others are live only while a review runs (started from
+the Labels tab’s Curation section), wherever the key is pressed. <code class="docutils literal notranslate"><span class="pre">Enter</span></code> is
+the frame-by-frame review’s alone: in segment review a label is re-placed by
+two plot clicks, and <code class="docutils literal notranslate"><span class="pre">V</span></code> replays it.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Shortcut</p></th>
@@ -619,16 +622,16 @@ Curation section), wherever the key is pressed.</p>
 <td><p>Flag the current trial as hard in the metadata table’s <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column, or back to normal — see the curation page’s hard-trials section</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Enter</span></code></p></td>
-<td><p>Confirm the frame on screen as the boundary — the label becomes manual if it moved, curated if not — and move on</p></td>
+<td><p>Frame-by-frame review: confirm the frame on screen as the boundary — the label becomes manual if it moved, curated if not — and move on</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Backspace</span></code> / <code class="docutils literal notranslate"><span class="pre">Delete</span></code></p></td>
-<td><p>Delete the event being reviewed and move on</p></td>
+<td><p>Delete the event or label being reviewed and move on</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
-<td><p>Next boundary (curates the one you leave when <strong>Click N curates current</strong> is ticked)</p></td>
+<td><p>Next boundary or label (curates the one you leave when <strong>Click N curates current</strong> is ticked)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">B</span></code></p></td>
-<td><p>Previous boundary</p></td>
+<td><p>Previous boundary or label</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Left</span></code> / <code class="docutils literal notranslate"><span class="pre">Right</span></code></p></td>
 <td><p>Step one frame — the main window’s own binding</p></td>

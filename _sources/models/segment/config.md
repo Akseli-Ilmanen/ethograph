@@ -337,10 +337,10 @@ The architectures share almost no hyperparameter names — `mlp` takes
 `f_maps_list`, `mstcn` takes `num_f_maps`, `edtcn` takes `kernel_size`. So
 `model.params` and any `search.params` entry under `model.params.*` are
 **per architecture**: a sweep needs one search space each, not one shared
-space. See {doc}`index` for the loop.
+space. See {doc}`guide` for the loop.
 ```
 
-For what each architecture is good at, see {doc}`index`.
+For what each architecture is good at, see {doc}`guide`.
 
 ## `train`
 

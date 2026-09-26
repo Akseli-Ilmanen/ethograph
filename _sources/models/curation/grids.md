@@ -4,155 +4,124 @@
 Two buttons in the Curation section open review grids on the
 {ref}`scope <target-curation-scope>`: **Label grid view…** freezes every
 boundary as a video frame, **Video grid…** plays the labels as clips. Both
-come with the same **mode** combo and a **Done** button, and a click means
-the same in both. Their *Setup* tab lists the labels in scope for clarity but
-cannot change them — the scope area is the one place labels are chosen.
+show many instances of one class together, which is what makes an outlier
+visible, and a click means the same in both: it **tags the label for
+review**, and **Done** curates the rest.
 
-The controls fall into five families, coloured the same way in both
-screenshots below:
-
-| Colour | Family | What it decides |
-|--------|--------|-----------------|
-| blue | **What is on screen** | which class, in which order |
-| orange | **Confidence threshold** | which tiles are outlined as doubtful |
-| green | **Verdicts** | what a click means, and **Done** |
-| pink | **What a tile says** | the label, where it sits, its confidence and method |
-| purple | **Playback, navigation, export** | stepping through the rest, and the PDF |
-
-## Setup: which labels, in which order
-
-Setup's **Labeling method** combo picks which labels of those classes the grid
-is about: *All labels*, *Manual only*, *Curated only*, *Manual or curated*, or
-*Automated only* — a model's output that nobody has looked at, which is what a
-prediction review is for. *Manual or curated* is there for checking your own
-work: both mean a human vouched for the label, and which of the two it is says
-only how it got there — *Manual only* and *Curated only* are available
-alongside it when you want to isolate one. Like the rest of the grid setup the
-choice is remembered across sessions, and a {doc}`workflow <workflows>` step
-sets it per grid.
-
-Both grids take a **Sort**: by trial (the default in the label grid) or by
-**confidence**, lowest or highest first. Sorting by confidence is the point of
-having it — it puts every doubtful label on the first screens instead of
-scattering them through the trials, so a model review starts where it should.
-The video grid adds **duration** (its default), which keeps clips of a similar
-length together so they end around the same time when they play. The choice is
-remembered, and reordering never moves a verdict: clicks are keyed by label,
-not by position.
+The screenshots below come from the Moll et al. 2025 template
+{cite:p}`moll2025crows`, a crow using a stick to reach a food pellet, on
+three of its behaviours: a point event, *pelletStickFirstContact*, the
+moment the stick first touches the pellet; and two state events,
+*lookToPellet*, the crow's gaze moving from the stick dispenser to the
+pellet, and *toss*, a corrective movement of the stick's orientation in the
+beak.
 
 ## Label grid view
 
 ```{figure} ../../_static/media/curation_framegrid_annotated.png
-:alt: The label grid with its controls numbered: label combo, sort, confidence threshold, mode row, Done, a tile's title, and the frame counter with Export PDF.
+:alt: The label grid on a point class, its controls boxed by family: sort and columns in blue, the confidence threshold in orange, the tag-for-review row and Done in green. One frame per label.
 :width: 100%
 
-One tile per boundary, per camera, titled with what it is and how sure the
-model was.
+A point class: one tile per label, per camera, showing the event's frame.
 ```
 
-1. **Label** — when the scope holds more than one class, narrows the grid to
-   one class at a time; each choice says how many tiles it has. It narrows
-   the *operations* too: **Mark low-confidence as uncurated**, **Done** and
-   the PDF apply to the class on screen and to no other, so a scope of
-   several classes is curated one class at a time without reopening the
-   dialog. Clicks on a class you have filtered away are out of **Done**'s
-   reach until you show it again.
-2. **Sort** — by trial then time, or by confidence, lowest or highest first.
-3. **Flag confidence below** and **Histogram…** — the threshold. Every tile
-   below it is outlined red, in the grid and in the PDF. The number is typed
-   in full rather than stepped, so a model whose scores sit at the bottom of
-   the range can be flagged at `0.0002` as easily as at `0.6`; **Histogram…**
-   shows where the scores actually sit, per class, before you commit — with a
-   bimodal statistic such as `ratio` the gap is where the threshold goes. The
-   popup also holds the {ref}`confidence rule <target-confidence-rule>`.
-4. **Mode**, **Mark low-confidence as uncurated**, **Clear** — what a click
-   means (below). **Mark low-confidence as uncurated** pre-clicks exactly the
-   outlined tiles, and exists only in the *Click = uncurated* mode: a low
-   score is a reason to doubt a label, never to approve it. **Clear** forgets
-   every click.
-5. **Done** — applies the verdicts to the labels on screen and closes the
-   grid. Curating is not undoable; nothing reaches disk until you save.
-6. **A tile's title** — the label's name and id, then trial, camera,
-   individual, the boundary's time and its `labeling_method`; the confidence
-   sits at the right. A state event has a start tile and an end tile.
-7. **The counter** and **Export PDF…** — how many tiles the class has, and a
-   paginated PDF of the grid as it stands, red outlines included.
+```{figure} ../../_static/media/curation_framegrid_state_annotated.png
+:alt: The label grid on a state class: each label is a double-width tile with its onset frame and its offset frame, only the beak tip keypoint drawn and named, and a capture of the GUI's speed panel underneath.
+:width: 100%
+
+A state class: a double-width tile per label, its onset frame on the left
+and its offset frame on the right. The pose overlay follows the sidebar's
+Pose section — here every keypoint but the beak tip is hidden and names are
+on — and the GUI's *speed* panel is captured under each tile, the label's
+span shaded and the onset marked in red.
+```
+
+**Label** (blue) picks the class on screen when the scope holds several, and
+**Sort** its order — by trial, or by confidence lowest first, which puts every
+doubtful label on the first screens. **Flag confidence below** (orange)
+outlines every tile under the threshold in a thin red; **Histogram…** shows
+where the scores sit per class before you commit, and holds the
+{ref}`confidence rule <target-confidence-rule>`. Then the green row: click
+the tiles that are wrong to tag them for review, or **Tag low-confidence**,
+which turns every red-outlined tile orange in one press — the threshold's
+*hint* becomes your *tag*. Press **Done** — every automated label on screen
+that is not tagged becomes curated, and the tagged ones stay automated for a
+closer look. A tile's outline says which it is:
+
+```{raw} html
+<div style="margin: 0.4em 0 1em 0; line-height: 2.2;">
+  <span style="display:inline-block; width:2.2em; height:1.2em; border:2px solid #d94040; border-radius:3px; vertical-align:middle; margin-right:0.5em;"></span>
+  <b>thin red</b> — below <i>Flag confidence below</i>: a hint from the model, not a verdict; <b>Done</b> curates it unless you tag it<br/>
+  <span style="display:inline-block; width:2.2em; height:1.2em; border:3px solid #ff9f1c; border-radius:3px; vertical-align:middle; margin-right:0.5em;"></span>
+  <b>thick orange</b> — tagged for review, by a click or by <i>Tag low-confidence</i>: stays automated after <b>Done</b>, and is the queue the detailed review walks<br/>
+  <span style="display:inline-block; width:2.2em; height:1.2em; border:1px solid #555; border-radius:3px; vertical-align:middle; margin-right:0.5em;"></span>
+  <b>no outline</b> — untagged: <b>Done</b> curates it
+</div>
+```
+
+Tags are keyed by label, so re-sorting never moves one, and a click on
+either frame of a state tile tags the whole label. With a **Label** filter
+active, **Done** and **Tag low-confidence** reach that class only. Curating
+is not undoable; nothing reaches disk until you save.
+
+A **double-click** jumps the main GUI to that boundary instead — the left
+frame of a state tile opens the onset, the right frame the offset — and into
+{ref}`segment review <target-curation-segment>` or
+{ref}`frame-by-frame review <target-curation-frame>` when the Curation
+section is in one. It leaves the tags as they were: click to tag,
+double-click to go and see. **Export PDF…** prints the grid as it stands, red
+outlines included.
+
+Setup's **Labeling method** combo picks which labels the grid is about:
+*Automated only* is what a prediction review wants, *Manual or curated*
+checks your own work. **GUI panels under each frame** ticks any open plot
+panel to capture around every label, as in the screenshot, so an outlier in
+the time series is seen next to its frames. The tab's choices and the sort
+are remembered across sessions, and a {doc}`workflow <workflows>` step sets
+them per grid.
 
 ## Video grid
 
 ```{figure} ../../_static/media/curation_videogrid_annotated.png
-:alt: The video grid with its controls numbered: class header, sort, confidence threshold, mode row with Done, a tile, the playback bar, and the previous and next buttons.
+:alt: The video grid on a point class, its controls boxed by family: class header and sort in blue, the confidence threshold in orange, the tag-for-review row in green, playback in purple, navigation in teal.
 :width: 100%
 
-Clips of one class, sorted by duration, driven by one Play button and one
-slider.
+A point class: each clip is a short window around the event, with a red
+marker on its frame.
 ```
 
-1. **The class header** — the class on screen, its event type and how many
-   clips it has. Only clips of **one label class** are on screen at a time,
-   so what you compare is like with like.
-2. **Sort** — by duration (the default), so clips of similar length share a
-   screen and end around the same time, or by trial or confidence.
-3. **Flag confidence below** and **Histogram…** — the same threshold as the
-   label grid.
-4. **Mode**, **Mark low-confidence as uncurated**, **Clear**, **Done** — the
-   same verdicts as the label grid.
-5. **A tile** — its title names the class and trial, its confidence sits at
-   the right, and the caption says camera, individual, where in the trial the
-   label sits (`1.77–1.82 s` for a state event, `at 0.03 s` for a point
-   event), its duration and its `labeling_method`. The caption also says
-   whether the clip had to be cut at the video's start or end — so a point
-   event that seems to show "the start of the trial" can be told apart from
-   one whose window was clipped. A point event plays its window (**Window
-   around point events** on the Setup tab, 0.5 s by default) with a red
-   marker in the corner on the frame the event falls on.
-6. **Play**, **speed**, the **slider** and the clock — one slider spanning the
-   longest clip on screen drives every tile at once, played once and stopped,
-   shorter clips holding their last frame; **←/→** pause and step every tile
-   one frame back or forward. The speed opens at the value last used in the
-   grid (100 % the first time), independent of the GUI's playback speed, as a
-   percentage of real time. The view never scrolls.
-7. **Previous label** and **Previous clips** — step back a class, or back a
-   screenful within the class.
-8. **Next clips** and **Next label** — step on a screenful (**Clips on
-   screen** on the Setup tab sets how many), or on to the next class; the
-   label buttons are greyed out when the scope holds one class.
+```{figure} ../../_static/media/curation_videogrid_state.gif
+:alt: The video grid on a state class playing: five clips of one class, each running from the label's onset to its offset, driven by one Play button and one slider.
+:width: 100%
 
-Clips decode a screenful at a time at a reduced size, so opening long events
-takes a moment; while a screenful is showing, the next one is already
-decoding in the background, so stepping on is quick. The layout choices —
-window around point events, clips on screen, columns — are remembered across
-sessions and datasets, like the label grid's column count.
+A state class, playing: each clip runs from the label's onset to its
+offset, sorted by duration so clips of a similar length share a screen and
+end around the same time. The controls are the point grid's above.
+```
 
-## What a click means
-
-A **double click** always jumps the main GUI to that trial and time — in
-frame-by-frame mode, straight into the review at that boundary — whichever
-mode the grid is in, and it leaves the verdicts exactly as they were. So
-judging a batch and going to look at one of its labels are not two modes to
-switch between: **click to judge, double-click to go and see.**
-
-A **single** click is a verdict, and the mode says which:
-
-* *Click = curated* — click the tiles that are right (green); **Done** curates
-  those labels.
-* *Click = uncurated, rest = curated* — for a batch that is mostly right:
-  click only the bad ones (orange), **Mark low-confidence as uncurated**
-  pre-clicks what the threshold outlines, and **Done** curates every other
-  label. With a **Label** filter active, "rest" means the rest of *that*
-  class.
+The same three families, plus playback and navigation. One class is on
+screen at a time, so what you compare is like with like, and **Sort**
+defaults to duration so clips of a similar length share a screen and end
+around the same time. **Play** (purple) drives every tile at once from one
+slider, once through, shorter clips holding their last frame; **←**/**→**
+step every clip a frame, and the speed is the grid's own, not the GUI's.
+**Previous / Next clips** (teal) page through the class, **Previous / Next
+label** move between classes. A point event plays a short window with a red
+marker on its frame (**Window around point events** on the Setup tab), and
+its caption says when the clip was cut at the video's start or end. Clips
+decode a screenful at a time at a reduced size, the next screen decoding in
+the background while one is showing.
 
 ## Reviewing by confidence
 
 Sort by confidence, lowest first, set **Flag confidence below** with the
-histogram in view, and the first screens hold every label the model doubted.
-In the *Click = uncurated, rest = curated* mode, **Mark low-confidence as
-uncurated** pre-clicks exactly the outlined tiles; click any other tile that
-looks wrong, and **Done** curates everything else in one go. With the
-Curation section in frame-by-frame review, a double-click drops straight into
-that boundary instead: `Enter` moves the event onto the right frame,
-`Backspace` deletes one that never happened, `N` marks it curated (with
-**Click N curates current** ticked).
+histogram in view, and the first screens hold every label the model doubted,
+each in a thin red outline. **Tag low-confidence** turns exactly those
+orange; click any other tile that looks wrong to turn it orange too, and
+**Done** curates everything that is not orange in one go. What is
+tagged goes to {ref}`segment review <target-curation-segment>` or
+{ref}`frame-by-frame review <target-curation-frame>` afterwards, straight
+from a double-click.
 
 Judge a cutoff by what it buys: on a session with curated labels, "reviewing
 everything below *t* catches what share of the errors?" is the question the

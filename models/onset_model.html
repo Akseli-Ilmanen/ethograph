@@ -50,7 +50,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/onset_model.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Segmentation pipeline" href="segment/index.html" />
+    <link rel="next" title="Action segmentation" href="segment/index.html" />
     <link rel="prev" title="Trial windows" href="trial_windows.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -383,6 +383,7 @@
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="curation/difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -474,8 +476,8 @@ GUI</strong>: no Python scripting, no config files, no GPU. It trains and predic
 an ordinary CPU in seconds, so it is the right starting point if you are not
 comfortable with code.</p>
 <p><strong>Model ▸ LightGBM: Train…</strong> and <strong>Model ▸ LightGBM: Predict…</strong></p>
-<p>Under the hood it is scikit-learn’s <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id270" title="Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake VanderPlas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, and Edouard Duchesnay. Scikit-learn: machine learning in Python. Journal of Machine Learning Research, 12:2825–2830, 2011. URL: https://jmlr.org/papers/v12/pedregosa11a.html.">Pedregosa <em>et al.</em>, 2011</a>]</span>
-<code class="docutils literal notranslate"><span class="pre">HistGradientBoostingClassifier</span></code>, inspired by LightGBM <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>.</p>
+<p>Under the hood it is scikit-learn’s <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id290" title="Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake VanderPlas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, and Edouard Duchesnay. Scikit-learn: machine learning in Python. Journal of Machine Learning Research, 12:2825–2830, 2011. URL: https://jmlr.org/papers/v12/pedregosa11a.html.">Pedregosa <em>et al.</em>, 2011</a>]</span>
+<code class="docutils literal notranslate"><span class="pre">HistGradientBoostingClassifier</span></code>, inspired by LightGBM <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id291" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>.</p>
 <hr class="docutils" />
 <section id="how-it-works">
 <h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">#</a></h2>
@@ -577,7 +579,7 @@ curated. Each prediction also carries a <code class="docutils literal notranslat
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Segmentation pipeline</p>
+        <p class="prev-next-title">Action segmentation</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

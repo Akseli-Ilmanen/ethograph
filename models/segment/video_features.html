@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Action segmentation (state events)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -446,7 +448,7 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Models</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Segmentation pipeline</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Action segmentation</a></li>
     
     <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Video features</span></li>
   </ul>
@@ -486,19 +488,19 @@ For a worked example from a session to a ranked subset of S3D dimensions, see
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> (default)</p></td>
 <td><p>clip-wise</p></td>
-<td><p>the <code class="docutils literal notranslate"><span class="pre">stack_s</span></code> window of frames centred on it, embedded by S3D <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id408" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span> (Kinetics-400 <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id407" title="Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: https://arxiv.org/abs/1705.06950, arXiv:1705.06950.">Kay <em>et al.</em>, 2017</a>]</span>) — motion is in the feature</p></td>
+<td><p>the <code class="docutils literal notranslate"><span class="pre">stack_s</span></code> window of frames centred on it, embedded by S3D <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id438" title="Saining Xie, Chen Sun, Jonathan Huang, Zhuowen Tu, and Kevin Murphy. Rethinking spatiotemporal feature learning: speed-accuracy trade-offs in video classification. In European Conference on Computer Vision (ECCV). 2018. URL: https://arxiv.org/abs/1712.04851, arXiv:1712.04851.">Xie <em>et al.</em>, 2018</a>]</span> (Kinetics-400 <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id437" title="Will Kay, Joao Carreira, Karen Simonyan, Brian Zhang, Chloe Hillier, Sudheendra Vijayanarasimhan, Fabio Viola, Tim Green, Trevor Back, Paul Natsev, Mustafa Suleyman, and Andrew Zisserman. The kinetics human action video dataset. 2017. URL: https://arxiv.org/abs/1705.06950, arXiv:1705.06950.">Kay <em>et al.</em>, 2017</a>]</span>) — motion is in the feature</p></td>
 <td><p><a class="reference external" href="https://v-iashin.github.io/video_features/models/s3d/">video_features › S3D</a></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code></p></td>
 <td><p>frame-wise</p></td>
-<td><p>the frame on its own, embedded by an image backbone — DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id409" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> ViT-B/14 unless <code class="docutils literal notranslate"><span class="pre">model_name</span></code> says otherwise; needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code></p></td>
+<td><p>the frame on its own, embedded by an image backbone — DINOv2 <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id439" title="Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mahmoud Assran, Nicolas Ballas, Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. DINOv2: learning robust visual features without supervision. Transactions on Machine Learning Research, 2024. URL: https://openreview.net/forum?id=a68SUt6zFt, arXiv:2304.07193.">Oquab <em>et al.</em>, 2024</a>]</span> ViT-B/14 unless <code class="docutils literal notranslate"><span class="pre">model_name</span></code> says otherwise; needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'ethograph[timm]'</span></code></p></td>
 <td><p><a class="reference external" href="https://v-iashin.github.io/video_features/models/timm/">video_features › timm</a></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <p>Both follow the recipes of
-<a class="reference external" href="https://v-iashin.github.io/video_features/">v-iashin/video_features</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id411" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span>.
+<a class="reference external" href="https://v-iashin.github.io/video_features/">v-iashin/video_features</a> <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id441" title="Vladimir Iashin. Video_features: extract features from videos with a single command. 2020. URL: https://github.com/v-iashin/video_features.">Iashin, 2020</a>]</span>.
 Extraction is a forward pass per frame, so it runs once into a sidecar file per
 video, which is then merged into your sessions.</p>
 <div class="admonition important">
@@ -531,7 +533,7 @@ already have a sidecar are skipped unless <code class="docutils literal notransl
 <td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">timm</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model_name</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code> only: any timm model with pretrained weights <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id410" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span>. <code class="docutils literal notranslate"><span class="pre">None</span></code> = DINOv2 ViT-B/14.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">timm</span></code> only: any timm model with pretrained weights <span class="bibtex-citation" id="id5">[<a class="reference internal" href="../../community/references.html#id440" title="Ross Wightman. Pytorch image models (timm). 2019. URL: https://github.com/huggingface/pytorch-image-models.">Wightman, 2019</a>]</span>. <code class="docutils literal notranslate"><span class="pre">None</span></code> = DINOv2 ViT-B/14.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stack_s</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> only: window length in seconds.</p></td>

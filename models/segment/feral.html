@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Action segmentation (state events)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_features.html">Video features</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../curation/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -446,7 +448,7 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Models</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Segmentation pipeline</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Action segmentation</a></li>
     
     <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">FERAL</span></li>
   </ul>
@@ -467,7 +469,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="feral">
 <span id="target-segment-feral"></span><h1>FERAL<a class="headerlink" href="#feral" title="Link to this heading">#</a></h1>
-<p>FERAL <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id412" title="Peter Skovorodnikov, Jacopo Razzauti, Blair R. Costelloe, Friederike Buck, Vikram Chandra, Dominic D. Frank, Tomas Kay, Benjamin Koger, Orli Snir, Janet Zhao, Iain D. Couzin, Daniel J. C. Kronauer, and Leslie B. Vosshall. FERAL: a supervised video-understanding system for direct video-to-behavior mapping. bioRxiv, 2025. URL: https://www.biorxiv.org/content/10.1101/2025.11.16.688666v2, doi:10.1101/2025.11.16.688666.">Skovorodnikov <em>et al.</em>, 2025</a>]</span> fine-tunes a video foundation model
+<p>FERAL <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id442" title="Peter Skovorodnikov, Jacopo Razzauti, Blair R. Costelloe, Friederike Buck, Vikram Chandra, Dominic D. Frank, Tomas Kay, Benjamin Koger, Orli Snir, Janet Zhao, Iain D. Couzin, Daniel J. C. Kronauer, and Leslie B. Vosshall. FERAL: a supervised video-understanding system for direct video-to-behavior mapping. bioRxiv, 2025. URL: https://www.biorxiv.org/content/10.1101/2025.11.16.688666v2, doi:10.1101/2025.11.16.688666.">Skovorodnikov <em>et al.</em>, 2025</a>]</span> fine-tunes a video foundation model
 (V-JEPA 2) to predict a class per frame from the pixels alone: no pose, no
 features. There are two ways to use it from ethograph, and both start the
 same way: the labels you curate in the GUI become FERAL’s <code class="docutils literal notranslate"><span class="pre">labels.json</span></code>,

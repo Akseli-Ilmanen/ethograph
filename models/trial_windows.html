@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="curation/modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="curation/difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="curation/workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -501,7 +503,7 @@ this way in <code class="docutils literal notranslate"><span class="pre">alignme
 (trial, individual) pair, and for <a class="reference internal" href="spot/index.html"><span class="doc">event spotting</span></a>, which
 shares the same sessions, trial filter and train/val/test split drawn by
 whole trial. (E2E-Spot then draws its clips of <code class="docutils literal notranslate"><span class="pre">context_s</span></code> inside each trial;
-see <a class="reference internal" href="spot/index.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.)</p>
+see <a class="reference internal" href="spot/guide.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.)</p>
 <p>Both read a trial as <strong>its window of the video</strong>, not the video file: a trial
 carved out of a longer video gives the model only the frames between its start
 and stop, and a video file that already matches its trial is read whole.</p>
@@ -526,12 +528,12 @@ the alignment.</p>
 <section id="why-non-overlapping-windows">
 <h2>Why non-overlapping windows<a class="headerlink" href="#why-non-overlapping-windows" title="Link to this heading">#</a></h2>
 <p>Tools such as DLC2Action split a recording into much shorter segments (e.g.
-256 frames; <span class="bibtex-citation" id="id1"><a class="reference internal" href="../community/references.html#id335" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a></span>, Figure S5) that <strong>overlap</strong>. The clear
+256 frames; <span class="bibtex-citation" id="id1"><a class="reference internal" href="../community/references.html#id360" title="Elizaveta Kozlova, Andy Bonnetto, and Alexander Mathis. DLC2Action: a multimodal deep learning-based toolbox for automated behavior segmentation. 2025. bioRxiv preprint. URL: https://github.com/amathislab/DLC2Action, doi:10.1101/2025.09.27.678941.">Kozlova <em>et al.</em>, 2025</a></span>, Figure S5) that <strong>overlap</strong>. The clear
 advantage is that a behaviour cut at the edge of one segment is seen whole in
 the next.</p>
 <p>We take a simpler approach: <strong>larger windows with no overlap</strong>, following the
 convention of the temporal action segmentation literature
-<span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id354" title="Guodong Ding, Fadime Sener, and Angela Yao. Temporal action segmentation: an analytic review. IEEE Transactions on Pattern Analysis and Machine Intelligence, 46(2):1043–1062, 2024. URL: https://ieeexplore.ieee.org/abstract/document/10294187, doi:10.1109/TPAMI.2023.3327284.">Ding <em>et al.</em>, 2024</a>]</span> (see also
+<span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id379" title="Guodong Ding, Fadime Sener, and Angela Yao. Temporal action segmentation: an analytic review. IEEE Transactions on Pattern Analysis and Machine Intelligence, 46(2):1043–1062, 2024. URL: https://ieeexplore.ieee.org/abstract/document/10294187, doi:10.1109/TPAMI.2023.3327284.">Ding <em>et al.</em>, 2024</a>]</span> (see also
 <a class="reference external" href="https://github.com/nus-cvml/awesome-temporal-action-segmentation">awesome-temporal-action-segmentation</a>).
 This</p>
 <ul class="simple">

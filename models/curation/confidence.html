@@ -52,7 +52,7 @@
     <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/curation/confidence.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Hard trials and review F1" href="difficulty.html" />
+    <link rel="next" title="Curator feedback" href="difficulty.html" />
     <link rel="prev" title="Review grids" href="grids.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -385,6 +385,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
@@ -392,7 +393,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -400,7 +402,7 @@
 <li class="toctree-l2"><a class="reference internal" href="modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="grids.html">Review grids</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -470,151 +472,158 @@
   <section class="tex2jax_ignore mathjax_ignore" id="model-confidence">
 <span id="target-confidence"></span><h1>Model confidence<a class="headerlink" href="#model-confidence" title="Link to this heading">#</a></h1>
 <p>Every predicted label carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code> in the labels TSV (a hand-placed
-label is <code class="docutils literal notranslate"><span class="pre">1.0</span></code>), and the review tools threshold on it: the label grid outlines
+label is <code class="docutils literal notranslate"><span class="pre">1.0</span></code>). The review tools threshold on it: the label grid outlines
 tiles below <strong>Flag confidence below</strong>, <strong>Histogram…</strong> shows where the scores
-sit per class, and <em>Mark low-confidence as uncurated</em> pre-selects exactly those
-tiles. The number is computed by the model that made the prediction, and
-<strong>how</strong> it is computed depends on what kind of question that model answered.
-There are two kinds.</p>
-<section id="state-events-which-class-is-this-frame">
-<h2>State events: which class is this frame?<a class="headerlink" href="#state-events-which-class-is-this-frame" title="Link to this heading">#</a></h2>
-<p>The segmentation pipeline (<code class="docutils literal notranslate"><span class="pre">eto.segment</span></code>) predicts <strong>state events</strong> — spans.
-Its output is one probability distribution <strong>over the classes at every
-frame</strong>: <span class="math notranslate nohighlight">\(p_1(t), \dots, p_C(t)\)</span> with <span class="math notranslate nohighlight">\(\sum_c p_c(t) = 1\)</span>. The label at a
-frame is the largest. A segment’s <code class="docutils literal notranslate"><span class="pre">confidence</span></code> in the TSV is the mean
-probability of its own class over its frames (<code class="docutils literal notranslate"><span class="pre">ethograph/segment/inference.py</span></code>):</p>
+sit per class, and <strong>Tag low-confidence</strong> tags exactly those tiles. The
+number is computed by the model that made the prediction, and <em>how</em> depends
+on the question that model answered — <em>which class is this frame?</em> for a
+state event, <em>when did it happen?</em> for a point event.</p>
+<section id="state-events-which-class">
+<h2>State events: which class?<a class="headerlink" href="#state-events-which-class" title="Link to this heading">#</a></h2>
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../../_images/curation_stateevents.png"><img alt="The segmentation model's per-frame softmax is turned into a confidence curve by normalised entropy; predictions are purged and stitched, then reviewed in bulk in the video grid, and the low-confidence trials inspected in depth." src="../../_images/curation_stateevents.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The <a class="reference internal" href="../segment/index.html"><span class="doc">segmentation pipeline</span></a> predicts a distribution
+over the classes at every frame. Its confidence curve dips wherever the model
+is torn between two classes; a segment’s own confidence is the mean of its
+class’s probability over its span.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The segmentation pipeline (<code class="docutils literal notranslate"><span class="pre">eto.segment</span></code>) outputs one probability
+distribution over the <span class="math notranslate nohighlight">\(C\)</span> classes at every frame, <span class="math notranslate nohighlight">\(p_1(t), \dots, p_C(t)\)</span>
+with <span class="math notranslate nohighlight">\(\sum_c p_c(t) = 1\)</span>, and the label at a frame is the largest. Two numbers
+come out of it:</p>
+<ul>
+<li><p><strong>A segment’s <code class="docutils literal notranslate"><span class="pre">confidence</span></code></strong> in the TSV is the mean probability of its own
+class <span class="math notranslate nohighlight">\(c\)</span> over its frames <span class="math notranslate nohighlight">\(S\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[
-\text{confidence} = \frac{1}{|S|} \sum_{t \in S} p_{c}(t),
-\]</div>
-<p>where <span class="math notranslate nohighlight">\(S\)</span> is the segment’s frames and <span class="math notranslate nohighlight">\(c\)</span> its class. The question at each
-frame is “which one”, so the number is how much of the distribution the
-chosen class holds.</p>
-<p>The confidence overlay drawn during review is a per-frame curve instead: how
-far the distribution is from uniform, its normalised entropy
-(<code class="docutils literal notranslate"><span class="pre">ethograph/labels/predictions.py</span></code>):</p>
+  \text{confidence} = \frac{1}{|S|} \sum_{t \in S} p_{c}(t).
+  \]</div>
+</li>
+<li><p><strong>The confidence curve</strong> drawn under the labels during review is
+per-frame: one minus the normalised entropy of the distribution.</p>
 <div class="math notranslate nohighlight">
 \[
-H(t) = -\sum_{c=1}^{C} p_c(t)\,\log p_c(t), \qquad
-\text{confidence}(t) = 1 - \frac{H(t)}{\log C}.
-\]</div>
-<p><code class="docutils literal notranslate"><span class="pre">1</span></code> means all the mass sits on one class, <code class="docutils literal notranslate"><span class="pre">0</span></code> means every class is equally
-likely.</p>
+  \text{confidence}(t) = 1 - \frac{H(t)}{\log C}, \qquad
+  H(t) = -\sum_{c=1}^{C} p_c(t)\,\log p_c(t).
+  \]</div>
+<p><code class="docutils literal notranslate"><span class="pre">1</span></code> means all the mass sits on one class, <code class="docutils literal notranslate"><span class="pre">0</span></code> that every class is equally
+likely. Its mean over a trial is the <code class="docutils literal notranslate"><span class="pre">model_confidence</span></code> column
+<strong>Confidence curves…</strong> writes to the metadata table.</p>
+</li>
+</ul>
 </section>
-<section id="point-events-when-did-it-happen">
-<h2>Point events: when did it happen?<a class="headerlink" href="#point-events-when-did-it-happen" title="Link to this heading">#</a></h2>
-<p>The LightGBM lightgbm model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> and the E2E-Spot pixel model <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> predict <strong>point
-events</strong>. For each class they produce a <strong>curve over time</strong>, <span class="math notranslate nohighlight">\(p_k(t)\)</span>, the
-per-frame belief that class <span class="math notranslate nohighlight">\(k\)</span>’s event is <em>here</em>, and the prediction is the
-tallest peak of that curve, <span class="math notranslate nohighlight">\(t^\ast = \arg\max_t p_k(t)\)</span> (a local maximum —
-a curve still climbing at the trial’s edge is not a peak).</p>
-<p>Entropy across classes says nothing useful about this: the question is not
-“which class” but “<strong>where</strong> on the curve”, and the alternatives are other
-<em>moments</em>, not other classes. So the confidence is a statistic of the
-curve’s <strong>shape around its peak</strong>, read within a window <span class="math notranslate nohighlight">\(w\)</span> of the peak
-(<code class="docutils literal notranslate"><span class="pre">ethograph/labels/confidence.py</span></code>):</p>
+<section id="point-events-when">
+<h2>Point events: when?<a class="headerlink" href="#point-events-when" title="Link to this heading">#</a></h2>
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../../_images/curation_pointevents.png"><img alt="E2E-Spot's output layer gives one probability curve per class; the tallest peak is the point event, and its confidence is the curve's ratio times its focus; low-confidence events are reviewed frame by frame." src="../../_images/curation_pointevents.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The <a class="reference internal" href="../onset_model.html"><span class="doc">LightGBM</span></a> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id291" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> and
+<a class="reference internal" href="../spot/index.html"><span class="doc">E2E-Spot</span></a> <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id292" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span> models produce one
+probability curve per class, and the point event sits on its tallest peak.
+The confidence is the <strong>shape</strong> of that curve, not the height of the peak.</span><a class="headerlink" href="#id4" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>For each class the model produces a curve <span class="math notranslate nohighlight">\(p_k(t)\)</span>, the per-frame belief that
+class <span class="math notranslate nohighlight">\(k\)</span>’s event is <em>here</em>; the prediction is its tallest peak
+<span class="math notranslate nohighlight">\(t^\ast = \arg\max_t p_k(t)\)</span> (a local maximum — a curve still climbing at the
+trial’s edge is not a peak). Entropy across classes says nothing useful here:
+the alternatives are other <em>moments</em>, not other classes. So the confidence is
+read off the curve’s shape around its peak, within a window <span class="math notranslate nohighlight">\(w\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[
-\text{peak} = p(t^\ast), \qquad
 \text{focus} = \frac{\sum_{|t - t^\ast| \le w} p(t)}{\sum_t p(t)}, \qquad
-\text{ratio} = 1 - \frac{\max_{t' \in \text{peaks},\; |t' - t^\ast| &gt; w} p(t')}{p(t^\ast)},
-\]</div>
-<div class="math notranslate nohighlight">
-\[
+\text{ratio} = 1 - \frac{\max_{t' \in \text{peaks},\; |t' - t^\ast| &gt; w} p(t')}{p(t^\ast)}, \qquad
 \text{confidence} = \text{focus} \times \text{ratio}.
 \]</div>
 <ul class="simple">
-<li><p><strong>peak</strong> — the model’s own score at the event.</p></li>
 <li><p><strong>focus</strong> — the share of the curve’s mass within <span class="math notranslate nohighlight">\(w\)</span> of the peak: <code class="docutils literal notranslate"><span class="pre">1</span></code> is one
-clean bump, lower means a broad bump or belief spread elsewhere.</p></li>
+clean bump, lower a broad bump or belief spread elsewhere.</p></li>
 <li><p><strong>ratio</strong> — one minus the tallest <em>rival</em> over the peak, a rival being
 another local maximum outside <span class="math notranslate nohighlight">\(w\)</span> (never the peak’s own shoulder): <code class="docutils literal notranslate"><span class="pre">1</span></code> is
 no rival, <code class="docutils literal notranslate"><span class="pre">0</span></code> a second candidate as tall as the first. Blind to width by
 design — width is <code class="docutils literal notranslate"><span class="pre">focus</span></code>’s job.</p></li>
-<li><p><strong>confidence</strong> — both at once: a lone sharp bump reads near <code class="docutils literal notranslate"><span class="pre">1</span></code>, a rival
-or a smeared bump pulls it down.</p></li>
+<li><p><strong>peak</strong> — the model’s own score <span class="math notranslate nohighlight">\(p(t^\ast)\)</span>, kept as a candidate.</p></li>
 </ul>
-<p><img alt="peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival" src="../../_images/confidence_curve_stats.png" /></p>
+<figure class="align-default" id="id5">
+<a class="reference internal image-reference" href="../../_images/confidence_curve_stats.png"><img alt="peak, focus and ratio on a sharp bump, a broad bump, and a curve with a rival" src="../../_images/confidence_curve_stats.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">A lone sharp bump reads near <code class="docutils literal notranslate"><span class="pre">1</span></code>; a smeared bump pulls <code class="docutils literal notranslate"><span class="pre">focus</span></code> down, a rival
+elsewhere in the trial pulls <code class="docutils literal notranslate"><span class="pre">ratio</span></code> down.</span><a class="headerlink" href="#id5" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p><strong>The window is your timescale.</strong> <span class="math notranslate nohighlight">\(w = 2 \times\)</span> the tolerance the labels are
+believed to: the LightGBM model takes it from its own <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, the pixel
+model from <code class="docutils literal notranslate"><span class="pre">infer.focus_window_ms</span></code>. A bump wider than that is smeared by your
+own definition; a peak further away than that is a rival.</p>
 <p><strong>Two curves read <code class="docutils literal notranslate"><span class="pre">0</span></code> whatever their shape</strong>: one that is nearly nothing
-everywhere (its tallest peak below 0.05 — otherwise a single surviving blip
-would be the cleanest bump imaginable and read <code class="docutils literal notranslate"><span class="pre">1</span></code>), and one with no
-interior peak at all, or higher at an edge than at any peak inside (still
-climbing at the trial’s end — the event may lie past it). Whatever rule is
-chosen, such a label’s confidence is <code class="docutils literal notranslate"><span class="pre">0</span></code>: flagged for review, never dropped.</p>
-<p><strong>Several events per trial change what a second peak means.</strong> The pixel
-model can read a curve as up to <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> events, peaks at
-least <code class="docutils literal notranslate"><span class="pre">infer.min_event_gap_s</span></code> apart. Then a second peak is another event,
-not a rival, so <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and the rules built on it are refused; <code class="docutils literal notranslate"><span class="pre">focus</span></code>
-(read over each event’s own stretch of the curve) or <code class="docutils literal notranslate"><span class="pre">peak</span></code> is written
-instead. And with one event per trial the tallest peak simply wins, while
-with several the model also returns the spurious ones, so the threshold in
-<strong>Flag confidence below</strong> has to be calibrated on the histogram before
-review rather than left at its default.</p>
-<p><strong>The window is the user’s timescale, not a constant.</strong> <span class="math notranslate nohighlight">\(w = 2 \times\)</span> the
-tolerance the labels are believed to: the lightgbm model takes it from its own
-<code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, the pixel model from <code class="docutils literal notranslate"><span class="pre">infer.focus_window_ms</span></code> (twice the label
-precision). A bump wider than twice the label precision is smeared by the
-user’s own definition; a peak further away than that is a rival.</p>
-<p><strong>Which statistic is written is a property of the model, and it is
-measured, not assumed.</strong> On the same held-out trials, how well each
-candidate separates the model’s hits from its misses (AUC) decides:</p>
+everywhere (tallest peak below 0.05, else a single surviving blip would be
+the cleanest bump imaginable), and one with no interior peak, or higher at an
+edge than at any peak inside (the event may lie past the trial’s end). Such a
+label is flagged for review, never dropped.</p>
+<p><strong>Several events per trial change what a second peak means.</strong> When the pixel
+model reads a curve as up to <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> events, a second
+peak is another event, not a rival: <code class="docutils literal notranslate"><span class="pre">ratio</span></code> is refused and <code class="docutils literal notranslate"><span class="pre">focus</span></code> (over each
+event’s own stretch of the curve) or <code class="docutils literal notranslate"><span class="pre">peak</span></code> is written instead. The model
+then also returns spurious peaks, so calibrate <strong>Flag confidence below</strong> on
+the histogram before review rather than leaving it at its default.</p>
+<p><strong>Which statistic is written is measured per model, not assumed.</strong> On the
+same held-out trials, the candidate that best separates the model’s hits from
+its misses (AUC) wins:</p>
 <ul class="simple">
-<li><p>The <strong>lightgbm model</strong> ranks every candidate per class when it trains
-(<code class="docutils literal notranslate"><span class="pre">fit_confidence_calibration</span></code>) and writes <code class="docutils literal notranslate"><span class="pre">peak</span></code> unless <code class="docutils literal notranslate"><span class="pre">focus</span></code>, <code class="docutils literal notranslate"><span class="pre">ratio</span></code> or
-their product wins by a clear margin — its curve is shape-constrained by construction (a
-Gaussian-weighted target smoothed with the matching kernel), so its bumps
-all look alike and height is what varies. The training message says which
-was chosen.</p></li>
-<li><p>The <strong>pixel model</strong> writes <code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code>. E2E-Spot’s per-frame softmax
-normalises across classes and nothing normalises across time, so a class
-can sit moderately high for a long stretch and its peak still reads as
-confident: height was near chance (AUC 0.58) where <code class="docutils literal notranslate"><span class="pre">focus</span></code>, <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and
-their product reached ~0.8. The two halves behave differently in a histogram — <code class="docutils literal notranslate"><span class="pre">ratio</span></code>
-is bimodal (one candidate or two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> sits in a middle band — so how
-much each should count is a review preference, not a model constant: the
-written number is the plain product, and the emphasis is set in the GUI
-with the histogram in view.</p></li>
+<li><p>The <strong>LightGBM model</strong> ranks every candidate per class when it trains and
+writes <code class="docutils literal notranslate"><span class="pre">peak</span></code> unless <code class="docutils literal notranslate"><span class="pre">focus</span></code>, <code class="docutils literal notranslate"><span class="pre">ratio</span></code> or their product wins by a clear
+margin. Its curve is shape-constrained by construction (a Gaussian-weighted
+target smoothed with the matching kernel), so its bumps all look alike and
+height is what varies. The training message says which was chosen.</p></li>
+<li><p>The <strong>pixel model</strong> writes <code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code>. E2E-Spot’s softmax normalises
+across classes and nothing normalises across time, so a class can sit
+moderately high for a long stretch and its peak still read as confident:
+height was near chance (AUC 0.58) where <code class="docutils literal notranslate"><span class="pre">focus</span></code>, <code class="docutils literal notranslate"><span class="pre">ratio</span></code> and their product
+reached ~0.8. The two halves look different in a histogram — <code class="docutils literal notranslate"><span class="pre">ratio</span></code> is
+bimodal (one candidate or two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> sits in a middle band — so how much
+each counts is set in the GUI, below.</p></li>
 </ul>
-<p>Every candidate stays readable off the curve frame-by-frame review draws
-under the label (one per class in scope, on a fixed 0–1 axis): the peak the
-label sits on, the rival that pulled <code class="docutils literal notranslate"><span class="pre">ratio</span></code> down, the smear that pulled
-<code class="docutils literal notranslate"><span class="pre">focus</span></code> down. That is what lets a threshold be set by looking.</p>
-<p><strong>How often a model is right is a verdict on the model, not on a label.</strong>
-Training reports the held-out hit rate per class (<em>peck: 6/8 within
-0.05 s</em>); it is never folded into any label’s confidence.</p>
+<p>Frame-by-frame review draws every curve in scope under the label on a fixed
+0–1 axis, so the peak, the rival and the smear behind a score are all in
+view. <strong>How often a model is right is a verdict on the model, not on a
+label</strong>: training reports the held-out hit rate per class (<em>peck: 6/8 within
+0.05 s</em>) and never folds it into a label’s confidence.</p>
 </section>
 <section id="changing-the-rule-in-the-gui">
 <span id="target-confidence-rule"></span><h2>Changing the rule in the GUI<a class="headerlink" href="#changing-the-rule-in-the-gui" title="Link to this heading">#</a></h2>
 <p>Which reading is the confidence is a review preference, so it is set where
 its effect is seen: the <strong>Histogram…</strong> popup of the label grid and the video
-grid carries a <em>Confidence rule</em> panel above the bars, whenever the session
+grid carries a <em>Confidence rule</em> panel above the bars whenever the session
 has a prediction run with curves beside it (every run merged, newest per
 class).</p>
 <ul class="simple">
-<li><p><strong>Rule</strong> — <code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code> (the default the pixel model writes), <code class="docutils literal notranslate"><span class="pre">ratio</span></code>
-alone (one candidate or two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> alone (sharp or smeared), <code class="docutils literal notranslate"><span class="pre">peak</span></code>, or
-<strong>custom</strong>: <code class="docutils literal notranslate"><span class="pre">ratio</span> <span class="pre">×</span> <span class="pre">(α</span> <span class="pre">+</span> <span class="pre">(1</span> <span class="pre">−</span> <span class="pre">α)·focus)</span></code> with one slider — α = 1 is
-<code class="docutils literal notranslate"><span class="pre">ratio</span></code>, α = 0 is the product.</p></li>
+<li><p><strong>Rule</strong> — <code class="docutils literal notranslate"><span class="pre">focus</span> <span class="pre">×</span> <span class="pre">ratio</span></code> (the default), <code class="docutils literal notranslate"><span class="pre">ratio</span></code> alone (one candidate or
+two), <code class="docutils literal notranslate"><span class="pre">focus</span></code> alone (sharp or smeared), <code class="docutils literal notranslate"><span class="pre">peak</span></code>, or <strong>custom</strong>:
+<code class="docutils literal notranslate"><span class="pre">ratio</span> <span class="pre">×</span> <span class="pre">(α</span> <span class="pre">+</span> <span class="pre">(1</span> <span class="pre">−</span> <span class="pre">α)·focus)</span></code> with one slider — α = 1 is <code class="docutils literal notranslate"><span class="pre">ratio</span></code>, α = 0 the
+product.</p></li>
 <li><p><strong>Same event within</strong> — the window <span class="math notranslate nohighlight">\(w\)</span> in ms.</p></li>
 </ul>
-<p>Every change redraws the histogram and restyles the grid’s tiles at once, so
-leaning toward candidates or sharpness is judged on the distribution it
-produces, with the threshold line in the same picture. <strong>Apply to labels</strong>
-confirms it: the values are written into the labels — only automated labels
-that have a curve; manual and curated ones are a human’s word and never
-change — as one undo step per trial (<code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> takes it back). Closing the
-popup without applying puts the original values back. The rule, α and window
-are remembered across sessions.</p>
+<p>Every change redraws the histogram and restyles the grid’s tiles at once, with
+the threshold line in the same picture. <strong>Apply to labels</strong> writes the values
+into the labels — only automated labels that have a curve; manual and curated
+ones are a human’s word and never change — as one undo step per trial
+(<code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> takes it back). Closing without applying puts the original values
+back. The rule, α and window are remembered across sessions.</p>
 <p><strong>Copy for project.yaml</strong> puts the same choice on the clipboard as the
-<code class="docutils literal notranslate"><span class="pre">infer:</span></code> lines of a spot project config —</p>
+<code class="docutils literal notranslate"><span class="pre">infer:</span></code> lines of a spot project config, so the next <code class="docutils literal notranslate"><span class="pre">inference()</span></code> writes
+confidence the way the review settled on and the grid and the pipeline never
+disagree about what the number means (<code class="docutils literal notranslate"><span class="pre">infer.confidence</span></code>,
+<code class="docutils literal notranslate"><span class="pre">infer.confidence_alpha</span></code> for the custom rule):</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">infer</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">confidence</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ratio</span>
 <span class="w">  </span><span class="nt">focus_window_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
 </pre></div>
 </div>
-<p>— so the next <code class="docutils literal notranslate"><span class="pre">inference()</span></code> writes confidence the way the review settled on,
-and the grid and the pipeline never disagree about what the number means
-(<code class="docutils literal notranslate"><span class="pre">infer.confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">infer.confidence_alpha</span></code> for the custom rule).</p>
 </section>
 <section id="reviewing-by-confidence">
 <h2>Reviewing by confidence<a class="headerlink" href="#reviewing-by-confidence" title="Link to this heading">#</a></h2>
@@ -647,7 +656,7 @@ and the grid and the pipeline never disagree about what the number means
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Hard trials and review F1</p>
+        <p class="prev-next-title">Curator feedback</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -670,8 +679,8 @@ and the grid and the pipeline never disagree about what the number means
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-events-which-class-is-this-frame">State events: which class is this frame?</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#point-events-when-did-it-happen">Point events: when did it happen?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-events-which-class">State events: which class?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#point-events-when">Point events: when?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changing-the-rule-in-the-gui">Changing the rule in the GUI</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reviewing-by-confidence">Reviewing by confidence</a></li>
 </ul>

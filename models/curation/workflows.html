@@ -51,7 +51,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Examples" href="../../examples/index.html" />
-    <link rel="prev" title="Hard trials and review F1" href="difficulty.html" />
+    <link rel="prev" title="Curator feedback" href="difficulty.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -497,17 +499,29 @@ filtered trials.</p>
 <tr class="row-even"><td><p><strong>Video grid</strong></p></td>
 <td><p>Opens the clip player on the scope, from the chosen cameras. The workflow waits until the grid is closed.</p></td>
 </tr>
-<tr class="row-odd"><td><p><strong>Frame-by-frame review</strong></p></td>
+<tr class="row-odd"><td><p><strong>Segment review</strong></p></td>
+<td><p>Starts the label-by-label review over the scope: each label plays, two clicks re-place it, <code class="docutils literal notranslate"><span class="pre">N</span></code> curates. The workflow waits until the review finishes or is stopped; with nothing left to review it is skipped.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Frame-by-frame review</strong></p></td>
 <td><p>Starts the boundary review over the scope. The workflow waits until the review finishes or is stopped; with nothing left to review it is skipped.</p></td>
 </tr>
-<tr class="row-even"><td><p><strong>Curate trials’ labels</strong></p></td>
+<tr class="row-odd"><td><p><strong>Curate trials’ labels</strong></p></td>
 <td><p>Marks every automated label of the chosen classes, in the chosen trials (current, all, filtered or hidden), as curated. An empty class list means whatever the curation scope holds. Curating is not undoable.</p></td>
 </tr>
-<tr class="row-odd"><td><p><strong>Delete trials’ labels</strong></p></td>
+<tr class="row-even"><td><p><strong>Delete trials’ labels</strong></p></td>
 <td><p>Deletes every label of the chosen classes in the chosen trials, whatever its labeling method.</p></td>
 </tr>
-<tr class="row-even"><td><p><strong>Purge short labels</strong></p></td>
+<tr class="row-odd"><td><p><strong>Purge short labels</strong></p></td>
 <td><p>Deletes state-interval labels of the chosen classes shorter than a threshold, in the chosen trials. Point events are never touched.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Stitch labels</strong></p></td>
+<td><p>Merges same-class state labels of one individual separated by less than a gap, in the chosen trials — the changepoint correction’s own stitch, on its own. Point events are never touched.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Correct changepoints</strong></p></td>
+<td><p>Presses the Changepoints tab’s manual correction — purge, stitch, snap to changepoints, purge again — with the settings that tab shows, over the current trial or every filtered trial (see <a class="reference internal" href="../../advanced/changepoints/correction.html"><span class="doc">Changepoint correction</span></a>). Those settings are the tab’s, not the step’s, so set them there first.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Score trials against the model</strong></p></td>
+<td><p>Presses the Curation section’s <strong>Score now</strong>: each trial’s curated labels against what its run predicted, an F1 per trial into the metadata table. Flagging from those scores is the reviewer’s decision in the histogram, never a step (see <a class="reference internal" href="difficulty.html"><span class="doc">Curator feedback</span></a>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Save labels</strong></p></td>
 <td><p>Writes the labels TSV, exactly as <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code> does. Nothing reaches disk before this step.</p></td>
@@ -534,7 +548,7 @@ filtered trials.</p>
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Hard trials and review F1</p>
+        <p class="prev-next-title">Curator feedback</p>
       </div>
     </a>
     <a class="right-next"

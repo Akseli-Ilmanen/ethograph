@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -511,14 +513,60 @@ not as a way to skip looking.</p>
 automated labels in scope. Use it when a model is good enough that looking at
 the trial is the review. The mode is per dataset, so it never follows you
 silently into another one.</p>
+<section id="segment-review">
+<span id="target-curation-segment"></span><h3>Segment review<a class="headerlink" href="#segment-review" title="Link to this heading">#</a></h3>
+<p>For state events. The labels in scope become a queue of whole labels, walked
+one at a time in the <strong>Order</strong> the combo says; each stop jumps to the label,
+shows it with the Navigation section’s before/after padding around it, plays
+it, and arms it for editing exactly as selecting it and pressing <code class="docutils literal notranslate"><span class="pre">Ctrl+E</span></code>
+would. The label being reviewed is named in large coloured text, and
+<strong>Shortcuts…</strong> spells out the keys. By default the queue holds only
+automated labels — untick <strong>Show automated only</strong> to walk the rest:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Action</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>click, click</p></td>
+<td><p>Re-place the label: the first click is its new start, the second its new end. The clicks snap to changepoints when the Changepoints tab’s correction is on, like any placed label. The label becomes <strong>manual</strong> (<code class="docutils literal notranslate"><span class="pre">confidence</span> <span class="pre">=</span> <span class="pre">1.0</span></code>), and the new segment plays so you see the result</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">V</span></code></p></td>
+<td><p>Play the label again</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Next label. With <strong>Click N curates current</strong> ticked (the default) the label you leave becomes <strong>curated</strong>; a label left with only one click in keeps its old boundaries</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">B</span></code></p></td>
+<td><p>Back to the previous label</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Backspace</span></code> / <code class="docutils literal notranslate"><span class="pre">Delete</span></code></p></td>
+<td><p>The label should not exist — delete it and move on</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Space</span></code></p></td>
+<td><p>Play / pause</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Enter</span></code> does nothing here: a label that plays right needs no key but <code class="docutils literal notranslate"><span class="pre">N</span></code>. The
+mode needs no video — in an audio-only session the label’s sound plays. Just
+watching, without curating, is the Navigation section’s <em>Label</em> mode;
+segment review is that same walk with <code class="docutils literal notranslate"><span class="pre">N</span></code>, <code class="docutils literal notranslate"><span class="pre">Backspace</span></code> and the two-click edit
+added, so it lives with the other curation modes and not in the Navigation
+section.</p>
+</section>
 <section id="frame-by-frame-review">
 <span id="target-curation-frame"></span><h3>Frame-by-frame review<a class="headerlink" href="#frame-by-frame-review" title="Link to this heading">#</a></h3>
-<p>The labels in scope become a queue of boundaries
+<p>For point events, and for a boundary the label grid singled out. The labels
+in scope become a queue of boundaries
 (one per point event, a start then an end per state event, in time order)
 walked one at a time, each centred in a small <strong>View window</strong>
-(untick <strong>Locked around label</strong> to pan the whole trial). The boundary being
-reviewed is named in large coloured text; the keys are drawn in the section,
-and <strong>Shortcuts…</strong> spells them out. By default the queue holds only automated
+(untick <strong>Locked around label</strong> to pan the whole trial). The label being
+reviewed is named in its class colour, with its labeling method and
+confidence beneath (and <em>start</em> or <em>end</em> for a state event); the keys are drawn
+in the section, and <strong>Shortcuts…</strong> spells them out. By default the queue holds only automated
 boundaries — a human already vouched for manual and curated ones — untick
 <strong>Show automated only</strong> to walk those too. The <strong>Order</strong> combo walks the queue
 <em>Trial-by-trial</em> (every boundary of a trial, then the next trial) or
@@ -556,7 +604,7 @@ deleting moves straight on to the next boundary:</p>
 <p>Navigating trials the normal way (trial combo, <code class="docutils literal notranslate"><span class="pre">Up</span></code>/<code class="docutils literal notranslate"><span class="pre">Down</span></code>) pulls the review
 along to that trial’s first boundary. Nothing reaches disk until you save with
 <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code>.</p>
-<p>Reviewing what a LightGBM model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id271" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> or the pixel model
+<p>Reviewing what a LightGBM model <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id291" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span> or the pixel model
 predicted, you also get the <strong>curve it predicted from</strong>: a dashed line per
 label class, in the class’s own colour, on a 0–1 right-hand axis. Only the
 classes <strong>in scope</strong> are drawn, so dragging in one class shows that class’s
@@ -627,6 +675,7 @@ them and replays them in one press.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope-which-labels">Scope: which labels</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#modes-how-a-label-gets-curated">Modes: how a label gets curated</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segment-review">Segment review</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#frame-by-frame-review">Frame-by-frame review</a></li>
 </ul>
 </li>

@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="modes.html">Ways to curate</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -470,178 +472,115 @@
 <p>Two buttons in the Curation section open review grids on the
 <a class="reference internal" href="modes.html#target-curation-scope"><span class="std std-ref">scope</span></a>: <strong>Label grid view…</strong> freezes every
 boundary as a video frame, <strong>Video grid…</strong> plays the labels as clips. Both
-come with the same <strong>mode</strong> combo and a <strong>Done</strong> button, and a click means
-the same in both. Their <em>Setup</em> tab lists the labels in scope for clarity but
-cannot change them — the scope area is the one place labels are chosen.</p>
-<p>The controls fall into five families, coloured the same way in both
-screenshots below:</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Colour</p></th>
-<th class="head"><p>Family</p></th>
-<th class="head"><p>What it decides</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>blue</p></td>
-<td><p><strong>What is on screen</strong></p></td>
-<td><p>which class, in which order</p></td>
-</tr>
-<tr class="row-odd"><td><p>orange</p></td>
-<td><p><strong>Confidence threshold</strong></p></td>
-<td><p>which tiles are outlined as doubtful</p></td>
-</tr>
-<tr class="row-even"><td><p>green</p></td>
-<td><p><strong>Verdicts</strong></p></td>
-<td><p>what a click means, and <strong>Done</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p>pink</p></td>
-<td><p><strong>What a tile says</strong></p></td>
-<td><p>the label, where it sits, its confidence and method</p></td>
-</tr>
-<tr class="row-even"><td><p>purple</p></td>
-<td><p><strong>Playback, navigation, export</strong></p></td>
-<td><p>stepping through the rest, and the PDF</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<section id="setup-which-labels-in-which-order">
-<h2>Setup: which labels, in which order<a class="headerlink" href="#setup-which-labels-in-which-order" title="Link to this heading">#</a></h2>
-<p>Setup’s <strong>Labeling method</strong> combo picks which labels of those classes the grid
-is about: <em>All labels</em>, <em>Manual only</em>, <em>Curated only</em>, <em>Manual or curated</em>, or
-<em>Automated only</em> — a model’s output that nobody has looked at, which is what a
-prediction review is for. <em>Manual or curated</em> is there for checking your own
-work: both mean a human vouched for the label, and which of the two it is says
-only how it got there — <em>Manual only</em> and <em>Curated only</em> are available
-alongside it when you want to isolate one. Like the rest of the grid setup the
-choice is remembered across sessions, and a <a class="reference internal" href="workflows.html"><span class="doc">workflow</span></a> step
-sets it per grid.</p>
-<p>Both grids take a <strong>Sort</strong>: by trial (the default in the label grid) or by
-<strong>confidence</strong>, lowest or highest first. Sorting by confidence is the point of
-having it — it puts every doubtful label on the first screens instead of
-scattering them through the trials, so a model review starts where it should.
-The video grid adds <strong>duration</strong> (its default), which keeps clips of a similar
-length together so they end around the same time when they play. The choice is
-remembered, and reordering never moves a verdict: clicks are keyed by label,
-not by position.</p>
-</section>
+show many instances of one class together, which is what makes an outlier
+visible, and a click means the same in both: it <strong>tags the label for
+review</strong>, and <strong>Done</strong> curates the rest.</p>
+<p>The screenshots below come from the Moll et al. 2025 template
+<span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id78" title="Felix W. Moll, Julius Würzler, and Andreas Nieder. Learned precision tool use in carrion crows. Current Biology, 35(19):4845–4852.e3, 2025. doi:10.1016/j.cub.2025.08.033.">Moll <em>et al.</em>, 2025</a>]</span>, a crow using a stick to reach a food pellet, on
+three of its behaviours: a point event, <em>pelletStickFirstContact</em>, the
+moment the stick first touches the pellet; and two state events,
+<em>lookToPellet</em>, the crow’s gaze moving from the stick dispenser to the
+pellet, and <em>toss</em>, a corrective movement of the stick’s orientation in the
+beak.</p>
 <section id="label-grid-view">
 <h2>Label grid view<a class="headerlink" href="#label-grid-view" title="Link to this heading">#</a></h2>
-<figure class="align-default" id="id1">
-<a class="reference internal image-reference" href="../../_images/curation_framegrid_annotated.png"><img alt="The label grid with its controls numbered: label combo, sort, confidence threshold, mode row, Done, a tile's title, and the frame counter with Export PDF." src="../../_images/curation_framegrid_annotated.png" style="width: 100%;" />
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../../_images/curation_framegrid_annotated.png"><img alt="The label grid on a point class, its controls boxed by family: sort and columns in blue, the confidence threshold in orange, the tag-for-review row and Done in green. One frame per label." src="../../_images/curation_framegrid_annotated.png" style="width: 100%;" />
 </a>
 <figcaption>
-<p><span class="caption-text">One tile per boundary, per camera, titled with what it is and how sure the
-model was.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+<p><span class="caption-text">A point class: one tile per label, per camera, showing the event’s frame.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
-<ol class="arabic simple">
-<li><p><strong>Label</strong> — when the scope holds more than one class, narrows the grid to
-one class at a time; each choice says how many tiles it has. It narrows
-the <em>operations</em> too: <strong>Mark low-confidence as uncurated</strong>, <strong>Done</strong> and
-the PDF apply to the class on screen and to no other, so a scope of
-several classes is curated one class at a time without reopening the
-dialog. Clicks on a class you have filtered away are out of <strong>Done</strong>’s
-reach until you show it again.</p></li>
-<li><p><strong>Sort</strong> — by trial then time, or by confidence, lowest or highest first.</p></li>
-<li><p><strong>Flag confidence below</strong> and <strong>Histogram…</strong> — the threshold. Every tile
-below it is outlined red, in the grid and in the PDF. The number is typed
-in full rather than stepped, so a model whose scores sit at the bottom of
-the range can be flagged at <code class="docutils literal notranslate"><span class="pre">0.0002</span></code> as easily as at <code class="docutils literal notranslate"><span class="pre">0.6</span></code>; <strong>Histogram…</strong>
-shows where the scores actually sit, per class, before you commit — with a
-bimodal statistic such as <code class="docutils literal notranslate"><span class="pre">ratio</span></code> the gap is where the threshold goes. The
-popup also holds the <a class="reference internal" href="confidence.html#target-confidence-rule"><span class="std std-ref">confidence rule</span></a>.</p></li>
-<li><p><strong>Mode</strong>, <strong>Mark low-confidence as uncurated</strong>, <strong>Clear</strong> — what a click
-means (below). <strong>Mark low-confidence as uncurated</strong> pre-clicks exactly the
-outlined tiles, and exists only in the <em>Click = uncurated</em> mode: a low
-score is a reason to doubt a label, never to approve it. <strong>Clear</strong> forgets
-every click.</p></li>
-<li><p><strong>Done</strong> — applies the verdicts to the labels on screen and closes the
-grid. Curating is not undoable; nothing reaches disk until you save.</p></li>
-<li><p><strong>A tile’s title</strong> — the label’s name and id, then trial, camera,
-individual, the boundary’s time and its <code class="docutils literal notranslate"><span class="pre">labeling_method</span></code>; the confidence
-sits at the right. A state event has a start tile and an end tile.</p></li>
-<li><p><strong>The counter</strong> and <strong>Export PDF…</strong> — how many tiles the class has, and a
-paginated PDF of the grid as it stands, red outlines included.</p></li>
-</ol>
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../../_images/curation_framegrid_state_annotated.png"><img alt="The label grid on a state class: each label is a double-width tile with its onset frame and its offset frame, only the beak tip keypoint drawn and named, and a capture of the GUI's speed panel underneath." src="../../_images/curation_framegrid_state_annotated.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">A state class: a double-width tile per label, its onset frame on the left
+and its offset frame on the right. The pose overlay follows the sidebar’s
+Pose section — here every keypoint but the beak tip is hidden and names are
+on — and the GUI’s <em>speed</em> panel is captured under each tile, the label’s
+span shaded and the onset marked in red.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p><strong>Label</strong> (blue) picks the class on screen when the scope holds several, and
+<strong>Sort</strong> its order — by trial, or by confidence lowest first, which puts every
+doubtful label on the first screens. <strong>Flag confidence below</strong> (orange)
+outlines every tile under the threshold in a thin red; <strong>Histogram…</strong> shows
+where the scores sit per class before you commit, and holds the
+<a class="reference internal" href="confidence.html#target-confidence-rule"><span class="std std-ref">confidence rule</span></a>. Then the green row: click
+the tiles that are wrong to tag them for review, or <strong>Tag low-confidence</strong>,
+which turns every red-outlined tile orange in one press — the threshold’s
+<em>hint</em> becomes your <em>tag</em>. Press <strong>Done</strong> — every automated label on screen
+that is not tagged becomes curated, and the tagged ones stay automated for a
+closer look. A tile’s outline says which it is:</p>
+<div style="margin: 0.4em 0 1em 0; line-height: 2.2;">
+  <span style="display:inline-block; width:2.2em; height:1.2em; border:2px solid #d94040; border-radius:3px; vertical-align:middle; margin-right:0.5em;"></span>
+  <b>thin red</b> — below <i>Flag confidence below</i>: a hint from the model, not a verdict; <b>Done</b> curates it unless you tag it<br/>
+  <span style="display:inline-block; width:2.2em; height:1.2em; border:3px solid #ff9f1c; border-radius:3px; vertical-align:middle; margin-right:0.5em;"></span>
+  <b>thick orange</b> — tagged for review, by a click or by <i>Tag low-confidence</i>: stays automated after <b>Done</b>, and is the queue the detailed review walks<br/>
+  <span style="display:inline-block; width:2.2em; height:1.2em; border:1px solid #555; border-radius:3px; vertical-align:middle; margin-right:0.5em;"></span>
+  <b>no outline</b> — untagged: <b>Done</b> curates it
+</div><p>Tags are keyed by label, so re-sorting never moves one, and a click on
+either frame of a state tile tags the whole label. With a <strong>Label</strong> filter
+active, <strong>Done</strong> and <strong>Tag low-confidence</strong> reach that class only. Curating
+is not undoable; nothing reaches disk until you save.</p>
+<p>A <strong>double-click</strong> jumps the main GUI to that boundary instead — the left
+frame of a state tile opens the onset, the right frame the offset — and into
+<a class="reference internal" href="modes.html#target-curation-segment"><span class="std std-ref">segment review</span></a> or
+<a class="reference internal" href="modes.html#target-curation-frame"><span class="std std-ref">frame-by-frame review</span></a> when the Curation
+section is in one. It leaves the tags as they were: click to tag,
+double-click to go and see. <strong>Export PDF…</strong> prints the grid as it stands, red
+outlines included.</p>
+<p>Setup’s <strong>Labeling method</strong> combo picks which labels the grid is about:
+<em>Automated only</em> is what a prediction review wants, <em>Manual or curated</em>
+checks your own work. <strong>GUI panels under each frame</strong> ticks any open plot
+panel to capture around every label, as in the screenshot, so an outlier in
+the time series is seen next to its frames. The tab’s choices and the sort
+are remembered across sessions, and a <a class="reference internal" href="workflows.html"><span class="doc">workflow</span></a> step sets
+them per grid.</p>
 </section>
 <section id="video-grid">
 <h2>Video grid<a class="headerlink" href="#video-grid" title="Link to this heading">#</a></h2>
-<figure class="align-default" id="id2">
-<a class="reference internal image-reference" href="../../_images/curation_videogrid_annotated.png"><img alt="The video grid with its controls numbered: class header, sort, confidence threshold, mode row with Done, a tile, the playback bar, and the previous and next buttons." src="../../_images/curation_videogrid_annotated.png" style="width: 100%;" />
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../../_images/curation_videogrid_annotated.png"><img alt="The video grid on a point class, its controls boxed by family: class header and sort in blue, the confidence threshold in orange, the tag-for-review row in green, playback in purple, navigation in teal." src="../../_images/curation_videogrid_annotated.png" style="width: 100%;" />
 </a>
 <figcaption>
-<p><span class="caption-text">Clips of one class, sorted by duration, driven by one Play button and one
-slider.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+<p><span class="caption-text">A point class: each clip is a short window around the event, with a red
+marker on its frame.</span><a class="headerlink" href="#id4" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
-<ol class="arabic simple">
-<li><p><strong>The class header</strong> — the class on screen, its event type and how many
-clips it has. Only clips of <strong>one label class</strong> are on screen at a time,
-so what you compare is like with like.</p></li>
-<li><p><strong>Sort</strong> — by duration (the default), so clips of similar length share a
-screen and end around the same time, or by trial or confidence.</p></li>
-<li><p><strong>Flag confidence below</strong> and <strong>Histogram…</strong> — the same threshold as the
-label grid.</p></li>
-<li><p><strong>Mode</strong>, <strong>Mark low-confidence as uncurated</strong>, <strong>Clear</strong>, <strong>Done</strong> — the
-same verdicts as the label grid.</p></li>
-<li><p><strong>A tile</strong> — its title names the class and trial, its confidence sits at
-the right, and the caption says camera, individual, where in the trial the
-label sits (<code class="docutils literal notranslate"><span class="pre">1.77–1.82</span> <span class="pre">s</span></code> for a state event, <code class="docutils literal notranslate"><span class="pre">at</span> <span class="pre">0.03</span> <span class="pre">s</span></code> for a point
-event), its duration and its <code class="docutils literal notranslate"><span class="pre">labeling_method</span></code>. The caption also says
-whether the clip had to be cut at the video’s start or end — so a point
-event that seems to show “the start of the trial” can be told apart from
-one whose window was clipped. A point event plays its window (<strong>Window
-around point events</strong> on the Setup tab, 0.5 s by default) with a red
-marker in the corner on the frame the event falls on.</p></li>
-<li><p><strong>Play</strong>, <strong>speed</strong>, the <strong>slider</strong> and the clock — one slider spanning the
-longest clip on screen drives every tile at once, played once and stopped,
-shorter clips holding their last frame; <strong>←/→</strong> pause and step every tile
-one frame back or forward. The speed opens at the value last used in the
-grid (100 % the first time), independent of the GUI’s playback speed, as a
-percentage of real time. The view never scrolls.</p></li>
-<li><p><strong>Previous label</strong> and <strong>Previous clips</strong> — step back a class, or back a
-screenful within the class.</p></li>
-<li><p><strong>Next clips</strong> and <strong>Next label</strong> — step on a screenful (<strong>Clips on
-screen</strong> on the Setup tab sets how many), or on to the next class; the
-label buttons are greyed out when the scope holds one class.</p></li>
-</ol>
-<p>Clips decode a screenful at a time at a reduced size, so opening long events
-takes a moment; while a screenful is showing, the next one is already
-decoding in the background, so stepping on is quick. The layout choices —
-window around point events, clips on screen, columns — are remembered across
-sessions and datasets, like the label grid’s column count.</p>
-</section>
-<section id="what-a-click-means">
-<h2>What a click means<a class="headerlink" href="#what-a-click-means" title="Link to this heading">#</a></h2>
-<p>A <strong>double click</strong> always jumps the main GUI to that trial and time — in
-frame-by-frame mode, straight into the review at that boundary — whichever
-mode the grid is in, and it leaves the verdicts exactly as they were. So
-judging a batch and going to look at one of its labels are not two modes to
-switch between: <strong>click to judge, double-click to go and see.</strong></p>
-<p>A <strong>single</strong> click is a verdict, and the mode says which:</p>
-<ul class="simple">
-<li><p><em>Click = curated</em> — click the tiles that are right (green); <strong>Done</strong> curates
-those labels.</p></li>
-<li><p><em>Click = uncurated, rest = curated</em> — for a batch that is mostly right:
-click only the bad ones (orange), <strong>Mark low-confidence as uncurated</strong>
-pre-clicks what the threshold outlines, and <strong>Done</strong> curates every other
-label. With a <strong>Label</strong> filter active, “rest” means the rest of <em>that</em>
-class.</p></li>
-</ul>
+<figure class="align-default" id="id5">
+<a class="reference internal image-reference" href="../../_images/curation_videogrid_state.gif"><img alt="The video grid on a state class playing: five clips of one class, each running from the label's onset to its offset, driven by one Play button and one slider." src="../../_images/curation_videogrid_state.gif" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">A state class, playing: each clip runs from the label’s onset to its
+offset, sorted by duration so clips of a similar length share a screen and
+end around the same time. The controls are the point grid’s above.</span><a class="headerlink" href="#id5" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The same three families, plus playback and navigation. One class is on
+screen at a time, so what you compare is like with like, and <strong>Sort</strong>
+defaults to duration so clips of a similar length share a screen and end
+around the same time. <strong>Play</strong> (purple) drives every tile at once from one
+slider, once through, shorter clips holding their last frame; <strong>←</strong>/<strong>→</strong>
+step every clip a frame, and the speed is the grid’s own, not the GUI’s.
+<strong>Previous / Next clips</strong> (teal) page through the class, <strong>Previous / Next
+label</strong> move between classes. A point event plays a short window with a red
+marker on its frame (<strong>Window around point events</strong> on the Setup tab), and
+its caption says when the clip was cut at the video’s start or end. Clips
+decode a screenful at a time at a reduced size, the next screen decoding in
+the background while one is showing.</p>
 </section>
 <section id="reviewing-by-confidence">
 <h2>Reviewing by confidence<a class="headerlink" href="#reviewing-by-confidence" title="Link to this heading">#</a></h2>
 <p>Sort by confidence, lowest first, set <strong>Flag confidence below</strong> with the
-histogram in view, and the first screens hold every label the model doubted.
-In the <em>Click = uncurated, rest = curated</em> mode, <strong>Mark low-confidence as
-uncurated</strong> pre-clicks exactly the outlined tiles; click any other tile that
-looks wrong, and <strong>Done</strong> curates everything else in one go. With the
-Curation section in frame-by-frame review, a double-click drops straight into
-that boundary instead: <code class="docutils literal notranslate"><span class="pre">Enter</span></code> moves the event onto the right frame,
-<code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes one that never happened, <code class="docutils literal notranslate"><span class="pre">N</span></code> marks it curated (with
-<strong>Click N curates current</strong> ticked).</p>
+histogram in view, and the first screens hold every label the model doubted,
+each in a thin red outline. <strong>Tag low-confidence</strong> turns exactly those
+orange; click any other tile that looks wrong to turn it orange too, and
+<strong>Done</strong> curates everything that is not orange in one go. What is
+tagged goes to <a class="reference internal" href="modes.html#target-curation-segment"><span class="std std-ref">segment review</span></a> or
+<a class="reference internal" href="modes.html#target-curation-frame"><span class="std std-ref">frame-by-frame review</span></a> afterwards, straight
+from a double-click.</p>
 <p>Judge a cutoff by what it buys: on a session with curated labels, “reviewing
 everything below <em>t</em> catches what share of the errors?” is the question the
 confidence exists to answer, and it is a better guide than how the histogram
@@ -697,10 +636,8 @@ computed by, is on the <a class="reference internal" href="confidence.html"><spa
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-which-labels-in-which-order">Setup: which labels, in which order</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#label-grid-view">Label grid view</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#video-grid">Video grid</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-click-means">What a click means</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reviewing-by-confidence">Reviewing by confidence</a></li>
 </ul>
   </nav></div>

@@ -6,7 +6,7 @@ with curated point labels, one camera, and plain E2E-Spot {cite:p}`hong2022e2esp
 on pixels only. It trains on two sessions, is scored on the third, and writes
 predictions you then open in the GUI next to the labels you drew.
 
-Everything here is a default. {doc}`index` is the same pipeline with the
+Everything here is a default. {doc}`guide` is the same pipeline with the
 choices put back in: pose features, MSAGSM.
 
 ethograph does not install PyTorch for you. Install it first, then the extra
@@ -69,7 +69,7 @@ Four things worth knowing about it:
   (`individual: crow_1`). The GUI draws a label only for the individual it
   names, and inference stops with an error rather than guess.
 - **No `features:` section.** That is what makes this option 2 in
-  {doc}`index`: pixels in, events out.
+  {doc}`guide`: pixels in, events out.
 
 ## 3. Train and score
 
@@ -119,7 +119,7 @@ model hesitated. See {ref}`target-curation-frame`.
   labelled event counts as positive. Fit them to how fast your events are
   before changing anything else. See {ref}`spot-config-clip`.
 - **A wider temporal aperture**: `model.architecture=rny008_msagsm`, then
-  `project.compare()` shows the two runs side by side (see {doc}`index`).
+  `project.compare()` shows the two runs side by side (see {doc}`guide`).
 - **You have pose**: list pose variables under `features:` and the model reads
   them next to the pixels. See {doc}`multimodal`.
 - **Every session held out in turn**: `project.cross_validate()`, so each

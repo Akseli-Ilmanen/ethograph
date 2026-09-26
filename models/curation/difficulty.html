@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Hard trials and review F1 &#8212; ethograph</title>
+    <title>Curator feedback &#8212; ethograph</title>
   
   
   
@@ -383,6 +383,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../onset_model.html">LightGBM (point events, CPU-only)</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../segment/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../segment/guide.html">Full guide</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/config.html">Config reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/video_features.html">Video features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
@@ -390,7 +391,8 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/guide.html">Full guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + pose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
@@ -398,7 +400,7 @@
 <li class="toctree-l2"><a class="reference internal" href="modes.html">Ways to curate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="grids.html">Review grids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="confidence.html">Model confidence</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Hard trials and review F1</a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Curator feedback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
@@ -448,7 +450,7 @@
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Curating labels</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Hard trials and review F1</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Curator feedback</span></li>
   </ul>
 </nav>
 </div>
@@ -465,43 +467,78 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="hard-trials-and-review-f1">
-<span id="target-curation-difficulty"></span><h1>Hard trials and review F1<a class="headerlink" href="#hard-trials-and-review-f1" title="Link to this heading">#</a></h1>
-<p>Some trials are simply difficult, and some the model barely managed. Both are
-worth showing it more often next time.</p>
-<section id="flagging-a-trial-by-hand">
-<h2>Flagging a trial by hand<a class="headerlink" href="#flagging-a-trial-by-hand" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code> (or the <strong>Hard trial</strong> box in the Curation section) flags the
-current trial as <code class="docutils literal notranslate"><span class="pre">hard</span></code> in the metadata table’s <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column, and
-again puts it back to <code class="docutils literal notranslate"><span class="pre">normal</span></code>. The column is a checklist in the trials
-table’s filter like <code class="docutils literal notranslate"><span class="pre">curated</span></code>, so “show me the hard trials” is one click, and
-a training run reads it back: in the segmentation pipeline,
+  <section class="tex2jax_ignore mathjax_ignore" id="curator-feedback">
+<span id="target-curation-difficulty"></span><h1>Curator feedback<a class="headerlink" href="#curator-feedback" title="Link to this heading">#</a></h1>
+<p>Where you overruled the model, it should pay extra attention next time. That
+is the whole idea of the <strong>Curator feedback</strong> block at the bottom of the
+Curation section: a trial you had to correct is flagged <code class="docutils literal notranslate"><span class="pre">hard</span></code> in the
+metadata table’s <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column, and the next training run draws it
+more often. The column is a checklist in the trials table’s filter like
+<code class="docutils literal notranslate"><span class="pre">curated</span></code>, so “show me the trials the model got wrong” is one click, and the
+segmentation pipeline reads it back:
 <code class="docutils literal notranslate"><span class="pre">train.oversample:</span> <span class="pre">{column:</span> <span class="pre">difficulty,</span> <span class="pre">weights:</span> <span class="pre">{hard:</span> <span class="pre">3.0}}</span></code> draws a hard
-trial three times as often (<a class="reference internal" href="../segment/config.html"><span class="doc">Config reference</span></a>).</p>
+trial three times as often (<a class="reference internal" href="../segment/config.html"><span class="doc">Config reference</span></a>). Auto-flagging only
+ever adds: a trial you flagged by hand stays hard whatever it scored.</p>
+<div class="important admonition">
+<p class="admonition-title">This is not confidence</p>
+<p>A low <strong>confidence</strong> tells <em>you</em> where to look (<a class="reference internal" href="confidence.html"><span class="doc">Model confidence</span></a>, the grids’
+<strong>Flag confidence below</strong>). It never flags a trial hard. The model already
+works on the classes it is unsure of; what it cannot know is where it was
+<strong>confident and wrong</strong>, and only a curator can tell it. Keep the two apart:
+confidence guides the review, disagreement guides the training.</p>
+</div>
+<section id="by-hand">
+<h2>By hand<a class="headerlink" href="#by-hand" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code> (or the <strong>Hard trial</strong> box) flags the current trial, and again puts
+it back to <code class="docutils literal notranslate"><span class="pre">normal</span></code>. Use it for a trial that is simply difficult — an odd
+posture, an occlusion, a rare variant — whether or not the model got it right
+this time.</p>
 </section>
-<section id="scoring-how-the-model-did">
-<h2>Scoring how the model did<a class="headerlink" href="#scoring-how-the-model-did" title="Link to this heading">#</a></h2>
-<p>Which trials the model barely managed is measured, not guessed. Every
-prediction run keeps the labels it wrote in its folder under <code class="docutils literal notranslate"><span class="pre">labels/</span></code>
-(<code class="docutils literal notranslate"><span class="pre">{stem}_predictions.tsv</span></code>, beside <code class="docutils literal notranslate"><span class="pre">onset_curves.npz</span></code>), and the moment the last
-trial the table shows becomes curated, each trial’s final labels are scored
-against what its run said — an F1 per trial and event type:</p>
+<section id="by-score-once-by-your-hand">
+<h2>By score, once, by your hand<a class="headerlink" href="#by-score-once-by-your-hand" title="Link to this heading">#</a></h2>
+<p>Which trials the model got wrong is measured, not guessed — but which of
+them the next run should see more often is <em>decided</em>, not thresholded by
+default. Every prediction run keeps the labels it wrote in its folder under
+<code class="docutils literal notranslate"><span class="pre">labels/</span></code> (<code class="docutils literal notranslate"><span class="pre">{stem}_predictions.tsv</span></code>, beside <code class="docutils literal notranslate"><span class="pre">onset_curves.npz</span></code>), and each
+trial’s final, curated labels are scored against what its run said — an F1
+per trial and event type:</p>
 <ul class="simple">
 <li><p><strong>State labels</strong> match at IoU ≥ 0.5, the <code class="docutils literal notranslate"><span class="pre">f1&#64;50</span></code> the pipeline selects its
 checkpoints on.</p></li>
 <li><p><strong>Point labels</strong> match within the run’s own <strong>tolerance</strong> — the precision the
 model was trained to, read from the run folder (the onset model’s
 <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, half of spot’s <code class="docutils literal notranslate"><span class="pre">focus_window_ms</span></code>). Nothing to pick; set the
-section’s <strong>Tolerance</strong> only to judge every run at one number, or for an old
+block’s <strong>Tolerance</strong> only to judge every run at one number, or for an old
 run folder that carries none.</p></li>
 </ul>
 <p>The scores land in the metadata table as <code class="docutils literal notranslate"><span class="pre">review_f1_state</span></code> and
-<code class="docutils literal notranslate"><span class="pre">review_f1_point</span></code> (blank where a trial had nothing of that type), a message
-says how the session did, and every trial scoring <strong>below the threshold</strong>
-(the section’s <em>Flag below F1</em>, default 0.5) is flagged <code class="docutils literal notranslate"><span class="pre">hard</span></code>. Auto-flagging
-only ever adds: a trial you flagged by hand stays hard whatever it scored.
-A trial no run predicted into is not scored. <strong>Score now</strong> runs the same
-comparison without waiting for the last trial.</p>
+<code class="docutils literal notranslate"><span class="pre">review_f1_point</span></code> (blank where a trial had nothing of that type) and nothing
+else happens. A trial no run predicted into is not scored. The comparison
+runs by itself, once, the moment the last trial the table shows becomes
+curated; <strong>Score now</strong> runs it without waiting, and a
+<a class="reference internal" href="workflows.html"><span class="doc">workflow</span></a> step (<strong>Score trials against the model</strong>) presses
+it.</p>
+<p>Then <strong>Histogram…</strong> shows the scores as a distribution, one histogram per
+event type. What you are looking for is a <em>split</em>: a cluster of trials the
+model handled and a tail, or a second bump, it did not. Put the threshold in
+the gap — the line and the red bars follow it — and press <strong>Flag N trials
+hard</strong>. That is the one moment the scores touch the <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column, and
+it is your press, remembered for next time but never repeated for you. There
+is no default cut-off because 0.5 means nothing in general: a clean
+behaviour on a good camera may split at 0.8, a hard one at 0.3.</p>
+<p><strong>Flag few.</strong> The count under the histogram turns red past a quarter of the
+scored trials. With <code class="docutils literal notranslate"><span class="pre">train.oversample</span></code> on, that many hard trials would be
+most of what the model sees, and a flag most trials carry says nothing. If
+the whole distribution is low, the answer is a better model or more
+training data, not more flags.</p>
+<div class="note admonition">
+<p class="admonition-title">The scores are anchored to the model</p>
+<p>A curated label is a prediction a human accepted, so a session confirmed
+with <code class="docutils literal notranslate"><span class="pre">N</span></code> fifty times in a row scores near 1 whatever the model did. The F1
+is honest in proportion to how much you actually moved or deleted. Read it
+as “how much the curator had to change”, not as an independent benchmark —
+the pipeline’s own evaluation on a held-out split is that.</p>
+</div>
 </section>
 </section>
 
@@ -552,8 +589,8 @@ comparison without waiting for the last trial.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#flagging-a-trial-by-hand">Flagging a trial by hand</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scoring-how-the-model-did">Scoring how the model did</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#by-hand">By hand</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#by-score-once-by-your-hand">By score, once, by your hand</a></li>
 </ul>
   </nav></div>
 

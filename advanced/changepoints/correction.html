@@ -472,7 +472,19 @@ producing more consistent annotations.</p>
 <hr class="docutils" />
 <section id="how-it-works">
 <h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">#</a></h2>
-<p>The correction runs four steps in sequence:</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../../_images/changepoint_correction.png"><img alt="Two-step schematic: purge and stitch, then changepoint correction against a speed trace" src="../../_images/changepoint_correction.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Step 1 drops labels shorter than the minimum duration (red crosses) and
+merges same-label neighbours across small gaps. Step 2 moves every remaining
+boundary (arrows) to the nearest changepoint of the feature — here the turning
+points of a speed trace, shown in the inset as the circles the onset and offset
+of each label snap to.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The correction runs four steps in sequence. The figure’s step 1 is the first
+two; its step 2 is the third:</p>
 <ol class="arabic simple">
 <li><p><strong>Purge short intervals</strong> — remove labels shorter than the minimum duration.</p></li>
 <li><p><strong>Stitch gaps</strong> — merge adjacent same-label intervals separated by a small gap.</p></li>

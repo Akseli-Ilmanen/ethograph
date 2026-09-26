@@ -1,13 +1,12 @@
 (target-curation)=
 # Curating labels
 
-A model's predictions come back into the GUI as labels nobody has looked at
-yet. **Curation** is looking at them, and Ethograph makes that fast by
-telling you *where* to look: every predicted label carries a **model
-confidence**, and the review tools sort, flag and threshold on it, so the
-doubtful labels are on the first screen instead of scattered through the
-trials. How the confidence is computed depends on the kind of label, and so
-does the routine that suits it. Both are below.
+**Curation** is overseeing a model's predictions: confirming the ones it got
+right and fixing the ones it got wrong. Ethograph makes curation faster by telling you
+*where* to look. Within single trials, you can see the **model confidence** per frame 
+as a **dotted line**, showing you where the model is uncertain, or may expect false positives or false negatives. How confidence is computed differs for point and state events. For state events there is also a trial-level number, the mean of that curve,
+so you can skip curation on high-confidence trials.
+
 
 Everything about curation lives in one place: the **Curation** section at the
 bottom of the **Labels** tab.
@@ -28,38 +27,112 @@ Curation is the move *automated → curated*. It never touches a manual label
 label makes it manual, re-running a model over a trial can add new automated
 labels, and nothing else changes a method.
 
-A **trial is curated** when none of its labels is still automated. That
-verdict is everywhere you navigate — the trial combo in the Navigation section
-and the `Trial 12 (12/173)` counter in the bottom bar are green for a curated
-trial and red for one with automated labels left — and it is written to the
-metadata table's `curated` column (`yes` / `no`), refreshed every few seconds
-while you work (see {doc}`../../advanced/metadata`). Predicting new labels into
-a curated trial turns it red again until those are curated too.
+Besides the per-label method, the GUI tracks curation **per trial**: a trial
+is curated once none of its labels is still automated, and the verdict is
+written to the `curated` column (`yes` / `no`) of the session's
+`metadata.tsv`, which appears the moment you start curating and is refreshed
+every few seconds while you work (see {doc}`../../advanced/metadata`). You see
+it wherever you navigate — the trial combo in the Navigation section and the
+`Trial 12 (12/173)` counter in the bottom bar are green for a curated trial and
+red for one with automated labels left, and predicting new labels into a
+curated trial turns it red again until those are curated too.
 
-### Where the verdict is saved
+## Three routines
 
-Nothing is written until you start curating. Opening a dataset arms nothing:
-curation becomes **active** the moment you drop label classes into the scope
-area or curate anything, and only then does the verdict start being saved
-(a line in the terminal says so). Loading another dataset disarms it again.
+Which routine fits is decided by the kind of label and by what can be wrong
+with it. A state label can be wrong as a whole — the class, or an event that
+never happened — or only at its edges; a point event can only sit on the
+wrong moment. Trial by trial is for the first, segment review for the second,
+frame by frame for the third. Every routine can end after its bulk pass:
+**Done** in a grid curates what was seen, and a rough pass beats no pass.
 
-Arming is also the one moment a metadata file appears. The `curated` column is
-Ethograph's own bookkeeping, so it is never written into a recording or into
-`.ethograph/alignment.nwb`: that write happens in place, and for a non-NWB
-dataset the alignment NWB is the only holder of your trial timing. Instead the
-metadata table you have loaded is copied to a sidecar `metadata.tsv`
-next to the data, and that file is the metadata table from then on — it is
-what the next load reads, and where later edits to trial metadata go. An
-existing metadata file is used as it stands, never overwritten.
+### 1. State events, trial by trial
 
-## Two kinds of label, two routines
+```{mermaid}
+flowchart LR
+    import[<b>Import predictions</b>] --> conf[<b>Confidence curves…</b><br/>one number per trial]
+    conf --> table[<b>Trials table</b><br/>sort by confidence]
+    table -->|"low"| walk[<b>Trial by trial</b><br/>Inspect is enough or Ctrl+C]
+    table -->|"high"| bulk[<b>Bulk curate</b>]
+    walk --> save[<b>Save</b><br/>Ctrl+S]
+    bulk --> save
+    click conf "confidence.html"
+    click walk "modes.html"
+```
 
-A model that predicts **point events** answers *when*; one that predicts
-**state events** answers *which class is this frame*. The confidence each
-one writes is built to answer the same question, and it decides which review
-surface to open first.
+```{figure} ../../_static/media/curation_stateevents.png
+:alt: The segmentation model's per-frame softmax is turned into a confidence curve by normalised entropy; predictions are purged and stitched, then reviewed in bulk in the video grid, and the low-confidence trials inspected in depth.
+:width: 100%
 
-### Point events: when?
+The {doc}`segmentation pipeline <../segment/index>` predicts a distribution
+over the classes at every frame. Its confidence curve is one minus the
+normalised entropy of that distribution: 1 where all the mass sits on one
+class, dropping wherever the model is torn between two. A segment's own
+`confidence` is the mean of its class's probability over its span.
+```
+
+**Confidence curves…** beside the grid buttons gives every trial one
+number — the mean of its frame confidence curve, written to the metadata
+table as `model_confidence` — and a PDF of every trial's curve with its
+labels. Sort the trials table by that column. Walk the low end trial by
+trial with *Inspect is enough* or `Ctrl+C` ({doc}`modes`), editing what is
+wrong, and curate the high end in bulk without opening it (**Tools ▸ Labels:
+Bulk editing…**). Where the cut goes is your call from the numbers in front
+of you, not a default. Should the pipeline's purge and stitch thresholds turn
+out too loose or too tight, the **Purge short labels** and **Stitch labels**
+{doc}`workflow steps <workflows>` redo them here.
+
+### 2. State events, label by label
+
+```{mermaid}
+flowchart LR
+    scope[<b>Scope</b><br/>drag the class in] --> grid{<b>Bulk review</b>}
+    grid --> video[<b>Video grid</b><br/>clips of one class side by side]
+    grid --> frames[<b>Label grid</b><br/>onset + offset frames, feature traces]
+    video --> sort[<b>Sort by confidence</b><br/>lowest first]
+    frames --> sort
+    sort --> tag[<b>Tag for review</b><br/>below a threshold from the histogram,<br/>or by clicking]
+    tag --> done[<b>Done</b><br/>everything untagged is curated]
+    done --> seg[<b>Segment review</b><br/>each tagged label plays · click, click re-places it<br/>N curates · Backspace deletes]
+    seg --> save[<b>Save</b><br/>Ctrl+S]
+    done -.->|"short on time"| save
+    click video "grids.html"
+    click frames "grids.html"
+    click seg "modes.html#segment-review"
+```
+
+Both grids show many instances of one class together, which is what makes an
+outlier visible: the {ref}`video grid <target-curation-grids>` plays clips
+of similar length side by side, the label grid freezes every label as its
+onset frame, its offset frame and the selected feature traces between them.
+Sort by confidence, lowest first, so the labels the model doubted fill the
+first screens. Then **tag** what needs a closer look — every label below a
+threshold you set with the histogram in view (**Mark low-confidence as
+uncurated**), plus anything you click — and press **Done**: everything
+untagged is curated, the tagged stay automated. The tagged labels are the
+queue for {ref}`segment review <target-curation-segment>`: each one plays,
+two clicks re-place its start and end, `N` curates what plays right and
+`Backspace` deletes what never happened. Short on time, stop after **Done**
+and save; the tagged labels wait, still dotted, for the next session.
+
+### 3. Point events
+
+```{mermaid}
+flowchart LR
+    scope[<b>Scope</b><br/>drag the class in] --> grid{<b>Bulk review</b>}
+    grid --> video[<b>Video grid</b><br/>a red dot on the event's frame]
+    grid --> frames[<b>Label grid</b><br/>the event's frame + its curve]
+    video --> sort[<b>Sort by confidence</b><br/>lowest first]
+    frames --> sort
+    sort --> tag[<b>Tag for review</b><br/>below a threshold from the histogram,<br/>or by clicking]
+    tag --> done[<b>Done</b><br/>everything untagged is curated]
+    done --> ff[<b>Frame-by-frame review</b><br/>each tagged event · ← → step · Enter confirms<br/>N curates · Backspace deletes]
+    ff --> save[<b>Save</b><br/>Ctrl+S]
+    done -.->|"short on time"| save
+    click video "grids.html"
+    click frames "grids.html"
+    click ff "modes.html#frame-by-frame-review"
+```
 
 ```{figure} ../../_static/media/curation_pointevents.png
 :alt: E2E-Spot's output layer gives one probability curve per class; the tallest peak is the point event, and its confidence is the curve's ratio times its focus; low-confidence events are reviewed frame by frame.
@@ -73,50 +146,27 @@ the curve sits close to the peak). One clean bump reads near 1; a second
 candidate elsewhere in the trial, or a smeared bump, pulls it down.
 ```
 
-The routine: drag the class into the scope, pick **Frame-by-frame review**,
-and walk the events one at a time. Each event is centred in a short window
-with its curve drawn underneath, so a low score explains itself before you
-press a key — `Enter` confirms the frame on screen, `←`/`→` moves it,
-`Backspace` deletes an event that never happened. To start with the doubtful
-ones, open the {ref}`label grid <target-curation-grids>` sorted by
-confidence and double-click a tile: the review opens at that boundary. See
-{ref}`target-curation-frame`.
+The bulk pass is the same as for state events, with the video grid playing a
+short window around each event and a red marker on its frame: sort lowest
+first, tag what is below your threshold or looks wrong, press **Done**. The
+tagged events are the queue for {ref}`frame-by-frame review
+<target-curation-frame>`: each is centred in a short window with its curve
+drawn underneath, so a low score explains itself before you press a key —
+`Enter` confirms the frame on screen, `←`/`→` moves it, `Backspace` deletes
+an event that never happened.
 
-### State events: which class?
-
-```{figure} ../../_static/media/curation_stateevents.png
-:alt: The segmentation model's per-frame softmax is turned into a confidence curve by normalised entropy; predictions are purged and stitched, then reviewed in bulk in the video grid, and the low-confidence trials inspected in depth.
-:width: 100%
-
-The {doc}`segmentation pipeline <../segment/index>` predicts a distribution
-over the classes at every frame. Its confidence curve is one minus the
-normalised entropy of that distribution: 1 where all the mass sits on one
-class, dropping wherever the model is torn between two. A segment's own
-`confidence` is the mean of its class's probability over its span.
-```
-
-The routine has three steps. **Automatic refinement** — purging short
-segments and stitching same-class neighbours — happens in the pipeline's own
-post-processing before the labels reach the GUI ({doc}`../segment/config`),
-with **Purge short labels** available again as a
-{doc}`workflow step <workflows>`. **Bulk review** opens the
-{ref}`video grid <target-curation-grids>` on one class at a time: clips of
-similar length play side by side, and a click is a verdict. **In-depth
-review** is for the trials the grid flagged: a trial is flagged as soon as
-*one* of its labels falls below **Flag confidence below** (there is no
-separate trial threshold), a double-click jumps the main GUI there, and the
-confidence curve under the labels shows exactly which boundary to inspect.
 
 ## In this section
 
-- {doc}`modes` — the scope (which classes) and the four ways a label gets
-  curated: by hand, in bulk, by inspection, or frame by frame.
+- {doc}`modes` — the scope (which classes) and the five ways a label gets
+  curated: by hand, in bulk, by inspection, segment by segment, or frame by
+  frame.
 - {doc}`grids` — the label grid and the video grid: what every control does,
   and what a click means.
 - {doc}`confidence` — how each model computes the number, and how to change
   the rule from the histogram.
-- {doc}`difficulty` — flagging hard trials, and scoring how the model did per
-  trial once a session is curated.
+- {doc}`difficulty` — flagging the trials you had to correct, so the next
+  training run pays extra attention to them.
 - {doc}`workflows` — recording the whole routine and replaying it in one press.
 
 ```{toctree}
@@ -126,6 +176,6 @@ confidence curve under the labels shows exactly which boundary to inspect.
 Ways to curate <modes>
 Review grids <grids>
 Model confidence <confidence>
-Hard trials and review F1 <difficulty>
+Curator feedback <difficulty>
 Curation workflows <workflows>
 ```
