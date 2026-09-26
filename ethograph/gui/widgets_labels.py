@@ -1,7 +1,6 @@
 """Widget for labeling segments in movement data."""
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -31,11 +30,6 @@ from qtpy.QtWidgets import (
 
 from ethograph.gui.notify import notify
 from ethograph.io.catalog import INDIVIDUAL_DIMS
-from ethograph.io.metadata_table import (
-    empty_metadata_df,
-    metadata_tsv_path,
-    save_metadata_tsv,
-)
 from ethograph.labels import onset_curves
 from ethograph.labels.intervals import (
     EVENT_TYPE_POINT,
@@ -51,7 +45,6 @@ from ethograph.labels.intervals import (
     save_label_mapping,
     subject_mask,
 )
-from ethograph.labels.plots import plot_confidence_pdf
 from ethograph.labels.predictions import (
     PredictionSet,
     PredictionsStore,
@@ -1093,11 +1086,9 @@ class LabelsWidget(QWidget):
         if self.io_widget.pred_load_mode() == "labels":
             self._import_predictions_as_labels(labels_df, str(path), store)
             return
-        threshold = self.io_widget.pred_confidence_threshold_spin.value()
         self.app_state.prediction_sets = add_prediction_set(
             self.app_state.prediction_sets, PredictionSet(path, labels_df, store)
         )
-        self.app_state.pred_confidence_threshold = threshold
         self._set_current_prediction_set(path)
 
         if self.plot_container is not None and self.plot_container.prediction_panel_for(path) is None:
@@ -1107,12 +1098,12 @@ class LabelsWidget(QWidget):
         self._redraw_prediction_panels()
 
     def _set_current_prediction_set(self, path: Path | None) -> None:
-        """The set the confidence PDF reads — the one selected in the Predictions list."""
+        """The set selected in the Predictions list — what the Curation section's
+        curves PDF falls back to when the labels carry no run of their own."""
         sets = self.app_state.prediction_sets
         current = next((s for s in sets if s.path == path), None)
         self.app_state.pred_labels_df = current.labels_df if current is not None else None
         self.app_state.pred_store = current.store if current is not None else None
-        self.io_widget.pred_confidence_pdf_btn.setEnabled(current is not None and current.store is not None)
         self.io_widget.set_prediction_sets(sets, current.path if current is not None else None)
 
     def _on_prediction_set_selected(self, *_args) -> None:
@@ -1183,80 +1174,6 @@ class LabelsWidget(QWidget):
         notify(
             f"{verb} {len(predicted_df)} prediction row(s) from {Path(source_text).name} as labels. Save with Ctrl+S."
         )
-
-    def _on_confidence_threshold_changed(self, _value):
-        self.app_state.pred_confidence_threshold = self.io_widget.pred_confidence_threshold_spin.value()
-        self.app_state.pred_segment_confidence_threshold = self.io_widget.pred_segment_confidence_threshold_spin.value()
-
-    def _plot_confidence_pdf(self):
-        store = getattr(self.app_state, "pred_store", None)
-        labels_df = getattr(self.app_state, "pred_labels_df", None)
-        if labels_df is None or labels_df.empty:
-            notify("No predictions loaded.", severity="warning")
-            return
-        if store is None:
-            notify(
-                "This predictions set has no confidence curves (loaded from a plain .tsv, not a run folder).",
-                severity="warning",
-            )
-            return
-        try:
-            # Load all confidence arrays at click time for the PDF (one-off)
-            individual = self.app_state.selected_individual()
-            confidence_map = {
-                trial: store.get_confidence(trial, self.app_state.dt, individual=individual)
-                for trial in self.app_state.trials
-            }
-            pdf_path, highlighted = plot_confidence_pdf(
-                confidence_map,
-                labels_df,
-                self.app_state.dt,
-                self._mappings,
-                confidence_threshold=self.app_state.pred_confidence_threshold,
-                segment_confidence_threshold=self.app_state.pred_segment_confidence_threshold,
-            )
-
-            # Update metadata table with mean model confidence per trial
-            mdf = getattr(self.app_state, "metadata_df", None)
-            if mdf is None or mdf.empty:
-                mdf = empty_metadata_df(self.app_state.trials)
-            else:
-                mdf = mdf.copy()
-            if "trial" not in mdf.columns:
-                mdf["trial"] = list(self.app_state.trials)
-
-            mdf_index = mdf.set_index("trial", drop=False)
-            for trial in self.app_state.trials:
-                arr = confidence_map.get(trial)
-                try:
-                    mean_confidence = float(np.nanmean(arr)) if arr is not None else float("nan")
-                except Exception:
-                    mean_confidence = float("nan")
-                mdf_index.loc[trial, "model_confidence"] = mean_confidence
-                mdf_index.loc[trial, "model_confidence_level"] = "low" if highlighted.get(trial, False) else "high"
-
-            mdf_updated = mdf_index.reset_index(drop=True)
-            self.app_state.metadata_df = mdf_updated
-
-            # Save to metadata TSV (explicit metadata_path or sidecar next to nc)
-            md_path = getattr(self.app_state, "metadata_path", None)
-            if not md_path and getattr(self.app_state, "nc_file_path", None):
-                md_path = metadata_tsv_path(self.app_state.nc_file_path)
-            if md_path:
-                try:
-                    save_metadata_tsv(md_path, mdf_updated)
-                    # ensure app_state knows about the metadata path
-                    if not getattr(self.app_state, "metadata_path", None):
-                        self.app_state.metadata_path = str(md_path)
-                    notify(f"Saved metadata with model confidence to {Path(md_path).name}")
-                except Exception as e:
-                    notify(f"Failed saving metadata: {e}", severity="warning")
-
-            if self.data_widget:
-                self.data_widget.refresh_trials_confidence()
-            os.startfile(str(pdf_path))
-        except Exception as e:
-            notify(str(e), severity="error")
 
     labels_TO_KEY = {}
 

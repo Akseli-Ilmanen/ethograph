@@ -30,6 +30,7 @@ from ethograph.labels.curation import (
     purge_short_labels,
     queue_index_of,
     set_method,
+    stitch_labels,
     targets_from_seeds,
     trial_curation_status,
 )
@@ -271,6 +272,55 @@ def _row_present(df: pd.DataFrame, trial, labels) -> bool:
     return bool(((df["trial"] == trial) & (df["labels"] == labels)).any())
 
 
+def _stitchable() -> pd.DataFrame:
+    """One trial: two class-1 states 0.05 s apart, a class-2 state in the gap
+    of another individual, and a class-1 point event right between them."""
+    return pd.DataFrame(
+        {
+            "trial": [1, 1, 1, 1],
+            "labels": [1, 1, 2, 1],
+            "onset_s": [0.0, 1.05, 1.00, 1.02],
+            "offset_s": [1.0, 2.0, 1.5, np.nan],
+            "individual": ["a", "a", "b", "a"],
+            "individual_rec": ["", "", "", ""],
+            "event_type": ["state", "state", "state", "point"],
+            "confidence": [0.9, 0.6, 1.0, 0.4],
+            "labeling_method": [LABELING_AUTOMATED, LABELING_AUTOMATED, LABELING_MANUAL, LABELING_AUTOMATED],
+        }
+    )
+
+
+class TestStitchLabels:
+    def test_merges_same_class_neighbours_under_the_gap(self):
+        out, n = stitch_labels(_stitchable(), max_gap_s=0.1)
+        assert n == 1
+        merged = out[(out["labels"] == 1) & (out["event_type"] == "state")]
+        assert len(merged) == 1
+        assert float(merged.iloc[0]["offset_s"]) == 2.0
+        # A merged label is only as trustworthy as its weakest part.
+        assert float(merged.iloc[0]["confidence"]) == 0.6
+
+    def test_leaves_points_and_other_classes_alone(self):
+        out, _ = stitch_labels(_stitchable(), max_gap_s=0.1)
+        assert (out["event_type"] == "point").sum() == 1
+        assert (out["labels"] == 2).sum() == 1
+
+    def test_a_gap_at_or_over_the_threshold_is_kept(self):
+        out, n = stitch_labels(_stitchable(), max_gap_s=0.05)
+        assert n == 0
+        assert len(out) == 4
+
+    def test_respects_the_scope(self):
+        out, n = stitch_labels(_stitchable(), max_gap_s=0.1, label_ids={2})
+        assert n == 0
+        assert len(out) == 4
+
+    def test_empty_passes_through(self):
+        empty = empty_intervals()
+        out, n = stitch_labels(empty, 0.1)
+        assert n == 0 and out is empty
+
+
 # ---------------------------------------------------------------------------
 # Per-trial verdicts
 # ---------------------------------------------------------------------------
@@ -352,6 +402,11 @@ class TestQueue:
     def test_unknown_order_raises(self):
         with pytest.raises(ValueError, match="review order"):
             build_review_queue(_labels(), None, order="bogus")
+
+    def test_whole_labels_is_one_target_per_row(self):
+        queue = build_review_queue(_labels(), None, whole_labels=True)
+        got = [(t.inst["trial"], t.inst["labels"], t.field) for t in queue]
+        assert got == [(1, 1, "label"), (1, 2, "label"), (2, 1, "label"), (2, 3, "label")]
 
     def test_automated_only_skips_manual_and_curated(self):
         """A human already vouched for the manual (trial 1, label 2) and

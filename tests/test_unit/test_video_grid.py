@@ -187,6 +187,9 @@ class _PanelStub:
     def mode(self):
         return self._mode
 
+    def reviews_on_jump(self):
+        return self._mode in ("segment", "frame")
+
     def curate_labels(self, insts):
         self.curated.extend(insts)
         return len(insts)
@@ -353,34 +356,23 @@ class TestPlayer:
 
     def test_double_click_leaves_the_verdicts_alone(self, player):
         """The press Qt delivers before a double click toggles the tile; the
-        double click toggles it back, so a jump marks nothing."""
-        player.mode_bar.mode_combo.setCurrentIndex(player.mode_bar.mode_combo.findData("curate"))
+        double click toggles it back, so a jump tags nothing."""
         tile = player._tiles[0]
         tile.clicked.emit(tile.entry)  # the press Qt delivers first
         tile.double_clicked.emit(tile.entry)
-        assert not player.mode_bar.verdicts.clicked
+        assert not player.verdict_bar.verdicts.clicked
         assert player._meta.navigation_widget.jumps
 
-    def test_click_marks_and_done_curates_in_curate_mode(self, player):
-        player.mode_bar.mode_combo.setCurrentIndex(player.mode_bar.mode_combo.findData("curate"))
+    def test_a_click_tags_and_done_curates_everything_else(self, player):
         tile = player._tiles[0]
         tile.clicked.emit(tile.entry)
-        assert player.mode_bar.verdicts.is_clicked(tile.entry)
-        player.mode_bar.apply_done()
+        assert player.verdict_bar.verdicts.is_clicked(tile.entry)
+        player.verdict_bar.apply_done()
         panel = player._meta.labels_widget.curation_panel
-        assert [i["trial"] for i in panel.curated] == ["2"]
-        assert tile.entry.labeling_method == LABELING_CURATED
-        assert not player.mode_bar.verdicts.clicked
-
-    def test_uncurate_mode_curates_everything_not_clicked(self, player):
-        player.mode_bar.mode_combo.setCurrentIndex(player.mode_bar.mode_combo.findData("uncurate"))
-        tile = player._tiles[0]
-        tile.clicked.emit(tile.entry)
-        player.mode_bar.apply_done()
-        panel = player._meta.labels_widget.curation_panel
-        # Every automated clip of every group except the clicked one.
+        # Every automated clip of every group except the tagged one.
         assert sorted((i["trial"], i["labels"]) for i in panel.curated) == [("1", 1), ("1", 2)]
         assert tile.entry.labeling_method == LABELING_AUTOMATED
+        assert not player.verdict_bar.verdicts.clicked
 
 
 class TestStickyGridSettings:

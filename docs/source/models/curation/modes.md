@@ -52,15 +52,44 @@ automated labels in scope. Use it when a model is good enough that looking at
 the trial is the review. The mode is per dataset, so it never follows you
 silently into another one.
 
+(target-curation-segment)=
+### Segment review
+
+For state events. The labels in scope become a queue of whole labels, walked
+one at a time in the **Order** the combo says; each stop jumps to the label,
+shows it with the Navigation section's before/after padding around it, plays
+it, and arms it for editing exactly as selecting it and pressing `Ctrl+E`
+would. The label being reviewed is named in large coloured text, and
+**Shortcuts…** spells out the keys. By default the queue holds only
+automated labels — untick **Show automated only** to walk the rest:
+
+| Key | Action |
+|-----|--------|
+| click, click | Re-place the label: the first click is its new start, the second its new end. The clicks snap to changepoints when the Changepoints tab's correction is on, like any placed label. The label becomes **manual** (`confidence = 1.0`), and the new segment plays so you see the result |
+| `V` | Play the label again |
+| `N` | Next label. With **Click N curates current** ticked (the default) the label you leave becomes **curated**; a label left with only one click in keeps its old boundaries |
+| `B` | Back to the previous label |
+| `Backspace` / `Delete` | The label should not exist — delete it and move on |
+| `Space` | Play / pause |
+
+`Enter` does nothing here: a label that plays right needs no key but `N`. The
+mode needs no video — in an audio-only session the label's sound plays. Just
+watching, without curating, is the Navigation section's *Label* mode;
+segment review is that same walk with `N`, `Backspace` and the two-click edit
+added, so it lives with the other curation modes and not in the Navigation
+section.
+
 (target-curation-frame)=
 ### Frame-by-frame review
 
-The labels in scope become a queue of boundaries
+For point events, and for a boundary the label grid singled out. The labels
+in scope become a queue of boundaries
 (one per point event, a start then an end per state event, in time order)
 walked one at a time, each centred in a small **View window**
-(untick **Locked around label** to pan the whole trial). The boundary being
-reviewed is named in large coloured text; the keys are drawn in the section,
-and **Shortcuts…** spells them out. By default the queue holds only automated
+(untick **Locked around label** to pan the whole trial). The label being
+reviewed is named in its class colour, with its labeling method and
+confidence beneath (and *start* or *end* for a state event); the keys are drawn
+in the section, and **Shortcuts…** spells them out. By default the queue holds only automated
 boundaries — a human already vouched for manual and curated ones — untick
 **Show automated only** to walk those too. The **Order** combo walks the queue
 *Trial-by-trial* (every boundary of a trial, then the next trial) or

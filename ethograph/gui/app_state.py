@@ -132,12 +132,12 @@ class AppStateSpec:
         # preference, so global like autoplay_on_navigate.
         "refine_window_s": (float, 0.5, True),
         # Curation (widgets_curation, docs models/curation/).
-        # curation_mode: "manual" | "inspect" | "frame" — SCOPE_LOCAL, because
+        # curation_mode: "manual" | "inspect" | "segment" | "frame" — SCOPE_LOCAL, because
         # "inspect is enough" curates a trial by merely opening it and must not
         # silently follow the user into the next dataset. curation_label_ids:
         # the label classes dropped into the scope area (None = every class),
-        # per dataset too. curation_next_curates: N in frame-by-frame review
-        # also curates the boundary it leaves — a reviewing preference.
+        # per dataset too. curation_next_curates: N in a review (segment or
+        # frame-by-frame) also curates the label it leaves — a reviewing preference.
         "curation_mode": (str, "manual", True, SCOPE_LOCAL),
         "curation_label_ids": (list | None, None, True, SCOPE_LOCAL),
         "curation_next_curates": (bool, True, True),
@@ -145,8 +145,8 @@ class AppStateSpec:
         # to the next target once they commit/delete the current one. On by
         # default; untick to confirm or delete without leaving the boundary.
         "curation_auto_advance": (bool, True, True),
-        # Frame-by-frame review queue: skip manual/curated boundaries, only
-        # queuing automated ones — a human already vouched for the rest, so
+        # Review queue (segment and frame-by-frame): skip manual/curated
+        # labels, only queuing automated ones — a human already vouched for the rest, so
         # there is nothing to re-review. On by default; a reviewing
         # preference like curation_next_curates.
         "frame_review_automated_only": (bool, True, True),
@@ -169,11 +169,12 @@ class AppStateSpec:
         "curve_run_path": (str | None, None, False),
         # Post-curation review (labels/review_metrics.py): once every trial
         # the table shows is curated, each trial's final labels are scored
-        # against the run that predicted them, and a trial whose F1 falls
-        # below review_flag_threshold is flagged "hard" in the metadata
-        # table's difficulty column. review_tolerance_s replaces every run's
-        # own point tolerance when set (None = the tolerance the model was
-        # trained to). Reviewing preferences, so global.
+        # against the run that predicted them (F1 columns in the metadata
+        # table). Nothing is flagged by that: review_flag_threshold is the
+        # cut the human last chose in the F1 histogram, where flagging is a
+        # deliberate press. review_tolerance_s replaces every run's own point
+        # tolerance when set (None = the tolerance the model was trained to).
+        # Reviewing preferences, so global.
         "review_flag_threshold": (float, 0.5, True),
         "review_tolerance_s": (float | None, None, True),
         # How the plot x-limits are derived: "interval" (follows slider scope:
@@ -221,8 +222,6 @@ class AppStateSpec:
         # The run folder whose predictions were imported *as labels*: it has no
         # panel, so its confidence curve is drawn on the feature plots instead.
         "labels_pred_store": (object | None, None, False),
-        "pred_confidence_threshold": (float, 0.75, True),
-        "pred_segment_confidence_threshold": (float, 0.6, True),
         # Import Predictions panel's "Load as" combo — "overlay" or "labels".
         # A global preference like import_labels_nc_data: it's how the user
         # tends to use predictions, not something tied to one dataset.

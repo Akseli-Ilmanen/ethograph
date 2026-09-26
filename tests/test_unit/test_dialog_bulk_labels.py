@@ -149,6 +149,14 @@ class TestGuardedActions:
         dialog._purge()
         assert calls == [(("filtered", 0.25, None), {"confirm": True})]
 
+    def test_stitch_reaches_the_panel_with_the_gap(self, dialog, monkeypatch):
+        calls = []
+        monkeypatch.setattr(dialog.panel, "stitch_trial_labels", lambda *a, **kw: calls.append((a, kw)) or 0)
+        dialog.stitch_spin.setValue(0.05)
+        dialog.all_labels_cb.setChecked(True)
+        dialog._stitch()
+        assert calls == [(("filtered", 0.05, None), {"confirm": True})]
+
     def test_an_empty_checklist_refuses_rather_than_meaning_every_class(self, dialog, monkeypatch):
         """scope_mask reads an empty set as "every class" — the dialog must
         never let an unticked checklist silently touch everything."""

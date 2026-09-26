@@ -22,15 +22,12 @@ straight into the review at that boundary
 press, which has already toggled the tile; the double click toggles it back,
 so navigating never leaves a verdict behind.
 
-A **single** click is a verdict, and the **mode** says which:
-
-* *Click = curated* — every tile clicked turns green; **Done** curates those
-  labels (automated → curated).
-* *Click = uncurated, rest = curated* — for a batch that is mostly right:
-  click only the bad ones (orange), and **Done** curates everything else.
-  **Mark low-confidence as uncurated** pre-clicks the tiles the confidence
-  threshold outlines — only in this mode, since a low score is a reason to
-  doubt a label, never to approve it.
+A **single** click **tags the label for review** (orange): a batch is
+mostly right, so the click marks the bad ones, and **Done** curates every
+other automated label on screen — the tagged ones stay automated, to be
+looked at. **Tag low-confidence** pre-tags the tiles the confidence
+threshold outlines: a low score is a reason to doubt a label, never to
+approve it. There is no mode in which a click approves.
 
 The **Label** combo narrows a grid built from several classes to one of them,
 and it narrows the operations too: the flagged tiles, **Done** and the PDF
@@ -51,6 +48,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -145,17 +143,9 @@ CONFIDENCE_FONT_PX = 15
 #: Tile outlines for the verdict a click gave: curated (green) or flagged as
 #: wrong (orange — distinct from the confidence red, which is a hint, not a
 #: verdict).
-CURATE_COLOR = "#3fb950"
-UNCURATE_COLOR = "#ff9f1c"
-_CURATE_STYLE = f"QFrame#frameCell {{ border: 3px solid {CURATE_COLOR}; border-radius: 3px; }}"
-_UNCURATE_STYLE = f"QFrame#frameCell {{ border: 3px solid {UNCURATE_COLOR}; border-radius: 3px; }}"
-
-#: What a *single* tile click means: key → combo text. A double click always
-#: navigates, in every mode, so there is no mode for it.
-GRID_MODES = {
-    "curate": "Click = curated",
-    "uncurate": "Click = uncurated, rest = curated",
-}
+#: A tile tagged for review — the one verdict a click gives.
+TAGGED_COLOR = "#ff9f1c"
+_TAGGED_STYLE = f"QFrame#frameCell {{ border: 3px solid {TAGGED_COLOR}; border-radius: 3px; }}"
 
 #: Confidence-histogram popup: dark canvas (the label colours are picked for
 #: one), plots per row and each plot's floor.
@@ -176,16 +166,28 @@ _HIST_MIN_COLOR_DISTANCE = 90.0
 # ----------------------------------------------------------------------
 
 
+#: A tile's kind. A point event is one frame; a state event is one tile
+#: holding its onset frame and its offset frame side by side, so a label is
+#: one tile and a verdict on it is one click.
+TILE_POINT = "point"
+TILE_STATE = "state"
+
+#: The review field a frame of a state tile stands for.
+FIELD_START = "start"
+FIELD_END = "end"
+
+
 @dataclass
 class FrameEntry:
-    """One tile of the grid: a label boundary seen by one camera."""
+    """One tile of the grid: a label seen by one camera."""
 
     trial: object
     camera: str | None
     label_id: int
     name: str
     event_type: str
-    boundary: str  # "point" | "start" | "end"
+    boundary: str  # TILE_POINT | TILE_STATE
+    #: The onset (or the point event's moment), trial-relative.
     t_rel: float
     onset_s: float
     offset_s: float
@@ -199,11 +201,29 @@ class FrameEntry:
     color_hex: str = "#ffffff"
     image: np.ndarray | None = None
     frame_idx: int | None = None
+    #: A state tile's second frame, at the offset.
+    end_image: np.ndarray | None = None
+    end_frame_idx: int | None = None
     cropped: bool = False
     error: str | None = None
-    #: (panel title, QImage) screenshots of ticked GUI panels around t_rel,
-    #: shared between the cameras of the same label boundary.
+    #: (panel title, QImage) screenshots of ticked GUI panels around the
+    #: label, shared between the cameras of the same label.
     panels: list = field(default_factory=list)
+
+    @property
+    def is_state(self) -> bool:
+        return self.boundary == TILE_STATE
+
+    @property
+    def span(self) -> int:
+        """Grid columns the tile takes: a state tile is two frames wide."""
+        return 2 if self.is_state else 1
+
+    def frames(self) -> list[tuple[str, float]]:
+        """``(review field, time)`` for each frame the tile shows."""
+        if self.is_state:
+            return [(FIELD_START, self.t_rel), (FIELD_END, self.offset_s)]
+        return [(TILE_POINT, self.t_rel)]
 
 
 def is_low_confidence(entry: "FrameEntry", threshold: float) -> bool:
@@ -325,8 +345,8 @@ def _mapping_color_hex(info: dict) -> str:
 
 
 def entry_key(entry) -> tuple:
-    """The label an entry belongs to — two cameras, or a start and an end
-    tile, share one key, so a verdict on any of them is a verdict on the label."""
+    """The label an entry belongs to — two cameras share one key, so a
+    verdict on either tile is a verdict on the label."""
     return (
         str(entry.trial),
         int(entry.label_id),
@@ -359,10 +379,11 @@ def build_frame_entries(
 ) -> list[FrameEntry]:
     """Expand matching label rows into grid entries.
 
-    One entry per point event, a start + end entry per state event, times
-    trial-relative — each repeated for every selected camera so a label's
-    views sit next to each other in the grid. *methods* keeps only the
-    labeling methods named (``None`` keeps every label).
+    One entry per label — a point event's frame, or a state event's onset
+    and offset frames in one tile — times trial-relative, each repeated for
+    every selected camera so a label's views sit next to each other in the
+    grid. *methods* keeps only the labeling methods named (``None`` keeps
+    every label).
     """
     if labels_df is None or labels_df.empty:
         return []
@@ -382,43 +403,65 @@ def build_frame_entries(
         onset = float(row["onset_s"])
         offset = float(row["offset_s"])
         is_point = event_type == EVENT_TYPE_POINT or not math.isfinite(offset)
-        boundaries = [("point", onset)] if is_point else [("start", onset), ("end", offset)]
-        for boundary, t_rel in boundaries:
-            for camera in cameras:
-                entries.append(
-                    FrameEntry(
-                        trial=row["trial"],
-                        camera=camera,
-                        label_id=label_id,
-                        name=name,
-                        event_type=EVENT_TYPE_POINT if is_point else "state",
-                        boundary=boundary,
-                        t_rel=t_rel,
-                        onset_s=onset,
-                        offset_s=offset,
-                        individual=row.get("individual"),
-                        individual_rec=row.get("individual_rec"),
-                        confidence=_row_confidence(row),
-                        labeling_method=_row_method(row),
-                        color_hex=_mapping_color_hex(info),
-                    )
+        for camera in cameras:
+            entries.append(
+                FrameEntry(
+                    trial=row["trial"],
+                    camera=camera,
+                    label_id=label_id,
+                    name=name,
+                    event_type=EVENT_TYPE_POINT if is_point else "state",
+                    boundary=TILE_POINT if is_point else TILE_STATE,
+                    t_rel=onset,
+                    onset_s=onset,
+                    offset_s=offset,
+                    individual=row.get("individual"),
+                    individual_rec=row.get("individual_rec"),
+                    confidence=_row_confidence(row),
+                    labeling_method=_row_method(row),
+                    color_hex=_mapping_color_hex(info),
                 )
+            )
     return entries
 
 
 def seeds_from_entries(entries: list[FrameEntry]) -> list[dict]:
     """Review seeds for *entries* — one per boundary, cameras deduplicated.
 
-    A boundary two cameras saw is two tiles but one label, and the review
-    queue must stop at it once. Each seed is the label row plus the ``field``
-    to edit, which is what :func:`ethograph.labels.curation.targets_from_seeds`
+    A state tile is two boundaries (its onset, then its offset); a label two
+    cameras saw is two tiles but one label, and the review queue must stop
+    at each boundary once. Each seed is the label row plus the ``field`` to
+    edit, which is what :func:`ethograph.labels.curation.targets_from_seeds`
     consumes.
     """
     seeds: dict[tuple, dict] = {}
     for entry in entries:
-        key = (*entry_key(entry), entry.boundary)
-        seeds.setdefault(key, {**entry_inst(entry), "field": entry.boundary})
+        for field_name, _t in entry.frames():
+            key = (*entry_key(entry), field_name)
+            seeds.setdefault(key, {**entry_inst(entry), "field": field_name})
     return list(seeds.values())
+
+
+def pack_tiles(entries: list, columns: int) -> list[tuple]:
+    """Where each tile goes in a *columns*-wide grid: ``(entry, row, col, span)``.
+
+    Tiles fill a row left to right in the given order; a state tile is two
+    columns wide and wraps to the next row when only one column is left, so
+    the two frames of one label never straddle a row break. Shared by the
+    screen layout and the PDF, so the printed sheet matches the screen.
+    """
+    columns = max(1, int(columns))
+    placed: list[tuple] = []
+    row, col = 0, 0
+    for entry in entries:
+        span = min(entry.span, columns)
+        if col + span > columns:
+            row, col = row + 1, 0
+        placed.append((entry, row, col, span))
+        col += span
+        if col >= columns:
+            row, col = row + 1, 0
+    return placed
 
 
 def flagged_trials(entries: list[FrameEntry], threshold: float) -> set[str]:
@@ -521,15 +564,14 @@ class TileVerdicts:
     def clear(self) -> None:
         self.clicked.clear()
 
-    def insts_for_done(self, mode: str, entries) -> list[dict]:
-        """The labels Done curates under *mode* — clicked ones in ``curate``,
-        every other one in ``uncurate`` — each label once, automated only."""
+    def insts_for_done(self, entries) -> list[dict]:
+        """The labels Done curates: every automated one *not* tagged, each
+        label once. A tagged label stays automated — it is the one to review."""
         out: dict[tuple, dict] = {}
         for entry in entries:
             if entry.labeling_method != LABELING_AUTOMATED:
                 continue
-            clicked = entry_key(entry) in self.clicked
-            if (mode == "curate" and clicked) or (mode == "uncurate" and not clicked):
+            if entry_key(entry) not in self.clicked:
                 out.setdefault(entry_key(entry), entry_inst(entry))
         return list(out.values())
 
@@ -649,35 +691,59 @@ def draw_pose_points(
     frame_idx: int,
     scale: float,
     color_by: str,
+    *,
+    hidden_keypoints: frozenset[str] | set[str] = frozenset(),
+    show_text: bool = False,
 ) -> None:
     """Draw the pose points of one video frame onto a decoded thumbnail.
 
     ``scale`` is the source→decoded pixel ratio (``VideoFrameSource.scale``);
     colour encodes ``color_by`` (keypoint/individual), matching the video
-    overlay's one-axis colour rule.
+    overlay's one-axis colour rule, and with ``show_text`` the *other* axis
+    is written next to each point, as the overlay does. ``hidden_keypoints``
+    is the sidebar's keypoint filter: those are not drawn.
     """
     frame_col = 1 if pose.data.shape[1] > 3 else 0
     frames = np.full(len(pose.data), -1, dtype=int)
     valid = pose.data_not_nan
     frames[valid] = np.round(pose.data[valid, frame_col]).astype(int)
     mask = frames == frame_idx
+    if hidden_keypoints and "keypoint" in pose.properties.columns:
+        mask &= ~pose.properties["keypoint"].astype(str).isin(hidden_keypoints).to_numpy()
     if not mask.any():
         return
 
     ys = pose.data[mask, frame_col + 1] / scale
     xs = pose.data[mask, frame_col + 2] / scale
+    rows = pose.properties.iloc[np.flatnonzero(mask)]
     if color_by in pose.properties.columns:
-        cats = pose.properties.iloc[np.flatnonzero(mask)][color_by].astype(str).to_numpy()
+        cats = rows[color_by].astype(str).to_numpy()
         order = pose.properties[color_by].astype(str).unique()
     else:
         cats = np.array([""] * len(xs))
         order = [""]
     palette = {val: _hex_to_rgb(MULTIDIM_COLORS[i % len(MULTIDIM_COLORS)]) for i, val in enumerate(order)}
+    text_prop = "individual" if color_by == "keypoint" else "keypoint"
+    texts = rows[text_prop].astype(str).to_numpy() if show_text and text_prop in rows.columns else None
 
     h, w = image.shape[:2]
     radius = max(2, round(min(h, w) / 130))
-    for x, y, cat in zip(xs, ys, cats):
-        _draw_disc(image, int(round(x)), int(round(y)), radius, palette.get(cat, (255, 255, 255)))
+    font_scale = max(0.3, min(h, w) / 600)
+    for i, (x, y, cat) in enumerate(zip(xs, ys, cats)):
+        colour = palette.get(cat, (255, 255, 255))
+        cx, cy = int(round(x)), int(round(y))
+        _draw_disc(image, cx, cy, radius, colour)
+        if texts is not None:
+            cv2.putText(
+                image,
+                texts[i],
+                (cx + radius + 2, cy - radius),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                font_scale,
+                colour,
+                1,
+                cv2.LINE_AA,
+            )
 
 
 def crop_thumbnail(image: np.ndarray, rect: tuple[int, int, int, int], scale: float) -> np.ndarray:
@@ -782,8 +848,15 @@ def decode_entry_images(
     current_trial=None,
     current_video_path: str | None = None,
     progress_cb=None,
+    show_keypoints: bool = True,
+    hidden_keypoints: frozenset[str] | set[str] = frozenset(),
+    show_text: bool = False,
 ) -> None:
     """Fill each entry's ``image`` (RGB thumbnail with pose overlay) in place.
+
+    The overlay follows the sidebar's Pose section: ``show_keypoints`` off
+    draws none, ``hidden_keypoints`` are left out, ``show_text`` names each
+    point — the thumbnails show what the video shows.
 
     Entries are grouped per (trial, camera) so each video is opened once and
     visited in frame order. Media metadata (paths, rates, offsets, pose
@@ -810,7 +883,11 @@ def decode_entry_images(
         current_video_path=current_video_path,
     ):
         camera = group[0].camera
-        pose = _load_group_pose(alignment, group[0].trial, camera, pose_folder, source_software, fps)
+        pose = (
+            _load_group_pose(alignment, group[0].trial, camera, pose_folder, source_software, fps)
+            if show_keypoints
+            else None
+        )
         jobs.append((group, path, fps, offset, pose, (camera_crops or {}).get(camera), nframes))
 
     def report() -> bool:
@@ -828,20 +905,35 @@ def decode_entry_images(
     def run_job(job) -> None:
         group, path, fps, offset, pose, crop, nframes = job
         try:
+            # Every frame the group needs, in frame order, so the video is
+            # visited once forwards: a state tile contributes two.
+            wanted = [(t, entry, field_name) for entry in group for field_name, t in entry.frames()]
             with VideoFrameSource(path, fps, nframes, max_side=THUMB_MAX_SIDE) as source:
-                for entry in sorted(group, key=lambda e: e.t_rel):
+                for t_rel, entry, field_name in sorted(wanted, key=lambda w: w[0]):
                     if cancel.is_set():
                         return
-                    frame = int(round((entry.t_rel - offset) * fps))
+                    frame = int(round((t_rel - offset) * fps))
                     frame = min(max(frame, 0), max(nframes - 1, 0))
                     image = np.ascontiguousarray(source[frame])
                     if pose is not None:
-                        draw_pose_points(image, pose, frame, source.scale, pose_color_by)
+                        draw_pose_points(
+                            image,
+                            pose,
+                            frame,
+                            source.scale,
+                            pose_color_by,
+                            hidden_keypoints=hidden_keypoints,
+                            show_text=show_text,
+                        )
                     if crop is not None:
                         image = crop_thumbnail(image, crop, source.scale)
                         entry.cropped = True
-                    entry.frame_idx = frame
-                    entry.image = image
+                    if field_name == FIELD_END:
+                        entry.end_frame_idx = frame
+                        entry.end_image = image
+                    else:
+                        entry.frame_idx = frame
+                        entry.image = image
         except (OSError, ValueError) as exc:
             logger.warning("Frame extraction failed for %s: %s", path, exc)
             for entry in group:
@@ -937,7 +1029,8 @@ def capture_panel_images(
     with the time marker on the label time and the viewport spanning
     ``window_s`` around it — then grabs each panel widget (``QWidget.grab``,
     same capture the screen recorder uses, so pygfx canvases come out too).
-    Cameras of the same boundary share the captures.
+    Cameras of the same label share the captures; a state tile's window
+    spans the whole label plus ``window_s / 2`` either side.
 
     ``autoscale`` fits each panel's y-range to the data visible in that
     capture's time window; with it off, the ranges the user has set now stay
@@ -965,6 +1058,7 @@ def capture_panel_images(
     try:
         for (trial_key, _), group in sorted(keyed.items()):
             lead = group[0]
+            view_end = lead.offset_s if lead.is_state else lead.t_rel
             nav.jump_to_label_instance(
                 {
                     "trial": lead.trial,
@@ -975,7 +1069,7 @@ def capture_panel_images(
                 },
                 seek_rel=lead.t_rel,
                 play=False,
-                view_rel=TimeRange(lead.t_rel - half, lead.t_rel + half),
+                view_rel=TimeRange(lead.t_rel - half, view_end + half),
             )
             settle(PANEL_TRIAL_SETTLE_MS if trial_key != last_trial else PANEL_SETTLE_MS)
             last_trial = trial_key
@@ -1009,24 +1103,32 @@ def capture_panel_images(
 
 
 def _entry_title(entry: FrameEntry) -> str:
-    title = f"{entry.name} ({entry.label_id})"
-    if entry.boundary != "point":
-        title += f" — {entry.boundary.upper()}"
-    return title
+    return f"{entry.name} ({entry.label_id})"
 
 
 def _entry_info(entry: FrameEntry) -> str:
+    """Where the label sits, the video grid's way: ``at 0.500 s`` for a point
+    event, ``1.000–1.800 s  ·  0.800 s`` for a state event."""
     parts = [f"trial {entry.trial}"]
     if entry.camera:
         parts.append(str(entry.camera))
     individual = entry.individual
     if individual is not None and not (isinstance(individual, float) and math.isnan(individual)):
         parts.append(str(individual))
-    parts.append(f"{entry.t_rel:.3f} s")
+    if entry.is_state:
+        parts.append(f"{entry.onset_s:.3f}–{entry.offset_s:.3f} s")
+        parts.append(f"{entry.offset_s - entry.onset_s:.3f} s")
+    else:
+        parts.append(f"at {entry.t_rel:.3f} s")
     parts.append(entry.labeling_method)
     if entry.cropped:
         parts.append("cropped")
     return "  ·  ".join(parts)
+
+
+def _frame_caption(field_name: str, t_rel: float) -> str:
+    """The small caption under one frame of a state tile."""
+    return f"{'onset' if field_name == FIELD_START else 'offset'}  {t_rel:.3f} s"
 
 
 # ----------------------------------------------------------------------
@@ -1045,10 +1147,12 @@ def write_frames_pdf(
     columns: int,
     confidence_threshold: float = 0.0,
 ) -> None:
-    """Write the grid as a paginated PDF, *columns* tiles per row.
+    """Write the grid as a paginated PDF, *columns* single tiles per row.
 
-    Tiles below *confidence_threshold* get the same red outline they carry in
-    the grid, so a printed review sheet flags what to check.
+    Tiles are placed as on screen (:func:`pack_tiles`): a state tile spans
+    two columns, its onset and offset frames side by side. Tiles below
+    *confidence_threshold* get the same red outline they carry in the grid,
+    so a printed review sheet flags what to check.
     """
     writer = QPdfWriter(str(path))
     writer.setPageSize(QPageSize(QPageSize.A4))
@@ -1066,31 +1170,57 @@ def write_frames_pdf(
         line_h = painter.fontMetrics().height()
         text_h = conf_h + line_h + 4
 
-        def frame_height(entry: FrameEntry) -> int:
-            if entry.image is not None:
-                h, w = entry.image.shape[:2]
+        def tile_width(span: int) -> int:
+            return span * cell_w + (span - 1) * gap
+
+        def image_height(image: np.ndarray | None) -> int:
+            if image is not None:
+                h, w = image.shape[:2]
                 return int(cell_w * h / w)
             return int(cell_w * 9 / 16)
 
-        def cell_height(entry: FrameEntry) -> int:
-            total = text_h + frame_height(entry)
+        def frames_height(entry: FrameEntry) -> int:
+            heights = [image_height(entry.image)]
+            if entry.is_state:
+                heights.append(image_height(entry.end_image))
+                heights[0] += line_h  # the onset / offset captions
+                heights[1] += line_h
+            return max(heights)
+
+        def cell_height(entry: FrameEntry, span: int) -> int:
+            total = text_h + frames_height(entry)
+            width = tile_width(span)
             for _, qimg in entry.panels:
-                total += line_h + int(cell_w * qimg.height() / max(1, qimg.width()))
+                total += line_h + int(width * qimg.height() / max(1, qimg.width()))
             return total
 
+        def draw_frame(x: int, cy: int, image: np.ndarray | None, error: str | None) -> None:
+            h_img = image_height(image)
+            if image is not None:
+                painter.drawImage(QRect(x, cy, cell_w, h_img), _to_qimage(image))
+            else:
+                painter.drawRect(x, cy, cell_w, h_img)
+                painter.drawText(x + 4, cy + line_h, f"(no frame: {error or 'unavailable'})")
+
+        placed = pack_tiles(entries, columns)
+        rows: dict[int, list[tuple]] = {}
+        for entry, row_idx, col, span in placed:
+            rows.setdefault(row_idx, []).append((entry, col, span))
+
         y = margin
-        for start in range(0, len(entries), columns):
-            row = entries[start : start + columns]
-            row_h = max(cell_height(entry) for entry in row)
+        for row_idx in sorted(rows):
+            row = rows[row_idx]
+            row_h = max(cell_height(entry, span) for entry, _, span in row)
             if y + row_h > page_h - margin and y > margin:
                 writer.newPage()
                 y = margin
-            for i, entry in enumerate(row):
-                x = margin + i * (cell_w + gap)
+            for entry, col, span in row:
+                x = margin + col * (cell_w + gap)
+                width = tile_width(span)
                 if is_low_confidence(entry, confidence_threshold):
                     painter.save()
                     painter.setPen(QPen(QColor(LOW_CONFIDENCE_COLOR), 2))
-                    painter.drawRect(x - 5, y - 5, cell_w + 10, cell_height(entry) + 10)
+                    painter.drawRect(x - 5, y - 5, width + 10, cell_height(entry, span) + 10)
                     painter.restore()
                 painter.save()
                 painter.setFont(conf_font)
@@ -1098,27 +1228,28 @@ def write_frames_pdf(
                     painter.setPen(QColor(LOW_CONFIDENCE_COLOR))
                 conf_text = confidence_text(entry)
                 conf_w = painter.fontMetrics().horizontalAdvance(conf_text)
-                painter.drawText(QRect(x, y, cell_w, conf_h), Qt.AlignRight | Qt.AlignVCenter, conf_text)
+                painter.drawText(QRect(x, y, width, conf_h), Qt.AlignRight | Qt.AlignVCenter, conf_text)
                 painter.restore()
                 painter.drawText(
-                    QRect(x, y, max(1, cell_w - conf_w - 6), conf_h),
+                    QRect(x, y, max(1, width - conf_w - 6), conf_h),
                     Qt.AlignLeft | Qt.AlignVCenter,
                     _entry_title(entry),
                 )
                 painter.drawText(x, y + conf_h + line_h, _entry_info(entry))
                 cy = y + text_h
-                h_img = frame_height(entry)
-                if entry.image is not None:
-                    painter.drawImage(QRect(x, cy, cell_w, h_img), _to_qimage(entry.image))
+                if entry.is_state and span == 2:
+                    for i, (field_name, t_rel) in enumerate(entry.frames()):
+                        fx = x + i * (cell_w + gap)
+                        painter.drawText(fx, cy + line_h - 2, _frame_caption(field_name, t_rel))
+                        draw_frame(fx, cy + line_h, entry.end_image if i else entry.image, entry.error)
                 else:
-                    painter.drawRect(x, cy, cell_w, h_img)
-                    painter.drawText(x + 4, cy + line_h, f"(no frame: {entry.error or 'unavailable'})")
-                cy += h_img
+                    draw_frame(x, cy, entry.image, entry.error)
+                cy += frames_height(entry)
                 for title, qimg in entry.panels:
                     painter.drawText(x, cy + line_h - 2, title)
                     cy += line_h
-                    h_panel = int(cell_w * qimg.height() / max(1, qimg.width()))
-                    painter.drawImage(QRect(x, cy, cell_w, h_panel), qimg)
+                    h_panel = int(width * qimg.height() / max(1, qimg.width()))
+                    painter.drawImage(QRect(x, cy, width, h_panel), qimg)
                     cy += h_panel
             y += row_h + gap
     finally:
@@ -1517,16 +1648,16 @@ class ConfidenceRuleController(QObject):
         self.changed.emit()
 
 
-class GridModeBar(QWidget):
-    """Mode combo + Done / Mark flagged — the verdict controls both grids share.
+class GridVerdictBar(QWidget):
+    """Tag low-confidence / Clear / Done — the verdict controls both grids share.
 
-    The host passes its entries and a ``restyle()`` callback; this widget owns
-    the :class:`TileVerdicts` and applies Done through the curation panel.
-    ``entries_fn`` returns what is *on screen* — a grid filtered to one label
-    class curates that class and nothing else.
+    A click tags a tile for review; **Done** curates every automated label
+    on screen that is not tagged. The host passes its entries and a
+    ``restyle()`` callback; this widget owns the :class:`TileVerdicts` and
+    applies Done through the curation panel. ``entries_fn`` returns what is
+    *on screen* — a grid filtered to one label class curates that class and
+    nothing else.
     """
-
-    mode_changed = Signal(str)
 
     def __init__(self, meta, entries_fn, restyle_fn, flagged_fn=None, parent=None):
         super().__init__(parent)
@@ -1538,30 +1669,18 @@ class GridModeBar(QWidget):
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(QLabel("Mode:"))
-        self.mode_combo = QComboBox()
-        for key, text in GRID_MODES.items():
-            self.mode_combo.addItem(text, key)
-        self.mode_combo.setToolTip(
-            "What a single tile click means.\n"
-            "Click = curated: Done curates every clicked label.\n"
-            "Click = uncurated, rest = curated: click the bad ones, Done curates the rest.\n"
-            "A double click always jumps the GUI there instead (into the frame-by-frame\n"
-            "review when that curation mode is on), whichever mode is chosen."
+        self.tag_flagged_btn = QPushButton("Tag low-confidence")
+        self.tag_flagged_btn.setAutoDefault(False)
+        self.tag_flagged_btn.setToolTip(
+            "Tag every tile the confidence threshold outlines in red for review —\n"
+            "a low score is a reason to doubt a label, never to approve it."
         )
-        self.mode_combo.currentIndexChanged.connect(self._on_mode)
-        lay.addWidget(self.mode_combo)
-        self.mark_flagged_btn = QPushButton("Mark low-confidence as uncurated")
-        self.mark_flagged_btn.setAutoDefault(False)
-        self.mark_flagged_btn.setToolTip(
-            "Click every tile the confidence threshold outlines in red, as uncurated.\n"
-            "Only in 'Click = uncurated, rest = curated': a low score is a reason to\n"
-            "doubt a label, never to approve it."
-        )
-        self.mark_flagged_btn.clicked.connect(self._mark_flagged)
-        lay.addWidget(self.mark_flagged_btn)
+        self.tag_flagged_btn.clicked.connect(self._tag_flagged)
+        self.tag_flagged_btn.setEnabled(flagged_fn is not None)
+        lay.addWidget(self.tag_flagged_btn)
         self.clear_btn = QPushButton("Clear")
         self.clear_btn.setAutoDefault(False)
+        self.clear_btn.setToolTip("Forget every tag")
         self.clear_btn.clicked.connect(self.clear)
         lay.addWidget(self.clear_btn)
         self.count_label = QLabel("")
@@ -1569,40 +1688,25 @@ class GridModeBar(QWidget):
         lay.addWidget(self.count_label)
         self.done_btn = QPushButton("Done")
         self.done_btn.setAutoDefault(False)
-        self.done_btn.setToolTip("Apply the verdicts: curate the labels this mode selects")
+        self.done_btn.setToolTip(
+            "Curate every automated label on screen that is not tagged;\nthe tagged ones stay automated, for review."
+        )
         self.done_btn.clicked.connect(self.apply_done)
         lay.addWidget(self.done_btn)
-        self._sync_buttons()
-
-    def mode(self) -> str:
-        return str(self.mode_combo.currentData() or "curate")
-
-    def _sync_buttons(self) -> None:
-        # Low confidence argues for doubt, not approval: the shortcut exists
-        # only where a click means "uncurated".
-        self.mark_flagged_btn.setEnabled(self.mode() == "uncurate" and self._flagged_fn is not None)
-
-    def _on_mode(self, *_args) -> None:
-        """A mode switch forgets the clicks — a click means something else now."""
-        self._sync_buttons()
-        self.verdicts.clear()
-        self._restyle_fn()
-        self._sync_count()
-        self.mode_changed.emit(self.mode())
 
     def _sync_count(self) -> None:
-        """Count the clicks the host is showing, not every click ever made —
+        """Count the tags the host is showing, not every tag ever made —
         a verdict on a hidden label is not what Done is about to apply."""
         keys = {entry_key(entry) for entry in self._entries_fn()}
         n = len(self.verdicts.clicked & keys)
-        self.count_label.setText(f"{n} clicked" if n else "")
+        self.count_label.setText(f"{n} tagged" if n else "")
 
     def refresh(self) -> None:
         """Re-read the host's entries — what is shown, and so what Done does."""
         self._sync_count()
 
     def click(self, entry) -> bool:
-        """A tile click in a verdict mode; returns whether it is marked now."""
+        """A tile click; returns whether the label is tagged now."""
         marked = self.verdicts.toggle(entry)
         self._restyle_fn()
         self._sync_count()
@@ -1613,8 +1717,8 @@ class GridModeBar(QWidget):
         self._restyle_fn()
         self._sync_count()
 
-    def _mark_flagged(self) -> None:
-        if self._flagged_fn is None or self.mode() != "uncurate":
+    def _tag_flagged(self) -> None:
+        if self._flagged_fn is None:
             return
         for entry in self._flagged_fn():
             self.verdicts.clicked.add(entry_key(entry))
@@ -1622,12 +1726,13 @@ class GridModeBar(QWidget):
         self._sync_count()
 
     def apply_done(self) -> int:
-        """Curate what the mode selects; the entries are restamped to match."""
+        """Curate every untagged automated label on screen; the entries are
+        restamped to match."""
         panel = curation_panel_of(self.meta)
         entries = list(self._entries_fn())
-        insts = self.verdicts.insts_for_done(self.mode(), entries)
+        insts = self.verdicts.insts_for_done(entries)
         if not insts:
-            notify("Nothing to curate — no automated labels selected.", severity="warning")
+            notify("Nothing to curate — every automated label on screen is tagged.", severity="warning")
             return 0
         if panel is None:
             notify("No curation panel to apply the verdicts to.", severity="warning")
@@ -1663,7 +1768,7 @@ class LabelGridView(QWidget):
 
     The **Label** combo narrows the grid to one of the classes it was built
     from. It is a filter on the whole tab, not just the view: the tile count,
-    **Mark low-confidence as uncurated**, **Done** and the PDF all run over
+    **Tag low-confidence**, **Done** and the PDF all run over
     what is on screen, so a scope of several classes can be curated one class
     at a time without reopening the dialog.
     """
@@ -1761,18 +1866,17 @@ class LabelGridView(QWidget):
         bar.addWidget(export_btn)
         layout.addLayout(bar)
 
-        self.mode_bar = GridModeBar(
+        self.verdict_bar = GridVerdictBar(
             meta,
             entries_fn=self.visible_entries,
             restyle_fn=self._apply_styles,
             flagged_fn=self._flagged_entries,
         )
-        layout.addWidget(self.mode_bar)
+        layout.addWidget(self.verdict_bar)
 
         self.hint = QLabel("")
         self.hint.setStyleSheet("color: grey; font-size: 10px;")
         layout.addWidget(self.hint)
-        self.mode_bar.mode_changed.connect(self._sync_hint)
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
@@ -1822,24 +1926,21 @@ class LabelGridView(QWidget):
         self._relayout()
         self._apply_styles()
         self._sync_count()
-        self.mode_bar.refresh()
+        self.verdict_bar.refresh()
         self._sync_hint()
 
     def _sync_count(self) -> None:
         shown = len(self.visible_entries())
         total = len(self._entries)
-        self.count_label.setText(f"{shown} frames" if shown == total else f"{shown} of {total} frames")
+        self.count_label.setText(f"{shown} labels" if shown == total else f"{shown} of {total} labels")
 
     def _sync_hint(self, *_args) -> None:
-        if self.mode_bar.mode() == "curate":
-            click = "Click the frames that are right, then Done curates those labels."
-        else:
-            click = "Click the frames that are wrong, then Done curates every other label."
+        click = "Click the frames that are wrong to tag them for review; Done curates every other label."
         panel = curation_panel_of(self.meta)
-        if panel is not None and panel.mode() == "frame":
-            jump = "Double-click a frame to review that boundary frame by frame in the main GUI."
+        if panel is not None and panel.reviews_on_jump():
+            jump = "Double-click a frame to review that label in the main GUI."
         else:
-            jump = "Double-click a frame to jump the GUI to that trial and time."
+            jump = "Double-click a frame to jump the GUI to that boundary."
         self.hint.setText(f"{click} {jump}{self._filter_note()}")
 
     def _filter_note(self) -> str:
@@ -1880,21 +1981,43 @@ class LabelGridView(QWidget):
         #: (label, unscaled pixmap) pairs — relayout rescales each to the
         #: current column width.
         pix_labels: list[tuple[QLabel, QPixmap]] = []
+        #: (label, unscaled pixmap) pairs that span the whole tile (panel
+        #: captures): a state tile rescales these to two columns.
+        wide_labels: list[tuple[QLabel, QPixmap]] = []
 
-        image_label = _ClickableLabel()
-        image_label.setCursor(Qt.PointingHandCursor)
-        image_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        if entry.image is not None:
-            pixmap = QPixmap.fromImage(_to_qimage(entry.image))
-            image_label.setPixmap(pixmap)
-            pix_labels.append((image_label, pixmap))
+        def make_frame(image: np.ndarray | None, field_name: str) -> _ClickableLabel:
+            image_label = _ClickableLabel()
+            image_label.setCursor(Qt.PointingHandCursor)
+            image_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+            if image is not None:
+                pixmap = QPixmap.fromImage(_to_qimage(image))
+                image_label.setPixmap(pixmap)
+                pix_labels.append((image_label, pixmap))
+            else:
+                image_label.setText(f"(no frame:\n{entry.error or 'unavailable'})")
+                image_label.setFrameShape(QFrame.StyledPanel)
+                image_label.setMinimumSize(160, 90)
+            image_label.clicked.connect(lambda e=entry: self._on_tile_clicked(e))
+            image_label.double_clicked.connect(lambda e=entry, f=field_name: self._on_tile_double_clicked(e, f))
+            return image_label
+
+        if entry.is_state:
+            # Onset and offset side by side, each captioned — without the
+            # captions two frames read as two cameras.
+            frames_row = QHBoxLayout()
+            frames_row.setSpacing(self._grid.spacing())
+            for i, (field_name, t_rel) in enumerate(entry.frames()):
+                column = QVBoxLayout()
+                column.setSpacing(1)
+                caption = QLabel(_frame_caption(field_name, t_rel))
+                caption.setStyleSheet("color: grey; font-size: 9px;")
+                column.addWidget(caption)
+                column.addWidget(make_frame(entry.end_image if i else entry.image, field_name))
+                column.addStretch()
+                frames_row.addLayout(column)
+            lay.addLayout(frames_row)
         else:
-            image_label.setText(f"(no frame:\n{entry.error or 'unavailable'})")
-            image_label.setFrameShape(QFrame.StyledPanel)
-            image_label.setMinimumSize(160, 90)
-        image_label.clicked.connect(lambda e=entry: self._on_tile_clicked(e))
-        image_label.double_clicked.connect(lambda e=entry: self._on_tile_double_clicked(e))
-        lay.addWidget(image_label)
+            lay.addWidget(make_frame(entry.image, TILE_POINT))
 
         for panel_title, qimage in entry.panels:
             caption = QLabel(panel_title)
@@ -1904,10 +2027,11 @@ class LabelGridView(QWidget):
             panel_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
             pixmap = QPixmap.fromImage(qimage)
             panel_label.setPixmap(pixmap)
-            pix_labels.append((panel_label, pixmap))
+            wide_labels.append((panel_label, pixmap))
             lay.addWidget(panel_label)
 
         cell._pix_labels = pix_labels  # type: ignore[attr-defined]
+        cell._wide_labels = wide_labels  # type: ignore[attr-defined]
         lay.addStretch()
         return cell
 
@@ -1921,11 +2045,10 @@ class LabelGridView(QWidget):
     def _apply_styles(self, *_args) -> None:
         """Outline the tiles: verdict colour first, else the confidence red."""
         threshold = self.threshold_edit.value()
-        mode = self.mode_bar.mode()
-        verdicts = self.mode_bar.verdicts
+        verdicts = self.verdict_bar.verdicts
         for cell, entry in zip(self._cells, self._entries):
             if verdicts.is_clicked(entry):
-                cell.setStyleSheet(_CURATE_STYLE if mode == "curate" else _UNCURATE_STYLE)
+                cell.setStyleSheet(_TAGGED_STYLE)
             else:
                 cell.setStyleSheet(_LOW_CONFIDENCE_STYLE if is_low_confidence(entry, threshold) else "")
             cell._info.setText(_entry_info(entry))
@@ -1985,38 +2108,44 @@ class LabelGridView(QWidget):
         cells = {id(entry): cell for entry, cell in zip(self._entries, self._cells)}
         for cell in self._cells:
             cell.setVisible(False)
-        for i, entry in enumerate(self.visible_entries()):
+        for entry, row, col, span in pack_tiles(self.visible_entries(), columns):
             cell = cells.get(id(entry))
             if cell is None:
                 continue
+            wide_w = span * thumb_w + (span - 1) * spacing
             for label, pixmap in cell._pix_labels:
                 if not pixmap.isNull():
                     label.setPixmap(pixmap.scaledToWidth(min(thumb_w, pixmap.width()), Qt.SmoothTransformation))
-            self._grid.addWidget(cell, i // columns, i % columns, alignment=Qt.AlignTop)
+            for label, pixmap in cell._wide_labels:
+                if not pixmap.isNull():
+                    label.setPixmap(pixmap.scaledToWidth(min(wide_w, pixmap.width()), Qt.SmoothTransformation))
+            self._grid.addWidget(cell, row, col, 1, span, alignment=Qt.AlignTop)
             cell.setVisible(True)
 
     def _on_tile_clicked(self, entry: FrameEntry):
         """A single click is the verdict the mode names."""
-        self.mode_bar.click(entry)
+        self.verdict_bar.click(entry)
 
-    def _on_tile_double_clicked(self, entry: FrameEntry):
+    def _on_tile_double_clicked(self, entry: FrameEntry, field_name: str = TILE_POINT):
         """A double click navigates, in every mode. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
-        navigating leaves the verdicts exactly as they were."""
-        self.mode_bar.click(entry)
-        self._jump(entry)
+        navigating leaves the verdicts exactly as they were. On a state tile
+        the frame clicked says which boundary: the onset or the offset."""
+        self.verdict_bar.click(entry)
+        self._jump(entry, field_name)
 
-    def _jump(self, entry: FrameEntry):
-        """Go there — into the frame-by-frame review when the curation panel
-        is in that mode, else a plain jump."""
+    def _jump(self, entry: FrameEntry, field_name: str = TILE_POINT):
+        """Go there — into the review when the curation panel is in a review
+        mode, else a plain jump to that boundary's time."""
         panel = curation_panel_of(self.meta)
-        if panel is not None and panel.mode() == "frame":
-            panel.start_review_at(entry_inst(entry), entry.boundary)
+        if panel is not None and panel.reviews_on_jump():
+            panel.start_review_at(entry_inst(entry), field_name)
             return
         nav = getattr(self.meta, "navigation_widget", None)
         if nav is None:
             return
-        nav.jump_to_label_instance(entry_inst(entry), seek_rel=entry.t_rel, play=False)
+        seek = entry.offset_s if field_name == FIELD_END else entry.t_rel
+        nav.jump_to_label_instance(entry_inst(entry), seek_rel=seek, play=False)
 
     def _export_pdf(self):
         labels_path = self.app_state.labels_file_path()
@@ -2464,6 +2593,9 @@ class LabelGridViewDialog(QDialog):
             source_software=source_software,
             pose_color_by=getattr(self.app_state, "pose_color_by", "keypoint") or "keypoint",
             camera_crops=self.setup.camera_crops(cameras),
+            show_keypoints=bool(self.app_state.get_with_default("pose_show_keypoints")),
+            hidden_keypoints=frozenset(str(n) for n in self.app_state.get_with_default("pose_hidden_keypoints") or []),
+            show_text=bool(self.app_state.get_with_default("pose_show_text")),
             current_trial=getattr(self.app_state, "trials_sel", None),
             current_video_path=getattr(self.app_state, "video_path", None),
             progress_cb=on_progress,

@@ -12,7 +12,6 @@ from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -568,43 +567,13 @@ class IOWidget(QWidget):
         buttons_col.addStretch()
         pred_group_layout.addLayout(folder_row)
 
-        # Row 2: show checkbox + threshold + PDF button
+        # Row 2: the "Confidence" overlay checkbox (MetaWidget moves it here).
+        # Thresholds and the curves PDF live in the Labels tab's Curation
+        # section, with everything else that flags a trial.
         controls_row = QHBoxLayout()
         controls_row.setContentsMargins(0, 0, 0, 0)
-        # Exposed so MetaWidget can move the "Confidence" overlay checkbox here.
         self._pred_controls_row = controls_row
-
-        controls_row.addWidget(QLabel("Frame thr:"))
-        self.pred_confidence_threshold_spin = QDoubleSpinBox()
-        self.pred_confidence_threshold_spin.setRange(0.0, 1.0)
-        self.pred_confidence_threshold_spin.setSingleStep(0.05)
-        self.pred_confidence_threshold_spin.setDecimals(2)
-        self.pred_confidence_threshold_spin.setValue(0.75)
-        self.pred_confidence_threshold_spin.setToolTip(
-            "Frame-level confidence threshold — frames below this are marked red."
-        )
-        controls_row.addWidget(self.pred_confidence_threshold_spin)
-
-        controls_row.addWidget(QLabel("Segment thr (state events only):"))
-        self.pred_segment_confidence_threshold_spin = QDoubleSpinBox()
-        self.pred_segment_confidence_threshold_spin.setRange(0.0, 1.0)
-        self.pred_segment_confidence_threshold_spin.setSingleStep(0.05)
-        self.pred_segment_confidence_threshold_spin.setDecimals(2)
-        self.pred_segment_confidence_threshold_spin.setValue(0.6)
-        self.pred_segment_confidence_threshold_spin.setToolTip(
-            "Segment-level mean confidence threshold — segments below this are highlighted red.\n"
-            "Meaningful for state events only: a point event has no span to average over, so this "
-            "threshold has no effect on it."
-        )
-        controls_row.addWidget(self.pred_segment_confidence_threshold_spin)
-
-        self.pred_confidence_pdf_btn = QPushButton("Update confidence (+ PDF)")
-        self.pred_confidence_pdf_btn.setToolTip(
-            "Regenerate confidence PDF with current thresholds and update low/high confidence classification.\n"
-            "The segment threshold only affects state events — point events have no span to average over."
-        )
-        self.pred_confidence_pdf_btn.setEnabled(False)
-        controls_row.addWidget(self.pred_confidence_pdf_btn)
+        controls_row.addStretch(1)
 
         pred_group_layout.addLayout(controls_row)
         target_layout.addRow(self.pred_group)
@@ -1758,13 +1727,8 @@ class IOWidget(QWidget):
             self.labels_widget._import_predictions_from_folders
         )
         self.import_predictions_from_tsv_action.triggered.connect(self.labels_widget._import_predictions_from_tsv)
-        self.pred_confidence_pdf_btn.clicked.connect(self.labels_widget._plot_confidence_pdf)
         self.remove_predictions_btn.clicked.connect(self.labels_widget._remove_selected_prediction_set)
         self.pred_sets_list.currentItemChanged.connect(self.labels_widget._on_prediction_set_selected)
-        self.pred_confidence_threshold_spin.valueChanged.connect(self.labels_widget._on_confidence_threshold_changed)
-        self.pred_segment_confidence_threshold_spin.valueChanged.connect(
-            self.labels_widget._on_confidence_threshold_changed
-        )
 
     def wire_ephys_signals(self, ephys_widget):
         """Connect neurons UI to EphysWidget methods."""

@@ -36,19 +36,16 @@ what you build on top of them:
 
 ```
 my_project/                            # chosen on the start page
-    ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
+    ├── segment.yaml                   # action-segmentation config (copy from ~/.ethograph/defaults/config/)
+    ├── spot.yaml                      # pixel event-spotting config
+    │
     ├── config/
-    │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
-    │   ├── spot.yaml                  # pixel event-spotting config
     │   ├── skeleton/                  # one YAML per skeleton (crow.yaml, mouse.yaml, …)
     │   └── space/                     # reference geometries for the Space plot
-    ├── runs/
-    │   └── lightgbm/                  # lightgbm models trained from the Model menu
-    ├── feral/                         # FERAL's inputs, checkpoints and embeddings (models/segment/feral)
+    │
     ├── workflows/                     # curation workflows
-    ├── wizard/                        # Data wizard notebooks, one per rig
-    └── sessions.txt                   # session folders made by drag & drop with this project set, reopenable
+    └── wizard/                        # Data wizard notebooks, one per rig
 ```
 
 ```{important}

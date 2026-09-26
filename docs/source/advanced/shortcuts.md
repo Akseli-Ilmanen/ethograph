@@ -58,18 +58,21 @@ useful guide when guessing a binding.
 
 ## Curation
 
-See {ref}`frame-by-frame review <target-curation-frame>`. `Ctrl+C` is always bound; the others are live
-only while a frame-by-frame review runs (started from the Labels tab's
-Curation section), wherever the key is pressed.
+See {ref}`segment review <target-curation-segment>` and
+{ref}`frame-by-frame review <target-curation-frame>`. `Ctrl+C` and `Ctrl+T`
+are always bound; the others are live only while a review runs (started from
+the Labels tab's Curation section), wherever the key is pressed. `Enter` is
+the frame-by-frame review's alone: in segment review a label is re-placed by
+two plot clicks, and `V` replays it.
 
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+C` | Curate the current trial: every automated label in scope becomes curated (manual ones stay manual) |
 | `Ctrl+T` | Flag the current trial as hard in the metadata table's `difficulty` column, or back to normal — see the curation page's hard-trials section |
-| `Enter` | Confirm the frame on screen as the boundary — the label becomes manual if it moved, curated if not — and move on |
-| `Backspace` / `Delete` | Delete the event being reviewed and move on |
-| `N` | Next boundary (curates the one you leave when **Click N curates current** is ticked) |
-| `B` | Previous boundary |
+| `Enter` | Frame-by-frame review: confirm the frame on screen as the boundary — the label becomes manual if it moved, curated if not — and move on |
+| `Backspace` / `Delete` | Delete the event or label being reviewed and move on |
+| `N` | Next boundary or label (curates the one you leave when **Click N curates current** is ticked) |
+| `B` | Previous boundary or label |
 | `Left` / `Right` | Step one frame — the main window's own binding |
 
 ## Keypoint Labelling

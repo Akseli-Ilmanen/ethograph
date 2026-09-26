@@ -52,3 +52,10 @@ links to its entry here.
 :filter: keywords % "videofeatures"
 :labelprefix: V
 ```
+
+## Curation and learning from corrections
+
+```{bibliography}
+:filter: keywords % "curation"
+:labelprefix: L
+```

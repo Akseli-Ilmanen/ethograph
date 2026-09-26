@@ -1,12 +1,14 @@
-"""Label bulk editing: curate / delete / purge across a chosen trial and
-label scope.
+"""Label bulk editing: curate / delete / purge / stitch across a chosen trial
+and label scope.
 
 Opened from **Tools ▸ Label bulk editing…** (`top_bar.py`). Everything here
 drives :class:`~ethograph.gui.widgets_curation.CurationPanel`'s own bulk
-methods (`curate_trial_labels`, `delete_trial_labels`, `purge_trial_labels`)
+methods (`curate_trial_labels`, `delete_trial_labels`, `purge_trial_labels`,
+`stitch_trial_labels`)
 — this dialog is a form in front of them, not a second implementation. Every
 one of these is also a :mod:`~ethograph.labels.workflow` step
-(``curate_trials``, ``delete_labels``, ``purge_labels``), so anything doable
+(``curate_trials``, ``delete_labels``, ``purge_labels``, ``stitch_labels``), so
+anything doable
 here can be recorded and replayed.
 
 Two choices apply to every action:
@@ -50,6 +52,8 @@ logger = logging.getLogger(__name__)
 #: The purge spin box opens here — short enough to catch stray clicks and
 #: jitter, not so short it silently keeps something meant as background.
 _DEFAULT_PURGE_S = 0.010
+#: The stitch spin box opens at the Changepoints tab's own default gap.
+_DEFAULT_STITCH_S = 0.015
 
 
 def _curation_panel(meta):
@@ -88,6 +92,7 @@ class LabelBulkEditDialog(QDialog):
         lay.addWidget(self._build_curate_group())
         lay.addWidget(self._build_delete_group())
         lay.addWidget(self._build_purge_group())
+        lay.addWidget(self._build_stitch_group())
 
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.reject)
@@ -185,6 +190,32 @@ class LabelBulkEditDialog(QDialog):
         lay.addLayout(row)
         return group
 
+    def _build_stitch_group(self) -> QGroupBox:
+        group = QGroupBox("Stitch labels")
+        lay = QVBoxLayout(group)
+        hint = QLabel(
+            "Merges same-class state labels of one individual whose gap is below the threshold. "
+            "Point events are never touched."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: grey; font-size: 10px;")
+        lay.addWidget(hint)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Stitch gaps shorter than:"))
+        self.stitch_spin = QDoubleSpinBox()
+        self.stitch_spin.setRange(0.0, 100000.0)
+        self.stitch_spin.setDecimals(3)
+        self.stitch_spin.setSingleStep(0.005)
+        self.stitch_spin.setSuffix(" s")
+        self.stitch_spin.setValue(_DEFAULT_STITCH_S)
+        row.addWidget(self.stitch_spin)
+        self.stitch_btn = QPushButton("Stitch…")
+        self.stitch_btn.setAutoDefault(False)
+        self.stitch_btn.clicked.connect(self._stitch)
+        row.addWidget(self.stitch_btn)
+        lay.addLayout(row)
+        return group
+
     # ------------------------------------------------------------------
     # Reading the form
     # ------------------------------------------------------------------
@@ -234,5 +265,12 @@ class LabelBulkEditDialog(QDialog):
         self._guarded(
             lambda label_ids: self.panel.purge_trial_labels(
                 self._trial_scope(), self.purge_spin.value(), label_ids, confirm=True
+            )
+        )
+
+    def _stitch(self) -> None:
+        self._guarded(
+            lambda label_ids: self.panel.stitch_trial_labels(
+                self._trial_scope(), self.stitch_spin.value(), label_ids, confirm=True
             )
         )

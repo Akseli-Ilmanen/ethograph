@@ -36,6 +36,7 @@ from ethograph.gui.dialog_label_gridview import (
     label_filter_choices,
     methods_for_filter,
     open_gui_panels,
+    pack_tiles,
     seeds_from_entries,
     split_histogram,
 )
@@ -103,22 +104,22 @@ class TestMethodFilter:
 
 
 class TestBuildFrameEntries:
-    def test_point_one_entry_state_two(self, labels_df):
+    def test_one_tile_per_label_whatever_its_kind(self, labels_df):
         entries = build_frame_entries(labels_df, MAPPINGS, [1, 2], [None])
         by_label = {}
         for e in entries:
             by_label.setdefault(e.label_id, []).append(e)
-        # 2 point rows -> 1 entry each; 2 state rows -> 2 entries each.
+        # 2 point rows and 2 state rows -> one tile each; a state tile is two frames.
         assert len(by_label[1]) == 2
-        assert len(by_label[2]) == 4
-        assert all(e.boundary == "point" for e in by_label[1])
-        assert [e.boundary for e in by_label[2]] == ["start", "end", "start", "end"]
+        assert len(by_label[2]) == 2
+        assert all(e.boundary == "point" and e.span == 1 for e in by_label[1])
+        assert all(e.boundary == "state" and e.span == 2 for e in by_label[2])
 
-    def test_state_times_are_onset_and_offset(self, labels_df):
+    def test_a_state_tile_holds_onset_and_offset(self, labels_df):
         entries = build_frame_entries(labels_df, MAPPINGS, [2], [None])
-        start, end = entries[0], entries[1]
-        assert start.t_rel == 1.0 and end.t_rel == 1.8
-        assert start.onset_s == end.onset_s == 1.0
+        tile = entries[0]
+        assert tile.t_rel == 1.0 and tile.offset_s == 1.8
+        assert tile.frames() == [("start", 1.0), ("end", 1.8)]
 
     def test_label_filter(self, labels_df):
         entries = build_frame_entries(labels_df, MAPPINGS, [1], [None])
@@ -136,8 +137,8 @@ class TestBuildFrameEntries:
     def test_unmapped_label_falls_back_to_state(self, labels_df):
         df = labels_df.assign(labels=[7, 7, 7, 7])
         entries = build_frame_entries(df, MAPPINGS, [7], [None])
-        # Finite-offset rows become state pairs; NaN offsets stay points.
-        assert [e.boundary for e in entries if str(e.trial) == "1"] == ["point", "start", "end"]
+        # Finite-offset rows become state tiles; NaN offsets stay points.
+        assert [e.boundary for e in entries if str(e.trial) == "1"] == ["point", "state"]
 
     def test_empty_df(self):
         assert build_frame_entries(pd.DataFrame(), MAPPINGS, [1], [None]) == []
@@ -182,22 +183,22 @@ class TestTitles:
             individual="a",
         )
         assert _entry_title(entry) == "peck (1)"
-        assert _entry_info(entry) == "trial 2  ·  cam-1  ·  a  ·  0.500 s  ·  manual"
+        assert _entry_info(entry) == "trial 2  ·  cam-1  ·  a  ·  at 0.500 s  ·  manual"
 
-    def test_state_names_boundary(self):
+    def test_state_reads_span_and_duration(self):
         entry = FrameEntry(
             trial=1,
             camera=None,
             label_id=2,
             name="hop",
             event_type="state",
-            boundary="end",
-            t_rel=1.8,
+            boundary="state",
+            t_rel=1.0,
             onset_s=1.0,
             offset_s=1.8,
         )
-        assert _entry_title(entry) == "hop (2) — END"
-        assert _entry_info(entry) == "trial 1  ·  1.800 s  ·  manual"
+        assert _entry_title(entry) == "hop (2)"
+        assert _entry_info(entry) == "trial 1  ·  1.000–1.800 s  ·  0.800 s  ·  manual"
 
     def test_cropped_entry_says_so(self):
         entry = FrameEntry(
@@ -212,7 +213,7 @@ class TestTitles:
             offset_s=float("nan"),
             cropped=True,
         )
-        assert _entry_info(entry) == "trial 1  ·  cam-1  ·  0.500 s  ·  manual  ·  cropped"
+        assert _entry_info(entry) == "trial 1  ·  cam-1  ·  at 0.500 s  ·  manual  ·  cropped"
 
     def test_predicted_confidence_shown(self):
         entry = FrameEntry(
@@ -441,10 +442,10 @@ class TestConfigDialog:
         assert grid is not None
         assert dialog.tabs.currentIndex() == 1 and dialog.tabs.widget(1) is grid
         # Scope [1, 2]: trial 1 holds a point (label 1) and a state (label 2,
-        # start + end); trial 3 a point — trial 2 is filtered out.
-        assert [str(e.trial) for e in grid._entries] == ["1", "1", "1", "3"]
+        # one tile); trial 3 a point — trial 2 is filtered out.
+        assert [str(e.trial) for e in grid._entries] == ["1", "1", "3"]
         assert all(e.image is None and e.error == "video not found" for e in grid._entries)
-        assert len(grid._cells) == 4
+        assert len(grid._cells) == 3
 
     def test_building_the_grid_shows_no_top_level_window(self, dialog):
         """Every tile is parented before it is shown: a parentless widget
@@ -467,7 +468,7 @@ class TestConfigDialog:
             dialog._generate()
         finally:
             QApplication.instance().removeEventFilter(spy)
-        assert len(dialog.grid_view._cells) == 4
+        assert len(dialog.grid_view._cells) == 3
         assert spy.shown == []
 
     def test_regenerating_replaces_the_grid_tab(self, dialog):
@@ -693,7 +694,19 @@ class TestPanelCapture:
         entry.panels = [("Lineplot — speed", QImage(40, 20, QImage.Format_RGB888))]
         dlg = LabelGridView(_Meta(ObservableAppState(), None), [entry])
         try:
-            # Frame pixmap + one panel pixmap, both rescalable on relayout.
+            # The frame pixmap rescales to one column, the panel pixmap to the
+            # tile's whole width — both on relayout.
+            assert len(dlg._cells[0]._pix_labels) == 1
+            assert len(dlg._cells[0]._wide_labels) == 1
+        finally:
+            dlg.close()
+
+    def test_a_state_tile_shows_both_frames(self, qapp):
+        entry = _entry(boundary="state", t_rel=1.0, offset_s=2.0, camera="cam-1")
+        entry.image = np.zeros((20, 30, 3), dtype=np.uint8)
+        entry.end_image = np.zeros((20, 30, 3), dtype=np.uint8)
+        dlg = LabelGridView(_Meta(ObservableAppState(), None), [entry])
+        try:
             assert len(dlg._cells[0]._pix_labels) == 2
         finally:
             dlg.close()
@@ -733,6 +746,37 @@ class TestPoseDrawing:
         assert image[5, 5].any()
         assert not image[10, 10].any()
 
+    def test_hidden_keypoints_are_not_drawn(self):
+        """The sidebar's keypoint filter reaches the thumbnails."""
+        data = np.array([[0.0, 5.0, 5.0], [0.0, 20.0, 20.0]])
+        pose = PoseRenderData(
+            data=data,
+            properties=pd.DataFrame({"keypoint": ["beak", "tail"], "individual": ["a", "a"]}),
+            data_not_nan=np.array([True, True]),
+            file_name="pose.nc",
+        )
+        image = np.zeros((30, 30, 3), dtype=np.uint8)
+        draw_pose_points(image, pose, frame_idx=0, scale=1.0, color_by="keypoint", hidden_keypoints={"tail"})
+        assert image[5, 5].any()
+        assert not image[20, 20].any()
+
+    def test_text_names_the_other_axis(self):
+        """Colour is one axis, text the other: coloured by individual, the
+        keypoint's name lands to the right of its point."""
+        data = np.array([[0.0, 40.0, 10.0]])
+        pose = PoseRenderData(
+            data=data,
+            properties=pd.DataFrame({"keypoint": ["beak"], "individual": ["a"]}),
+            data_not_nan=np.array([True]),
+            file_name="pose.nc",
+        )
+        silent = np.zeros((80, 120, 3), dtype=np.uint8)
+        draw_pose_points(silent, pose, frame_idx=0, scale=1.0, color_by="individual")
+        named = np.zeros((80, 120, 3), dtype=np.uint8)
+        draw_pose_points(named, pose, frame_idx=0, scale=1.0, color_by="individual", show_text=True)
+        assert not silent[:, 20:].any()
+        assert named[:, 20:].any()
+
     def test_nan_rows_skipped(self):
         data = np.array([[0.0, np.nan, np.nan]])
         pose = PoseRenderData(
@@ -771,7 +815,7 @@ def _entry(
         event_type="point" if boundary == "point" else "state",
         boundary=boundary,
         t_rel=t_rel,
-        onset_s=t_rel if boundary != "end" else 1.0,
+        onset_s=t_rel,
         offset_s=offset_s,
         individual=individual,
         individual_rec="",
@@ -788,12 +832,39 @@ class TestSeedsFromEntries:
         assert seeds[0]["field"] == "point"
         assert seeds[0]["labels"] == 1 and str(seeds[0]["trial"]) == "1"
 
-    def test_start_and_end_of_one_label_are_two_seeds(self):
+    def test_a_state_tile_is_two_seeds(self):
+        entries = [_entry(boundary="state", t_rel=1.0, offset_s=2.0)]
+        assert [s["field"] for s in seeds_from_entries(entries)] == ["start", "end"]
+
+    def test_two_cameras_of_a_state_tile_still_two_seeds(self):
         entries = [
-            _entry(boundary="start", t_rel=1.0, offset_s=2.0),
-            _entry(boundary="end", t_rel=2.0, offset_s=2.0),
+            _entry(boundary="state", t_rel=1.0, offset_s=2.0, camera="cam-1"),
+            _entry(boundary="state", t_rel=1.0, offset_s=2.0, camera="cam-2"),
         ]
         assert [s["field"] for s in seeds_from_entries(entries)] == ["start", "end"]
+
+
+class TestPackTiles:
+    """A state tile is two columns wide and never straddles a row break."""
+
+    def test_points_fill_rows_left_to_right(self):
+        placed = pack_tiles([_entry(t_rel=t) for t in (0.1, 0.2, 0.3)], columns=2)
+        assert [(r, c, span) for _, r, c, span in placed] == [(0, 0, 1), (0, 1, 1), (1, 0, 1)]
+
+    def test_a_state_tile_spans_two_columns(self):
+        state = _entry(boundary="state", t_rel=1.0, offset_s=2.0)
+        placed = pack_tiles([state, _entry(t_rel=3.0)], columns=3)
+        assert [(r, c, span) for _, r, c, span in placed] == [(0, 0, 2), (0, 2, 1)]
+
+    def test_a_state_tile_wraps_rather_than_splitting(self):
+        state = _entry(boundary="state", t_rel=1.0, offset_s=2.0)
+        placed = pack_tiles([_entry(t_rel=0.5), _entry(t_rel=0.6), state], columns=3)
+        assert [(r, c, span) for _, r, c, span in placed] == [(0, 0, 1), (0, 1, 1), (1, 0, 2)]
+
+    def test_one_column_shrinks_a_state_tile_to_fit(self):
+        state = _entry(boundary="state", t_rel=1.0, offset_s=2.0)
+        placed = pack_tiles([state, state], columns=1)
+        assert [(r, c, span) for _, r, c, span in placed] == [(0, 0, 1), (1, 0, 1)]
 
     def test_different_trials_stay_separate(self):
         entries = [_entry(trial="1"), _entry(trial="2")]
@@ -817,6 +888,9 @@ class _PanelStub:
     def mode(self):
         return self._mode
 
+    def reviews_on_jump(self):
+        return self._mode in ("segment", "frame")
+
     def curate_labels(self, insts):
         self.curated.extend(insts)
         return len(insts)
@@ -835,10 +909,6 @@ class _NavStub2:
 
     def jump_to_label_instance(self, inst, **kwargs):
         self.jumps.append(inst)
-
-
-def _set_grid_mode(grid, key):
-    grid.mode_bar.mode_combo.setCurrentIndex(grid.mode_bar.mode_combo.findData(key))
 
 
 class TestGridVerdicts:
@@ -864,27 +934,19 @@ class TestGridVerdicts:
         grid._on_tile_double_clicked(grid._entries[0])
         assert [i["trial"] for i in grid._meta.navigation_widget.jumps] == ["1"]
 
-    def test_double_click_jumps_in_a_verdict_mode_too(self, grid):
-        """Both functions at once: single click curates, double click navigates."""
-        _set_grid_mode(grid, "curate")
-        grid._on_tile_double_clicked(grid._entries[0])
-        assert [i["trial"] for i in grid._meta.navigation_widget.jumps] == ["1"]
-
     def test_double_click_leaves_the_verdicts_alone(self, grid):
         """Qt opens a double click with a plain press, which toggles the tile;
-        the double click toggles it back, so a jump curates nothing."""
-        _set_grid_mode(grid, "curate")
+        the double click toggles it back, so a jump tags nothing."""
         grid._on_tile_clicked(grid._entries[0])  # the press Qt delivers first
         grid._on_tile_double_clicked(grid._entries[0])
-        assert not grid.mode_bar.verdicts.clicked
-        assert grid.mode_bar.count_label.text() == ""
+        assert not grid.verdict_bar.verdicts.clicked
+        assert grid.verdict_bar.count_label.text() == ""
 
-    def test_double_click_on_a_marked_tile_keeps_it_marked(self, grid):
-        _set_grid_mode(grid, "curate")
-        grid._on_tile_clicked(grid._entries[0])  # marked
+    def test_double_click_on_a_tagged_tile_keeps_it_tagged(self, grid):
+        grid._on_tile_clicked(grid._entries[0])  # tagged
         grid._on_tile_clicked(grid._entries[0])  # the press: unmarks
         grid._on_tile_double_clicked(grid._entries[0])  # the double click: back on
-        assert grid.mode_bar.verdicts.is_clicked(grid._entries[0])
+        assert grid.verdict_bar.verdicts.is_clicked(grid._entries[0])
 
     def test_double_click_drops_into_the_frame_review_when_that_curation_mode_is_on(self, grid):
         grid._meta.labels_widget.curation_panel._mode = "frame"
@@ -893,63 +955,38 @@ class TestGridVerdicts:
         assert panel.reviews and panel.reviews[0][0]["trial"] == "2" and panel.reviews[0][1] == "point"
         assert grid._meta.navigation_widget.jumps == []
 
-    def test_curate_mode_curates_the_clicked_labels_on_done(self, grid):
-        _set_grid_mode(grid, "curate")
+    def test_done_curates_every_untagged_automated_label(self, grid):
         grid._on_tile_clicked(grid._entries[0])
-        assert grid.mode_bar.count_label.text() == "1 clicked"
-        grid._on_tile_clicked(grid._entries[0])  # a second click unmarks
+        assert grid.verdict_bar.count_label.text() == "1 tagged"
+        grid._on_tile_clicked(grid._entries[0])  # a second click untags
         grid._on_tile_clicked(grid._entries[1])
-        grid.mode_bar.apply_done()
+        grid.verdict_bar.apply_done()
         panel = grid._meta.labels_widget.curation_panel
-        assert [i["trial"] for i in panel.curated] == ["2"]
-        assert grid._entries[1].labeling_method == LABELING_CURATED
-        assert grid._entries[0].labeling_method == LABELING_AUTOMATED
-
-    def test_uncurate_mode_curates_every_other_automated_label(self, grid):
-        _set_grid_mode(grid, "uncurate")
-        grid._on_tile_clicked(grid._entries[0])
-        grid.mode_bar.apply_done()
-        panel = grid._meta.labels_widget.curation_panel
-        assert [i["trial"] for i in panel.curated] == ["2"]  # not the clicked one, not the manual one
+        assert [i["trial"] for i in panel.curated] == ["1"]  # not the tagged one, not the manual one
+        assert grid._entries[0].labeling_method == LABELING_CURATED
+        assert grid._entries[1].labeling_method == LABELING_AUTOMATED  # tagged: left for review
+        assert not grid.verdict_bar.verdicts.clicked
 
     def test_done_restarts_an_active_frame_review(self, grid):
         """Done may curate a label the frame-by-frame session is reviewing —
         its queue must be rebuilt, not left stale."""
         panel = grid._meta.labels_widget.curation_panel
         panel.session_active = True
-        _set_grid_mode(grid, "curate")
         grid._on_tile_clicked(grid._entries[1])
-        grid.mode_bar.apply_done()
+        grid.verdict_bar.apply_done()
         assert panel.restarted == 1
 
     def test_done_leaves_an_inactive_review_alone(self, grid):
         panel = grid._meta.labels_widget.curation_panel
         assert not panel.session_active
-        _set_grid_mode(grid, "curate")
         grid._on_tile_clicked(grid._entries[1])
-        grid.mode_bar.apply_done()
+        grid.verdict_bar.apply_done()
         assert panel.restarted == 0
 
-    def test_mark_low_confidence_exists_only_where_a_click_means_uncurated(self, grid):
+    def test_tag_flagged_tags_what_the_threshold_outlines(self, grid):
         grid.threshold_edit.setValue(0.5)
-        _set_grid_mode(grid, "curate")
-        assert not grid.mode_bar.mark_flagged_btn.isEnabled()
-        grid.mode_bar._mark_flagged()  # a stray call in curate mode marks nothing
-        assert not grid.mode_bar.verdicts.clicked
-        _set_grid_mode(grid, "uncurate")
-        assert grid.mode_bar.mark_flagged_btn.isEnabled()
-
-    def test_mark_flagged_clicks_what_the_threshold_outlines(self, grid):
-        _set_grid_mode(grid, "uncurate")
-        grid.threshold_edit.setValue(0.5)
-        grid.mode_bar._mark_flagged()
-        assert [grid.mode_bar.verdicts.is_clicked(e) for e in grid._entries] == [True, False, False]
-
-    def test_switching_mode_clears_the_clicks(self, grid):
-        _set_grid_mode(grid, "curate")
-        grid._on_tile_clicked(grid._entries[0])
-        _set_grid_mode(grid, "uncurate")
-        assert not grid.mode_bar.verdicts.clicked
+        grid.verdict_bar._tag_flagged()
+        assert [grid.verdict_bar.verdicts.is_clicked(e) for e in grid._entries] == [True, False, False]
 
 
 class TestLabelFilterChoices:
@@ -1010,49 +1047,37 @@ class TestLabelFilterGrid:
     def test_opens_unfiltered(self, grid):
         assert grid.label_filter.currentData() is None
         assert len(grid.visible_entries()) == 3
-        assert grid.count_label.text() == "3 frames"
+        assert grid.count_label.text() == "3 labels"
 
     def test_filtering_hides_the_other_classes_tiles(self, grid):
         self._select(grid, 2)
         assert [c.isVisibleTo(grid) for c in grid._cells] == [False, True, True]
-        assert grid.count_label.text() == "2 of 3 frames"
+        assert grid.count_label.text() == "2 of 3 labels"
 
-    def test_done_curates_only_the_filtered_class(self, grid):
+    def test_done_leaves_the_hidden_classes_untouched(self, grid):
+        """The dangerous one: 'the rest is curated' must mean the rest *on screen*."""
         self._select(grid, 2)
-        _set_grid_mode(grid, "curate")
-        grid._on_tile_clicked(grid._entries[0])  # peck — hidden, out of reach
         grid._on_tile_clicked(grid._entries[1])
-        grid.mode_bar.apply_done()
-        assert [i["trial"] for i in grid.meta.labels_widget.curation_panel.curated] == ["2"]
-
-    def test_uncurate_leaves_the_hidden_classes_untouched(self, grid):
-        """The dangerous one: 'rest = curated' must mean the rest *on screen*."""
-        self._select(grid, 2)
-        _set_grid_mode(grid, "uncurate")
-        grid._on_tile_clicked(grid._entries[1])
-        grid.mode_bar.apply_done()
+        grid.verdict_bar.apply_done()
         assert [i["trial"] for i in grid.meta.labels_widget.curation_panel.curated] == ["3"]
         assert grid._entries[0].labeling_method == LABELING_AUTOMATED
 
-    def test_mark_flagged_only_reaches_the_shown_tiles(self, grid):
+    def test_tag_flagged_only_reaches_the_shown_tiles(self, grid):
         self._select(grid, 2)
-        _set_grid_mode(grid, "uncurate")
         grid.threshold_edit.setValue(0.5)
-        grid.mode_bar._mark_flagged()
-        assert [grid.mode_bar.verdicts.is_clicked(e) for e in grid._entries] == [False, True, False]
+        grid.verdict_bar._tag_flagged()
+        assert [grid.verdict_bar.verdicts.is_clicked(e) for e in grid._entries] == [False, True, False]
 
-    def test_the_click_count_follows_the_filter(self, grid):
-        _set_grid_mode(grid, "curate")
+    def test_the_tag_count_follows_the_filter(self, grid):
         grid._on_tile_clicked(grid._entries[0])
         grid._on_tile_clicked(grid._entries[1])
-        assert grid.mode_bar.count_label.text() == "2 clicked"
+        assert grid.verdict_bar.count_label.text() == "2 tagged"
         self._select(grid, 2)
-        assert grid.mode_bar.count_label.text() == "1 clicked"
+        assert grid.verdict_bar.count_label.text() == "1 tagged"
         self._select(grid, None)
-        assert grid.mode_bar.count_label.text() == "2 clicked"
+        assert grid.verdict_bar.count_label.text() == "2 tagged"
 
     def test_the_hint_names_the_filtered_class(self, grid):
-        _set_grid_mode(grid, "uncurate")
         assert "Filtered to" not in grid.hint.text()
         self._select(grid, 2)
         assert "Filtered to 'hop'" in grid.hint.text()
@@ -1063,16 +1088,17 @@ class TestTileVerdicts:
         a = _entry(trial="1", camera="c1", labeling_method=LABELING_AUTOMATED)
         b = _entry(trial="1", camera="c2", labeling_method=LABELING_AUTOMATED)
         verdicts = TileVerdicts()
+        assert [i["trial"] for i in verdicts.insts_for_done([a, b])] == ["1"]  # untagged: once
         assert verdicts.toggle(a) is True
         assert verdicts.is_clicked(b)
-        assert [i["trial"] for i in verdicts.insts_for_done("curate", [a, b])] == ["1"]  # once
-        assert verdicts.insts_for_done("uncurate", [a, b]) == []
+        assert verdicts.insts_for_done([a, b]) == []  # tagged through either camera
 
     def test_manual_labels_are_never_part_of_a_verdict(self):
         manual = _entry(trial="1", labeling_method=LABELING_MANUAL)
         verdicts = TileVerdicts()
+        assert verdicts.insts_for_done([manual]) == []
         verdicts.toggle(manual)
-        assert verdicts.insts_for_done("curate", [manual]) == []
+        assert verdicts.insts_for_done([manual]) == []
 
 
 class TestFlaggedTrials:
@@ -1091,7 +1117,7 @@ class TestFlaggedTrials:
     def test_threshold_off_flags_nothing(self):
         assert flagged_trials(self._entries(), 0.0) == set()
 
-    def test_flagged_tiles_are_outlined_and_mark_flagged_follows_the_threshold(self, qapp, tmp_path, labels_df):
+    def test_flagged_tiles_are_outlined_and_tag_flagged_follows_the_threshold(self, qapp, tmp_path, labels_df):
         state = ObservableAppState()
         state._yaml_path = str(tmp_path / "gui_settings.yaml")
         state._all_labels_df = labels_df
@@ -1099,9 +1125,8 @@ class TestFlaggedTrials:
         grid.threshold_edit.setValue(0.6)
         assert [bool(c.styleSheet()) for c in grid._cells] == [False, True, False]
 
-        _set_grid_mode(grid, "uncurate")
-        grid.mode_bar._mark_flagged()
-        assert [grid.mode_bar.verdicts.is_clicked(e) for e in grid._entries] == [False, True, False]
+        grid.verdict_bar._tag_flagged()
+        assert [grid.verdict_bar.verdicts.is_clicked(e) for e in grid._entries] == [False, True, False]
         grid.close()
 
 
@@ -1120,11 +1145,10 @@ class TestConfidenceGroups:
         assert sorted(groups[0].values) == [0.2, 0.8]
         assert all(g.individual is None for g in groups)
 
-    def test_cameras_and_boundaries_count_the_event_once(self):
+    def test_cameras_count_the_event_once(self):
         entries = [
-            _entry(camera="cam-1", boundary="start", t_rel=1.0, offset_s=2.0, confidence=0.4),
-            _entry(camera="cam-2", boundary="start", t_rel=1.0, offset_s=2.0, confidence=0.4),
-            _entry(camera="cam-1", boundary="end", t_rel=2.0, offset_s=2.0, confidence=0.4),
+            _entry(camera="cam-1", boundary="state", t_rel=1.0, offset_s=2.0, confidence=0.4),
+            _entry(camera="cam-2", boundary="state", t_rel=1.0, offset_s=2.0, confidence=0.4),
         ]
         assert confidence_groups(entries)[0].values == [0.4]
 

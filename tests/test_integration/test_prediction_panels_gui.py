@@ -80,16 +80,15 @@ def test_run_folder_sets_carry_their_folder_and_draw_confidence_in_their_panel(m
     meta.data_widget.show_confidence_checkbox.setChecked(False)
     assert not run_panel._confidence_item.isVisible()
 
-    # The list's selection is the PDF source; Remove unloads set and panel.
+    # The list's selection is what the Curation section's curves PDF falls
+    # back to; Remove unloads set and panel.
     io.pred_sets_list.setCurrentRow(0)
     assert meta.app_state.pred_store is store
-    assert io.pred_confidence_pdf_btn.isEnabled()
     labels._remove_selected_prediction_set()
     QApplication.processEvents()
     assert [s.name for s in meta.app_state.prediction_sets] == ["moll_predictions.tsv"]
     assert [p.prediction_path.name for p in pc.prediction_panels()] == ["moll_predictions.tsv"]
     assert meta.app_state.pred_store is None
-    assert not io.pred_confidence_pdf_btn.isEnabled()
 
 
 def test_prediction_panel_is_a_strip_without_a_time_axis(moll2025_gui):

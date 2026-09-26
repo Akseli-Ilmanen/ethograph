@@ -51,12 +51,22 @@ REVIEW_F1_STATE = "review_f1_state"
 REVIEW_F1_POINT = "review_f1_point"
 REVIEW_COLUMNS = (REVIEW_F1_STATE, REVIEW_F1_POINT)
 
+#: A trial's mean frame confidence over its run's curve (1 − normalised
+#: entropy), written by the Curation section's *Confidence curves…*. A
+#: number to sort and filter trials on — which ones to open first, which
+#: to curate in bulk — and never an input to ``difficulty``.
+MODEL_CONFIDENCE_COLUMN = "model_confidence"
 #: A state label matches at this IoU — the ``f1@50`` convention the
 #: segmentation pipeline selects its checkpoints on.
 STATE_IOU = 0.5
 
 #: A trial whose F1 (either event type) falls below this is flagged hard.
 DEFAULT_FLAG_THRESHOLD = 0.5
+
+#: Above this share of the scored trials, flagging from the histogram is
+#: warned against: with ``train.oversample`` on they would be most of what
+#: the model sees, and a flag that most trials carry means nothing.
+FLAG_SHARE_WARNING = 0.25
 
 
 # ---------------------------------------------------------------------------
@@ -300,13 +310,81 @@ def review_session(
 # ---------------------------------------------------------------------------
 
 
+def trial_confidence_means(confidence_map: dict[str, np.ndarray | None]) -> dict[str, float]:
+    """``{trial: mean frame confidence}`` for every trial with a curve; a trial
+    without one is left out rather than written as 0."""
+    means: dict[str, float] = {}
+    for trial, curve in confidence_map.items():
+        if curve is None or len(curve) == 0:
+            continue
+        mean = float(np.nanmean(curve))
+        if not np.isnan(mean):
+            means[str(trial)] = mean
+    return means
+
+
 def is_hard(value) -> bool:
     return isinstance(value, str) and value.strip().lower() == DIFFICULTY_HARD
 
 
-def flag_hard(reviews: dict[str, TrialReview], threshold: float) -> set[str]:
-    """The trials whose state or point F1 falls below *threshold*."""
-    return {trial for trial, review in reviews.items() if review.below(threshold)}
+def f1_scores(metadata_df: pd.DataFrame | None) -> dict[str, list[float]]:
+    """The scored values per review column, ``{column: [f1, ...]}`` — what the
+    histogram draws. A column the table lacks, or a blank cell, contributes
+    nothing."""
+    out: dict[str, list[float]] = {column: [] for column in REVIEW_COLUMNS}
+    if metadata_df is None or metadata_df.empty:
+        return out
+    for column in REVIEW_COLUMNS:
+        if column in metadata_df.columns:
+            values = pd.to_numeric(metadata_df[column], errors="coerce")
+            out[column] = [float(v) for v in values if not pd.isna(v)]
+    return out
+
+
+def _scored_rows(metadata_df: pd.DataFrame | None) -> pd.DataFrame | None:
+    """Rows with at least one review score, the scores as floats (NaN elsewhere)."""
+    if metadata_df is None or metadata_df.empty or "trial" not in metadata_df.columns:
+        return None
+    present = [c for c in REVIEW_COLUMNS if c in metadata_df.columns]
+    if not present:
+        return None
+    df = metadata_df[["trial", *present]].copy()
+    for column in present:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+    return df[df[present].notna().any(axis=1)]
+
+
+def scored_trial_count(metadata_df: pd.DataFrame | None) -> int:
+    """How many trials carry a review score at all."""
+    rows = _scored_rows(metadata_df)
+    return 0 if rows is None else len(rows)
+
+
+def trials_below_f1(metadata_df: pd.DataFrame | None, threshold: float) -> set[str]:
+    """The scored trials whose state *or* point F1 is below *threshold* — the
+    histogram's flag set. A threshold of 0 flags nothing."""
+    rows = _scored_rows(metadata_df)
+    if rows is None or threshold <= 0.0:
+        return set()
+    present = [c for c in REVIEW_COLUMNS if c in rows.columns]
+    low = (rows[present] < threshold).any(axis=1)
+    return set(rows.loc[low, "trial"].astype(str))
+
+
+def flag_share_note(n_flagged: int, n_scored: int, threshold: float) -> str:
+    """The line under the histogram: the count, and a warning past
+    :data:`FLAG_SHARE_WARNING` of the scored trials."""
+    if not n_scored:
+        return "No scored trials."
+    share = n_flagged / n_scored
+    text = f"Below {threshold:.2f}: <b>{n_flagged} of {n_scored}</b> scored trial(s) ({share:.0%})."
+    if share > FLAG_SHARE_WARNING:
+        text += (
+            f" <span style='color:#d94040'>That is more than {FLAG_SHARE_WARNING:.0%} of them — with "
+            "train.oversample on, hard trials would be most of what the model sees, and the flag would "
+            "stop meaning anything. Move the threshold to the gap, or flag by hand.</span>"
+        )
+    return text
 
 
 def difficulty_values(metadata_df: pd.DataFrame | None, hard: set[str], trials) -> dict[str, str]:
@@ -333,8 +411,8 @@ def review_columns(reviews: dict[str, TrialReview]) -> dict[str, dict[str, float
     return {REVIEW_F1_STATE: state, REVIEW_F1_POINT: point}
 
 
-def summary(reviews: dict[str, TrialReview], hard: set[str]) -> str:
-    """One line for the reviewer: pooled F1 per event type and how many trials were flagged."""
+def summary(reviews: dict[str, TrialReview]) -> str:
+    """One line for the reviewer: pooled F1 per event type over the scored trials."""
     if not reviews:
         return "Review: no trial had a prediction run to compare against."
     state = sum((r.state for r in reviews.values()), Counts())
@@ -348,4 +426,4 @@ def summary(reviews: dict[str, TrialReview], hard: set[str]) -> str:
     if unjudged:
         parts.append(f"{unjudged} trial(s) with point events but no tolerance to judge them at")
     scored = ", ".join(parts) if parts else "nothing to compare"
-    return f"Curation done — {scored}; {len(hard)} of {len(reviews)} reviewed trial(s) flagged hard."
+    return f"Scored {len(reviews)} trial(s) against their runs — {scored}. Histogram… to flag the worst as hard."

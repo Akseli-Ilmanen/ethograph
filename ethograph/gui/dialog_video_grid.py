@@ -28,9 +28,10 @@ Frames are decoded one screenful at a time (at :data:`CLIP_MAX_SIDE`), so the
 first one is quick and memory stays bounded; while a page is on screen the
 **next page decodes ahead** on a worker thread (its videos are resolved on
 the GUI thread first — the alignment NWB is not thread-safe), so stepping on
-is quick. The mode bar is the label grid's
-(:class:`~ethograph.gui.dialog_label_gridview.GridModeBar`): a single click
-marks the label for **Done** to curate, a double click jumps the GUI there.
+is quick. The verdict bar is the label grid's
+(:class:`~ethograph.gui.dialog_label_gridview.GridVerdictBar`): a single click
+tags the label for review, **Done** curates every other automated label on
+screen, a double click jumps the GUI there.
 """
 
 from __future__ import annotations
@@ -66,14 +67,15 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.dialog_label_gridview import (
-    CURATE_COLOR,
+    FIELD_START,
     LOW_CONFIDENCE_COLOR,
-    UNCURATE_COLOR,
+    TAGGED_COLOR,
+    TILE_POINT,
     VIDEO_GRID_SORT_ORDERS,
     ConfidenceEdit,
     ConfidenceHistogramsDialog,
     ConfidenceRuleController,
-    GridModeBar,
+    GridVerdictBar,
     LabelSetupPage,
     _mapping_color_hex,
     _row_confidence,
@@ -108,8 +110,7 @@ _GRID_MIN_HEIGHT = 760
 
 _TILE_STYLE = "QFrame#clipTile { border: 2px solid #444; border-radius: 3px; }"
 _TILE_LOW_STYLE = f"QFrame#clipTile {{ border: 2px solid {LOW_CONFIDENCE_COLOR}; border-radius: 3px; }}"
-_TILE_CURATE_STYLE = f"QFrame#clipTile {{ border: 3px solid {CURATE_COLOR}; border-radius: 3px; }}"
-_TILE_UNCURATE_STYLE = f"QFrame#clipTile {{ border: 3px solid {UNCURATE_COLOR}; border-radius: 3px; }}"
+_TILE_TAGGED_STYLE = f"QFrame#clipTile {{ border: 3px solid {TAGGED_COLOR}; border-radius: 3px; }}"
 
 
 # ----------------------------------------------------------------------
@@ -552,19 +553,19 @@ class VideoGridPlayer(QWidget):
         layout.addWidget(self.header)
 
         top = QHBoxLayout()
-        # The threshold box exists before the mode bar: the bar restyles the
+        # The threshold box exists before the verdict bar: the bar restyles the
         # tiles as soon as it is built, and the style reads the threshold.
         # Shared (SCOPE_GLOBAL) with the frame grid's own threshold box.
         self.threshold_edit = ConfidenceEdit(float(self.app_state.get_with_default("grid_confidence_threshold")))
         self.threshold_edit.valueChanged.connect(self._apply_styles)
         self.threshold_edit.valueChanged.connect(self._on_threshold_changed)
-        self.mode_bar = GridModeBar(
+        self.verdict_bar = GridVerdictBar(
             meta,
             entries_fn=lambda: self._all_entries,
             restyle_fn=self._apply_styles,
             flagged_fn=self._flagged_entries,
         )
-        top.addWidget(self.mode_bar, stretch=1)
+        top.addWidget(self.verdict_bar, stretch=1)
         top.addWidget(QLabel("Sort:"))
         self.sort_combo = QComboBox()
         for key, text in VIDEO_GRID_SORT_ORDERS.items():
@@ -599,7 +600,6 @@ class VideoGridPlayer(QWidget):
         self.hint = QLabel("")
         self.hint.setStyleSheet("color: grey; font-size: 10px;")
         layout.addWidget(self.hint)
-        self.mode_bar.mode_changed.connect(self._sync_hint)
 
         self._grid_host = QWidget()
         self._grid = QGridLayout(self._grid_host)
@@ -784,10 +784,7 @@ class VideoGridPlayer(QWidget):
         self.next_clips_btn.setEnabled(self._page_idx < len(self.pages) - 1)
 
     def _sync_hint(self, *_args) -> None:
-        if self.mode_bar.mode() == "curate":
-            click = "Click the clips that are right, then Done curates those labels."
-        else:
-            click = "Click the clips that are wrong, then Done curates every other label."
+        click = "Click the clips that are wrong to tag them for review; Done curates every other label."
         self.hint.setText(
             f"Clips of one label class, shortest first · ←/→ step a frame · {click}"
             " Double-click a clip to jump the GUI there."
@@ -955,12 +952,11 @@ class VideoGridPlayer(QWidget):
 
     def _apply_styles(self, *_args) -> None:
         threshold = self.threshold_edit.value()
-        mode = self.mode_bar.mode()
-        verdicts = self.mode_bar.verdicts
+        verdicts = self.verdict_bar.verdicts
         for tile in self._tiles:
             entry = tile.entry
             if verdicts.is_clicked(entry):
-                tile.setStyleSheet(_TILE_CURATE_STYLE if mode == "curate" else _TILE_UNCURATE_STYLE)
+                tile.setStyleSheet(_TILE_TAGGED_STYLE)
             elif is_low_confidence(entry, threshold):
                 tile.setStyleSheet(_TILE_LOW_STYLE)
             else:
@@ -998,20 +994,20 @@ class VideoGridPlayer(QWidget):
 
     def _on_tile_clicked(self, entry: ClipEntry) -> None:
         """A single click is the verdict the mode names."""
-        self.mode_bar.click(entry)
+        self.verdict_bar.click(entry)
 
     def _on_tile_double_clicked(self, entry: ClipEntry) -> None:
         """A double click navigates, in every mode. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
         navigating leaves the verdicts exactly as they were."""
-        self.mode_bar.click(entry)
+        self.verdict_bar.click(entry)
         self._jump(entry)
 
     def _jump(self, entry: ClipEntry) -> None:
         self.stop()
         panel = curation_panel_of(self.meta)
-        if panel is not None and panel.mode() == "frame":
-            panel.start_review_at(entry_inst(entry), "point" if entry.is_point else "start")
+        if panel is not None and panel.reviews_on_jump():
+            panel.start_review_at(entry_inst(entry), TILE_POINT if entry.is_point else FIELD_START)
             return
         nav = getattr(self.meta, "navigation_widget", None)
         if nav is None:

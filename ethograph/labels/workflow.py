@@ -111,20 +111,17 @@ def copy_default(value: Any) -> Any:
 CURATION_MODE_CHOICES = {
     "manual": "Manual (trial level)",
     "inspect": "Inspect is enough (trial level)",
+    "segment": "Segment review",
     "frame": "Frame-by-frame review",
 }
 
-#: What a *single* tile click means, mirroring
-#: ``gui.dialog_label_gridview.GRID_MODES``. A double click always navigates,
-#: in every mode, so there is no mode for it — a workflow written before that
-#: (``grid_mode: navigate``) names no choice, and the grid keeps its default.
-GRID_MODE_CHOICES = {
-    "curate": "Click = curated",
-    "uncurate": "Click = uncurated, rest = curated",
-}
+#: Parameters earlier versions wrote that no step has any more — dropped on
+#: load, so a saved workflow keeps running. ``grid_mode`` chose what a grid
+#: click meant; a click now always tags for review.
+RETIRED_PARAMS = frozenset({"grid_mode"})
 
 
-#: Which trials a bulk label operation (curate / delete / purge) acts on.
+#: Which trials a bulk label operation (curate / delete / purge / stitch) acts on.
 #: Canonical here, not mirrored from the GUI — it names no Qt object, so
 #: ``gui.widgets_curation`` and ``gui.dialog_bulk_labels`` import it directly
 #: instead of keeping their own copy. "single" is the current trial; "all"
@@ -140,6 +137,16 @@ TRIAL_SCOPE_CHOICES = {
     TRIAL_SCOPE_ALL: "All trials",
     TRIAL_SCOPE_FILTERED: "Filtered trials (shown by the table)",
     TRIAL_SCOPE_HIDDEN: "Hidden trials (filtered out)",
+}
+
+#: The Changepoints tab's two manual-correction buttons, by the mode string
+#: ``ChangepointsWidget._cp_correction`` takes. That tab offers exactly these
+#: two, so the step does too — "all" there already means the filtered set.
+CP_SCOPE_SINGLE = "single_trial"
+CP_SCOPE_ALL = "all_trials"
+CP_SCOPE_CHOICES = {
+    CP_SCOPE_SINGLE: "Current trial",
+    CP_SCOPE_ALL: "All trials (filtered only)",
 }
 
 #: The grids' "Labeling method" filter, mirroring
@@ -175,7 +182,7 @@ _TRIALS_PARAM = ParamSpec(
     choices=TRIAL_SCOPE_CHOICES,
 )
 
-#: The ``label_ids`` parameter curate/delete/purge share: an explicit class
+#: The ``label_ids`` parameter curate/delete/purge/stitch share: an explicit class
 #: list, like the bulk-editing dialog's own checklist. Empty means "don't
 #: override — use whatever the curation scope area holds" (the drag-and-drop
 #: scope, or an earlier ``scope`` step), exactly as leaving the dialog's own
@@ -193,6 +200,16 @@ _LABEL_IDS_PARAM = ParamSpec(
 #: shows one tile per (label, camera). An empty list means "leave the cameras
 #: as the grid would tick them itself" — every camera, or the last selection
 #: the reviewer made (``app_state.grid_selected_cameras``).
+#: Both grids: pre-tag what the confidence threshold outlines, so Done
+#: curates only what scored above it.
+_TAG_FLAGGED_PARAM = ParamSpec(
+    "mark_flagged",
+    "Tag the low-confidence tiles for review",
+    "bool",
+    False,
+    "Presses Tag low-confidence once the grid is built: every tile the threshold outlines is tagged.",
+)
+
 _CAMERAS_PARAM = ParamSpec(
     "cameras",
     "Cameras",
@@ -330,14 +347,7 @@ STEP_KINDS: dict[str, StepKind] = {
                     minimum=0.0,
                     maximum=1.0,
                 ),
-                ParamSpec("grid_mode", "Single click means", "choice", "curate", choices=GRID_MODE_CHOICES),
-                ParamSpec(
-                    "mark_flagged",
-                    "Pre-click the low-confidence tiles",
-                    "bool",
-                    False,
-                    "Only meaningful in 'Click = uncurated, rest = curated'.",
-                ),
+                _TAG_FLAGGED_PARAM,
                 ParamSpec(
                     "generate",
                     "Generate straight away",
@@ -385,13 +395,35 @@ STEP_KINDS: dict[str, StepKind] = {
                     minimum=0.0,
                     maximum=1.0,
                 ),
-                ParamSpec("grid_mode", "Single click means", "choice", "curate", choices=GRID_MODE_CHOICES),
+                _TAG_FLAGGED_PARAM,
                 ParamSpec(
                     "generate",
                     "Generate straight away",
                     "bool",
                     True,
                     "Untick to open on the Setup tab so the layout can be tweaked first.",
+                ),
+            ),
+        ),
+        StepKind(
+            key="segment_review",
+            title="Segment review",
+            summary="Walk the scope label by label — each plays, two clicks re-place it — and wait for it to finish.",
+            interactive=True,
+            params=(
+                ParamSpec(
+                    "automated_only",
+                    "Automated only",
+                    "bool",
+                    True,
+                    "Leave manual and curated labels out of the queue.",
+                ),
+                ParamSpec(
+                    "next_curates",
+                    "N (next) marks curated",
+                    "bool",
+                    True,
+                    "Moving on with N means the label was watched and is fine.",
                 ),
             ),
         ),
@@ -459,6 +491,48 @@ STEP_KINDS: dict[str, StepKind] = {
             ),
         ),
         StepKind(
+            key="stitch_labels",
+            title="Stitch labels",
+            summary="Merge same-class state labels of one individual separated by less than a gap, in the "
+            "chosen trials. Point events are never touched.",
+            params=(
+                _TRIALS_PARAM,
+                _LABEL_IDS_PARAM,
+                ParamSpec(
+                    "max_gap_s",
+                    "Gap shorter than",
+                    "float",
+                    0.015,
+                    "Two labels of the same class and individual closer than this (seconds) become one.",
+                    minimum=0.0,
+                    maximum=600.0,
+                ),
+            ),
+        ),
+        StepKind(
+            key="correct_changepoints",
+            title="Correct changepoints",
+            summary="Press the Changepoints tab's manual correction (purge, stitch, snap to changepoints, purge "
+            "again) with the settings that tab shows, over the current trial or every filtered trial.",
+            params=(
+                ParamSpec(
+                    "which",
+                    "Trials",
+                    "choice",
+                    CP_SCOPE_ALL,
+                    "The tab's two buttons: the current trial, or every trial the table shows.",
+                    choices=CP_SCOPE_CHOICES,
+                ),
+            ),
+        ),
+        StepKind(
+            key="score_trials",
+            title="Score trials against the model",
+            summary="Press the Curation section's Score now: each trial's curated labels against what its "
+            "prediction run wrote, an F1 per trial into the metadata table. Flagging trials hard from those "
+            "scores is a decision the reviewer makes in the histogram, never a step.",
+        ),
+        StepKind(
             key="save_labels",
             title="Save labels",
             summary="Write the labels TSV, exactly as Ctrl+S does.",
@@ -507,7 +581,11 @@ class CurationWorkflow:
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> CurationWorkflow:
         steps = [
-            WorkflowStep(kind=str(s["kind"]), params=dict(s.get("params") or {})) for s in (raw.get("steps") or [])
+            WorkflowStep(
+                kind=str(s["kind"]),
+                params={k: v for k, v in (s.get("params") or {}).items() if k not in RETIRED_PARAMS},
+            )
+            for s in (raw.get("steps") or [])
         ]
         return cls(name=str(raw["name"]), description=str(raw.get("description") or ""), steps=steps)
 

@@ -202,10 +202,41 @@ def _review(trial, state=None, point=None):
     return rm.TrialReview(str(trial), Path("run"), counts, rm.Counts(*point) if point else None, 0.05)
 
 
-def test_flag_hard_on_either_event_type():
-    reviews = {"1": _review(1, state=(9, 2, 0)), "2": _review(2, state=(9, 2, 0), point=(1, 8, 0)), "3": _review(3)}
-    assert rm.flag_hard(reviews, 0.5) == {"2"}
-    assert rm.flag_hard(reviews, 0.95) == {"1", "2"}
+def _scored_table() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "trial": [1, 2, 3, 4],
+            rm.REVIEW_F1_STATE: [0.9, 0.9, np.nan, ""],
+            rm.REVIEW_F1_POINT: [np.nan, 0.2, 0.7, ""],
+        }
+    )
+
+
+def test_trials_below_f1_on_either_event_type():
+    assert rm.trials_below_f1(_scored_table(), 0.5) == {"2"}
+    assert rm.trials_below_f1(_scored_table(), 0.95) == {"1", "2", "3"}
+    assert rm.trials_below_f1(_scored_table(), 0.0) == set()
+    assert rm.trials_below_f1(pd.DataFrame({"trial": [1]}), 0.5) == set()
+
+
+def test_f1_scores_and_scored_count_skip_blanks():
+    scores = rm.f1_scores(_scored_table())
+    assert scores[rm.REVIEW_F1_STATE] == [0.9, 0.9]
+    assert scores[rm.REVIEW_F1_POINT] == [pytest.approx(0.2), pytest.approx(0.7)]
+    assert rm.scored_trial_count(_scored_table()) == 3
+    assert rm.scored_trial_count(None) == 0
+
+
+def test_trial_confidence_means_skip_trials_without_a_curve():
+    means = rm.trial_confidence_means({"0": np.array([0.9, 0.7]), "1": None, "2": np.array([])})
+    assert means == {"0": pytest.approx(0.8)}
+
+
+def test_flag_share_note_warns_past_a_quarter():
+    assert "3 of 12" in rm.flag_share_note(3, 12, 0.5)
+    assert "more than" not in rm.flag_share_note(3, 12, 0.5)
+    assert "more than" in rm.flag_share_note(4, 12, 0.5)
+    assert rm.flag_share_note(0, 0, 0.5) == "No scored trials."
 
 
 def test_auto_flagging_never_clears_a_hand_set_flag():
@@ -222,9 +253,9 @@ def test_review_columns_and_summary():
     assert cols[rm.REVIEW_F1_STATE]["1"] == pytest.approx(0.9)
     assert np.isnan(cols[rm.REVIEW_F1_STATE]["2"])
     assert cols[rm.REVIEW_F1_POINT]["2"] == pytest.approx(0.2)
-    text = rm.summary(reviews, {"2"})
-    assert "1 of 2" in text and "state F1@50" in text and "point F1" in text
-    assert "no trial" in rm.summary({}, set())
+    text = rm.summary(reviews)
+    assert "Scored 2" in text and "state F1@50" in text and "point F1" in text
+    assert "no trial" in rm.summary({})
 
 
 def test_derived_columns_never_reach_an_nwb():
