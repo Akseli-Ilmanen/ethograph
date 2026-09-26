@@ -606,4 +606,3 @@ confidence, and every label you confirm becomes `curated`.
 This is what makes stage 2 worth its cost: the fold's predictions and the
 labels you drew are the same kind of object on the same axis, so "60% F1"
 becomes *which* class, *which* trials and *how far off* the boundaries are.
-

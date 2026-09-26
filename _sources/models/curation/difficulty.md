@@ -78,4 +78,3 @@ is honest in proportion to how much you actually moved or deleted. Read it
 as "how much the curator had to change", not as an independent benchmark —
 the pipeline's own evaluation on a held-out split is that.
 ```
-

@@ -3,7 +3,7 @@
 
 **Curation** is overseeing a model's predictions: confirming the ones it got
 right and fixing the ones it got wrong. Ethograph makes curation faster by telling you
-*where* to look. Within single trials, you can see the **model confidence** per frame 
+*where* to look. Within single trials, you can see the **model confidence** per frame
 as a **dotted line**, showing you where the model is uncertain, or may expect false positives or false negatives. How confidence is computed differs for point and state events. For state events there is also a trial-level number, the mean of that curve,
 so you can skip curation on high-confidence trials.
 
