@@ -472,8 +472,7 @@
   <section class="tex2jax_ignore mathjax_ignore" id="curator-feedback">
 <span id="target-curation-difficulty"></span><h1>Curator feedback<a class="headerlink" href="#curator-feedback" title="Link to this heading">#</a></h1>
 <p>Where you overruled the model, it should pay extra attention next time. That
-is the whole idea of the <strong>Curator feedback</strong> block at the bottom of the
-Curation section: a trial you had to correct is flagged <code class="docutils literal notranslate"><span class="pre">hard</span></code> in the
+is the whole idea of <strong>Model ▸ Curator feedback…</strong>: a trial you had to correct is flagged <code class="docutils literal notranslate"><span class="pre">hard</span></code> in the
 metadata table’s <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column, and the next training run draws it
 more often. The column is a checklist in the trials table’s filter like
 <code class="docutils literal notranslate"><span class="pre">curated</span></code>, so “show me the trials the model got wrong” is one click, and the
@@ -491,8 +490,8 @@ confidence guides the review, disagreement guides the training.</p>
 </div>
 <section id="by-hand">
 <h2>By hand<a class="headerlink" href="#by-hand" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code> (or the <strong>Hard trial</strong> box) flags the current trial, and again puts
-it back to <code class="docutils literal notranslate"><span class="pre">normal</span></code>. Use it for a trial that is simply difficult — an odd
+<p><code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code> flags the current trial, and again puts it back to <code class="docutils literal notranslate"><span class="pre">normal</span></code>; the
+<code class="docutils literal notranslate"><span class="pre">difficulty</span></code> column of the trials table shows where you stand. Use it for a trial that is simply difficult — an odd
 posture, an occlusion, a rare variant — whether or not the model got it right
 this time.</p>
 </section>
@@ -510,7 +509,7 @@ checkpoints on.</p></li>
 <li><p><strong>Point labels</strong> match within the run’s own <strong>tolerance</strong> — the precision the
 model was trained to, read from the run folder (the onset model’s
 <code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code>, half of spot’s <code class="docutils literal notranslate"><span class="pre">focus_window_ms</span></code>). Nothing to pick; set the
-block’s <strong>Tolerance</strong> only to judge every run at one number, or for an old
+popup’s <strong>Tolerance</strong> only to judge every run at one number, or for an old
 run folder that carries none.</p></li>
 </ul>
 <p>The scores land in the metadata table as <code class="docutils literal notranslate"><span class="pre">review_f1_state</span></code> and
