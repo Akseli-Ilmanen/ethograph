@@ -134,10 +134,6 @@ Export helpers
 
 .. autofunction:: enrich_labels_df
 
-.. autofunction:: correct_offsets
-
-.. autofunction:: correct_offsets_trial
-
 .. autofunction:: trees_to_df
 
 ----

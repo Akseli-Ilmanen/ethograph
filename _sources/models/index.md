@@ -36,8 +36,8 @@ flowchart TD
 ```
 
 Every box is a link. Whichever model you pick, its predictions come back to the
-GUI: {doc}`curate them <curation>`, then {doc}`read and threshold their
-confidence <confidence>`.
+GUI: {doc}`curate them <curation/index>`, then {doc}`read and threshold their
+confidence <curation/confidence>`.
 
 | Model | Label | Description |
 |---|---|---|
@@ -68,7 +68,5 @@ Trial windows <trial_windows>
 LightGBM (point events, CPU-only) <onset_model>
 Action segmentation (state events) <segment/index>
 PES (point events from pixels) <spot/index>
-confidence
-curation
-workflows
+Curation (reviewing predictions) <curation/index>
 ```

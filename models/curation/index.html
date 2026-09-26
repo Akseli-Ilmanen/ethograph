@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Quickstart &#8212; ethograph</title>
+    <title>Curating labels &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'models/spot/quickstart';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'models/curation/index';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/spot/quickstart.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/curation/index.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Pixels + Pose (extra features)" href="multimodal.html" />
-    <link rel="prev" title="Precise event spotting (PES) from pixels" href="index.html" />
+    <link rel="next" title="Ways to curate" href="modes.html" />
+    <link rel="prev" title="Config reference" href="../spot/config.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -388,18 +388,18 @@
 <li class="toctree-l2"><a class="reference internal" href="../segment/feral.html">FERAL</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">PES (point events from pixels)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="multimodal.html">Pixels + Pose (extra features)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="config.html">Config reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../spot/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/multimodal.html">Pixels + Pose (extra features)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Hard trials and review F1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../curation/workflows.html">Curation workflows</a></li>
+<li class="toctree-l1 current active has-children"><a aria-current="page" class="current reference internal" href="#">Curation (reviewing predictions)</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="modes.html">Ways to curate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="grids.html">Review grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="confidence.html">Model confidence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
 </ul>
 </details></li>
 </ul>
@@ -445,10 +445,7 @@
     
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Models</a></li>
     
-    
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Precise event spotting (PES) from pixels</a></li>
-    
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Quickstart</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Curating labels</span></li>
   </ul>
 </nav>
 </div>
@@ -465,127 +462,141 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
-<span id="target-spot-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
-<p>Here is a minimal setup for spotting point events from video: three sessions
-with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id272" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
-on pixels only. It trains on two sessions, is scored on the third, and writes
-predictions you then open in the GUI next to the labels you drew.</p>
-<p>Everything here is a default. <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a> is the same pipeline with the
-choices put back in: pose features, MSAGSM.</p>
-<p>ethograph does not install PyTorch for you. Install it first, then the extra
-(see <em>Train models</em> in <a class="reference internal" href="../../getting_started/installation.html"><span class="doc">Installation</span></a>):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[model]"</span>
-</pre></div>
+  <section class="tex2jax_ignore mathjax_ignore" id="curating-labels">
+<span id="target-curation"></span><h1>Curating labels<a class="headerlink" href="#curating-labels" title="Link to this heading">#</a></h1>
+<p>A model’s predictions come back into the GUI as labels nobody has looked at
+yet. <strong>Curation</strong> is looking at them, and Ethograph makes that fast by
+telling you <em>where</em> to look: every predicted label carries a <strong>model
+confidence</strong>, and the review tools sort, flag and threshold on it, so the
+doubtful labels are on the first screen instead of scattered through the
+trials. How the confidence is computed depends on the kind of label, and so
+does the routine that suits it. Both are below.</p>
+<p>Everything about curation lives in one place: the <strong>Curation</strong> section at the
+bottom of the <strong>Labels</strong> tab.</p>
+<section id="what-curation-means">
+<h2>What curation means<a class="headerlink" href="#what-curation-means" title="Link to this heading">#</a></h2>
+<p>Every label carries a <code class="docutils literal notranslate"><span class="pre">labeling_method</span></code> — the vocabulary of
+<a class="reference external" href="https://github.com/catalystneuro/ndx-ethogram">ndx-ethogram</a>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Value</p></th>
+<th class="head"><p>Meaning</p></th>
+<th class="head"><p>Drawn as</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">manual</span></code></p></td>
+<td><p>A human placed or last edited it</p></td>
+<td><p>solid outline</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">automated</span></code></p></td>
+<td><p>A model produced it and nobody has looked at it</p></td>
+<td><p><strong>dotted</strong> outline</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">curated</span></code></p></td>
+<td><p>Automated output a human looked at and let stand</p></td>
+<td><p>solid outline</p></td>
+</tr>
+</tbody>
+</table>
 </div>
-<p>The trainer is upstream’s own E2E-Spot code, shipped inside ethograph; there
-is nothing else to clone.</p>
-<section id="what-a-session-needs">
-<h2>1. What a session needs<a class="headerlink" href="#what-a-session-needs" title="Link to this heading">#</a></h2>
+<p>Curation is the move <em>automated → curated</em>. It never touches a manual label
+(a human already vouched for it), and it never runs backwards: editing a
+label makes it manual, re-running a model over a trial can add new automated
+labels, and nothing else changes a method.</p>
+<p>A <strong>trial is curated</strong> when none of its labels is still automated. That
+verdict is everywhere you navigate — the trial combo in the Navigation section
+and the <code class="docutils literal notranslate"><span class="pre">Trial</span> <span class="pre">12</span> <span class="pre">(12/173)</span></code> counter in the bottom bar are green for a curated
+trial and red for one with automated labels left — and it is written to the
+metadata table’s <code class="docutils literal notranslate"><span class="pre">curated</span></code> column (<code class="docutils literal notranslate"><span class="pre">yes</span></code> / <code class="docutils literal notranslate"><span class="pre">no</span></code>), refreshed every few seconds
+while you work (see <a class="reference internal" href="../../advanced/metadata.html"><span class="doc">Trial metadata</span></a>). Predicting new labels into
+a curated trial turns it red again until those are curated too.</p>
+<section id="where-the-verdict-is-saved">
+<h3>Where the verdict is saved<a class="headerlink" href="#where-the-verdict-is-saved" title="Link to this heading">#</a></h3>
+<p>Nothing is written until you start curating. Opening a dataset arms nothing:
+curation becomes <strong>active</strong> the moment you drop label classes into the scope
+area or curate anything, and only then does the verdict start being saved
+(a line in the terminal says so). Loading another dataset disarms it again.</p>
+<p>Arming is also the one moment a metadata file appears. The <code class="docutils literal notranslate"><span class="pre">curated</span></code> column is
+Ethograph’s own bookkeeping, so it is never written into a recording or into
+<code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>: that write happens in place, and for a non-NWB
+dataset the alignment NWB is the only holder of your trial timing. Instead the
+metadata table you have loaded is copied to a sidecar <code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code>
+next to the data, and that file is the metadata table from then on — it is
+what the next load reads, and where later edits to trial metadata go. An
+existing metadata file is used as it stands, never overwritten.</p>
+</section>
+</section>
+<section id="two-kinds-of-label-two-routines">
+<h2>Two kinds of label, two routines<a class="headerlink" href="#two-kinds-of-label-two-routines" title="Link to this heading">#</a></h2>
+<p>A model that predicts <strong>point events</strong> answers <em>when</em>; one that predicts
+<strong>state events</strong> answers <em>which class is this frame</em>. The confidence each
+one writes is built to answer the same question, and it decides which review
+surface to open first.</p>
+<section id="point-events-when">
+<h3>Point events: when?<a class="headerlink" href="#point-events-when" title="Link to this heading">#</a></h3>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../../_images/curation_pointevents.png"><img alt="E2E-Spot's output layer gives one probability curve per class; the tallest peak is the point event, and its confidence is the curve's ratio times its focus; low-confidence events are reviewed frame by frame." src="../../_images/curation_pointevents.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The <a class="reference internal" href="../onset_model.html"><span class="doc">LightGBM</span></a> and <a class="reference internal" href="../spot/index.html"><span class="doc">E2E-Spot</span></a>
+models produce one probability curve per class, and the point event sits on
+its tallest peak. The confidence is the <strong>shape</strong> of that curve: <code class="docutils literal notranslate"><span class="pre">ratio</span></code>
+(how much taller the peak is than its best rival) times <code class="docutils literal notranslate"><span class="pre">focus</span></code> (how much of
+the curve sits close to the peak). One clean bump reads near 1; a second
+candidate elsewhere in the trial, or a smeared bump, pulls it down.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The routine: drag the class into the scope, pick <strong>Frame-by-frame review</strong>,
+and walk the events one at a time. Each event is centred in a short window
+with its curve drawn underneath, so a low score explains itself before you
+press a key — <code class="docutils literal notranslate"><span class="pre">Enter</span></code> confirms the frame on screen, <code class="docutils literal notranslate"><span class="pre">←</span></code>/<code class="docutils literal notranslate"><span class="pre">→</span></code> moves it,
+<code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes an event that never happened. To start with the doubtful
+ones, open the <a class="reference internal" href="grids.html#target-curation-grids"><span class="std std-ref">label grid</span></a> sorted by
+confidence and double-click a tile: the review opens at that boundary. See
+<a class="reference internal" href="modes.html#target-curation-frame"><span class="std std-ref">Frame-by-frame review</span></a>.</p>
+</section>
+<section id="state-events-which-class">
+<h3>State events: which class?<a class="headerlink" href="#state-events-which-class" title="Link to this heading">#</a></h3>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../../_images/curation_stateevents.png"><img alt="The segmentation model's per-frame softmax is turned into a confidence curve by normalised entropy; predictions are purged and stitched, then reviewed in bulk in the video grid, and the low-confidence trials inspected in depth." src="../../_images/curation_stateevents.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The <a class="reference internal" href="../segment/index.html"><span class="doc">segmentation pipeline</span></a> predicts a distribution
+over the classes at every frame. Its confidence curve is one minus the
+normalised entropy of that distribution: 1 where all the mass sits on one
+class, dropping wherever the model is torn between two. A segment’s own
+<code class="docutils literal notranslate"><span class="pre">confidence</span></code> is the mean of its class’s probability over its span.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The routine has three steps. <strong>Automatic refinement</strong> — purging short
+segments and stitching same-class neighbours — happens in the pipeline’s own
+post-processing before the labels reach the GUI (<a class="reference internal" href="../segment/config.html"><span class="doc">Config reference</span></a>),
+with <strong>Purge short labels</strong> available again as a
+<a class="reference internal" href="workflows.html"><span class="doc">workflow step</span></a>. <strong>Bulk review</strong> opens the
+<a class="reference internal" href="grids.html#target-curation-grids"><span class="std std-ref">video grid</span></a> on one class at a time: clips of
+similar length play side by side, and a click is a verdict. <strong>In-depth
+review</strong> is for the trials the grid flagged: a trial is flagged as soon as
+<em>one</em> of its labels falls below <strong>Flag confidence below</strong> (there is no
+separate trial threshold), a double-click jumps the main GUI there, and the
+confidence curve under the labels shows exactly which boundary to inspect.</p>
+</section>
+</section>
+<section id="in-this-section">
+<h2>In this section<a class="headerlink" href="#in-this-section" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p><strong>Point labels.</strong> Label the events in the GUI as usual. You get
-<code class="docutils literal notranslate"><span class="pre">{name}_labels.tsv</span></code> beside the session file, with the label ids in
-<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>. Only <code class="docutils literal notranslate"><span class="pre">manual</span></code> and <code class="docutils literal notranslate"><span class="pre">curated</span></code> labels are training targets.</p></li>
-<li><p><strong>Video for every trial.</strong> The alignment already knows the video path, frame
-rate and offset for each trial. One file per trial, or trials carved out of a
-longer video: the model reads only the frames inside each trial. If the paths it holds are not valid on this
-machine, add <code class="docutils literal notranslate"><span class="pre">video_dir</span></code> to the session line.</p></li>
+<li><p><a class="reference internal" href="modes.html"><span class="doc">Ways to curate</span></a> — the scope (which classes) and the four ways a label gets
+curated: by hand, in bulk, by inspection, or frame by frame.</p></li>
+<li><p><a class="reference internal" href="grids.html"><span class="doc">Review grids</span></a> — the label grid and the video grid: what every control does,
+and what a click means.</p></li>
+<li><p><a class="reference internal" href="confidence.html"><span class="doc">Model confidence</span></a> — how each model computes the number, and how to change
+the rule from the histogram.</p></li>
+<li><p><a class="reference internal" href="difficulty.html"><span class="doc">Hard trials and review F1</span></a> — flagging hard trials, and scoring how the model did per
+trial once a session is curated.</p></li>
+<li><p><a class="reference internal" href="workflows.html"><span class="doc">Curation workflows</span></a> — recording the whole routine and replaying it in one press.</p></li>
 </ul>
-<p>No features, and no preprocessing. The model reads the frames.</p>
-</section>
-<section id="spot-yaml">
-<h2>2. <code class="docutils literal notranslate"><span class="pre">spot.yaml</span></code><a class="headerlink" href="#spot-yaml" title="Link to this heading">#</a></h2>
-<p>Put this beside your data. It is the whole config:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-01</span><span class="w">    </span><span class="c1"># a session folder: .ethograph/alignment.nwb names the videos</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-02</span><span class="w">    </span><span class="c1"># absolute, or relative to this file's folder</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/sessions/ses-03</span><span class="w">    </span><span class="c1"># the held-out session, named below by its folder name</span>
-
-<span class="nt">labels</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">classes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">31</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">]</span><span class="w">                  </span><span class="c1"># the point-event label ids to spot, in the order they happen</span>
-<span class="w">  </span><span class="nt">camera</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cam-1</span><span class="w">                      </span><span class="c1"># one camera per project</span>
-
-<span class="nt">train</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">split</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">train_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
-<span class="w">    </span><span class="nt">val_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
-<span class="w">    </span><span class="nt">test_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span>
-<span class="w">    </span><span class="nt">holdout_sessions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ses-03</span><span class="p p-Indicator">]</span><span class="w">       </span><span class="c1"># every trial of this session is `test`</span>
-</pre></div>
+<div class="toctree-wrapper compound">
 </div>
-<p>Four things worth knowing about it:</p>
-<ul class="simple">
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">labels_path</span></code> is left out</strong> because it defaults to <code class="docutils literal notranslate"><span class="pre">{stem}_labels.tsv</span></code>
-beside the source, which is where the GUI writes it.</p></li>
-<li><p><strong>No <code class="docutils literal notranslate"><span class="pre">clip:</span></code> section.</strong> The model sees 2 s of video at a time
-(<code class="docutils literal notranslate"><span class="pre">context_s</span></code>). The label grid (<code class="docutils literal notranslate"><span class="pre">resolution_ms</span></code>) is left unset, so it is as
-fine as your GPU’s memory allows. Both are durations and are converted using
-each video’s own frame rate, so the same file works at 60 fps and at 200 fps.
-See <a class="reference internal" href="index.html#target-spot-seconds"><span class="std std-ref">Every temporal setting is a duration</span></a>.</p></li>
-<li><p><strong>No <code class="docutils literal notranslate"><span class="pre">individual:</span></code> key.</strong> Every predicted label names the session’s one
-individual, so it lands on the same track as the labels you drew. With
-several individuals in a session, say whose events these are
-(<code class="docutils literal notranslate"><span class="pre">individual:</span> <span class="pre">crow_1</span></code>). The GUI draws a label only for the individual it
-names, and inference stops with an error rather than guess.</p></li>
-<li><p><strong>No <code class="docutils literal notranslate"><span class="pre">features:</span></code> section.</strong> That is what makes this option 2 in
-<a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>: pixels in, events out.</p></li>
-</ul>
-</section>
-<section id="train-and-score">
-<h2>3. Train and score<a class="headerlink" href="#train-and-score" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
-
-<span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"spot.yaml"</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">materialise</span><span class="p">()</span>  <span class="c1"># every trial's video -&gt; frames/ + E2E-Spot's index; resumable</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># runs/ctx2s_res…ms/</span>
-<span class="n">metrics</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">evaluate</span><span class="p">()</span>  <span class="c1"># ses-03, never trained on -&gt; test_metrics.yaml</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">run_dir</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>  <span class="c1"># per class: misses, spurious, error in ms, hit rate at 10/20/50/100 ms</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">materialise()</span></code> decodes every trial to JPEGs once; later runs and folds reuse
-them. <code class="docutils literal notranslate"><span class="pre">train()</span></code> runs for the whole <code class="docutils literal notranslate"><span class="pre">train.epochs</span></code> budget. The epoch it keeps
-is the one with the fewest misses on the validation trials, not the last one.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p><code class="docutils literal notranslate"><span class="pre">train()</span></code> checks up front whether the clip fits on your GPU and stops with an
-error if it does not, naming the duration to shorten. On a small card, try
-<code class="docutils literal notranslate"><span class="pre">eto.spot.Project(&quot;spot.yaml&quot;,</span> <span class="pre">&quot;clip.context_s=1.5&quot;)</span></code>.</p>
-</div>
-</section>
-<section id="look-at-the-mistakes-in-the-gui">
-<h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03"</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<span class="c1"># labels/predictions_spot_ctx2s_res…ms_20260914_151203/ses-03_predictions.tsv</span>
-</pre></div>
-</div>
-<p>That folder sits in the <code class="docutils literal notranslate"><span class="pre">ses-03</span></code> session folder. Each call writes a new one, so an earlier
-run is never overwritten. Inference reads the video directly; it does not
-export frames for this session. Open ses-03 in the GUI and load the TSV with
-<strong>File ▸ Import labels…</strong>. Every predicted event arrives as <code class="docutils literal notranslate"><span class="pre">automated</span></code>, drawn
-dotted, and carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code> read from the shape of its curve. The
-curves are saved next to the TSV, so frame-by-frame review shows where the
-model hesitated. See <a class="reference internal" href="../curation/modes.html#target-curation-frame"><span class="std std-ref">Frame-by-frame review</span></a>.</p>
-</section>
-<section id="where-to-go-from-here">
-<h2>Where to go from here<a class="headerlink" href="#where-to-go-from-here" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p><strong>Tune the clip first</strong>: <code class="docutils literal notranslate"><span class="pre">clip.context_s</span></code>, <code class="docutils literal notranslate"><span class="pre">clip.resolution_ms</span></code> and
-<code class="docutils literal notranslate"><span class="pre">clip.positive_window_ms</span></code> are the three settings that matter most — how much
-video the model sees at once, the grid a label can land on, and how wide a
-labelled event counts as positive. Fit them to how fast your events are
-before changing anything else. See <a class="reference internal" href="config.html#spot-config-clip"><span class="std std-ref">clip</span></a>.</p></li>
-<li><p><strong>A wider temporal aperture</strong>: <code class="docutils literal notranslate"><span class="pre">model.architecture=rny008_msagsm</span></code>, then
-<code class="docutils literal notranslate"><span class="pre">project.compare()</span></code> shows the two runs side by side (see <a class="reference internal" href="index.html"><span class="doc">Precise event spotting (PES) from pixels</span></a>).</p></li>
-<li><p><strong>You have pose</strong>: list pose variables under <code class="docutils literal notranslate"><span class="pre">features:</span></code> and the model reads
-them next to the pixels. See <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features)</span></a>.</p></li>
-<li><p><strong>Every session held out in turn</strong>: <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code>, so each
-session gets predictions from a model that never saw it.</p></li>
-<li><p><strong>Every key</strong>, with its default: <a class="reference internal" href="config.html"><span class="doc">Config reference</span></a>.</p></li>
-</ul>
 </section>
 </section>
 
@@ -600,20 +611,20 @@ session gets predictions from a model that never saw it.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="index.html"
+       href="../spot/config.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Precise event spotting (PES) from pixels</p>
+        <p class="prev-next-title">Config reference</p>
       </div>
     </a>
     <a class="right-next"
-       href="multimodal.html"
+       href="modes.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Pixels + Pose (extra features)</p>
+        <p class="prev-next-title">Ways to curate</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -636,11 +647,16 @@ session gets predictions from a model that never saw it.</p></li>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-session-needs">1. What a session needs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spot-yaml">2. <code class="docutils literal notranslate"><span class="pre">spot.yaml</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train-and-score">3. Train and score</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#look-at-the-mistakes-in-the-gui">4. Look at the mistakes in the GUI</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-to-go-from-here">Where to go from here</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-curation-means">What curation means</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-verdict-is-saved">Where the verdict is saved</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-kinds-of-label-two-routines">Two kinds of label, two routines</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#point-events-when">Point events: when?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#state-events-which-class">State events: which class?</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-this-section">In this section</a></li>
 </ul>
   </nav></div>
 
@@ -648,7 +664,7 @@ session gets predictions from a model that never saw it.</p></li>
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/models/spot/quickstart.md">
+    <a href="../../_sources/models/curation/index.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

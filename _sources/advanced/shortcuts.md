@@ -58,7 +58,7 @@ useful guide when guessing a binding.
 
 ## Curation
 
-See {doc}`../models/curation`. `Ctrl+C` is always bound; the others are live
+See {ref}`frame-by-frame review <target-curation-frame>`. `Ctrl+C` is always bound; the others are live
 only while a frame-by-frame review runs (started from the Labels tab's
 Curation section), wherever the key is pressed.
 

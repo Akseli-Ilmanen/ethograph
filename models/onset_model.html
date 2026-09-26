@@ -394,9 +394,14 @@
 <li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="confidence.html">Model confidence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="curation.html">Curating labels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="workflows.html">Curation workflows</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="curation/modes.html">Ways to curate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="curation/grids.html">Review grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="curation/confidence.html">Model confidence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="curation/workflows.html">Curation workflows</a></li>
+</ul>
+</details></li>
 </ul>
 </div>
 </nav></div>
@@ -540,11 +545,11 @@ dialog has no filters of its own and says how many trials it will run over.</p><
 </ul>
 <p>Predictions land in memory like any other label, stamped
 <code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code>: dotted on the plots until you
-<a class="reference internal" href="curation.html"><span class="doc">curate</span></a> them, red in the trial list. <strong>Review predictions…</strong>
+<a class="reference internal" href="curation/modes.html"><span class="doc">curate</span></a> them, red in the trial list. <strong>Review predictions…</strong>
 at the bottom of the dialog opens the label grid view on exactly what the run
 just wrote, so you can check the video frame at each one and fix it or mark it
 curated. Each prediction also carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, explained on
-<a class="reference internal" href="confidence.html"><span class="doc">the confidence page</span></a>.</p>
+<a class="reference internal" href="curation/confidence.html"><span class="doc">the confidence page</span></a>.</p>
 </section>
 </section>
 

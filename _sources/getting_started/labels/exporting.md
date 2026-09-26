@@ -51,7 +51,7 @@ the GUI; computed columns are derived on each save from the data file.
 | `individual_rec` | str | The recipient of a dyadic behaviour (e.g. the bird being mounted), shown as **Receiver** in the GUI; empty for a solo behaviour |
 | `trial` | int/str | Trial identifier, matches the TrialTree |
 | `confidence` | float | How sure the label is: `1.0` for a hand-placed label, the model's own score for a predicted one |
-| `labeling_method` | str | Who vouches for the label: `manual` (placed or edited by hand), `automated` (a model's output nobody has looked at) or `curated` (automated, then approved) — see {doc}`../../models/curation`. A file without the column reads `automated` for any row with `confidence < 1.0`, `manual` otherwise |
+| `labeling_method` | str | Who vouches for the label: `manual` (placed or edited by hand), `automated` (a model's output nobody has looked at) or `curated` (automated, then approved) — see {doc}`../../models/curation/index`. A file without the column reads `automated` for any row with `confidence < 1.0`, `manual` otherwise |
 
 `individual` and `individual_rec` together are the **subject** of a label. The
 receiver is an attribute of each label, not a separate track: overlapping labels

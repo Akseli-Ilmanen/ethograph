@@ -145,7 +145,7 @@ re-run never overwrites an earlier one — and the TSV in it is the GUI's own
 labels format. Open ses-03 in the GUI and load it
 with **File ▸ Import labels…**: every row arrives as `automated`, drawn dotted
 next to your curated labels, and confirming one makes it `curated`. See
-{doc}`../curation`.
+{doc}`../curation/index`.
 
 ## Where to go from here
 

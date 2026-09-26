@@ -109,7 +109,7 @@ export frames for this session. Open ses-03 in the GUI and load the TSV with
 **File ▸ Import labels…**. Every predicted event arrives as `automated`, drawn
 dotted, and carries a `confidence` read from the shape of its curve. The
 curves are saved next to the TSV, so frame-by-frame review shows where the
-model hesitated. See {doc}`../curation`.
+model hesitated. See {ref}`target-curation-frame`.
 
 ## Where to go from here
 

@@ -394,9 +394,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../spot/config.html">Config reference</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../confidence.html">Model confidence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../curation.html">Curating labels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../workflows.html">Curation workflows</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../curation/modes.html">Ways to curate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/grids.html">Review grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/confidence.html">Model confidence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/difficulty.html">Hard trials and review F1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../curation/workflows.html">Curation workflows</a></li>
+</ul>
+</details></li>
 </ul>
 </div>
 </nav></div>
@@ -1016,7 +1021,7 @@ space. See <a class="reference internal" href="index.html"><span class="doc">Seg
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">oversample</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{column:</span> <span class="pre">null,</span> <span class="pre">weights:</span> <span class="pre">{}}</span></code></p></td>
-<td><p>Draw some trials more often, by a metadata column: <code class="docutils literal notranslate"><span class="pre">{column:</span> <span class="pre">difficulty,</span> <span class="pre">weights:</span> <span class="pre">{hard:</span> <span class="pre">3.0}}</span></code> draws a trial the GUI flagged hard during curation (<code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code>, or the post-curation review’s threshold — see <a class="reference internal" href="../curation.html"><span class="doc">Curating labels</span></a>) three times as often. The column is read from each session’s metadata table at training time, so flagging more trials never needs a re-materialisation; a value the mapping does not name keeps weight <code class="docutils literal notranslate"><span class="pre">1</span></code>. An epoch is still one draw per training sample, and validation and test are never reweighted.</p></td>
+<td><p>Draw some trials more often, by a metadata column: <code class="docutils literal notranslate"><span class="pre">{column:</span> <span class="pre">difficulty,</span> <span class="pre">weights:</span> <span class="pre">{hard:</span> <span class="pre">3.0}}</span></code> draws a trial the GUI flagged hard during curation (<code class="docutils literal notranslate"><span class="pre">Ctrl+T</span></code>, or the post-curation review’s threshold — see <a class="reference internal" href="../curation/difficulty.html"><span class="doc">Hard trials and review F1</span></a>) three times as often. The column is read from each session’s metadata table at training time, so flagging more trials never needs a re-materialisation; a value the mapping does not name keeps weight <code class="docutils literal notranslate"><span class="pre">1</span></code>. An epoch is still one draw per training sample, and validation and test are never reweighted.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">subsample</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
