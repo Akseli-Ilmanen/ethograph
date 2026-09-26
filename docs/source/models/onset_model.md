@@ -93,4 +93,8 @@ Predictions land in memory like any other label, stamped
 at the bottom of the dialog opens the label grid view on exactly what the run
 just wrote, so you can check the video frame at each one and fix it or mark it
 curated. Each prediction also carries a `confidence`, explained on
-{doc}`the confidence page <curation/confidence>`.
+{doc}`the confidence page <curation/confidence>`. The model places one event
+per class in every trial it runs over; **Min confidence** in the dialog is
+where a class is instead left absent, and it is near zero by default because
+a wrong label costs one keypress to delete while a missing one cannot be
+reviewed ({ref}`target-spot-peaks` has the reasoning).

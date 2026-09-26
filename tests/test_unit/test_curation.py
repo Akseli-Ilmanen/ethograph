@@ -15,7 +15,9 @@ from ethograph.labels.curation import (
     CURATED_NO,
     CURATED_YES,
     REVIEW_ORDER_LABEL,
+    ConfidenceCut,
     build_review_queue,
+    confident_trials,
     curate_label,
     curate_rows,
     curate_trial,
@@ -200,6 +202,35 @@ class TestTransitions:
         assert n == 1
         assert out.loc[out["labels"] == 3, "labeling_method"].item() == LABELING_CURATED
         assert out.loc[(out["trial"] == 1) & (out["labels"] == 1), "labeling_method"].item() == LABELING_AUTOMATED
+
+
+class TestConfidentTrials:
+    """The trial-by-trial rule: a trial is confident only when its mean passes
+    *and* none of its automated labels falls below the segment cut."""
+
+    def test_either_cut_keeps_a_trial_out(self):
+        # trial 1: automated label at 0.4, mean 0.9 — the segment half catches it.
+        # trial 2: automated label at 0.7, mean 0.5 — the trial half catches it.
+        means = {"1": 0.9, "2": 0.5}
+        assert confident_trials([1, 2], means, _labels(), None, ConfidenceCut(0.75, 0.6)) == []
+        assert confident_trials([1, 2], means, _labels(), None, ConfidenceCut(0.75, 0.0)) == [1]
+        assert confident_trials([1, 2], means, _labels(), None, ConfidenceCut(0.0, 0.6)) == [2]
+
+    def test_a_low_label_counts_only_when_automated_and_in_scope(self):
+        cut = ConfidenceCut(0.0, 0.6)
+        # trial 1's low label is class 1; asking about class 3 alone clears the trial.
+        assert confident_trials([1], {}, _labels(), {3}, cut) == [1]
+        df = _labels()
+        df.loc[0, "labeling_method"] = LABELING_CURATED
+        assert confident_trials([1], {}, df, None, cut) == [1]
+
+    def test_a_trial_without_a_mean_fails_the_trial_half(self):
+        assert confident_trials([1, 2], {"2": 0.9}, _labels(), None, ConfidenceCut(0.5, 0.0)) == [2]
+        assert confident_trials([1, 2], {"2": 0.9}, _labels(), None, ConfidenceCut(0.0, 0.0)) == [1, 2]
+
+    def test_a_threshold_outside_the_unit_interval_is_refused(self):
+        with pytest.raises(ValueError):
+            ConfidenceCut(1.5, 0.0)
 
 
 class TestDelete:

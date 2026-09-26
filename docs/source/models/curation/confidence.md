@@ -9,7 +9,7 @@ number is computed by the model that made the prediction, and *how* depends
 on the question that model answered — *which class is this frame?* for a
 state event, *when did it happen?* for a point event.
 
-## State events: which class?
+## Confidence - State events
 
 ```{figure} ../../_static/media/curation_stateevents.png
 :alt: The segmentation model's per-frame softmax is turned into a confidence curve by normalised entropy; predictions are purged and stitched, then reviewed in bulk in the video grid, and the low-confidence trials inspected in depth.
@@ -45,7 +45,34 @@ come out of it:
   likely. Its mean over a trial is the `model_confidence` column
   **Confidence curves…** writes to the metadata table.
 
-## Point events: when?
+### Two thresholds: trial and segment
+
+The two dotted lines in the figure are two cuts, both yours to set:
+
+- **Trial threshold** (blue) — on `model_confidence`, the trial's mean.
+- **Segment threshold** (red, *Action threshold* in the figure) — on each
+  label's own `confidence`.
+
+Which cut you review by follows the routine ({doc}`guide`):
+
+- **Trial by trial** — both cuts decide, and a trial is opened when
+  *either* fires: its mean is below the trial threshold, *or any one* of its
+  labels is below the segment threshold. The mean alone is not enough — a
+  lone doubtful action in a long confident trial barely moves it. The rest
+  are curated whole without being opened: **Tools ▸ Labels: Bulk editing…**
+  ▸ *Only trials the model is confident on* takes both numbers and skips
+  every trial either cut touches, so what is left automated afterwards is
+  exactly what to walk with *Inspect is enough* or `Ctrl+C`. The same cut is
+  the *Curate trials' labels* {doc}`workflow step <workflows>`.
+- **Label by label** ({ref}`segment review <target-curation-segment>`) —
+  the segment threshold decides. In the label or video grid, **Flag
+  confidence below** outlines every label under it, **Tag low-confidence**
+  tags them, and **Done** curates every label above it in one press
+  ({doc}`grids`); the tagged ones are the review queue.
+
+
+
+## Confidence - Point events
 
 ```{figure} ../../_static/media/curation_pointevents.png
 :alt: E2E-Spot's output layer gives one probability curve per class; the tallest peak is the point event, and its confidence is the curve's ratio times its focus; low-confidence events are reviewed frame by frame.
@@ -91,44 +118,17 @@ believed to: the LightGBM model takes it from its own `tolerance_s`, the pixel
 model from `infer.focus_window_ms`. A bump wider than that is smeared by your
 own definition; a peak further away than that is a rival.
 
-**Two curves read `0` whatever their shape**: one that is nearly nothing
-everywhere (tallest peak below 0.05, else a single surviving blip would be
-the cleanest bump imaginable), and one with no interior peak, or higher at an
-edge than at any peak inside (the event may lie past the trial's end). Such a
-label is flagged for review, never dropped.
+**A `0` means the model found nothing.** A curve with no interior peak, or
+higher at an edge than at any peak inside it, reads `0` under every rule: the
+event may lie past the trial's end, so the label is written and flagged
+rather than dropped. A curve that never rises above `infer.min_peak` writes
+no label at all — the class is absent from that trial. Why a model places one
+event per class per trial, where that floor sits and how several events per
+trial change what a rival is, are on {doc}`../spot/peaks`.
 
-**Several events per trial change what a second peak means.** When the pixel
-model reads a curve as up to `infer.max_events_per_trial` events, a second
-peak is another event, not a rival: `ratio` is refused and `focus` (over each
-event's own stretch of the curve) or `peak` is written instead. The model
-then also returns spurious peaks, so calibrate **Flag confidence below** on
-the histogram before review rather than leaving it at its default.
-
-**Which statistic is written is measured per model, not assumed.** On the
-same held-out trials, the candidate that best separates the model's hits from
-its misses (AUC) wins:
-
-- The **LightGBM model** ranks every candidate per class when it trains and
-  writes `peak` unless `focus`, `ratio` or their product wins by a clear
-  margin. Its curve is shape-constrained by construction (a Gaussian-weighted
-  target smoothed with the matching kernel), so its bumps all look alike and
-  height is what varies. The training message says which was chosen.
-- The **pixel model** writes `focus × ratio`. E2E-Spot's softmax normalises
-  across classes and nothing normalises across time, so a class can sit
-  moderately high for a long stretch and its peak still read as confident:
-  height was near chance (AUC 0.58) where `focus`, `ratio` and their product
-  reached ~0.8. The two halves look different in a histogram — `ratio` is
-  bimodal (one candidate or two), `focus` sits in a middle band — so how much
-  each counts is set in the GUI, below.
-
-Frame-by-frame review draws every curve in scope under the label on a fixed
-0–1 axis, so the peak, the rival and the smear behind a score are all in
-view. **How often a model is right is a verdict on the model, not on a
-label**: training reports the held-out hit rate per class (*peck: 6/8 within
-0.05 s*) and never folds it into a label's confidence.
 
 (target-confidence-rule)=
-## Changing the rule in the GUI
+### Focus vs ratio
 
 Which reading is the confidence is a review preference, so it is set where
 its effect is seen: the **Histogram…** popup of the label grid and the video

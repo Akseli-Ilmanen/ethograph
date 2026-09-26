@@ -188,8 +188,8 @@ Global settings live in `~/.ethograph` (override with `ETHOGRAPH_HOME`):
     ├── cache/              # derived media: video proxies, extracted audio,
     │                       # example datasets, downloaded weights — safe to delete
     └── defaults/           # a starter project, used while no project folder is chosen:
-                            # mapping.txt, config/segment.yaml + spot.yaml to copy from,
-                            # config/space/ geometries, runs/lightgbm/ lightgbm models,
+                            # mapping.txt, segment/ + spot/ configs to copy from,
+                            # skeleton/, space/ libraries, runs/lightgbm/ lightgbm models,
                             # workflows/, wizard/ notebooks
 
 An older home folder is rearranged into this shape the first time the GUI starts.

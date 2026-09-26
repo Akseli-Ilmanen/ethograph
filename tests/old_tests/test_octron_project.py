@@ -69,7 +69,7 @@ class TestConfig:
     def test_shipped_default_loads(self):
         from ethograph.utils.paths import BUNDLED_DEFAULTS_DIR
 
-        cfg = OctronConfig.load(BUNDLED_DEFAULTS_DIR / "config" / "octron.yaml")
+        cfg = OctronConfig.load(BUNDLED_DEFAULTS_DIR / "octron" / "octron.yaml")
         assert cfg.model == "YOLO26m"
 
 

@@ -65,6 +65,7 @@ from ethograph.gui.notify import notify
 from ethograph.gui.project import project_dir_of
 from ethograph.labels import onset_model as om
 from ethograph.labels import workflow as wf
+from ethograph.labels.curation import ConfidenceCut
 
 logger = logging.getLogger(__name__)
 
@@ -502,9 +503,14 @@ def _label_ids_kwargs(step: wf.WorkflowStep) -> dict:
     return {"label_ids": set(ids)} if ids else {}
 
 
+def _confidence_cut(step: wf.WorkflowStep) -> ConfidenceCut | None:
+    cut = ConfidenceCut(float(step.value("trial_confidence")), float(step.value("label_confidence")))
+    return cut if cut.active else None
+
+
 def _run_curate_trials(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
     panel = _require_panel(runner.meta)
-    n = panel.curate_trial_labels(str(step.value("which")), **_label_ids_kwargs(step))
+    n = panel.curate_trial_labels(str(step.value("which")), cut=_confidence_cut(step), **_label_ids_kwargs(step))
     runner.note.emit(f"Curated {n} label(s).")
     return False
 
@@ -677,7 +683,13 @@ def describe_step(step: wf.WorkflowStep) -> str:
         noun = wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
         ids = step.value("label_ids") or []
         classes = ", ".join(str(i) for i in ids) if ids else "the curation scope"
-        return f"{noun} · {classes}"
+        cut = _confidence_cut(step) if step.kind == "curate_trials" else None
+        if cut is None:
+            return f"{noun} · {classes}"
+        return (
+            f"{noun} · {classes} · confident only (mean ≥ {format_confidence(cut.trial)}, "
+            f"labels ≥ {format_confidence(cut.segment)})"
+        )
     if step.kind == "purge_labels":
         noun = wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
         ids = step.value("label_ids") or []

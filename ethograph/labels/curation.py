@@ -184,6 +184,64 @@ def curate_trials(
     return curate_rows(all_df, mask)
 
 
+@dataclass(frozen=True)
+class ConfidenceCut:
+    """The two thresholds a trial-by-trial review reads a trial against.
+
+    A trial is *confident* when its mean frame confidence reaches ``trial``
+    **and** none of its automated labels in scope sits below ``segment``.
+    Both halves are needed: one doubtful action inside a long confident
+    trial barely moves the mean, and that action is the one a model gets
+    wrong. Either half at ``0`` is off.
+    """
+
+    trial: float = 0.0
+    segment: float = 0.0
+
+    def __post_init__(self) -> None:
+        for name in ("trial", "segment"):
+            value = getattr(self, name)
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} threshold must lie in [0, 1], got {value!r}")
+
+    @property
+    def active(self) -> bool:
+        return self.trial > 0.0 or self.segment > 0.0
+
+
+def confident_trials(
+    trials,
+    means: dict[str, float],
+    all_df: pd.DataFrame | None,
+    label_ids: set[int] | None,
+    cut: ConfidenceCut,
+) -> list:
+    """The subset of *trials* that pass *cut*, in the given order.
+
+    *means* is ``{trial: mean frame confidence}`` (see
+    :func:`~ethograph.labels.review_metrics.trial_confidence_means`); a trial
+    it does not name fails the trial half whenever that half is on — no
+    curve, no verdict. The segment half reads the automated labels of
+    *label_ids* (``None`` = every class), never manual or curated ones: a
+    human already vouched for those.
+    """
+    low_segment: set[str] = set()
+    if cut.segment > 0.0 and all_df is not None and not all_df.empty:
+        df = ensure_labeling_method(all_df)
+        automated = df[(df["labeling_method"] == LABELING_AUTOMATED) & scope_mask(df, label_ids)]
+        low = automated[automated["confidence"].astype(float) < cut.segment]
+        low_segment = set(low["trial"].astype(str))
+    out = []
+    for trial in trials:
+        key = str(trial)
+        if cut.trial > 0.0 and (key not in means or means[key] < cut.trial):
+            continue
+        if key in low_segment:
+            continue
+        out.append(trial)
+    return out
+
+
 def curate_label(all_df: pd.DataFrame | None, inst: dict) -> tuple[pd.DataFrame | None, int]:
     """Curate one label (identified as :func:`row_mask` does, within its trial)."""
     if all_df is None or all_df.empty:

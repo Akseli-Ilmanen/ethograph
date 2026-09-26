@@ -180,13 +180,10 @@ features:                          # optional — option 3, see multimodal
 There is no preprocessing and no individuals. A point event's subject comes
 from the labels; the pixels are whatever the camera saw. **By default each
 class happens at most once per trial**: the prediction is the tallest peak
-of the class's curve, and its confidence reads a second peak as doubt, not
-as a second event. A recording in which the event repeats is either cut into
-trials at the alignment, or spotted with `infer.max_events_per_trial` raised
-— then peaks at least `infer.min_event_gap_s` apart are separate events, the
-confidence rule has to be `focus` or `peak`, and the threshold you flag below
-needs calibrating, since the model now returns spurious events as well as
-real ones (see {doc}`config`).
+of the class's curve, a curve below `infer.min_peak` means the class is
+absent, and a second peak is doubt, not a second event. A recording in which
+the event repeats is either cut into trials at the alignment or spotted with
+`infer.max_events_per_trial` raised; {doc}`peaks` has the whole rule.
 
 (target-spot-session-lines)=
 ### The session lines

@@ -11,6 +11,7 @@ from qtpy.QtWidgets import QApplication, QWidget
 from ethograph.gui.app_state import ObservableAppState
 from ethograph.gui.dialog_bulk_labels import LabelBulkEditDialog
 from ethograph.gui.widgets_curation import CurationPanel
+from ethograph.labels.curation import ConfidenceCut
 from ethograph.labels.intervals import LABELING_AUTOMATED, LABELING_MANUAL
 
 
@@ -132,7 +133,21 @@ class TestGuardedActions:
         _label_item(dialog, 4).setCheckState(Qt.Checked)
         _label_item(dialog, 6).setCheckState(Qt.Checked)
         dialog._curate()
-        assert calls == [(("all", {4, 6}), {"confirm": True})]
+        assert calls == [(("all", {4, 6}), {"confirm": True, "cut": None})]
+
+    def test_the_confidence_cut_reaches_the_panel_only_when_ticked(self, dialog, monkeypatch):
+        """Off, the panel gets no cut; on, both numbers as typed — the trial
+        half and the segment half, which the panel applies as one rule."""
+        calls = []
+        monkeypatch.setattr(dialog.panel, "curate_trial_labels", lambda *a, **kw: calls.append(kw["cut"]) or 0)
+        dialog.all_labels_cb.setChecked(True)
+        assert not dialog.trial_confidence_edit.isEnabled()
+        dialog.confident_cb.setChecked(True)
+        assert dialog.trial_confidence_edit.isEnabled()
+        dialog.trial_confidence_edit.setValue(0.8)
+        dialog.segment_confidence_edit.setValue(0.5)
+        dialog._curate()
+        assert calls == [ConfidenceCut(0.8, 0.5)]
 
     def test_delete_reaches_the_panel(self, dialog, monkeypatch):
         calls = []

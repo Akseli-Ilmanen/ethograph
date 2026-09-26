@@ -5,7 +5,7 @@
 |---|---|
 | Train a first model this afternoon, with every choice made for you | {doc}`quickstart` — three sessions, three kinematic features, one architecture, four lines |
 | Understand every stage: the search, the cross-validation, samples, the materialised dataset, the architectures | {doc}`guide` |
-| Look up a key you already know you need | {doc}`config` |
+| Look at all configs | {doc}`config` |
 | Give the model what the animal *looks like it is doing*, from a pretrained video network | {doc}`video_features` |
 | Fine-tune a video foundation model on the pixels alone, or feed its embeddings to this pipeline | {doc}`feral` |
 

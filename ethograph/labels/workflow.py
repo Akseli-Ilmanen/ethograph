@@ -461,8 +461,28 @@ STEP_KINDS: dict[str, StepKind] = {
         StepKind(
             key="curate_trials",
             title="Curate trials' labels",
-            summary="Mark every automated label of the chosen classes, in the chosen trials, as curated.",
-            params=(_TRIALS_PARAM, _LABEL_IDS_PARAM),
+            summary="Mark every automated label of the chosen classes, in the chosen trials, as curated — "
+            "skipping, with either confidence cut on, the trials the model is not confident on.",
+            params=(
+                _TRIALS_PARAM,
+                _LABEL_IDS_PARAM,
+                ParamSpec(
+                    "trial_confidence",
+                    "Skip trials whose mean confidence is below",
+                    "confidence",
+                    0.0,
+                    "A trial's mean frame confidence (what Confidence curves… writes as model_confidence) "
+                    "must reach this for the trial to be curated. Empty = no trial cut.",
+                ),
+                ParamSpec(
+                    "label_confidence",
+                    "…or with any automated label below",
+                    "confidence",
+                    0.0,
+                    "A trial with any automated label of the chosen classes below this is skipped, "
+                    "however high its mean. Empty = no label cut.",
+                ),
+            ),
         ),
         StepKind(
             key="delete_labels",

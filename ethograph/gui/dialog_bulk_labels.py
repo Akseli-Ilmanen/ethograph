@@ -44,8 +44,10 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
 )
 
+from ethograph.gui.dialog_label_gridview import ConfidenceEdit
 from ethograph.gui.notify import notify
 from ethograph.labels import workflow as wf
+from ethograph.labels.curation import ConfidenceCut
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,10 @@ logger = logging.getLogger(__name__)
 _DEFAULT_PURGE_S = 0.010
 #: The stitch spin box opens at the Changepoints tab's own default gap.
 _DEFAULT_STITCH_S = 0.015
+#: Where the confidence cut opens: a trial's mean below the first, or any
+#: automated label below the second, keeps the trial out of a bulk curate.
+_DEFAULT_TRIAL_CONFIDENCE = 0.75
+_DEFAULT_SEGMENT_CONFIDENCE = 0.6
 
 
 def _curation_panel(meta):
@@ -139,10 +145,28 @@ class LabelBulkEditDialog(QDialog):
     def _build_curate_group(self) -> QGroupBox:
         group = QGroupBox("Curate")
         lay = QVBoxLayout(group)
-        hint = QLabel("Every automated label in the classes above becomes curated. Manual labels stay manual.")
+        hint = QLabel(
+            "Every automated label in the classes above becomes curated. Manual labels stay manual. "
+            "With the cut on, a trial is skipped — left for you to open — when its mean frame "
+            "confidence is below the first number or any of its automated labels is below the second."
+        )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: grey; font-size: 10px;")
         lay.addWidget(hint)
+        self.confident_cb = QCheckBox("Only trials the model is confident on")
+        self.confident_cb.setChecked(False)
+        self.confident_cb.toggled.connect(self._on_confident_toggled)
+        lay.addWidget(self.confident_cb)
+        cut_row = QHBoxLayout()
+        cut_row.addWidget(QLabel("Trial mean ≥"))
+        self.trial_confidence_edit = ConfidenceEdit(_DEFAULT_TRIAL_CONFIDENCE)
+        cut_row.addWidget(self.trial_confidence_edit)
+        cut_row.addWidget(QLabel("and every label ≥"))
+        self.segment_confidence_edit = ConfidenceEdit(_DEFAULT_SEGMENT_CONFIDENCE)
+        cut_row.addWidget(self.segment_confidence_edit)
+        cut_row.addStretch(1)
+        lay.addLayout(cut_row)
+        self._on_confident_toggled(False)
         self.curate_btn = QPushButton("Curate…")
         self.curate_btn.setAutoDefault(False)
         self.curate_btn.clicked.connect(self._curate)
@@ -223,6 +247,15 @@ class LabelBulkEditDialog(QDialog):
     def _on_all_labels_toggled(self, checked: bool) -> None:
         self.label_list.setEnabled(not checked)
 
+    def _on_confident_toggled(self, checked: bool) -> None:
+        self.trial_confidence_edit.setEnabled(checked)
+        self.segment_confidence_edit.setEnabled(checked)
+
+    def _confidence_cut(self) -> ConfidenceCut | None:
+        if not self.confident_cb.isChecked():
+            return None
+        return ConfidenceCut(self.trial_confidence_edit.value(), self.segment_confidence_edit.value())
+
     def _trial_scope(self) -> str:
         return str(self.trial_scope_combo.currentData())
 
@@ -256,7 +289,11 @@ class LabelBulkEditDialog(QDialog):
         run(label_ids)
 
     def _curate(self) -> None:
-        self._guarded(lambda label_ids: self.panel.curate_trial_labels(self._trial_scope(), label_ids, confirm=True))
+        self._guarded(
+            lambda label_ids: self.panel.curate_trial_labels(
+                self._trial_scope(), label_ids, confirm=True, cut=self._confidence_cut()
+            )
+        )
 
     def _delete(self) -> None:
         self._guarded(lambda label_ids: self.panel.delete_trial_labels(self._trial_scope(), label_ids, confirm=True))

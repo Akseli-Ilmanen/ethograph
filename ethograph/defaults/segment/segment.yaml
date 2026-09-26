@@ -2,7 +2,7 @@
 # sessions, name the features you built into the session file, and run:
 #
 #   import ethograph as eto
-#   project = eto.segment.Project("config/segment.yaml")
+#   project = eto.segment.Project("segment/segment.yaml")
 #   project.materialise()      # data/{features.name}/ in the literature layout
 #   project.train()            # runs/{run_name}/
 #   project.cross_validate()   # one fold per session, predictions the GUI opens
@@ -10,7 +10,7 @@
 # Reference: docs/source/models/segment/config.md. Every key is checked; a
 # typo is an error, never a silent default.
 
-root: ..                                   # data/ and runs/ land in the project folder
+root: .                                    # data/ and runs/ land beside this file
 
 sessions:
   # One entry per session file. labels_path is the curated labels TSV the GUI

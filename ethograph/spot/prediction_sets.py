@@ -16,7 +16,11 @@ only), and every model's run folder follows
 
 **Nothing is dropped for being uncertain.** A low-confidence prediction is
 written and flagged; a missing label cannot be reviewed, and review is the
-point.
+point. The one thing not written is a class that was *absent*: a curve that
+never rises above ``infer.min_peak`` in a trial found nothing there. Every
+trial is otherwise assumed to hold one event per class, so the floor is set
+low on purpose — a false positive is one keypress in review, a false
+negative is invisible.
 """
 
 from __future__ import annotations
@@ -103,7 +107,10 @@ def spot_entry(
     clock, for entries that do not state their own.
 
     A class's curve is read as ``infer.max_events_per_trial`` events at most
-    (:func:`~ethograph.labels.confidence.curve_events`), in time order.
+    (:func:`~ethograph.labels.confidence.curve_events`), in time order. An
+    event whose peak is below ``infer.min_peak`` is not an event: the class
+    is absent from the trial and nothing is written for it. The curve is
+    kept either way, so review can still draw what the model saw.
     """
     by_class: dict[str, list[tuple[int, float]]] = {}
     for event in entry.get("events", []):
@@ -125,6 +132,8 @@ def spot_entry(
         curve = densify(frames, scores, _curve_length(entry, clip, num_frames, frames))
         curves[label] = curve
         for stats in curve_events(curve, window, gap, config.infer.max_events_per_trial):
+            if stats.peak < config.infer.min_peak:
+                continue
             full_frame = clip.to_frame(stats.index)
             events.append(
                 SpottedEvent(

@@ -324,7 +324,7 @@ class SkeletonSettingsDialog(QDialog):
         pick_row = QHBoxLayout()
         pick_row.addWidget(QLabel("Skeleton:"))
         self._name = QComboBox(self)
-        self._name.setToolTip("One file per skeleton in config/skeleton/ — a study with two rigs has two")
+        self._name.setToolTip("One file per skeleton in skeleton/ — a study with two rigs has two")
         self._name.currentIndexChanged.connect(lambda _i: self._refresh_connections())
         pick_row.addWidget(self._name, stretch=1)
         layout.addLayout(pick_row)

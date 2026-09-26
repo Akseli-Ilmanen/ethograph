@@ -26,6 +26,7 @@ from typing import Any
 
 from ethograph.features.label_inputs import branches_of, check_branches_disjoint
 from ethograph.io.session_layout import adopt_legacy_files
+from ethograph.labels.confidence import MIN_PEAK
 from ethograph.labels.tsv_store import labels_tsv_path
 from ethograph.segment.config import (
     LabelInputsConfig,
@@ -307,8 +308,16 @@ class InferConfig:
     #: takes it from its ``tolerance_s``). Flat across 50-200 ms on a 200 fps
     #: rig; set it for yours.
     focus_window_ms: float = 100.0
-    #: Below this the prediction is written anyway and flagged, never dropped:
-    #: a missing label cannot be reviewed, and review is the point.
+    #: A class whose curve never rises above this in a trial is absent from
+    #: it: no label is written. Every trial is otherwise assumed to hold one
+    #: event per class — the tallest peak wins, however low. The default is
+    #: deliberately low (:data:`ethograph.labels.confidence.MIN_PEAK`): a
+    #: false positive costs one keypress in frame-by-frame review, a missed
+    #: event can never be reviewed, and a curve this low scores near 0 anyway.
+    #: Raise it for a class that is often absent; ``0`` writes every curve.
+    min_peak: float = MIN_PEAK
+    #: Below this *confidence* the prediction is written anyway and only
+    #: logged as flagged: doubt is reviewed, not dropped.
     flag_confidence_below: float = 0.01
     #: Written into every predicted row's ``prediction_source``.
     source: str | None = None
@@ -348,6 +357,8 @@ class InferConfig:
             raise ValueError(f"infer.confidence_alpha must be in [0, 1], got {self.confidence_alpha!r}")
         if self.focus_window_ms <= 0:
             raise ValueError(f"infer.focus_window_ms must be positive, got {self.focus_window_ms!r}")
+        if not 0.0 <= self.min_peak <= 1.0:
+            raise ValueError(f"infer.min_peak must be in [0, 1], got {self.min_peak!r}")
         if self.max_events_per_trial < 1:
             raise ValueError(f"infer.max_events_per_trial must be at least 1, got {self.max_events_per_trial!r}")
         if self.min_event_gap_s <= 0:

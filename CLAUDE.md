@@ -173,7 +173,7 @@ Panels are dock widgets in `UnifiedPanelContainer`, created via the layout (`Sou
 - **One canonical feature list**: `catalog.feature_choices()` — never `ds.data_vars`.
 - **Feature plots render only from their own `panel_state`**, never from `app_state.features_sel`.
 - **Labels on new panels:** any path creating/showing a panel ends with `plot_container.schedule_labels_redraw()` (deferred), never a synchronous `labels_redraw_needed`.
-- Space reference geometry comes from `~/.ethograph/defaults/config/space/*.yaml`; templates ship layouts via `local_settings.yaml`, never overwriting a local file.
+- Space reference geometry is a library resolved nearest first, like `mapping.txt`: `{session}/.ethograph/space/`, `{project}/space/`, `~/.ethograph/defaults/space/` (`plots_space.geometry_dirs`); templates ship layouts via `local_settings.yaml`, never overwriting a local file.
 
 ### Console panel + derived features
 

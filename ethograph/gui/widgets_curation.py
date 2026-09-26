@@ -110,8 +110,10 @@ from ethograph.labels.curation import (
     CURATED_YES,
     FIELD_LABEL,
     REVIEW_ORDER_TRIAL,
+    ConfidenceCut,
     ReviewTarget,
     build_review_queue,
+    confident_trials,
     curate_label,
     curate_trials,
     curated_column_differs,
@@ -198,24 +200,6 @@ _SEGMENT_HINT = "click the new start, then the new end  ·  V replays"
 #: Linger on a just-committed boundary this long before jumping to the next
 #: seed, so the user sees the label land where they put it.
 _CONFIRM_PAUSE_MS = 100
-
-_KEYS_SCHEMATIC = (
-    "<table cellspacing='2' style='color:#bbb; font-size:10px;'>"
-    "<tr><td><b>←</b> / <b>→</b></td><td>one frame</td>"
-    "<td>&nbsp;&nbsp;<b>Enter</b></td><td>confirm this frame</td></tr>"
-    "<tr><td><b>B</b> / <b>N</b></td><td>back / next</td>"
-    "<td>&nbsp;&nbsp;<b>Backspace</b></td><td>delete the event</td></tr>"
-    "</table>"
-)
-
-_SEGMENT_KEYS_SCHEMATIC = (
-    "<table cellspacing='2' style='color:#bbb; font-size:10px;'>"
-    "<tr><td><b>click</b> / <b>click</b></td><td>new start / new end</td>"
-    "<td>&nbsp;&nbsp;<b>V</b></td><td>replay the label</td></tr>"
-    "<tr><td><b>B</b> / <b>N</b></td><td>back / next</td>"
-    "<td>&nbsp;&nbsp;<b>Backspace</b></td><td>delete the label</td></tr>"
-    "</table>"
-)
 
 _KEY_ROWS = {
     "frame": [
@@ -576,15 +560,10 @@ class CurationPanel(QGroupBox):
         review_opts_row.addWidget(self.auto_advance_cb)
         frame_lay.addLayout(review_opts_row)
 
-        keys_row = QHBoxLayout()
-        self.keys_label = QLabel(_KEYS_SCHEMATIC)
-        self.keys_label.setTextFormat(Qt.RichText)
-        keys_row.addWidget(self.keys_label, stretch=1)
         self.shortcuts_btn = QPushButton("Shortcuts…")
         self.shortcuts_btn.setAutoDefault(False)
         self.shortcuts_btn.clicked.connect(self._show_shortcuts)
-        keys_row.addWidget(self.shortcuts_btn, alignment=Qt.AlignTop)
-        frame_lay.addLayout(keys_row)
+        frame_lay.addWidget(self.shortcuts_btn)
 
         self.start_stop_btn = QPushButton("Start review")
         self.start_stop_btn.setAutoDefault(False)
@@ -804,7 +783,6 @@ class CurationPanel(QGroupBox):
         self.mode_combo.setToolTip(_MODE_HINTS[key])
         self.frame_group.setVisible(key in REVIEW_MODES)
         self.window_row.setVisible(key == "frame")
-        self.keys_label.setText(_SEGMENT_KEYS_SCHEMATIC if key == "segment" else _KEYS_SCHEMATIC)
         self.auto_advance_cb.setText(
             "Jump to next after Backspace" if key == "segment" else "Jump to next after Enter/Backspace"
         )
@@ -910,7 +888,12 @@ class CurationPanel(QGroupBox):
         return list(visible)  # filtered
 
     def curate_trial_labels(
-        self, which: str = wf.TRIAL_SCOPE_FILTERED, label_ids=_SCOPE_UNSET, confirm: bool = False, quiet: bool = False
+        self,
+        which: str = wf.TRIAL_SCOPE_FILTERED,
+        label_ids=_SCOPE_UNSET,
+        confirm: bool = False,
+        quiet: bool = False,
+        cut: ConfidenceCut | None = None,
     ) -> int:
         """Curate every automated label of *label_ids*, across the trials *which* names.
 
@@ -918,6 +901,11 @@ class CurationPanel(QGroupBox):
         pass an explicit set (or ``None`` for every class) to bypass it — what
         the bulk-editing dialog's own checkbox list does. Manual labels are
         never rewritten.
+
+        *cut* keeps only the trials the model is confident on
+        (:func:`~ethograph.labels.curation.confident_trials`): the rest are
+        left automated for the reviewer to open. The trial means come from
+        the same curves **Confidence curves…** reads.
 
         *confirm* asks first: from the GUI this is one click away from marking
         labels nobody looked at as seen, which is the one thing the
@@ -933,12 +921,19 @@ class CurationPanel(QGroupBox):
             return 0
         scope = self.scope() if label_ids is _SCOPE_UNSET else label_ids
         trials = self.trials_for_scope(which)
+        if cut is not None and cut.active:
+            means = rm.trial_confidence_means(self._confidence_curves(trials)) if cut.trial > 0.0 else {}
+            trials = confident_trials(trials, means, self.app_state._all_labels_df, scope, cut)
+            if not trials:
+                if not quiet:
+                    notify(f"No trial passes the confidence cut across the {_TRIAL_SCOPE_NOUN[which]}.")
+                return 0
         df, total = curate_trials(self.app_state._all_labels_df, trials, scope)
         if not total:
             if not quiet:
                 notify(f"Nothing left to curate in scope across the {_TRIAL_SCOPE_NOUN[which]}.")
             return 0
-        if confirm and not self._confirm_bulk_curate(which, scope, total, len(trials)):
+        if confirm and not self._confirm_bulk_curate(which, scope, total, len(trials), cut):
             return 0
         message = None if quiet else f"Curated {total} label(s) across {len(trials)} trial(s)."
         return self._commit(df, total, message=message)
@@ -955,7 +950,9 @@ class CurationPanel(QGroupBox):
         """
         return self.curate_trial_labels(wf.TRIAL_SCOPE_FILTERED, confirm=confirm)
 
-    def _confirm_bulk_curate(self, which: str, label_ids, total: int, n_trials: int) -> bool:
+    def _confirm_bulk_curate(
+        self, which: str, label_ids, total: int, n_trials: int, cut: ConfidenceCut | None = None
+    ) -> bool:
         """Ask before marking labels across many trials as seen by a human.
 
         Curating is **not** undoable: ``Ctrl+Z`` walks per-trial snapshots
@@ -969,8 +966,14 @@ class CurationPanel(QGroupBox):
         box.setIcon(QMessageBox.Warning)
         box.setWindowTitle(f"Curate: {noun}")
         box.setText(f"Mark {total} automated label(s) as curated, across {n_trials} {noun}, in {classes}?")
+        passing = ""
+        if cut is not None and cut.active:
+            passing = (
+                f"Only the {n_trials} trial(s) the model is confident on: mean confidence at least "
+                f"{cut.trial:g} and every automated label at least {cut.segment:g}.\n\n"
+            )
         box.setInformativeText(
-            "Curated means a human has approved them — labels you have not looked at "
+            passing + "Curated means a human has approved them — labels you have not looked at "
             "will be marked as though you had.\n\n"
             "This cannot be undone: Ctrl+Z does not take back a curation. Nothing "
             "reaches disk until you save, so closing without saving still discards it."

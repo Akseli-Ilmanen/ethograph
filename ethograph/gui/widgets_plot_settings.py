@@ -479,12 +479,19 @@ class PlotSettingsWidget(QWidget):
         group_layout.addWidget(QLabel("Library geometry:"), row, 0)
         self.space_library_combo = QComboBox()
         self.space_library_combo.setToolTip(
-            "Reference geometry drawn behind the trajectory — one entry per "
-            "YAML file in the geometry library (~/.ethograph/defaults/config/space/*.yaml)"
+            "Reference geometry drawn behind the trajectory — one entry per YAML file "
+            "in the geometry library: the session's .ethograph/space/, then the project's space/"
         )
         self.space_library_combo.currentTextChanged.connect(self._on_space_library_changed)
         # Re-sync when set externally (e.g. a template's library_geometry default)
-        self.app_state.space_library_geometry_changed.connect(lambda *_: self._populate_space_library_combo())
+        # and when the library itself changes with the session or the project.
+        for signal in (
+            self.app_state.space_library_geometry_changed,
+            self.app_state.nc_file_path_changed,
+            self.app_state.nwb_file_path_changed,
+            self.app_state.project_path_changed,
+        ):
+            signal.connect(lambda *_: self._populate_space_library_combo())
         group_layout.addWidget(self.space_library_combo, row, 1, 1, 3)
 
         main_layout.addWidget(self.spaceplot_panel)
@@ -506,14 +513,14 @@ class PlotSettingsWidget(QWidget):
         self._populate_space_library_combo()
 
     def _populate_space_library_combo(self):
-        """Re-scan the global geometry library and restore the saved selection."""
-        from ethograph.gui.plots_space import load_library_geometries
+        """Re-scan the geometry library of the loaded session and restore the saved selection."""
+        from ethograph.gui.plots_space import geometry_dirs_of, load_library_geometries
 
         combo = self.space_library_combo
         combo.blockSignals(True)
         combo.clear()
         combo.addItem("None")
-        combo.addItems(sorted(load_library_geometries()))
+        combo.addItems(sorted(load_library_geometries(geometry_dirs_of(self.app_state))))
         saved = self.app_state.get_with_default("space_library_geometry")
         if saved:
             idx = combo.findText(saved)

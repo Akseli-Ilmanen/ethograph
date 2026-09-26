@@ -40,7 +40,9 @@ Passing these trials to a model as its samples is a natural fit, both for
 (trial, individual) pair, and for {doc}`event spotting <spot/index>`, which
 shares the same sessions, trial filter and train/val/test split drawn by
 whole trial. (E2E-Spot then draws its clips of `context_s` inside each trial;
-see {ref}`target-spot-seconds`.)
+see {ref}`target-spot-seconds`.) For event spotting the trial is also the
+unit of the prediction rule — one event per class per trial, so cut the
+trials that way ({ref}`target-spot-peaks`).
 
 Both read a trial as **its window of the video**, not the video file: a trial
 carved out of a longer video gives the model only the frames between its start

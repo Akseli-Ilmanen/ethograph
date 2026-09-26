@@ -22,10 +22,11 @@ pytest-qt, ruff, pre-commit) and the docs toolchain:
 ```bash
 git clone https://github.com/Akseli-Ilmanen/ethograph.git
 cd ethograph
-conda create -y -n ethograph-dev -c conda-forge python=3.12
-conda activate ethograph-dev
+conda create -y -n ethograph -c conda-forge python=3.12
+conda activate ethograph
 uv pip install --torch-backend=auto torch torchvision
 uv pip install -e ".[gui,audio,model,dandi,dev,docs]"
+ethograph shortcut
 pre-commit install
 ```
 

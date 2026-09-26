@@ -8,7 +8,7 @@ the DataLoader so xarray, pynapple, and NWB sources all work.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 import numpy as np
 import pyqtgraph as pg
@@ -30,8 +30,10 @@ from ethograph.features.preprocessing import interpolate_nans
 from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_lineplot import MultiColoredLineItem
+from ethograph.gui.project import project_dir_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS, DataLoader
-from ethograph.utils.paths import defaults_dir, seed_defaults
+from ethograph.io.session_layout import settings_dir
+from ethograph.utils.paths import defaults_dir
 
 logger = logging.getLogger(__name__)
 
@@ -99,46 +101,59 @@ def load_geometry_yaml(path: Path) -> Optional[dict]:
         return yaml.safe_load(f)
 
 
-#: User library of reference geometries. Drop a ``*.yaml`` file here (a
-#: ``references:`` list of vertices/edges) to make it selectable — by file
-#: stem — in the Space controls / persist-able as a default via
-#: ``space_library_geometry`` in gui_settings.yaml or local_settings.yaml.
-GEOMETRY_LIBRARY_DIR = defaults_dir("config") / "space"
+#: The library of reference geometries: one ``*.yaml`` per geometry (a
+#: ``references:`` list of vertices/edges), selectable by file stem in the
+#: Space controls and persist-able via ``space_library_geometry`` in
+#: gui_settings.yaml or local_settings.yaml. The folder has this name inside a
+#: session's ``.ethograph/``, a project folder and the starter project alike.
+GEOMETRY_DIRNAME = "space"
 
 
-def ensure_geometry_library() -> Path:
-    """Seed the geometry library (with every other bundled default) and return it.
+def geometry_dirs(session: Path | str | None, project: Path | str | None) -> list[Path]:
+    """The directories searched, nearest first: the session's, the project's, the starter project's.
 
-    ``seed_defaults`` copies each shipped file only when it is missing, so a
-    user's edits to a bundled geometry stick; a deleted one comes back.
+    The same rule as ``mapping.txt`` and the skeleton library: a file in the
+    session's ``.ethograph/space/`` shadows the project's ``space/``, which
+    shadows the user's own under ``~/.ethograph/defaults/``. A template writes
+    its arena into its own session, so it never needs the home folder.
     """
-    seed_defaults()
-    GEOMETRY_LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
-    return GEOMETRY_LIBRARY_DIR
+    dirs: list[Path] = []
+    if session is not None:
+        dirs.append(settings_dir(session) / GEOMETRY_DIRNAME)
+    if project is not None:
+        dirs.append(Path(project) / GEOMETRY_DIRNAME)
+    dirs.append(defaults_dir(GEOMETRY_DIRNAME))
+    return dirs
 
 
-def load_library_geometries(lib_dir: Path | None = None) -> dict[str, list["ReferenceGeometry"]]:
-    """Parse every YAML file in the geometry library, keyed by file stem.
+def geometry_dirs_of(app_state) -> list[Path]:
+    """:func:`geometry_dirs` for the loaded session and the project it works in."""
+    source = getattr(app_state, "nc_file_path", None) or getattr(app_state, "nwb_file_path", None)
+    return geometry_dirs(source or None, project_dir_of(app_state))
+
+
+def load_library_geometries(dirs: Iterable[Path]) -> dict[str, list["ReferenceGeometry"]]:
+    """Every geometry in *dirs*, keyed by file stem, the nearest (first) directory winning.
 
     One file = one selectable geometry (e.g. ``moll2025.yaml`` →
     ``"moll2025"``); all of a file's ``references`` are drawn together.
     Unparsable files are skipped with a log message (user-supplied input).
     """
-    lib_dir = GEOMETRY_LIBRARY_DIR if lib_dir is None else Path(lib_dir)
     geometries: dict[str, list[ReferenceGeometry]] = {}
-    if not lib_dir.is_dir():
-        return geometries
-    for path in sorted(lib_dir.glob("*.y*ml")):
-        cfg = load_geometry_yaml(path)
-        if not cfg:
+    for lib_dir in reversed(list(dirs)):  # farthest first, so nearest overwrites
+        if not lib_dir.is_dir():
             continue
-        try:
-            refs = _parse_references(cfg)
-        except Exception:
-            logger.exception("Failed to parse geometry library file %s", path)
-            continue
-        if refs:
-            geometries[path.stem] = refs
+        for path in sorted(lib_dir.glob("*.y*ml")):
+            cfg = load_geometry_yaml(path)
+            if not cfg:
+                continue
+            try:
+                refs = _parse_references(cfg)
+            except Exception:
+                logger.exception("Failed to parse geometry library file %s", path)
+                continue
+            if refs:
+                geometries[path.stem] = refs
     return geometries
 
 
@@ -1179,15 +1194,16 @@ class SpacePlot(IndividualPinMixin, QWidget):
 
         ``app_state.space_library_geometry`` (chosen in the Space controls, or
         set as a default in gui_settings.yaml / local_settings.yaml) is the
-        stem of a YAML file in ``~/.ethograph/defaults/config/space/``; all of that
-        file's references are drawn.
+        stem of a YAML file in the geometry library (:func:`geometry_dirs`);
+        all of that file's references are drawn.
         """
         selected = getattr(self.app_state, "space_library_geometry", None)
         if not selected:
             return []
-        refs = load_library_geometries().get(selected)
+        dirs = geometry_dirs_of(self.app_state)
+        refs = load_library_geometries(dirs).get(selected)
         if refs is None:
-            logger.warning("Geometry file %r not found in %s", selected, GEOMETRY_LIBRARY_DIR)
+            logger.warning("Geometry file %r not found in %s", selected, [str(d) for d in dirs])
             return []
         return refs
 

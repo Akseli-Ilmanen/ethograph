@@ -13,7 +13,8 @@ from ethograph.gui.widgets_curation import CurationPanel, drag_label_ids
 from ethograph.gui.widgets_navigation import NavigationWidget
 from ethograph.labels import onset_curves
 from ethograph.labels import review_metrics as rm
-from ethograph.labels.curation import CURATED_COLUMN
+from ethograph.labels import workflow as wf
+from ethograph.labels.curation import CURATED_COLUMN, ConfidenceCut
 from ethograph.labels.intervals import (
     HUMAN_CONFIDENCE,
     LABELING_AUTOMATED,
@@ -278,12 +279,26 @@ class TestTrialLevel:
         vouch for labels across every trial."""
         asked = []
         monkeypatch.setattr(
-            panel, "_confirm_bulk_curate", lambda which, label_ids, total, n: asked.append((which, total, n)) or False
+            panel,
+            "_confirm_bulk_curate",
+            lambda which, label_ids, total, n, cut=None: asked.append((which, total, n)) or False,
         )
         assert panel.curate_visible_trials(confirm=True) == 0
         assert asked == [("filtered", 3, 2)]
         # Declined: nothing moved.
         assert _row(panel.app_state, "0", 4, 1.0)["labeling_method"] == LABELING_AUTOMATED
+
+    def test_the_confidence_cut_skips_the_trials_the_model_doubts(self, panel, monkeypatch):
+        """Trial by trial: a trial is bulk-curated only when its mean passes
+        *and* no automated label of it falls below the segment cut — trial 0
+        carries a 0.3 label, so its high mean does not save it."""
+        monkeypatch.setattr(panel, "_confidence_curves", lambda trials: {str(t): np.full(4, 0.95) for t in trials})
+        assert panel.curate_trial_labels(wf.TRIAL_SCOPE_FILTERED, None, cut=ConfidenceCut(0.5, 0.5)) == 1
+        assert _row(panel.app_state, "1", 4, 0.5)["labeling_method"] == LABELING_CURATED
+        assert _row(panel.app_state, "0", 4, 1.0)["labeling_method"] == LABELING_AUTOMATED
+        assert _row(panel.app_state, "0", 6, 2.5)["labeling_method"] == LABELING_AUTOMATED
+        # The trial half alone: a mean of 0.95 fails a 0.99 cut, and nothing moves.
+        assert panel.curate_trial_labels(wf.TRIAL_SCOPE_FILTERED, None, cut=ConfidenceCut(0.99, 0.0)) == 0
 
     def test_a_workflow_step_does_not_ask(self, panel, monkeypatch):
         """A recorded step is already a deliberate choice."""

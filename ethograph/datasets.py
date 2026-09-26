@@ -14,6 +14,9 @@ from typing import TYPE_CHECKING
 from ethograph.labels.onset_curves import RUN_PREFIX
 from ethograph.utils.paths import cache_dir
 
+#: Files shipped with a template and copied into its session (``configs`` below).
+ASSETS_DIR = Path(__file__).parent / "assets"
+
 if TYPE_CHECKING:
     import xarray as xr
 
@@ -30,7 +33,7 @@ DATASETS: dict[str, dict] = {
         "nc_filename": "Trial_data.nc",
         "has_audio": False,
         "import_labels": True,
-        # Reference geometry from the bundled defaults (ethograph/defaults/config/space/)
+        # Reference geometry: the arena written into the session's .ethograph/space/ (configs below)
         "library_geometry": "moll2025",
         # The trial number is the recording number in the filename, so these
         # rows are in date order while dt.trials is numerically sorted --
@@ -87,8 +90,9 @@ DATASETS: dict[str, dict] = {
             "beakTip_position.npz",
             "trials.npz",
         ],
-        # Configs written to dest/.ethograph/ (existing files are kept)
+        # Configs written to dest/.ethograph/ (existing files are kept); a Path is a bundled file copied as is
         "configs": {
+            "space/moll2025.yaml": ASSETS_DIR / "space" / "moll2025.yaml",
             "mapping.txt": (
                 "0 background\n"
                 "1 pullOutStick\n"
