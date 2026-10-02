@@ -449,7 +449,7 @@
   <section id="dataset">
 <span id="target-dataset-api"></span><h1>Dataset<a class="headerlink" href="#dataset" title="Link to this heading">#</a></h1>
 <p>Dataset-level builders and augmenters that operate on an
-<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> or <a class="reference internal" href="trialtree.html#ethograph.io.trialtree.TrialTree" title="ethograph.io.trialtree.TrialTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">TrialTree</span></code></a>. Use
+<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> or <a class="reference internal" href="trialtree.html#ethograph.io.trialtree.TrialTree" title="ethograph.io.trialtree.TrialTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">TrialTree</span></code></a>. Use
 these to build a basic tree from a single long recording, downsample, or
 attach changepoint / colour features.</p>
 <p>For the pynapple equivalents (<code class="docutils literal notranslate"><span class="pre">load_nap_data</span></code>,
@@ -503,13 +503,13 @@ on a 30 Hz signal produces ~6 Hz output (2 points per block).</p></li>
 <dd><p>Detect changepoints in a feature and store them in the dataset.</p>
 <p>Applies <em>changepoint_func</em> independently along every non-time
 dimension (e.g. per keypoint, per individual) using
-<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html#xarray.apply_ufunc" title="(in xarray v2026.7.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.apply_ufunc()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">vectorize=True</span></code>.  The result is an
+<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html#xarray.apply_ufunc" title="(in xarray v2026.9.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.apply_ufunc()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">vectorize=True</span></code>.  The result is an
 <code class="docutils literal notranslate"><span class="pre">int8</span></code> binary array (1 = changepoint, 0 = not) stored as
 <code class="docutils literal notranslate"><span class="pre">ds[&quot;{target_feature}_{changepoint_name}&quot;]</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><em>xarray.Dataset</em></a>) – Trial dataset containing <em>target_feature</em>.</p></li>
+<li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><em>xarray.Dataset</em></a>) – Trial dataset containing <em>target_feature</em>.</p></li>
 <li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the variable to run detection on (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;speed&quot;</span></code>).</p></li>
 <li><p><strong>changepoint_name</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Suffix for the output variable name.  The stored variable will be
 called <code class="docutils literal notranslate"><span class="pre">&quot;{target_feature}_{changepoint_name}&quot;</span></code> (e.g.
@@ -523,7 +523,7 @@ numpy array and returns a same-length binary indicator.</p></li>
 <dd class="field-even"><p>The input dataset with the changepoint variable added in place.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)">xarray.Dataset</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)">xarray.Dataset</a></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -560,7 +560,7 @@ is applied before angle computation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><em>xarray.Dataset</em></a>) – Dataset containing a <code class="docutils literal notranslate"><span class="pre">position</span></code> variable with at least
+<li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><em>xarray.Dataset</em></a>) – Dataset containing a <code class="docutils literal notranslate"><span class="pre">position</span></code> variable with at least
 <code class="docutils literal notranslate"><span class="pre">space=[&quot;x&quot;,</span> <span class="pre">&quot;y&quot;]</span></code> and a time dimension.</p></li>
 <li><p><strong>smoothing_params</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Keyword arguments forwarded to
 <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html#scipy.ndimage.gaussian_filter1d" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.ndimage.gaussian_filter1d()</span></code></a> (e.g. <code class="docutils literal notranslate"><span class="pre">{&quot;sigma&quot;:</span> <span class="pre">3}</span></code>).</p></li>
@@ -570,7 +570,7 @@ is applied before angle computation.</p>
 <dd class="field-even"><p>The input dataset with <code class="docutils literal notranslate"><span class="pre">angles</span></code> and <code class="docutils literal notranslate"><span class="pre">angle_rgb</span></code> added in-place.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)">xarray.Dataset</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)">xarray.Dataset</a></p>
 </dd>
 </dl>
 </dd></dl>

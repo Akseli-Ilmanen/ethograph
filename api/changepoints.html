@@ -518,20 +518,20 @@ and NaN-transition boundaries, 0 elsewhere.</p>
 <dd><p>Merge NaN-transition boundaries with other changepoints -&gt; binary mask.</p>
 </dd></dl>
 
-<p>To attach detectors to a <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> or a pynapple object:</p>
+<p>To attach detectors to a <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> or a pynapple object:</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.io.dataset.add_changepoints_to_ds">
 <span class="sig-prename descclassname"><span class="pre">ethograph.io.dataset.</span></span><span class="sig-name descname"><span class="pre">add_changepoints_to_ds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_feature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">changepoint_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">changepoint_func</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">func_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/dataset.html#add_changepoints_to_ds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.dataset.add_changepoints_to_ds" title="Link to this definition">#</a></dt>
 <dd><p>Detect changepoints in a feature and store them in the dataset.</p>
 <p>Applies <em>changepoint_func</em> independently along every non-time
 dimension (e.g. per keypoint, per individual) using
-<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html#xarray.apply_ufunc" title="(in xarray v2026.7.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.apply_ufunc()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">vectorize=True</span></code>.  The result is an
+<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html#xarray.apply_ufunc" title="(in xarray v2026.9.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.apply_ufunc()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">vectorize=True</span></code>.  The result is an
 <code class="docutils literal notranslate"><span class="pre">int8</span></code> binary array (1 = changepoint, 0 = not) stored as
 <code class="docutils literal notranslate"><span class="pre">ds[&quot;{target_feature}_{changepoint_name}&quot;]</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)"><em>xarray.Dataset</em></a>) – Trial dataset containing <em>target_feature</em>.</p></li>
+<li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><em>xarray.Dataset</em></a>) – Trial dataset containing <em>target_feature</em>.</p></li>
 <li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the variable to run detection on (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;speed&quot;</span></code>).</p></li>
 <li><p><strong>changepoint_name</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Suffix for the output variable name.  The stored variable will be
 called <code class="docutils literal notranslate"><span class="pre">&quot;{target_feature}_{changepoint_name}&quot;</span></code> (e.g.
@@ -545,7 +545,7 @@ numpy array and returns a same-length binary indicator.</p></li>
 <dd class="field-even"><p>The input dataset with the changepoint variable added in place.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.7.0)">xarray.Dataset</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)">xarray.Dataset</a></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
