@@ -22,7 +22,7 @@ from qtpy.QtWidgets import QSplitter, QVBoxLayout, QWidget
 from ethograph.io.time_model import trial_frame_window
 from ethograph.io.validation import IMAGE_EXTENSIONS
 from ethograph.io.video_probe import VideoProbe, probe_video  # noqa: F401  (re-exported for GUI callers)
-from ethograph.io.video_proxy import proxy_cache_path
+from ethograph.io.video_proxy import DEFAULT_PROXY_HEIGHT, proxy_cache_path
 from ethograph.utils.paths import cache_dir
 
 from .app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
@@ -431,6 +431,9 @@ class VideoManager:
                 return start_frame, end_frame, 0.0
         return 0, nframes, time_offset
 
+    def _proxy_height(self) -> int:
+        return getattr(self.app_state, "video_proxy_height", DEFAULT_PROXY_HEIGHT)
+
     def _decode_path(self, video_path: str) -> str:
         """Return the path the DECODER should read for *video_path*.
 
@@ -445,7 +448,7 @@ class VideoManager:
         if Path(video_path).suffix.lower() in IMAGE_EXTENSIONS or is_url(video_path) or Path(video_path).is_dir():
             return video_path
         try:
-            proxy = proxy_cache_path(video_path, proxy_cache_dir(video_path))
+            proxy = proxy_cache_path(video_path, proxy_cache_dir(video_path), self._proxy_height())
         except OSError:
             return video_path
         return str(proxy) if proxy.exists() else video_path
@@ -475,12 +478,12 @@ class VideoManager:
 
         The single choke point for proxy lifecycle: call it whenever the set
         of visible videos may have changed (panel open/close, trial change,
-        quality toggle). Starts jobs for newly-visible videos, cancels jobs
+        quality toggle, proxy height). Starts jobs for newly-visible videos, cancels jobs
         for videos that went away (so the thread count never grows unbounded),
         and swaps in any proxy that is already available.
         """
         if getattr(self.app_state, "video_quality_mode", "full") == "proxy":
-            self.proxy_mgr.sync(self.visible_video_sources())
+            self.proxy_mgr.sync(self.visible_video_sources(), self._proxy_height())
         else:
             self.proxy_mgr.cancel_all()
             self._clear_proxy_badges()

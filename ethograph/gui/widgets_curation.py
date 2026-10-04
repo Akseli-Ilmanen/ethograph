@@ -35,6 +35,11 @@ a user turns automated labels into curated ones:
   (``dialog_label_gridview.py``, ``dialog_video_grid.py``) on the scope; a
   tile click there navigates, and in frame-by-frame mode it drops straight
   into the review at that label.
+* **Grids and label navigation read** (shown once a prediction set is
+  loaded) — the label source (``app_state.label_source``): the working
+  labels, or one loaded set, read-only. The grids and *Navigate by: Label*
+  then run over that set's rows and classes; curation itself only ever acts
+  on the working labels.
 * **Model ▸ Curation workflows…** (top bar) opens the saved curation routines
   (``dialog_curation_workflow.py``): filter, predict, scope, grid, review,
   save — recorded once and replayed, rather than set up again each session.
@@ -390,6 +395,9 @@ class CurationPanel(QGroupBox):
         app_state.curation_mode_changed.connect(self._sync_mode_from_state)
         app_state.curation_label_ids_changed.connect(self._sync_scope_from_state)
         app_state.curation_review_order_changed.connect(self._sync_order_from_state)
+        app_state.prediction_sets_changed.connect(self._sync_source_combo)
+        app_state.label_source_path_changed.connect(self._on_label_source_changed)
+        self._sync_source_combo()
         self._sync_mode_from_state()
         self._sync_scope_from_state()
         self._sync_order_from_state()
@@ -541,6 +549,20 @@ class CurationPanel(QGroupBox):
         # Curate trial/visible/delete/purge all moved to Tools ▸ Label bulk
         # editing… (dialog_bulk_labels.py) — this panel keeps only the
         # Ctrl+C shortcut (bound in shortcuts.py) and the two review grids.
+        self.source_row = QWidget()
+        source_lay = QHBoxLayout(self.source_row)
+        source_lay.setContentsMargins(0, 0, 0, 0)
+        source_lay.addWidget(QLabel("Grids and label navigation read:"))
+        self.source_combo = QComboBox()
+        self.source_combo.setToolTip(
+            "Which labels the two grids below and 'Navigate by: Label' run over.\n"
+            "A loaded prediction set (an imported run, or labels made from a feature)\n"
+            "is read-only there: browse, play back and jump, nothing is curated or edited."
+        )
+        self.source_combo.currentIndexChanged.connect(self._on_source_combo)
+        source_lay.addWidget(self.source_combo, stretch=1)
+        lay.addWidget(self.source_row)
+
         tools_row = QHBoxLayout()
         self.grid_btn = QPushButton("Label grid view…")
         self.grid_btn.setAutoDefault(False)
@@ -651,7 +673,14 @@ class CurationPanel(QGroupBox):
         return self.app_state.curation_scope()
 
     def scope_or_all_ids(self) -> list[int]:
-        """The scope as an explicit id list (every mapped class when unset)."""
+        """The scope as an explicit id list (every mapped class when unset).
+
+        The scope area holds classes of the working labels; a read-only label
+        source has its own, and the grids' setup page is where those are picked.
+        """
+        source = self.app_state.label_source()
+        if not source.writable:
+            return source.label_ids()
         ids = self.scope_area.ids()
         if ids:
             return ids
@@ -702,6 +731,38 @@ class CurationPanel(QGroupBox):
         if ids != self.scope_area.ids():
             self.scope_area.set_ids(ids)
         self._refresh_status()
+
+    # ------------------------------------------------------------------
+    # Label source (what the grids and label navigation read)
+    # ------------------------------------------------------------------
+
+    def _sync_source_combo(self, *_args) -> None:
+        """List the working labels and every loaded set; hidden while there is no set to pick."""
+        sets = self.app_state.prediction_sets
+        wanted = self.app_state.label_source_path
+        if wanted is not None and all(str(s.path) != wanted for s in sets):
+            # The set being read was removed: back to the working labels
+            # (which comes straight back here through the signal).
+            self.app_state.label_source_path = None
+            return
+        self.source_combo.blockSignals(True)
+        self.source_combo.clear()
+        self.source_combo.addItem("Working labels", None)
+        for prediction_set in sets:
+            self.source_combo.addItem(f"{prediction_set.name} (read-only)", str(prediction_set.path))
+        self.source_combo.setCurrentIndex(max(0, self.source_combo.findData(wanted)))
+        self.source_combo.blockSignals(False)
+        self.source_row.setVisible(bool(sets))
+
+    def _on_source_combo(self, _index: int) -> None:
+        self.app_state.label_source_path = self.source_combo.currentData()
+
+    def _on_label_source_changed(self, *_args) -> None:
+        """An open grid was built from the previous source — close it rather than leave it stale."""
+        self._sync_source_combo()
+        for dialog in (self._grid_dialog, self._video_dialog):
+            if dialog is not None and dialog.isVisible():
+                dialog.close()
 
     # ------------------------------------------------------------------
     # Mode
@@ -1301,27 +1362,42 @@ class CurationPanel(QGroupBox):
     # Grids
     # ------------------------------------------------------------------
 
-    def open_grid_view(self):
-        """Open (or raise) the label grid on the scope; returns the dialog."""
+    def open_grid_view(self, label_ids: list[int] | None = None):
+        """Open (or raise) the label grid on the scope; returns the dialog.
+
+        *label_ids* opens it on those classes instead — a fresh grid, since
+        an open one shows whatever it was built for.
+        """
         from ethograph.gui.dialog_label_gridview import LabelGridViewDialog
 
         if self.meta is None:
             return None
+        if label_ids is not None and self._grid_dialog is not None:
+            self._grid_dialog.close()
+            self._grid_dialog = None
         if self._grid_dialog is None or not self._grid_dialog.isVisible():
-            self._grid_dialog = LabelGridViewDialog(self.meta, parent=self.window(), label_ids=self.scope_or_all_ids())
+            ids = self.scope_or_all_ids() if label_ids is None else label_ids
+            self._grid_dialog = LabelGridViewDialog(self.meta, parent=self.window(), label_ids=ids)
         self._grid_dialog.show()
         self._grid_dialog.raise_()
         self._grid_dialog.activateWindow()
         return self._grid_dialog
 
-    def open_video_grid(self):
-        """Open (or raise) the video grid on the scope; returns the dialog."""
+    def open_video_grid(self, label_ids: list[int] | None = None):
+        """Open (or raise) the video grid on the scope; returns the dialog.
+
+        *label_ids* opens it on those classes instead, as :meth:`open_grid_view` does.
+        """
         from ethograph.gui.dialog_video_grid import VideoGridDialog
 
         if self.meta is None:
             return None
+        if label_ids is not None and self._video_dialog is not None:
+            self._video_dialog.close()
+            self._video_dialog = None
         if self._video_dialog is None or not self._video_dialog.isVisible():
-            self._video_dialog = VideoGridDialog(self.meta, parent=self.window(), label_ids=self.scope_or_all_ids())
+            ids = self.scope_or_all_ids() if label_ids is None else label_ids
+            self._video_dialog = VideoGridDialog(self.meta, parent=self.window(), label_ids=ids)
         self._video_dialog.show()
         self._video_dialog.raise_()
         self._video_dialog.activateWindow()

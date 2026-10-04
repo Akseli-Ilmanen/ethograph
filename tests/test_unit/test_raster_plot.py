@@ -79,6 +79,20 @@ def test_a_set_tick_width_is_used_as_it_is_and_auto_follows_the_view(qtbot, app_
     assert all(item.opts["pen"].width() == 5 for item in plot._tick_items)
 
 
+def test_rows_are_labelled_on_the_left_and_thinned_when_they_crowd(qtbot, app_state):
+    plot = _raster(qtbot, app_state, n_rows=400, spikes_per_row=10)
+    plot.set_row_labels({i: f"u{i}" for i in range(400)})
+
+    # Row 0 is the top row (y = 399): zoomed in, every row in view is named.
+    _show(plot, (0.0, 100.0), y_range=(394.5, 399.5))
+    assert [label for _, label in plot._row_ticks] == ["u0", "u1", "u2", "u3", "u4"]
+
+    # 400 rows in 300 px cannot all be written; the ones that are do not overlap.
+    _show(plot, (0.0, 100.0), y_range=(-1.0, 400.0))
+    assert 1 < len(plot._row_ticks) < 40
+    assert plot._row_ticks[0][1] == "u0"
+
+
 def test_redrawing_the_same_rows_keeps_the_zoom(qtbot, app_state):
     plot = _raster(qtbot, app_state, n_rows=50, spikes_per_row=10)
     plot.vb.setYRange(10.0, 20.0, padding=0)

@@ -421,6 +421,11 @@ _LABEL_COLORS = [
 _GAP_COLOR = [128 / 255.0, 128 / 255.0, 128 / 255.0]
 
 
+def label_color(label_id: int) -> np.ndarray:
+    """The colour class *label_id* is drawn in — one palette for every vocabulary."""
+    return np.array(_LABEL_COLORS[label_id % len(_LABEL_COLORS)]) / 255.0
+
+
 def load_label_mapping(
     mapping_file: str | Path = "mapping.txt",
     order: list[int] | None = None,
@@ -503,7 +508,7 @@ def load_label_mapping(
                     event_type = EVENT_TYPE_STATE
                 label_mappings[label_id] = {
                     "name": parts[1],
-                    "color": np.array(_LABEL_COLORS[label_id % len(_LABEL_COLORS)]) / 255.0,
+                    "color": label_color(label_id),
                     "branch": branch,
                     "event_type": event_type,
                 }

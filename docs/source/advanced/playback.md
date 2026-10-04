@@ -68,6 +68,10 @@ app stays responsive meanwhile). A badge on each panel shows progress —
 — and the panel switches to the proxy once ready. Uncheck to return to full
 resolution.
 
+The copy is 480 pixels tall by default. Right-click the **Proxy** checkbox to
+choose 360p, 480p, 720p or 1080p; each resolution is cached separately, and a
+video smaller than the chosen height keeps its own size.
+
 ```{note}
 The proxy has the **same frame rate and frame count** as the original — only
 the resolution drops — so labels and timing stay exactly aligned. Use full

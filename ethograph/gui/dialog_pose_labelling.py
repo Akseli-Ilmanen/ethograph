@@ -2224,7 +2224,7 @@ class PoseLabellingDialog(QDialog):
         # Printing the tags is NOT offered here. By the time this tab is
         # reachable there is a video, which means the tags were printed and
         # stuck on the animals weeks ago — the sheet belongs on the cover page's
-        # "Pre-recording tools", the one screen that exists before a recording.
+        # "More tools" menu, the one screen that exists before a recording.
         box.addWidget(self.tag_row)
 
         self._refresh_detector_rows()

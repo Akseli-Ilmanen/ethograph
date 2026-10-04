@@ -1434,16 +1434,21 @@ class ConfidenceRuleController(QObject):
 
     changed = Signal()
 
-    def __init__(self, meta, entries_fn, parent=None):
+    def __init__(self, meta, entries_fn, parent=None, *, read_only: bool = False):
         super().__init__(parent)
         self.meta = meta
         self.app_state = meta.app_state
         self._entries_fn = entries_fn
+        #: The grid shows a read-only label source: the session's curves are
+        #: not about its rows, and there is nothing to apply a rule to.
+        self._read_only = read_only
         self._curves = None
         self._originals: dict[int, float] = {}
         self._rule: tuple[str, float, float] | None = None
 
     def curves(self) -> dict:
+        if self._read_only:
+            return {}
         if self._curves is None:
             from ethograph.labels.onset_curves import read_all_curves
 
@@ -1498,6 +1503,8 @@ class ConfidenceRuleController(QObject):
         """Write the previewed rule into the labels: one undo step per trial touched."""
         from ethograph.labels.rescore import rescore_labels
 
+        if self._read_only:
+            raise RuntimeError("Cannot rescore the labels of a read-only label source")
         if self._rule is None:
             return
         rule, alpha, window_ms = self._rule
@@ -1528,12 +1535,15 @@ class GridModeBar(QWidget):
 
     mode_changed = Signal(str)
 
-    def __init__(self, meta, entries_fn, restyle_fn, flagged_fn=None, parent=None):
+    def __init__(self, meta, entries_fn, restyle_fn, flagged_fn=None, parent=None, *, read_only: bool = False):
         super().__init__(parent)
         self.meta = meta
         self._entries_fn = entries_fn
         self._restyle_fn = restyle_fn
         self._flagged_fn = flagged_fn
+        #: The grid shows a read-only label source: the host hides this bar,
+        #: and a verdict that reaches it anyway is a bug, not a no-op.
+        self._read_only = read_only
         self.verdicts = TileVerdicts()
 
         lay = QHBoxLayout(self)
@@ -1623,6 +1633,8 @@ class GridModeBar(QWidget):
 
     def apply_done(self) -> int:
         """Curate what the mode selects; the entries are restamped to match."""
+        if self._read_only:
+            raise RuntimeError("Cannot curate the labels of a read-only label source")
         panel = curation_panel_of(self.meta)
         entries = list(self._entries_fn())
         insts = self.verdicts.insts_for_done(self.mode(), entries)
@@ -1668,11 +1680,14 @@ class LabelGridView(QWidget):
     at a time without reopening the dialog.
     """
 
-    def __init__(self, meta, entries: list[FrameEntry], parent=None):
+    def __init__(self, meta, entries: list[FrameEntry], parent=None, *, read_only: bool = False):
         super().__init__(parent)
         self.meta = meta
         self.app_state = meta.app_state
         self._entries = entries
+        #: The entries come from a read-only label source: the grid only
+        #: shows and navigates — no verdicts, no rescoring.
+        self._read_only = read_only
         #: Which label class the grid is narrowed to; ``None`` is all of them.
         self._filter_label_id: int | None = None
         #: Filled once the toolbar exists — the mode bar restyles on creation.
@@ -1750,7 +1765,9 @@ class LabelGridView(QWidget):
         self.histogram_btn.clicked.connect(self._show_histograms)
         bar.addWidget(self.histogram_btn)
         # The confidence rule lives in the histogram popup; this drives it.
-        self.rule_controller = ConfidenceRuleController(meta, entries_fn=lambda: self._entries, parent=self)
+        self.rule_controller = ConfidenceRuleController(
+            meta, entries_fn=lambda: self._entries, parent=self, read_only=read_only
+        )
         self.rule_controller.changed.connect(self._on_confidence_rescored)
         bar.addStretch()
         self.count_label = QLabel("")
@@ -1766,8 +1783,11 @@ class LabelGridView(QWidget):
             entries_fn=self.visible_entries,
             restyle_fn=self._apply_styles,
             flagged_fn=self._flagged_entries,
+            read_only=read_only,
         )
         layout.addWidget(self.mode_bar)
+        if read_only:
+            self.mode_bar.hide()
 
         self.hint = QLabel("")
         self.hint.setStyleSheet("color: grey; font-size: 10px;")
@@ -1831,6 +1851,11 @@ class LabelGridView(QWidget):
         self.count_label.setText(f"{shown} frames" if shown == total else f"{shown} of {total} frames")
 
     def _sync_hint(self, *_args) -> None:
+        if self._read_only:
+            self.hint.setText(
+                f"A read-only label source: click a frame to jump the GUI to that trial and time.{self._filter_note()}"
+            )
+            return
         if self.mode_bar.mode() == "curate":
             click = "Click the frames that are right, then Done curates those labels."
         else:
@@ -1996,21 +2021,27 @@ class LabelGridView(QWidget):
             cell.setVisible(True)
 
     def _on_tile_clicked(self, entry: FrameEntry):
-        """A single click is the verdict the mode names."""
+        """A single click is the verdict the mode names — a jump where there
+        are no verdicts to give (a read-only label source)."""
+        if self._read_only:
+            self._jump(entry)
+            return
         self.mode_bar.click(entry)
 
     def _on_tile_double_clicked(self, entry: FrameEntry):
         """A double click navigates, in every mode. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
         navigating leaves the verdicts exactly as they were."""
-        self.mode_bar.click(entry)
+        if not self._read_only:
+            self.mode_bar.click(entry)
         self._jump(entry)
 
     def _jump(self, entry: FrameEntry):
         """Go there — into the frame-by-frame review when the curation panel
-        is in that mode, else a plain jump."""
+        is in that mode, else a plain jump. The review edits the working
+        labels, so a read-only source only ever jumps."""
         panel = curation_panel_of(self.meta)
-        if panel is not None and panel.mode() == "frame":
+        if not self._read_only and panel is not None and panel.mode() == "frame":
             panel.start_review_at(entry_inst(entry), entry.boundary)
             return
         nav = getattr(self.meta, "navigation_widget", None)
@@ -2048,6 +2079,9 @@ class LabelSetupPage(QWidget):
         self.meta = meta
         self.app_state = meta.app_state
         self.labels_widget = meta.labels_widget
+        #: What the grid reads — the working labels, or the read-only set
+        #: picked in the Curation section — fixed for the life of the dialog.
+        self.source = self.app_state.label_source()
         self._restrict_trials = set(trials) if trials else None
         #: The label classes this run is about — chosen elsewhere (the
         #: curation scope, or what the Predict dialog just wrote) and only
@@ -2070,15 +2104,23 @@ class LabelSetupPage(QWidget):
             event_type = info.get("event_type", "state")
             item = QListWidgetItem(f"{label_id} — {name}  ({event_type})")
             item.setData(Qt.UserRole, label_id)
-            item.setFlags(Qt.ItemIsEnabled)
+            if self.source.writable:
+                item.setFlags(Qt.ItemIsEnabled)
+            else:
+                # A read-only source's classes cannot be dragged into the
+                # scope area — they are picked here instead.
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+                item.setCheckState(Qt.Checked)
             self.label_list.addItem(item)
         self.label_list.setMaximumHeight(max(40, min(160, 22 * len(self._label_ids) + 6)))
         labels_lay.addWidget(self.label_list)
-        scope_hint = QLabel(
-            "No labels in scope — drag label rows into the Curation section's scope area."
-            if not self._label_ids
-            else "To change this, drag other label rows into the Curation section's scope area."
-        )
+        if not self.source.writable:
+            scope_text = f"Classes of '{self.source.name}' (read-only) — untick the ones to leave out."
+        elif not self._label_ids:
+            scope_text = "No labels in scope — drag label rows into the Curation section's scope area."
+        else:
+            scope_text = "To change this, drag other label rows into the Curation section's scope area."
+        scope_hint = QLabel(scope_text)
         scope_hint.setWordWrap(True)
         scope_hint.setStyleSheet("color: grey; font-size: 10px;")
         labels_lay.addWidget(scope_hint)
@@ -2108,6 +2150,8 @@ class LabelSetupPage(QWidget):
         self.method_combo.currentIndexChanged.connect(self._save_method_filter)
         method_lay.addWidget(self.method_combo)
         layout.addWidget(method_group)
+        # Nobody curates a read-only source: its rows all carry one method.
+        method_group.setVisible(self.source.writable)
 
         # Which trials: the trials table's filters, and nothing else — the one
         # place trials are included or excluded for every operation.
@@ -2148,7 +2192,15 @@ class LabelSetupPage(QWidget):
         layout.addWidget(crop_hint)
 
     def mappings(self) -> dict:
+        if not self.source.writable:
+            return self.source.mappings
         return getattr(self.labels_widget, "_mappings", {}) or {}
+
+    def labels_df(self) -> pd.DataFrame | None:
+        """The rows the grid is built from — the source's, read when asked."""
+        if not self.source.writable:
+            return self.source.df
+        return getattr(self.app_state, "_all_labels_df", None)
 
     def gui_crop_for(self, camera: str | None) -> tuple[int, int, int, int] | None:
         """The display crop the GUI holds for *camera* (source pixels).
@@ -2189,8 +2241,12 @@ class LabelSetupPage(QWidget):
         return {str(t) for t in trials}
 
     def selected_label_ids(self) -> list[int]:
-        """The label classes in scope — fixed for the life of the dialog."""
-        return list(self._label_ids)
+        """The label classes in scope — fixed for the life of the dialog,
+        minus what a read-only source's list has unticked."""
+        if self.source.writable:
+            return list(self._label_ids)
+        items = [self.label_list.item(i) for i in range(self.label_list.count())]
+        return [int(item.data(Qt.UserRole)) for item in items if item.checkState() == Qt.Checked]
 
     def selected_cameras(self) -> list[str | None]:
         if self.camera_list is None:
@@ -2204,6 +2260,8 @@ class LabelSetupPage(QWidget):
 
     def selected_methods(self) -> frozenset[str] | None:
         """The labeling methods the grid shows; ``None`` = all of them."""
+        if not self.source.writable:
+            return None
         return methods_for_filter(self.method_combo.currentData())
 
     def _save_method_filter(self, *_args) -> None:
@@ -2423,7 +2481,7 @@ class LabelGridViewDialog(QDialog):
         if not label_ids:
             notify("No labels in scope — drag label rows into the Curation section's scope area.", severity="warning")
             return
-        df = getattr(self.app_state, "_all_labels_df", None)
+        df = self.setup.labels_df()
         if df is None or df.empty:
             notify("No labels loaded.", severity="warning")
             return
@@ -2480,7 +2538,7 @@ class LabelGridViewDialog(QDialog):
     def _show_grid(self, entries: list[FrameEntry]):
         """Put a freshly built grid on the *Frames* tab and go there."""
         old = self.tabs.widget(1)
-        self.grid_view = LabelGridView(self.meta, entries, parent=self)
+        self.grid_view = LabelGridView(self.meta, entries, parent=self, read_only=not self.setup.source.writable)
         self.tabs.removeTab(1)
         self.tabs.insertTab(1, self.grid_view, f"Frames ({len(entries)})")
         self.tabs.setTabEnabled(1, True)

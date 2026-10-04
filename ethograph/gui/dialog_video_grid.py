@@ -523,11 +523,15 @@ class VideoGridPlayer(QWidget):
         decode_fn,
         prefetch_fn=None,
         parent=None,
+        read_only: bool = False,
     ):
         super().__init__(parent)
         self.meta = meta
         self.app_state = meta.app_state
         self._all_entries = entries
+        #: The clips come from a read-only label source: the grid only plays
+        #: and navigates — no verdicts, no rescoring.
+        self._read_only = read_only
         self._sort_order = str(self.app_state.get_with_default("video_grid_sort"))
         self._groups = group_clips(entries, self._sort_order)
         self._columns = max(1, columns)
@@ -563,8 +567,12 @@ class VideoGridPlayer(QWidget):
             entries_fn=lambda: self._all_entries,
             restyle_fn=self._apply_styles,
             flagged_fn=self._flagged_entries,
+            read_only=read_only,
         )
         top.addWidget(self.mode_bar, stretch=1)
+        if read_only:
+            self.mode_bar.hide()
+            top.addStretch(1)
         top.addWidget(QLabel("Sort:"))
         self.sort_combo = QComboBox()
         for key, text in VIDEO_GRID_SORT_ORDERS.items():
@@ -592,7 +600,9 @@ class VideoGridPlayer(QWidget):
         self.histogram_btn.clicked.connect(self._show_histograms)
         top.addWidget(self.histogram_btn)
         # The confidence rule lives in the histogram popup; this drives it.
-        self.rule_controller = ConfidenceRuleController(meta, entries_fn=lambda: self._all_entries, parent=self)
+        self.rule_controller = ConfidenceRuleController(
+            meta, entries_fn=lambda: self._all_entries, parent=self, read_only=read_only
+        )
         self.rule_controller.changed.connect(self._on_confidence_rescored)
         layout.addLayout(top)
 
@@ -784,6 +794,12 @@ class VideoGridPlayer(QWidget):
         self.next_clips_btn.setEnabled(self._page_idx < len(self.pages) - 1)
 
     def _sync_hint(self, *_args) -> None:
+        if self._read_only:
+            self.hint.setText(
+                "Clips of one label class, shortest first · ←/→ step a frame · "
+                "A read-only label source: click a clip to jump the GUI there."
+            )
+            return
         if self.mode_bar.mode() == "curate":
             click = "Click the clips that are right, then Done curates those labels."
         else:
@@ -997,20 +1013,26 @@ class VideoGridPlayer(QWidget):
         self._hist_dialog = None
 
     def _on_tile_clicked(self, entry: ClipEntry) -> None:
-        """A single click is the verdict the mode names."""
+        """A single click is the verdict the mode names — a jump where there
+        are no verdicts to give (a read-only label source)."""
+        if self._read_only:
+            self._jump(entry)
+            return
         self.mode_bar.click(entry)
 
     def _on_tile_double_clicked(self, entry: ClipEntry) -> None:
         """A double click navigates, in every mode. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
         navigating leaves the verdicts exactly as they were."""
-        self.mode_bar.click(entry)
+        if not self._read_only:
+            self.mode_bar.click(entry)
         self._jump(entry)
 
     def _jump(self, entry: ClipEntry) -> None:
         self.stop()
         panel = curation_panel_of(self.meta)
-        if panel is not None and panel.mode() == "frame":
+        # The review edits the working labels: a read-only source only jumps.
+        if not self._read_only and panel is not None and panel.mode() == "frame":
             panel.start_review_at(entry_inst(entry), "point" if entry.is_point else "start")
             return
         nav = getattr(self.meta, "navigation_widget", None)
@@ -1202,7 +1224,7 @@ class VideoGridDialog(QDialog):
         if not label_ids:
             notify("No labels in scope — drag label rows into the Curation section's scope area.", severity="warning")
             return
-        df = getattr(self.app_state, "_all_labels_df", None)
+        df = self.setup.labels_df()
         if df is None or df.empty:
             notify("No labels loaded.", severity="warning")
             return
@@ -1240,6 +1262,7 @@ class VideoGridDialog(QDialog):
             decode_fn=self._decode_page,
             prefetch_fn=self._prefetch_page,
             parent=self,
+            read_only=not self.setup.source.writable,
         )
         self.tabs.removeTab(1)
         self.tabs.insertTab(1, self.player, f"Playback ({len(entries)})")

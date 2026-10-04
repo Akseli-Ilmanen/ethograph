@@ -39,6 +39,9 @@ class _Event:
     def button(self):
         return self._button
 
+    def modifiers(self):
+        return Qt.NoModifier
+
     def scenePos(self):
         return object()
 
@@ -74,6 +77,9 @@ class _Point:
 
     def x(self):
         return self._x
+
+    def y(self):
+        return 0.0
 
 
 class TestDoubleClickWhileDrawing:

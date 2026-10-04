@@ -34,8 +34,8 @@ a few more distinguishable IDs.
 
 ## Print the tags first
 
-The sheet is made on the **start page**, under **🛠 Pre-recording tools ▸ Print
-tag sheet…** — by the time you are tuning a detector the tags are already on
+The sheet is made on the **start page**, under **🛠 More tools ▸ Print tag
+sheet…** — by the time you are tuning a detector the tags are already on
 the animals. It produces a print-ready vector PDF at a size given in millimetres.
 
 A sheet is a table of **rows**, so one page can mix sizes and families — a

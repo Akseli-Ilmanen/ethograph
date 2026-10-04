@@ -1,7 +1,7 @@
 """The GUI over a DeepLabCut / LightningPose project: two stages, one switch.
 
-Entered from the cover page's **Refine DLC / LightningPose training data**
-button with the project's root folder. From then on the top bar carries only
+Entered from the cover page's **More tools ▸ Refine DLC / LightningPose training
+data…** entry with the project's root folder. From then on the top bar carries only
 **Docs**, **Help** and the two stage buttons, and the Labels section shows
 the stage's own panel:
 

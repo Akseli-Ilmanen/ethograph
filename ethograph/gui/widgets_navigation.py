@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
+import pandas as pd
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -166,6 +167,12 @@ class NavigationWidget(QWidget):
         self.individual_combo.currentIndexChanged.connect(self._on_label_filter_changed)
         lr2.addWidget(self.individual_combo, stretch=1)
         label_lay.addLayout(lr2)
+        # Says so when the labels walked are not the working labels.
+        self.label_source_note = QLabel("")
+        self.label_source_note.setStyleSheet("color: grey; font-size: 10px;")
+        self.label_source_note.setWordWrap(True)
+        self.label_source_note.setVisible(False)
+        label_lay.addWidget(self.label_source_note)
         self._stack.addWidget(label_panel)
 
         # -- Sequence panel --
@@ -307,6 +314,7 @@ class NavigationWidget(QWidget):
         # Restore saved modes
         self._sync_mode_combos_from_state()
         self._sync_xlim_combo_from_state()
+        app_state.label_source_path_changed.connect(self._on_label_source_changed)
 
     # ==================================================================
     # Public API (used by widgets_data, shortcuts, widgets_meta, etc.)
@@ -453,7 +461,7 @@ class NavigationWidget(QWidget):
             return
         individual = self.individual_combo.currentText()
         ind_filter = None if individual == "All" else individual
-        df = getattr(self.app_state, "_all_labels_df", None)
+        df, _mappings = self._label_source()
         self._label_instances = self._only_visible_trials(get_label_instances(df, label_id, ind_filter))
         self.app_state.label_instance_idx = min(old_idx, max(0, len(self._label_instances) - 1))
         self._update_counter()
@@ -766,10 +774,32 @@ class NavigationWidget(QWidget):
     # Label mode
     # ==================================================================
 
+    def _label_source(self) -> tuple[pd.DataFrame | None, dict[int, dict[str, Any]]]:
+        """The rows and the vocabulary label mode walks (``app_state.label_source``).
+
+        The working labels and the session's classes, unless a read-only set
+        was picked in the Curation section — then that set's own.
+        """
+        source = self.app_state.label_source()
+        if source.writable:
+            return source.df, self._mappings
+        return source.df, source.mappings
+
+    def _on_label_source_changed(self, *_args):
+        """Another label source: its classes, its individuals, its instances."""
+        source = self.app_state.label_source()
+        self.label_source_note.setText("" if source.writable else f"Walking '{source.name}' (read-only)")
+        self.label_source_note.setVisible(not source.writable)
+        self._populate_label_combo()
+        self._populate_individual_combo()
+        if self.app_state.ready and self.app_state.navigate_mode == "label":
+            self._refresh_label_instances()
+
     def _populate_label_combo(self):
         self.label_combo.blockSignals(True)
         self.label_combo.clear()
-        for label_id, info in sorted(self._mappings.items(), key=lambda x: x[0]):
+        _df, mappings = self._label_source()
+        for label_id, info in sorted(mappings.items(), key=lambda x: x[0]):
             if label_id == 0:
                 continue
             name = info.get("name", str(label_id))
@@ -780,7 +810,7 @@ class NavigationWidget(QWidget):
         self.individual_combo.blockSignals(True)
         self.individual_combo.clear()
         self.individual_combo.addItem("All")
-        df = getattr(self.app_state, "_all_labels_df", None)
+        df, _mappings = self._label_source()
         if df is not None and "individual" in df.columns:
             for ind in sorted(df["individual"].unique()):
                 self.individual_combo.addItem(str(ind))
@@ -806,7 +836,7 @@ class NavigationWidget(QWidget):
             return
         individual = self.individual_combo.currentText()
         ind_filter = None if individual == "All" else individual
-        df = getattr(self.app_state, "_all_labels_df", None)
+        df, _mappings = self._label_source()
         self._label_instances = self._only_visible_trials(get_label_instances(df, label_id, ind_filter))
         self.app_state.label_instance_idx = 0
         self._update_counter()
@@ -824,7 +854,8 @@ class NavigationWidget(QWidget):
         if not self._label_instances:
             return
         idx = self.app_state.label_instance_idx
-        self.jump_to_label_instance(self._label_instances[idx])
+        df, _mappings = self._label_source()
+        self.jump_to_label_instance(self._label_instances[idx], labels_df=df)
 
     def jump_to_label_instance(
         self,
@@ -833,13 +864,14 @@ class NavigationWidget(QWidget):
         seek_rel: float | None = None,
         play: bool | None = None,
         view_rel: TimeRange | None = None,
+        labels_df: pd.DataFrame | None = None,
     ):
         """Jump to one label instance — the label-mode navigation path, callable
         with an instance dict from anywhere (label mode itself, refine dialog).
 
         *inst* needs ``trial``/``onset_s``/``offset_s``, plus an optional
-        ``row_idx`` (positional row in ``_all_labels_df``) for the restriction
-        window. *seek_rel* seeks the marker/video to that trial-relative time
+        ``row_idx`` (positional row in *labels_df*, by default the working
+        labels) for the restriction window. *seek_rel* seeks the marker/video to that trial-relative time
         instead of the onset; *play* overrides the auto-play checkbox.
         *view_rel* is an explicit trial-relative view window that replaces the
         before/after padding AND the fixed-window mode for both the restriction
@@ -866,7 +898,7 @@ class NavigationWidget(QWidget):
         # limits, loader queries, ephys restriction) describes what's shown.
         # In fixed x-limits mode _center_and_maybe_play overwrites this with
         # the fixed window — also correct.
-        df = getattr(self.app_state, "_all_labels_df", None)
+        df = labels_df if labels_df is not None else getattr(self.app_state, "_all_labels_df", None)
         tb = self.app_state.trial_bounds
         if view_rel is not None:
             # The restriction spans the view and the whole label, so zoom

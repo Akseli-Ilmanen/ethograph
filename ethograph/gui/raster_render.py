@@ -18,12 +18,17 @@ RENDER_MODES: dict[str, str] = {
 }
 
 #: What a raster row is and how rows are ordered: a probe channel by depth, or
-#: one row per unit in the cluster table's order or in a fitted Rastermap order.
+#: one row per unit in the neuron table's order, in a fitted Rastermap order, or
+#: by when each unit's firing rate peaks. Every panel that lists units follows it.
 ROW_ORDERS: dict[str, str] = {
     "depth": "Probe depth",
-    "table": "Cluster table",
+    "table": "Neuron table",
     "rastermap": "Rastermap",
+    "peak_trial": "Peak time (each trial)",
+    "peak_window": "Peak time (visible window)",
 }
+#: The orders read off the firing rates: the first re-sorts on every trial, the second when asked.
+PEAK_ORDERS = ("peak_trial", "peak_window")
 
 #: Spikes per pixel cell above which Auto switches to the density image, and
 #: the lower value it must fall under to switch back — two thresholds so a

@@ -740,7 +740,13 @@ class BasePlot(IndividualPinMixin, pg.PlotWidget):
 
         pos = self.plot_item.vb.mapSceneToView(event.scenePos())
 
-        click_info = {"x": pos.x(), "button": event.button(), "plot": self}
+        click_info = {
+            "x": pos.x(),
+            "y": pos.y(),
+            "button": event.button(),
+            "modifiers": event.modifiers(),
+            "plot": self,
+        }
         self.plot_clicked.emit(click_info)
 
     def autoscale(self):

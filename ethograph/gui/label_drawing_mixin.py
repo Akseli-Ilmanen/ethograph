@@ -144,8 +144,12 @@ class LabelDrawingMixin:
           - ``plots`` (optional): the only plots this slot draws on — a prediction
             panel's own slot. A slot without it draws on every plot except
             prediction panels.
+          - ``mappings`` (optional): the slot's own vocabulary, for a set whose
+            classes are not the session's.
+          - ``lanes`` (optional): ``{label_id: (y0, y1)}`` — each class drawn in
+            its own horizontal band, so classes that overlap in time stay apart.
         """
-        if not self.label_mappings:
+        if not self.label_mappings and not any(slot.get("mappings") for slot in slots or []):
             return
 
         #: draw_key → [(item, color_rgb, base_width)] for every item drawn
@@ -180,6 +184,8 @@ class LabelDrawingMixin:
                     mode=mode,
                     top_positions_present=top_positions_present if targets is None else frozenset(),
                     register=targets is None,
+                    mappings=slot.get("mappings"),
+                    lanes=slot.get("lanes"),
                 )
 
     def _clear_labels_on_plot(self, plot):
@@ -202,11 +208,15 @@ class LabelDrawingMixin:
         mode=LABEL_OVERLAY_MODE_FULL,
         top_positions_present: frozenset = frozenset(),
         register: bool = True,
+        mappings: Dict[int, Dict[str, Any]] | None = None,
+        lanes: Dict[int, tuple[float, float]] | None = None,
     ):
         if not hasattr(plot, "label_items"):
             plot.label_items = []
         if intervals_df is None or intervals_df.empty:
             return
+        if mappings is None:
+            mappings = self.label_mappings
         has_event_type = "event_type" in intervals_df.columns
         has_method = "labeling_method" in intervals_df.columns
         # A prediction's items are never restyled by a label's curation.
@@ -222,11 +232,21 @@ class LabelDrawingMixin:
                 continue
             is_point = has_event_type and row["event_type"] == EVENT_TYPE_POINT
             automated = has_method and row["labeling_method"] == LABELING_AUTOMATED
+            if labels not in mappings:
+                continue
+            color_rgb = tuple(int(c * 255) for c in mappings[labels]["color"])
             if is_point:
-                items = self._draw_single_point(plot, row["onset_s"], labels, automated)
+                items = self._draw_single_point(plot, row["onset_s"], color_rgb, automated)
+            elif lanes is not None:
+                if labels not in lanes:
+                    continue
+                y0, y1 = lanes[labels]
+                items = self._draw_label_region(
+                    plot, row["onset_s"], row["offset_s"], color_rgb, y0, y1, Z_INDEX_LABELS, automated=automated
+                )
             else:
                 items = self._draw_single_label(
-                    plot, row["onset_s"], row["offset_s"], labels, position, mode, top_positions_present, automated
+                    plot, row["onset_s"], row["offset_s"], color_rgb, position, mode, top_positions_present, automated
                 )
             if items:
                 key = draw_key(labels, row["onset_s"], row.get("individual"), row.get("individual_rec"))
@@ -247,14 +267,11 @@ class LabelDrawingMixin:
             return
         plot.label_items.append(tag)
 
-    def _draw_single_point(self, plot, time_s, labels, automated=False) -> list:
+    def _draw_single_point(self, plot, time_s, color_rgb, automated=False) -> list:
         """Draw a point event as a thick vertical line in the label's color.
 
         Dotted while the label is automated (see :func:`_point_pen`).
         """
-        if labels not in self.label_mappings:
-            return []
-        color_rgb = tuple(int(c * 255) for c in self.label_mappings[labels]["color"])
         line = pg.InfiniteLine(pos=time_s, angle=90, pen=_point_pen(color_rgb, automated), movable=False)
         line.setZValue(_POINT_EVENT_Z_INDEX)
         plot.plot_item.addItem(line)
@@ -269,7 +286,7 @@ class LabelDrawingMixin:
         plot,
         start_time,
         end_time,
-        labels,
+        color_rgb,
         position="main",
         mode=LABEL_OVERLAY_MODE_FULL,
         top_positions_present: frozenset = frozenset(),
@@ -285,10 +302,6 @@ class LabelDrawingMixin:
         directly under Top1 so two prediction-like sources can co-exist visibly.
         *automated* draws the outline dotted (see :func:`_boundary_pen`).
         """
-        if labels not in self.label_mappings:
-            return []
-        color_rgb = tuple(int(c * 255) for c in self.label_mappings[labels]["color"])
-
         is_main = position == "main"
 
         if is_main and mode == LABEL_OVERLAY_MODE_FULL and not top_positions_present:

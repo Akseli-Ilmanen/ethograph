@@ -9,6 +9,10 @@ pytest.importorskip("qtpy")
 nap = pytest.importorskip("pynapple")
 
 from qtpy.QtCore import Qt  # noqa: E402
+from qtpy.QtGui import QPainter, QPixmap  # noqa: E402
+from qtpy.QtWidgets import QStyle, QStyleOptionViewItem  # noqa: E402
+
+from ethograph.gui.widgets_ephys import _COLOR_ROLE  # noqa: E402
 
 GOOD_A, MUA, GOOD_B = 7, 42, 105
 RED = (228, 26, 28)
@@ -65,6 +69,27 @@ def test_the_raster_draws_the_units_the_cluster_table_lets_through(units_widget,
         ew._on_unit_filter_changed()
     (drawn,) = _times_by_color(raster).values()
     assert drawn == [1.0, 2.0, 3.0, 4.0]
+
+
+def test_ctrl_click_on_a_raster_row_toggles_its_unit_in_the_table(units_widget):
+    ew, raster = units_widget
+    ew.refresh_raster()
+
+    def click(unit: int, modifiers=Qt.ControlModifier) -> None:
+        (row,) = (key for key, units in ew._raster_row_units.items() if units == [unit])
+        y = raster._hw_to_global_y[row]
+        raster.plot_clicked.emit({"x": 1.0, "y": y, "button": Qt.LeftButton, "modifiers": modifiers, "plot": raster})
+
+    click(GOOD_B)
+    click(GOOD_A)
+    assert ew.selected_unit_ids() == [GOOD_A, GOOD_B]
+
+    click(GOOD_B)
+    assert ew.selected_unit_ids() == [GOOD_A]
+
+    # A plain click is the labels' and the playhead's, never a selection.
+    click(GOOD_B, modifiers=Qt.NoModifier)
+    assert ew.selected_unit_ids() == [GOOD_A]
 
 
 def test_a_selected_unit_is_highlighted_among_the_filtered_ones(units_widget):
@@ -124,6 +149,52 @@ def test_firing_rate_opens_as_a_heatmap_with_a_row_per_filtered_unit(moll2025_gu
     assert "firing_rate" in pc._available_features()
 
 
+def test_a_restored_firing_rate_heatmap_gets_its_rates_binned(moll2025_gui):
+    """A saved layout names the firing rates before anything has computed them."""
+    _, meta = moll2025_gui
+    _units_in(meta)
+    pc = meta.plot_container
+    assert "firing_rate" not in pc._available_features()
+
+    pc.apply_layout_state({"panels": [{"type": "heatmap", "feature": "firing_rate", "selections": {}}]})
+    heatmap = pc.heatmap_plots[-1]
+    # Not the feature the sidebar happens to have selected, drawn under the firing rates' name.
+    assert heatmap.image_item.image is None
+
+    _switch_to_other_trial(meta.app_state)
+
+    assert heatmap._buffered_data.shape[1] == 12
+
+
+def test_the_raster_and_the_firing_rates_share_one_row_order(moll2025_gui):
+    _, meta = moll2025_gui
+    _units_in(meta)
+    ew = meta.ephys_widget
+    # The heatmaps' own sort is on: it must not reorder a heatmap of units.
+    meta.app_state.heatmap_sort_mode = "trial"
+    meta._create_panel_for_source("firing_rate", "firing_rate", "Heatmap")
+    heatmap = meta.plot_container.heatmap_plots[-1]
+
+    ew.raster_row_order_combo.setCurrentIndex(ew.raster_row_order_combo.findData("peak_trial"))
+
+    order = ew.ordered_unit_ids()
+    assert order == ew._peak_units
+    assert sorted(order) == list(range(12)) and order != list(range(12))
+    assert [int(label) for label in heatmap._last_visible_labels] == order
+    assert [units for _, units in sorted(ew._raster_row_units.items())] == [[unit] for unit in order]
+
+
+def test_a_firing_rate_heatmap_shows_the_neuron_table_not_the_coords(moll2025_gui):
+    _, meta = moll2025_gui
+    _units_in(meta)
+    meta._create_panel_for_source("firing_rate", "firing_rate", "Heatmap")
+    meta.plot_container.active_feature_plot = meta.plot_container.heatmap_plots[-1]
+
+    meta._on_plot_focus("heatmap")
+
+    assert meta.context_panel.current_context() == "firing_rate"
+
+
 def test_the_firing_rate_panel_follows_the_trial_with_a_console_open(moll2025_gui):
     """The rates are re-binned per trial; the console's per-trial reset must not take them along."""
     _, meta = moll2025_gui
@@ -154,3 +225,21 @@ def test_the_firing_rate_rows_follow_the_cluster_tables_filter(moll2025_gui):
 
     assert ew.filtered_unit_ids() == [0, 1, 2, 3, 4]
     assert heatmap._buffered_data.shape[1] == 5
+
+
+def test_a_selected_units_coloured_id_cell_paints(units_widget):
+    """The delegate reads the selected state off Qt's flag enum, which no longer mixes with a bare int."""
+    ew, _raster = units_widget
+    ew.cluster_table.selectRow(0)
+    index = ew._cluster_proxy.index(0, ew._find_col_by_header("", exact="id"))
+    assert index.data(_COLOR_ROLE) is not None, "selecting a unit colours its id cell"
+
+    pixmap = QPixmap(60, 20)
+    option = QStyleOptionViewItem()
+    option.rect = pixmap.rect()
+    option.state |= QStyle.StateFlag.State_Selected
+    painter = QPainter(pixmap)
+    try:
+        ew._cluster_id_delegate.paint(painter, option, index)
+    finally:
+        painter.end()

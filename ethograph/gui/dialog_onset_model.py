@@ -38,7 +38,7 @@ import logging
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 import numpy as np
 import pandas as pd
@@ -99,31 +99,33 @@ _CAVEAT = (
 # ---------------------------------------------------------------------------
 
 
-def _base_loader(app_state):
+def base_loader(app_state):
     """The real DataLoader behind the console's DerivedLoader wrapper."""
     loader = getattr(app_state, "data_loader", None)
     return getattr(loader, "base", loader)
 
 
-def _iter_trial_windows(app_state) -> Iterator[tuple[int | str, object, float | None, float | None, float]]:
-    """Yield ``(trial_id, loader, t0, t1, shift)`` per visible trial.
+def iter_trial_windows(
+    app_state, trials: list | None = None
+) -> Iterator[tuple[int | str, Any, float | None, float | None, float]]:
+    """Yield ``(trial_id, loader, t0, t1, shift)`` per visible trial (or per one of *trials*).
 
     ``loader.select(feature, sel, t0, t1)`` returns times on the loader's own
     clock; subtracting *shift* makes them trial-relative — the clock labels
     are stored in. Loaders are throwaway (no display-offset provider), so the
     GUI's navigation state is untouched.
     """
-    base = _base_loader(app_state)
+    base = base_loader(app_state)
     if base is None:
         return
     if base.backend == "xarray":
         dt = app_state.dt
-        for tid in app_state.trials:
+        for tid in app_state.trials if trials is None else trials:
             yield tid, XarrayLoader(dt.trial(tid)), None, None, 0.0
     else:
         sc = getattr(app_state, "source_collection", None)
         fresh = PynappleLoader(base.data, base.catalog)
-        for tid in app_state.trials:
+        for tid in app_state.trials if trials is None else trials:
             idx = sc.trial_index(tid) if sc is not None else None
             if idx is None:
                 continue
@@ -322,7 +324,7 @@ def predict_onsets(
     written_rows: list[dict] = []
     QApplication.setOverrideCursor(Qt.WaitCursor)
     try:
-        for tid, loader, t0, t1, shift in _iter_trial_windows(app_state):
+        for tid, loader, t0, t1, shift in iter_trial_windows(app_state):
             trial_rows = df[df["trial"] == tid] if df is not None else None
             # Each class is filled independently: a trial already carrying
             # one of them can still receive the others.
@@ -501,7 +503,7 @@ class FeatureTree(QTreeWidget):
         console recipes live for one trial and cannot travel between sessions)."""
         self.clear()
         loader = getattr(app_state, "data_loader", None)
-        base = _base_loader(app_state)
+        base = base_loader(app_state)
         if base is None:
             return
         derived = getattr(loader, "derived", None) or {}
@@ -1024,7 +1026,7 @@ class TrainOnsetDialog(QDialog):
         per_target: dict[int, int] = {label: 0 for label in config.targets}
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            for tid, loader, t0, t1, shift in _iter_trial_windows(self.app_state):
+            for tid, loader, t0, t1, shift in iter_trial_windows(self.app_state):
                 trial_rows = df[df["trial"] == tid]
                 y_times: dict[int, float] = {}
                 for label in config.targets:

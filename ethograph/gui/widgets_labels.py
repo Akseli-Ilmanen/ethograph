@@ -446,10 +446,56 @@ class LabelsWidget(QWidget):
                     continue
                 slots.append({"df": intervals_df, "label_ids": branch_ids, "position": position})
 
+        sets = {s.path: s for s in state.prediction_sets}
         for panel, df in prediction_dfs.items():
-            slots.append({"df": df, "label_ids": None, "position": "main", "plots": [panel]})
+            # A set with its own classes draws in them, one row per class.
+            prediction_set = sets.get(panel.prediction_path)
+            mappings = prediction_set.mappings if prediction_set is not None else None
+            rows = self._lane_mappings(mappings)
+            if panel.set_lanes(rows):
+                self.plot_container.schedule_axis_align()
+            panel.highlight_rows(self._selected_unit_classes(mappings))
+            slots.append(
+                {
+                    "df": df,
+                    "label_ids": None,
+                    "position": "main",
+                    "plots": [panel],
+                    "mappings": mappings,
+                    # Only classes given a row are drawn — none at all when every unit is filtered out.
+                    "lanes": panel.lanes if rows is None or rows else {},
+                }
+            )
 
         return slots
+
+    def highlight_unit_rows(self, *_args) -> None:
+        """Mark, in every per-unit set's panel, the rows of the units selected in the neuron table."""
+        sets = {s.path: s for s in self.app_state.prediction_sets}
+        for panel in self.plot_container.prediction_panels():
+            prediction_set = sets.get(panel.prediction_path)
+            panel.highlight_rows(self._selected_unit_classes(prediction_set.mappings if prediction_set else None))
+
+    def _selected_unit_classes(self, mappings: dict | None) -> dict[int, tuple]:
+        ephys = getattr(self.meta_widget, "ephys_widget", None)
+        if mappings is None or ephys is None:
+            return {}
+        return ephys.selected_unit_classes(mappings)
+
+    def _lane_mappings(self, mappings: dict | None) -> dict | None:
+        """The classes of a set that get a row in its panel, top row first.
+
+        A set with a class per unit follows the neuron table: the units its
+        filters let through, in the raster's row order. Any other set shows
+        every class, in id order.
+        """
+        if mappings is None:
+            return None
+        ephys = getattr(self.meta_widget, "ephys_widget", None)
+        unit_rows = ephys.unit_class_rows(mappings) if ephys is not None else None
+        if unit_rows is not None:
+            return unit_rows
+        return {lid: mappings[lid] for lid in sorted(lid for lid in mappings if isinstance(lid, int))}
 
     def sizeHint(self):
         return QSize(300, LABELS_WIDGET_SIZE_HINT_HEIGHT)
@@ -1093,10 +1139,18 @@ class LabelsWidget(QWidget):
         if self.io_widget.pred_load_mode() == "labels":
             self._import_predictions_as_labels(labels_df, str(path), store)
             return
+        self.show_prediction_set(PredictionSet(path, labels_df, store))
+
+    def show_prediction_set(self, prediction_set: PredictionSet) -> None:
+        """Load *prediction_set* as a read-only overlay with a panel of its own.
+
+        The one way a set joins ``app_state.prediction_sets`` — an imported
+        file, or a table made in memory (labels created from a feature). A
+        set of the same path replaces the one already loaded.
+        """
+        path = prediction_set.path
         threshold = self.io_widget.pred_confidence_threshold_spin.value()
-        self.app_state.prediction_sets = add_prediction_set(
-            self.app_state.prediction_sets, PredictionSet(path, labels_df, store)
-        )
+        self.app_state.prediction_sets = add_prediction_set(self.app_state.prediction_sets, prediction_set)
         self.app_state.pred_confidence_threshold = threshold
         self._set_current_prediction_set(path)
 
@@ -1564,7 +1618,7 @@ class LabelsWidget(QWidget):
             if button == Qt.LeftButton and not self.ready_for_label_click:
                 if click_trial != self.app_state.trials_sel:
                     self._switch_trial_for_click(click_trial)
-                self._check_labels_click(t_rel, individual, clicked_plot)
+                self._check_labels_click(t_rel, individual, clicked_plot, click_info.get("y"))
 
         except (KeyError, IndexError, ValueError, AttributeError) as e:
             logger.error("Error in plot click handling: %s", e)
@@ -1643,7 +1697,7 @@ class LabelsWidget(QWidget):
             return False
         return self._mappings[lid].get("event_type", EVENT_TYPE_STATE) == EVENT_TYPE_POINT
 
-    def _check_labels_click(self, t_clicked: float, individual: str, panel=None) -> bool:
+    def _check_labels_click(self, t_clicked: float, individual: str, panel=None, y: float | None = None) -> bool:
         """Check if the click is on an existing interval or point, and select it.
 
         **Any label the user can see is selectable** — the gate is the shown
@@ -1663,9 +1717,11 @@ class LabelsWidget(QWidget):
             t_clicked: Time in seconds of the click
             individual: Individual name to check
             panel: The panel clicked
+            y: Height of the click on that panel — which row, where classes have rows
         """
         if getattr(panel, "panel_type", None) == "predictions":
-            return self._check_predictions_click(t_clicked, individual, panel.prediction_path)
+            lane = panel.lane_label_at(y) if y is not None else None
+            return self._check_predictions_click(t_clicked, individual, panel.prediction_path, lane)
         df = self.app_state.label_intervals
         if df is not None and not df.empty:
             active_ids = self.app_state.active_label_ids
@@ -1717,14 +1773,21 @@ class LabelsWidget(QWidget):
             df = df[df["trial"] == self.app_state.trials_sel]
         return df
 
-    def _check_predictions_click(self, t_clicked: float, individual: str, path: Path | None) -> bool:
+    def _check_predictions_click(
+        self, t_clicked: float, individual: str, path: Path | None, lane: int | None = None
+    ) -> bool:
         """Same lookup as :meth:`_check_labels_click`, over one prediction panel's file.
 
         Predictions are read-only — no branch/mapping, no class adoption,
         and :meth:`_delete_label`/:meth:`_edit_label` refuse a prediction
         selection — but they select and drive V playback just the same.
+        *lane* is the class whose row was clicked, on a panel that draws one
+        row per class: classes overlap in time there, so the time alone does
+        not say which was meant.
         """
         df = self._prediction_rows(path)
+        if df is not None and lane is not None:
+            df = df[df["labels"] == lane]
         if df is None or df.empty:
             return False
 

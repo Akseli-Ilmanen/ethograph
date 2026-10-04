@@ -257,6 +257,16 @@ def firing_rate_to_xarray(
     )
 
 
+#: The instantaneous rate above which the birdsong literature calls spikes a burst:
+#: "A burst was defined as the interval over which the instantaneous firing rate
+#: exceeded a threshold of 125 Hz" — Leonardo A, Fee MS (2005). Ensemble coding of
+#: vocal control in birdsong. J Neurosci 25(3):652-661,
+#: https://doi.org/10.1523/JNEUROSCI.3036-04.2005. Other songbird studies use 100 Hz.
+#: A starting point for a threshold the user sets, tuned to RA neurons — not a constant
+#: of nature.
+BURST_INSTANTANEOUS_RATE_HZ = 125.0
+
+
 def instantaneous_rate(spike_times: np.ndarray, at: np.ndarray) -> np.ndarray:
     """The instantaneous firing rate at each of *at*: ``1 / ISI`` of the inter-spike interval it falls in.
 

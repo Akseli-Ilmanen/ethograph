@@ -38,7 +38,7 @@ from .source_popup import IMAGE_BROWSE, ChannelSelectDialog, PlotTypePicker, Sou
 from .widget_trials import TrialsWidget
 from .widgets_changepoints import ChangepointsWidget
 from .widgets_data import DataPanel, DataWidget
-from .widgets_ephys import EphysWidget
+from .widgets_ephys import FIRING_RATE_FEATURE, EphysWidget
 from .widgets_help import HelpWidget
 from .widgets_io import IOWidget
 from .widgets_labels import LabelsWidget
@@ -163,6 +163,12 @@ class MetaWidget(GridSectionContainer):
         self.navigation_widget.set_plot_container(self.plot_container)
         self.ephys_widget.set_plot_container(self.plot_container)
         self.ephys_widget.set_meta_widget(self)
+        # A per-unit label set shows the raster's rows: redraw it when they change.
+        self.ephys_widget.unit_rows_changed.connect(self.plot_container.schedule_labels_redraw)
+        # ...and marks the rows of the units selected in the neuron table.
+        self.ephys_widget.cluster_table.selectionModel().selectionChanged.connect(
+            self.labels_widget.highlight_unit_rows
+        )
         self.ephys_widget.set_data_widget(self.data_widget)
         self.ephys_widget.io_widget = self.io_widget
 
@@ -304,8 +310,12 @@ class MetaWidget(GridSectionContainer):
             "spaceplot": getattr(ps, "spaceplot_panel", None),
             "radialplot": getattr(ps, "radialplot_panel", None),
             "spectrogram": getattr(ps, "spectrogram_panel", None),
+            "rasterdisplay": getattr(self.ephys_widget, "raster_panel", None),
+            "heatmapsort": getattr(ps, "heatmap_sort_group", None),
             "heatmap": getattr(ps, "heatmap_panel", None),
             "shared": getattr(ps, "shared_widget", None),
+            # Last: the neuron table is the tall one, under whatever is specific to the panel.
+            "neurons": getattr(self.ephys_widget, "neuron_table_panel", None),
         }
         panel = RightContextPanel(sections)
         panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -726,6 +736,7 @@ class MetaWidget(GridSectionContainer):
             return
         plot = self.plot_container.add_panel("heatmap", feature=feature)
         if plot is not None:
+            ew.sync_firing_rate_panels()
             self._activate_panel(plot, "heatmap")
 
     def _add_neo_panel(self, stream_name: str):
@@ -881,6 +892,10 @@ class MetaWidget(GridSectionContainer):
                 pass
         notify(f"Added image view: {Path(path).name}")
 
+    @staticmethod
+    def _shows_firing_rates(plot) -> bool:
+        return plot is not None and plot._effective_feature() == FIRING_RATE_FEATURE
+
     def _on_plot_focus(self, panel_type: str):
         """Show only the clicked plot's settings, unless zen / Labels / Nav active.
 
@@ -905,6 +920,9 @@ class MetaWidget(GridSectionContainer):
                 self.data_widget.sync_sidebar_from_active_plot()
             if hasattr(self.plot_settings_widget, "sync_axes_to_active_plot"):
                 self.plot_settings_widget.sync_axes_to_active_plot()
+        if panel_type == "heatmap" and self._shows_firing_rates(self.plot_container.active_feature_plot):
+            # A heatmap of units is a neuron panel: the neuron table, not the xarray coords.
+            panel_type = "firing_rate"
         has_pose = bool(getattr(self.app_state, "has_pose", False)) or self._pose_available()
         if self.collapsible_widgets:
             self.collapsible_widgets[0].expand()

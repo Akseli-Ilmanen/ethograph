@@ -11,6 +11,7 @@ import pandas as pd
 import pynapple as nap
 import pyqtgraph as pg
 from qtpy.QtCore import (
+    QItemSelection,
     QItemSelectionModel,
     QRectF,
     Qt,
@@ -35,6 +36,7 @@ from qtpy.QtWidgets import (
     QSizePolicy,
     QSpinBox,
     QSplitter,
+    QStyle,
     QStyledItemDelegate,
     QTableView,
     QTableWidget,
@@ -53,6 +55,8 @@ from ethograph.gui.table_filter import (
     MultiColumnFilterProxy,
     NumericFilterDialog,
 )
+from ethograph.gui.unit_events import UnitEventsArea
+from ethograph.labels.feature_events import classes_along
 from ethograph.utils.qt import (
     find_combo_index,
     get_combo_value,
@@ -66,15 +70,17 @@ from ..io.ephys_loader import load_ephys
 from ..io.plot_sources import FileSource
 from ..io.validation import EPHYS_EXTENSIONS_RAW
 from .app_constants import CLUSTER_TABLE_MAX_HEIGHT, CLUSTER_TABLE_ROW_HEIGHT
-from .heatmap_sort import RASTERMAP_MAX_SAMPLES, RASTERMAP_MIN_ROWS, rastermap_order
+from .heatmap_sort import RASTERMAP_MAX_SAMPLES, RASTERMAP_MIN_ROWS, argmax_window_order, rastermap_order
 from .raster_render import (
     MAX_TICK_WIDTH,
+    PEAK_ORDERS,
     RENDER_MODES,
     ROW_ORDERS,
     TICK_WIDTH_AUTO,
     group_by_color,
     order_units,
 )
+from .right_context import CONTEXT_TITLE_STYLE
 
 logger = logging.getLogger(__name__)
 
@@ -486,7 +492,7 @@ def _write_params_py(folder: Path, params: dict):
 
 _COLOR_ROLE = Qt.UserRole + 2
 
-#: Raster dots of a unit that passes the cluster table's filters but is not selected.
+#: Raster dots of a unit that passes the neuron table's filters but is not selected.
 _UNSELECTED_DOT_COLOR = (0, 0, 0)
 
 
@@ -531,7 +537,7 @@ class _ClusterIdDelegate(QStyledItemDelegate):
         if color is not None:
             painter.save()
             painter.fillRect(option.rect, QBrush(color))
-            if option.state & 0x0002:  # QStyle.State_Selected
+            if option.state & QStyle.StateFlag.State_Selected:
                 painter.fillRect(option.rect, QBrush(QColor(255, 255, 255, 50)))
             r, g, b = color.red(), color.green(), color.blue()
             text_color = QColor(0, 0, 0) if (r * 0.299 + g * 0.587 + b * 0.114) > 150 else QColor(255, 255, 255)
@@ -593,7 +599,8 @@ class EphysWidget(QWidget):
     """Ephys controls with toggle-button tabs: Ephys trace | Neuron jumping."""
 
     cluster_selected = Signal(int)  # emitted when a single cluster row is selected
-    unit_filter_changed = Signal()  # the cluster table's filters changed which units pass
+    unit_filter_changed = Signal()  # the neuron table's filters changed which units pass
+    unit_rows_changed = Signal()  # which units have a row, or the order of the rows, changed
 
     def __init__(self, shell, app_state, parent=None):
         super().__init__(parent=parent)
@@ -772,9 +779,15 @@ class EphysWidget(QWidget):
         self._unselect_btn.clicked.connect(self._unselect_clusters)
         _sel_row.addWidget(self._unselect_btn)
 
-        group_layout.addLayout(_sel_row)
+        self._selection_row = _sel_row
 
         self._multi_cluster_colors: dict[int, tuple] = {}
+        # Unit ids by when their rate peaks, as last sorted (the PEAK_ORDERS row orders).
+        self._peak_units: list[int] | None = None
+        # The units drawn on each raster row, by row key (see _raster_rows).
+        self._raster_row_units: dict[int, list[int]] = {}
+        # True while a click on a plot row changes the table's selection: the view stays where it is.
+        self._selecting_from_plot = False
 
         self._cluster_model = QStandardItemModel()
         self._cluster_proxy = _ChannelFilterProxy()
@@ -828,9 +841,12 @@ class EphysWidget(QWidget):
         # layoutChanged, not the header's sortIndicatorChanged: that one fires before the rows have moved.
         self._cluster_proxy.layoutChanged.connect(self._on_cluster_table_sorted)
 
+        # Raster-only settings: how its spikes are drawn.
+        self.raster_panel = QGroupBox("Raster display")
         raster_row = QHBoxLayout()
         raster_row.setSpacing(4)
-        raster_row.setContentsMargins(0, 0, 0, 0)
+        raster_row.setContentsMargins(2, 2, 2, 2)
+        self.raster_panel.setLayout(raster_row)
         raster_row.addWidget(QLabel("Raster:"))
         self.raster_render_combo = QComboBox()
         for key, label in RENDER_MODES.items():
@@ -857,31 +873,60 @@ class EphysWidget(QWidget):
         self.raster_tick_width_spin.setValue(self.app_state.get_with_default("raster_tick_width"))
         self.raster_tick_width_spin.valueChanged.connect(self._on_raster_tick_width_changed)
         raster_row.addWidget(self.raster_tick_width_spin)
+        raster_row.addStretch()
 
-        raster_row.addWidget(QLabel("Rows:"))
+        # What every neuron panel's sidebar shows: the one row order they all
+        # follow, and the table that filters, sorts and selects the units.
+        self.neuron_table_panel = QWidget()
+        neuron_layout = QVBoxLayout()
+        neuron_layout.setSpacing(2)
+        neuron_layout.setContentsMargins(0, 0, 0, 0)
+        self.neuron_table_panel.setLayout(neuron_layout)
+        neuron_title = QLabel("Neuron table settings")
+        neuron_title.setStyleSheet(CONTEXT_TITLE_STYLE)
+        neuron_layout.addWidget(neuron_title)
+
+        order_row = QHBoxLayout()
+        order_row.setSpacing(4)
+        order_row.setContentsMargins(0, 0, 0, 0)
+        order_row.addWidget(QLabel("Row order:"))
         self.raster_row_order_combo = QComboBox()
         for key, label in ROW_ORDERS.items():
             self.raster_row_order_combo.addItem(label, key)
         self.raster_row_order_combo.setToolTip(
+            "The order of the units in every panel that lists them (raster, firing rates, per-unit labels).\n"
             "Probe depth: a row per channel, aligned with the trace panel (Kilosort only).\n"
-            "Cluster table: a row per unit, in the table's order — sort the table to reorder.\n"
-            "Rastermap: a row per unit, units with similar activity next to each other."
+            "Neuron table: the table's order — sort the table to reorder.\n"
+            "Rastermap: units with similar activity next to each other; fitted once, then kept.\n"
+            "Peak time (each trial): by when each unit's rate peaks, earliest on top; re-sorted on every trial.\n"
+            "Peak time (visible window): the same over what is on screen, sorted when the button is pressed."
         )
         self.raster_row_order_combo.currentIndexChanged.connect(self._on_raster_row_order_changed)
-        raster_row.addWidget(self.raster_row_order_combo)
+        order_row.addWidget(self.raster_row_order_combo)
 
-        self.rastermap_fit_btn = QPushButton("Refit")
-        self.rastermap_fit_btn.setToolTip("Fit Rastermap again on the units and trial shown now")
-        self.rastermap_fit_btn.clicked.connect(self._fit_rastermap)
-        raster_row.addWidget(self.rastermap_fit_btn)
-        raster_row.addStretch()
-        layout.addLayout(raster_row)
+        self.order_window_spin = QDoubleSpinBox()
+        self.order_window_spin.setRange(0.01, 600.0)
+        self.order_window_spin.setDecimals(2)
+        self.order_window_spin.setSuffix(" s")
+        self.order_window_spin.setToolTip("Length of the window a unit's peak is looked for in")
+        self.order_window_spin.setValue(self.app_state.get_with_default("heatmap_sort_window_s"))
+        self.order_window_spin.valueChanged.connect(self._on_order_window_changed)
+        order_row.addWidget(self.order_window_spin)
+
+        self.order_apply_btn = QPushButton("Refit")
+        self.order_apply_btn.setToolTip("Fit or sort again on the units and the trial or window shown now")
+        self.order_apply_btn.clicked.connect(self._on_order_apply_clicked)
+        order_row.addWidget(self.order_apply_btn)
+        order_row.addStretch()
+        neuron_layout.addLayout(order_row)
+        neuron_layout.addLayout(self._selection_row)
+        neuron_layout.addWidget(self.cluster_table)
+        self.unit_events = UnitEventsArea(self.app_state, self, FIRING_RATE_UNIT_DIM)
+        neuron_layout.addWidget(self.unit_events)
         self._sync_row_order_combo()
 
-        cluster_table_header = QLabel("Cluster Table")
-        cluster_table_header.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaa; padding: 2px 0px 0px 2px;")
-        layout.addWidget(cluster_table_header)
-        layout.addWidget(self.cluster_table)
+        main_layout.addWidget(self.raster_panel)
+        main_layout.addWidget(self.neuron_table_panel)
 
         main_layout.addWidget(self.traceview_panel)
 
@@ -1242,7 +1287,7 @@ class EphysWidget(QWidget):
             self._tsgroup = build_tsgroup(self._spike_times_s, self._spike_clusters)
             if self._cluster_df is None:
                 # The table is the unit filter, so it lists the units even without Phy's metadata.
-                notify("No cluster_info.tsv found — the cluster table lists the units without metadata.", "warning")
+                notify("No cluster_info.tsv found — the neuron table lists the units without metadata.", "warning")
                 self._cluster_df = self._build_cluster_df_from_tsgroup(self._tsgroup)
         self._channel_positions = self._load_file(folder / "channel_positions.npy", np.load)
         self._channel_map = self._load_file(folder / "channel_map.npy", np.load, flatten=True)
@@ -1292,17 +1337,26 @@ class EphysWidget(QWidget):
             notify(f"Failed to load Pynapple file: {e}", "warning")
             return
 
-        if not hasattr(data, "keys") or "units" not in data:
-            available = list(data.keys()) if hasattr(data, "keys") else []
+        # An .npz holds one object, so a saved TsGroup comes back as itself
+        # (its keys are unit ids); an NWB file is a container with a 'units' entry.
+        if isinstance(data, nap.TsGroup):
+            tsgroup = data
+        elif isinstance(data, nap.NWBFile):
+            if "units" not in data:
+                notify(
+                    f"No 'units' key found in {path.name}.\nAvailable keys: {list(data.keys())}",
+                    "warning",
+                )
+                return
+            tsgroup = data["units"]
+            if not isinstance(tsgroup, nap.TsGroup):
+                notify(f"'units' is not a TsGroup (got {type(tsgroup).__name__})", "warning")
+                return
+        else:
             notify(
-                f"No 'units' key found in {path.name}.\nAvailable keys: {available}",
+                f"{path.name} holds a {type(data).__name__}, not a TsGroup of spike times.",
                 "warning",
             )
-            return
-
-        tsgroup = data["units"]
-        if not isinstance(tsgroup, nap.TsGroup):
-            notify(f"'units' is not a TsGroup (got {type(tsgroup).__name__})", "warning")
             return
 
         self._tsgroup = tsgroup
@@ -1411,7 +1465,7 @@ class EphysWidget(QWidget):
         return self._trial_start_session() + ephys_offset
 
     def filtered_unit_ids(self) -> list[int]:
-        """Ids of the units passing the cluster table's filters — the one unit filter.
+        """Ids of the units passing the neuron table's filters — the one unit filter.
 
         Every consumer of units (raster, firing rates, PSTH) reads this, the
         way every trial operation reads ``app_state.trials``. Table order.
@@ -1430,9 +1484,12 @@ class EphysWidget(QWidget):
         return ids
 
     def _on_unit_filter_changed(self) -> None:
+        if self._row_order() == "peak_trial":
+            self._sort_by_peak()
         self._draw_raster()
         self._refresh_firing_rates()
         self.unit_filter_changed.emit()
+        self.unit_rows_changed.emit()
 
     def _spike_table(self) -> SpikeTable:
         """Every spike of the loaded units, time-sorted; rebuilt only when the TsGroup is replaced."""
@@ -1474,6 +1531,8 @@ class EphysWidget(QWidget):
         order = self._row_order()
         if order == "rastermap":
             return order_units(unit_ids, self._rastermap_units)
+        if order in PEAK_ORDERS:
+            return order_units(unit_ids, self._peak_units)
         if order == "depth":
             channels = self._unit_channels(unit_ids)
             rank = {int(hw): i for i, hw in enumerate(self._depth_ordered_channels())}
@@ -1485,7 +1544,8 @@ class EphysWidget(QWidget):
 
         By depth, Kilosort units sit at their best channel (the trace panel's
         y-space); in every other order each unit gets a row of its own, in the
-        order ``unit_ids`` come in.
+        order ``unit_ids`` come in. Either way a row is labelled with the ids
+        of the units on it.
         """
         raster = self.plot_container.raster_plot
         if self._row_order() == "depth":
@@ -1495,11 +1555,19 @@ class EphysWidget(QWidget):
             if total > 0:
                 spacing = self.plot_container.ephys_trace_plot.buffer.channel_spacing
                 raster.sync_y_axis({int(hw): (total - 1 - i) * spacing for i, hw in enumerate(all_ch)}, spacing, total)
-            return self._unit_channels(unit_ids)
+            channels = self._unit_channels(unit_ids)
+            on_channel: dict[int, list[int]] = {}
+            for cid in unit_ids:
+                on_channel.setdefault(channels[cid], []).append(cid)
+            self._raster_row_units = on_channel
+            raster.set_row_labels({hw: ", ".join(map(str, ids)) for hw, ids in on_channel.items()})
+            return channels
         raster.follows_trace_y = False
         rows = {cid: i for i, cid in enumerate(unit_ids)}
         total = len(rows)
         raster.sync_y_axis({i: float(total - 1 - i) for i in range(total)}, 1.0, total)
+        raster.set_row_labels({i: str(cid) for cid, i in rows.items()})
+        self._raster_row_units = {i: [cid] for cid, i in rows.items()}
         self._pynapple_cid_to_row = rows
         return rows
 
@@ -1529,7 +1597,9 @@ class EphysWidget(QWidget):
         combo.blockSignals(True)
         combo.setCurrentIndex(combo.findData(order))
         combo.blockSignals(False)
-        self.rastermap_fit_btn.setEnabled(order == "rastermap")
+        self.order_apply_btn.setText("Refit" if order == "rastermap" else "Sort now")
+        self.order_apply_btn.setEnabled(order in ("rastermap", "peak_window"))
+        self.order_window_spin.setVisible(order in PEAK_ORDERS)
 
     def _on_raster_render_changed(self, _index: int) -> None:
         self.app_state.raster_render_mode = self.raster_render_combo.currentData()
@@ -1544,17 +1614,64 @@ class EphysWidget(QWidget):
     def _on_raster_row_order_changed(self, _index: int) -> None:
         self.app_state.raster_row_order = self.raster_row_order_combo.currentData()
         self._sync_row_order_combo()
-        if self._row_order() == "rastermap" and self._rastermap_units is None:
+        order = self._row_order()
+        if order == "rastermap" and self._rastermap_units is None:
             # Picking the order asks for the fit; the button is for fitting it again.
             self._fit_rastermap()
             return
+        if order in PEAK_ORDERS:
+            self._sort_by_peak()
+        self._apply_unit_order()
+
+    def _apply_unit_order(self) -> None:
+        """Redraw every view that lists units by row, in the order now in effect."""
         self._draw_raster()
         self._refresh_firing_rates()
+        self.unit_rows_changed.emit()
 
     def _on_cluster_table_sorted(self, *_) -> None:
         if self._row_order() == "table":
-            self._draw_raster()
-            self._refresh_firing_rates()
+            self._apply_unit_order()
+
+    def _on_order_apply_clicked(self) -> None:
+        if self._row_order() == "rastermap":
+            self._fit_rastermap()
+            return
+        self._sort_by_peak()
+        self._apply_unit_order()
+
+    def _on_order_window_changed(self, window_s: float) -> None:
+        self.app_state.heatmap_sort_window_s = window_s
+        if self._row_order() == "peak_trial":
+            self._sort_by_peak()
+            self._apply_unit_order()
+
+    def _peak_sort_span(self) -> tuple[float, float] | None:
+        """The stretch of the spike clock a peak order is read from: the trial, or what is on screen."""
+        span = self._trial_span_spike_clock()
+        if span is None or self._row_order() != "peak_window" or not self.plot_container:
+            return span
+        offset = self._ephys_offset()
+        x0, x1 = self.plot_container.raster_plot.get_current_xlim()
+        t0, t1 = max(x0 + offset, span[0]), min(x1 + offset, span[1])
+        return (t0, t1) if t1 > t0 else span
+
+    def _sort_by_peak(self) -> None:
+        """Order the filtered units by the window their firing rate is highest in: earliest first."""
+        span = self._peak_sort_span()
+        unit_ids = self.filtered_unit_ids()
+        if self._tsgroup is None or span is None or not unit_ids:
+            return
+        rates, centers = self._bin_rates(unit_ids, *span)
+        if len(centers) == 0:
+            return
+        order = argmax_window_order(
+            rates,
+            centers,
+            float(self.app_state.get_with_default("heatmap_sort_window_s")),
+            float(self.app_state.get_with_default("heatmap_sort_overlap")),
+        )
+        self._peak_units = [unit_ids[i] for i in order]
 
     def _fit_rastermap(self) -> None:
         """Fit Rastermap on the filtered units' spike counts over the visible window; keep the order."""
@@ -1582,6 +1699,7 @@ class EphysWidget(QWidget):
         self._rastermap_units = [unit_ids[i] for i in order]
         self._draw_raster()
         self._refresh_firing_rates()
+        self.unit_rows_changed.emit()
         notify(f"Rastermap order fitted on {len(unit_ids)} units")
 
     def _build_cluster_best_channel_map(self) -> dict[int, int]:
@@ -1944,6 +2062,53 @@ class EphysWidget(QWidget):
         source_idx = self._cluster_proxy.mapToSource(proxy_idx)
         return self._cluster_model.itemFromIndex(source_idx)
 
+    def selected_unit_ids(self) -> list[int]:
+        """Ids of the units whose rows are selected in the neuron table, in table order."""
+        cid_col = self._find_col_by_header("", exact="id")
+        if cid_col is None:
+            return []
+        rows = sorted(index.row() for index in self.cluster_table.selectionModel().selectedRows())
+        items = [self._source_item(row, cid_col) for row in rows]
+        return [int(item.text()) for item in items if item is not None]
+
+    def _on_unit_row_clicked(self, click_info: dict) -> None:
+        """Ctrl+click on a row of the raster or of a firing-rate heatmap toggles its units in the table."""
+        ctrl = click_info.get("modifiers", Qt.NoModifier) & Qt.ControlModifier
+        if click_info.get("button") != Qt.LeftButton or not ctrl or self.app_state.label_drawing_armed:
+            return
+        plot = click_info.get("plot")
+        if plot is self.plot_container.raster_plot:
+            unit_ids = self._raster_row_units.get(plot.row_at(click_info["y"]), [])
+        elif plot in self.plot_container.heatmap_plots and plot._effective_feature() == FIRING_RATE_FEATURE:
+            label = plot.row_label_at(click_info["y"])
+            unit_ids = [] if label is None else [int(label)]
+        else:
+            return
+        self.toggle_units_selected(unit_ids)
+
+    def toggle_units_selected(self, unit_ids: list[int]) -> None:
+        """Flip the table selection of *unit_ids*, leaving the rest of the selection as it is."""
+        cid_col = self._find_col_by_header("", exact="id")
+        if cid_col is None or not unit_ids:
+            return
+        wanted = set(unit_ids)
+        proxy = self._cluster_proxy
+        selection = QItemSelection()
+        for row in range(proxy.rowCount()):
+            item = self._source_item(row, cid_col)
+            if item is not None and int(item.text()) in wanted:
+                selection.select(proxy.index(row, 0), proxy.index(row, 0))
+        if selection.isEmpty():
+            return
+        self._selecting_from_plot = True
+        try:
+            self.cluster_table.selectionModel().select(
+                selection, QItemSelectionModel.Toggle | QItemSelectionModel.Rows
+            )
+        finally:
+            self._selecting_from_plot = False
+        self.cluster_table.scrollTo(selection.indexes()[0])
+
     def _on_cluster_row_selected(self, _selected=None, _deselected=None):
         indexes = self.cluster_table.selectionModel().selectedRows()
         if not indexes:
@@ -1992,7 +2157,8 @@ class EphysWidget(QWidget):
 
         ks_ch = self._get_ks_channel_for_row(proxy_row, hw_col_idx)
         self._draw_spikes_for_cluster(cluster_id, ks_ch)
-        self._jump_to_first_spike()
+        if not self._selecting_from_plot:
+            self._jump_to_first_spike()
         self._sync_cluster_id_to_combo(cluster_id)
 
         self._current_cluster_id_for_psth = cluster_id
@@ -2078,6 +2244,7 @@ class EphysWidget(QWidget):
         self._draw_raster()
 
     def _apply_cluster_colors_to_table(self):
+        self.sync_firing_rate_panels()
         model = self._cluster_model
         cid_col = self._find_col_by_header("", exact="id")
         if cid_col is None:
@@ -2336,7 +2503,7 @@ class EphysWidget(QWidget):
 
         unit_ids = self.ordered_unit_ids()
         if not unit_ids:
-            notify("No units pass the cluster table's filters.", "warning")
+            notify("No units pass the neuron table's filters.", "warning")
             return False
         bin_size = self.fr_bin_spin.value()
         sigma = self.fr_sigma_spin.value()
@@ -2350,7 +2517,7 @@ class EphysWidget(QWidget):
         if n_cells > _FIRING_RATE_MAX_CELLS:
             notify(
                 f"Firing rates of {len(unit_ids)} units in {bin_size:g} s bins over this trial would be "
-                f"{n_cells:,} values — raise the bin size or filter the cluster table.",
+                f"{n_cells:,} values — raise the bin size or filter the neuron table.",
                 "warning",
             )
             return False
@@ -2367,7 +2534,7 @@ class EphysWidget(QWidget):
             )
         )
         self._fr_cache_key = cache_key
-        self.fr_status_label.setText(f"{len(unit_ids)} units (cluster table filter)")
+        self.fr_status_label.setText(f"{len(unit_ids)} units (neuron table filter)")
         if self.data_widget:
             self.data_widget.refresh_feature_choices()
         return True
@@ -2388,6 +2555,39 @@ class EphysWidget(QWidget):
     def firing_rate_units(self) -> list[str]:
         """The units a firing rate can be read for, as the ``firing_rate`` feature lists them."""
         return [str(cid) for cid in self.ordered_unit_ids()]
+
+    def unit_class_rows(self, mappings: dict[int, dict]) -> dict[int, dict] | None:
+        """The classes of a per-unit label vocabulary that have a row: the filtered units', top row first.
+
+        A set made along the units (``unit_<id>`` classes) is shown the way
+        the raster is — the units the neuron table's filters let through, in
+        the raster's row order — so a row of one is the same unit as the row
+        of the other. ``None`` for a vocabulary that is not per unit, or with
+        no units loaded.
+        """
+        classes = classes_along(mappings, FIRING_RATE_UNIT_DIM)
+        if not classes or self._tsgroup is None:
+            return None
+        return {classes[unit]: mappings[classes[unit]] for unit in self.firing_rate_units() if unit in classes}
+
+    def selected_unit_classes(self, mappings: dict[int, dict]) -> dict[int, tuple]:
+        """The classes of a per-unit label vocabulary whose units are selected in the neuron table.
+
+        Each with the colour its unit is drawn in, so every panel marks a
+        selected unit the same way.
+        """
+        classes = classes_along(mappings, FIRING_RATE_UNIT_DIM)
+        return {
+            classes[str(unit)]: self._multi_cluster_colors.get(unit, _CLUSTER_COLORS[0])
+            for unit in self.selected_unit_ids()
+            if str(unit) in classes
+        }
+
+    def spike_trains(self) -> dict[str, nap.Ts | nap.Tsd]:
+        """Each filtered unit's spike train, keyed and ordered as :meth:`firing_rate_units` lists them."""
+        if self._tsgroup is None:
+            return {}
+        return {str(cid): self._tsgroup[cid] for cid in self.ordered_unit_ids()}
 
     def firing_rate_windows(self, trials: list) -> Iterator[tuple[object, FiringRateReader, float, float, float]]:
         """Yield ``(trial, reader, t0, t1, shift)`` per trial: its firing rates, read on the spike clock.
@@ -2412,9 +2612,20 @@ class EphysWidget(QWidget):
             yield trial, reader, start, start + collection.trial_range(idx).duration, start
 
     def _refresh_firing_rates(self) -> None:
-        """Re-bin the firing rates if they are a feature: the trial, the units or the bin changed."""
+        """Re-bin the firing rates if they are in use: the trial, the units or the bin changed.
+
+        In use means they are a feature already, or a panel names them — a
+        restored layout does, before anything has binned them.
+        """
         loader = derived_loader_for(self.app_state)
-        if loader is None or not loader.is_derived(FIRING_RATE_FEATURE):
+        if loader is None or not self.plot_container:
+            return
+        shown = [
+            plot
+            for plot in [*self.plot_container.line_plots, *self.plot_container.heatmap_plots]
+            if plot._effective_feature() == FIRING_RATE_FEATURE
+        ]
+        if not shown and not loader.is_derived(FIRING_RATE_FEATURE):
             return
         if not self._compute_firing_rates(force=True):
             # Nothing to bin here: a stale snapshot would show another trial's rates as this one's.
@@ -2422,11 +2633,21 @@ class EphysWidget(QWidget):
             if self.data_widget:
                 self.data_widget.refresh_feature_choices()
             return
-        for plot in [*self.plot_container.line_plots, *self.plot_container.heatmap_plots]:
-            if plot._effective_feature() == FIRING_RATE_FEATURE:
-                plot.resync_selections()
-                plot.invalidate_data()
-                plot.update_plot()
+        for plot in shown:
+            plot.resync_selections()
+            plot.invalidate_data()
+            plot.update_plot()
+        self.sync_firing_rate_panels()
+
+    def sync_firing_rate_panels(self) -> None:
+        """Make every firing-rate heatmap a neuron panel: rows in the unit order, selected units outlined."""
+        if not self.plot_container:
+            return
+        colors = {str(cid): color for cid, color in self._multi_cluster_colors.items()}
+        for plot in self.plot_container.heatmap_plots:
+            shows_rates = plot._effective_feature() == FIRING_RATE_FEATURE
+            plot.keeps_source_order = shows_rates
+            plot.set_row_highlights(colors if shows_rates else {})
 
     def _on_fr_compute_clicked(self) -> None:
         """Compute the firing rates and show them in the active feature panel."""
@@ -2488,10 +2709,18 @@ class EphysWidget(QWidget):
     def set_plot_container(self, plot_container):
         self.plot_container = plot_container
         plot_container.plot_changed.connect(self._on_plot_changed)
+        plot_container.raster_plot.plot_clicked.connect(self._on_unit_row_clicked)
+        for plot in plot_container.heatmap_plots:
+            self._follow_panel(plot)
+        plot_container.panel_added.connect(self._follow_panel)
         ephys_plot = plot_container.ephys_trace_plot
         if ephys_plot is not None:
             ephys_plot.gain_scroll_requested.connect(self._on_gain_scroll)
             ephys_plot.visible_channels_changed.connect(self._on_visible_channels_changed)
+
+    def _follow_panel(self, plot) -> None:
+        """A Ctrl+click on a unit's row in a new panel selects that unit, as in the raster."""
+        plot.plot_clicked.connect(self._on_unit_row_clicked)
 
     def set_meta_widget(self, meta_widget):
         self.meta_widget = meta_widget
@@ -2507,6 +2736,8 @@ class EphysWidget(QWidget):
     def on_trial_changed(self):
         if not self.data_widget:
             return
+        if self._row_order() == "peak_trial":
+            self._sort_by_peak()
         # The firing rates are a snapshot of one trial: bin the new one in their place.
         self._refresh_firing_rates()
 

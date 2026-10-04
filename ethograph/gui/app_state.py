@@ -31,6 +31,7 @@ from ethograph.labels import exporters
 from ethograph.labels import workflow as wf
 from ethograph.labels.curation import trial_curation_status
 from ethograph.labels.export import enrich_labels_df
+from ethograph.labels.predictions import LabelSource
 from ethograph.labels.tsv_store import (
     LabelEdit,
     LabelHistory,
@@ -218,6 +219,10 @@ class AppStateSpec:
         "prediction_sets": (list, [], False),
         "pred_labels_df": (pd.DataFrame | None, None, False),
         "pred_store": (object | None, None, False),
+        # The prediction set (its path, as a string) label navigation and the
+        # review grids read instead of the working labels; None = the working
+        # labels. See label_source().
+        "label_source_path": (str | None, None, False),
         # The run folder whose predictions were imported *as labels*: it has no
         # panel, so its confidence curve is drawn on the feature plots instead.
         "labels_pred_store": (object | None, None, False),
@@ -378,6 +383,8 @@ class AppStateSpec:
         # pref (not per-dataset). Only affects which file the DECODER reads;
         # all alignment/frame math stays on the source.
         "video_quality_mode": (str, "full", True),
+        # Height in pixels of the proxy copy (one of video_proxy.PROXY_HEIGHTS).
+        "video_proxy_height": (int, 480, True),
         "audio_path": (str | None, None, False),
         # audio_source_map key driving audio PLAYBACK (last-clicked audio panel);
         # None follows the global mic combo. Distinct from what each panel draws.
@@ -482,7 +489,7 @@ class AppStateSpec:
         "detect_quad_decimate": (float, 1.0, True, SCOPE_LOCAL),
         "detect_decode_sharpening": (float, 0.25, True),
         "detect_tag_corners": (bool, False, True),
-        # Printing the tags (cover page Pre-recording tools ▸ Print tag sheet…). Page setup is a property
+        # Printing the tags (cover page More tools ▸ Print tag sheet…). Page setup is a property
         # of the *printer*, so it is global; the camera figures the minimum tag
         # size is computed from describe THIS rig, so they are local. The rows of
         # a sheet are not settings at all.
@@ -595,7 +602,8 @@ class AppStateSpec:
         "ava_use_softmax_amp": (bool, True, True),
         # Heatmap-specific display
         "heatmap_exclusion_percentile": (float, 98.0, True),
-        "heatmap_colormap": (str, "RdBu_r", True),
+        # A matplotlib colormap name, or "auto" (plots_heatmap.AUTO_COLORMAP).
+        "heatmap_colormap": (str, "auto", True),
         "heatmap_normalization": (str, "per_channel", True),
         # Row order: "none" | "trial" (re-sorted on every trial) | "visible"
         # (sorted on demand for the visible window, then kept).
@@ -1337,7 +1345,7 @@ class ObservableAppState(QObject):
         The user's own list (``gui_settings.yaml``): a project folder can be copied
         from one machine to the next, but which of two ``.nc`` files is the current
         one is answered by the person sitting in front of it, so the answer follows
-        them and not the folder. Edited on the cover page (**Excluded files…**).
+        them and not the folder. Edited on the cover page (**More tools ▸ Excluded files list…**).
         """
         return tuple(str(g) for g in self.get_with_default("ignore_files"))
 
@@ -1518,6 +1526,10 @@ class ObservableAppState(QObject):
                 state_dict[attr] = self._to_native(value)
             elif isinstance(value, dict) and value:
                 state_dict[attr] = value
+            elif isinstance(value, list) and value != AppStateSpec.get_default(attr):
+                # A list at its default is left out, so clearing one is remembered
+                # as the key's absence rather than as a line of its own.
+                state_dict[attr] = self._to_native(value)
 
         for attr, value in self._unavailable_paths.items():
             if attr in state_dict or self._values.get(attr) is not None:
@@ -1900,6 +1912,22 @@ class ObservableAppState(QObject):
 
     def set_trial_meta_attr(self, trial, key: str, value) -> None:
         self._all_labels_df = set_trial_meta_attr(self._all_labels_df, trial, key, value)
+
+    # --- What the review tools read ---
+    def label_source(self) -> LabelSource:
+        """The labels navigation and the review grids run over.
+
+        The working labels unless ``label_source_path`` names a loaded
+        prediction set — then that set's rows, in its own vocabulary when it
+        has one, and read-only. A set that has since been removed falls back
+        to the working labels.
+        """
+        wanted = self.label_source_path
+        chosen = next((s for s in self.prediction_sets if str(s.path) == wanted), None) if wanted else None
+        if chosen is None:
+            return LabelSource("Working labels", self._all_labels_df, self._label_mappings or {}, writable=True)
+        mappings = chosen.mappings if chosen.mappings is not None else (self._label_mappings or {})
+        return LabelSource(chosen.name, chosen.labels_df, mappings, writable=False)
 
     # --- Curation (labels/curation.py) ---
     def curation_scope(self) -> set[int] | None:

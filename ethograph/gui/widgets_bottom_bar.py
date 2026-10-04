@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -23,6 +24,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.datasets import is_template_path
+from ethograph.io.video_proxy import PROXY_HEIGHTS
 from ethograph.utils.ffmpeg import ffmpeg_available
 
 from .app_constants import BOTTOM_BAR_MIN_WIDTH_PX, PLAYBACK_MODE_CHOICES
@@ -262,6 +264,8 @@ class BottomPlaybackBar(QWidget):
         self.proxy_cb = QCheckBox("Proxy")
         self.proxy_cb.setChecked(app_state.get_with_default("video_quality_mode") == "proxy")
         self.proxy_cb.toggled.connect(self._on_proxy_toggled)
+        self.proxy_cb.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.proxy_cb.customContextMenuRequested.connect(self._show_proxy_height_menu)
         self._update_proxy_checkbox()
         bot.addWidget(self.proxy_cb)
 
@@ -366,7 +370,9 @@ class BottomPlaybackBar(QWidget):
         "\n"
         "Copies are cached in a '.ethograph_proxies' folder next to each\n"
         "video and reused across sessions. Uncheck to play the original\n"
-        "full-resolution video."
+        "full-resolution video.\n"
+        "\n"
+        "Right-click to choose the copy's resolution (now {height}p)."
     )
     _PROXY_NO_FFMPEG_TOOLTIP = (
         "Proxy generation requires ffmpeg (optional). Video plays at full\n"
@@ -390,7 +396,8 @@ class BottomPlaybackBar(QWidget):
             self.proxy_cb.setToolTip(self._PROXY_TEMPLATE_TOOLTIP)
         else:
             self.proxy_cb.setEnabled(True)
-            self.proxy_cb.setToolTip(self._PROXY_TOOLTIP)
+            height = self.app_state.get_with_default("video_proxy_height")
+            self.proxy_cb.setToolTip(self._PROXY_TOOLTIP.format(height=height))
 
     def _is_template_dataset(self) -> bool:
         """True when the loaded data comes from the downloaded templates tree."""
@@ -403,6 +410,24 @@ class BottomPlaybackBar(QWidget):
             dw.set_video_quality(checked)
         else:
             self.app_state.video_quality_mode = "proxy" if checked else "full"
+
+    def _show_proxy_height_menu(self, pos) -> None:
+        menu = QMenu(self.proxy_cb)
+        current = self.app_state.get_with_default("video_proxy_height")
+        for height in PROXY_HEIGHTS:
+            action = menu.addAction(f"{height}p")
+            action.setCheckable(True)
+            action.setChecked(height == current)
+            action.triggered.connect(lambda _checked, h=height: self._on_proxy_height_chosen(h))
+        menu.exec(self.proxy_cb.mapToGlobal(pos))
+
+    def _on_proxy_height_chosen(self, height: int) -> None:
+        dw = getattr(self, "_data_widget", None)
+        if dw is not None and hasattr(dw, "set_video_proxy_height"):
+            dw.set_video_proxy_height(height)
+        else:
+            self.app_state.video_proxy_height = height
+        self._update_proxy_checkbox()
 
     def _on_volume_changed(self, value: int):
         """Apply the output gain live and persist it (gui_settings.yaml)."""

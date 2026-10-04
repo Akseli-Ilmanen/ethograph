@@ -23,6 +23,10 @@ plot type     sections shown
 ``radial``    Radial-plot (feature + which value is up)
 ============  ==================================================
 
+Neuron panels — the Phy trace, the spike raster and the firing-rate heatmap —
+show what is specific to them and then the **Neuron table settings** section:
+the one row order every panel of units follows, and the neuron table.
+
 The **Individual** group sits above all of them, outside the mapping, and is
 always visible: which animal (and, for dyadic behaviours, which receiver) is
 being shown and labelled is a question every panel answers — a video and a
@@ -52,7 +56,12 @@ _CONTEXT_MAP: dict[str, list[str]] = {
     "spectrogram": ["audiochannel", "spectrogram"],
     "feature": ["coords", "lineplot", "shared"],
     "lineplot": ["coords", "lineplot", "shared"],
-    "heatmap": ["coords", "heatmap", "shared"],
+    "heatmap": ["coords", "heatmapsort", "heatmap", "shared"],
+    # Neuron panels (firing-rate heatmap, raster, Phy trace): what is specific
+    # to the panel, then the neuron table section they all share. The firing
+    # rates have no xarray coords to pick and no sort of their own — their rows
+    # are the neuron table's.
+    "firing_rate": ["heatmap", "shared", "neurons"],
     # Space: its own X/Y/Z + 3D + space controls (now inside spaceplot_panel);
     # the lineplot "coords" group is intentionally excluded.
     "space": ["spaceplot", "shared"],
@@ -62,10 +71,10 @@ _CONTEXT_MAP: dict[str, list[str]] = {
     # Phy-like ephys trace: the full Kilosort trace controls (channel/gain/
     # pyramid/probe select + cluster table), borrowed from EphysWidget. No
     # shared axes group — autoscale/lock-axes don't apply to the trace view.
-    "ephys": ["phy"],
-    # Raster: the same section, for its cluster table — selecting units there
-    # is what colours them in the raster.
-    "raster": ["phy"],
+    "ephys": ["phy", "neurons"],
+    # Raster: how its spikes are drawn, then the neuron table — selecting units
+    # there is what colours them in the raster.
+    "raster": ["rasterdisplay", "neurons"],
     # Neo trace (generic per-modality stream): channels are chosen at drop time
     # via the source popup; the sidebar exposes per-panel gain + channel spacing.
     "neo": ["neocontrols"],
@@ -81,6 +90,7 @@ _CONTEXT_TITLE: dict[str, str] = {
     "feature": "Lineplot settings",
     "lineplot": "Lineplot settings",
     "heatmap": "Heatmap settings",
+    "firing_rate": "Heatmap settings",
     "space": "Space plot settings",
     "radial": "Radial plot settings",
     "ephys": "Phy viewer settings",
@@ -90,6 +100,8 @@ _CONTEXT_TITLE: dict[str, str] = {
 
 #: The active-panel green edge colour (see ``ActivePanelManager._EDGE_ON``).
 _ACTIVE_GREEN = "#2ecc71"
+#: How a section caption is written: the context's own, and the neuron table's.
+CONTEXT_TITLE_STYLE = f"color: {_ACTIVE_GREEN}; font-weight: bold; font-size: 14px; padding: 4px 2px;"
 
 
 class RightContextPanel(QWidget):
@@ -116,7 +128,7 @@ class RightContextPanel(QWidget):
         # panel's green selection edge so the link is obvious to the user.
         self._title = QLabel("")
         self._title.setWordWrap(True)
-        self._title.setStyleSheet(f"color: {_ACTIVE_GREEN}; font-weight: bold; font-size: 14px; padding: 4px 2px;")
+        self._title.setStyleSheet(CONTEXT_TITLE_STYLE)
         self._title.setVisible(False)
         layout.addWidget(self._title)
 

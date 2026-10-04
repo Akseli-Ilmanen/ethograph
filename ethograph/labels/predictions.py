@@ -81,11 +81,21 @@ def merge_as_labels(existing: pd.DataFrame | None, predicted: pd.DataFrame) -> p
 
 @dataclass
 class PredictionSet:
-    """One imported prediction file: its rows, and the run's store when it came from a run folder."""
+    """One read-only labels table shown beside the working labels.
+
+    Usually an imported prediction file: its rows, and the run's store when
+    it came from a run folder. A table made in memory
+    (:mod:`ethograph.labels.feature_events`) has no file — its *path* is only
+    its name, the key every panel and list finds it by — and brings its own
+    vocabulary in *mappings*, since its classes are not in ``mapping.txt``.
+    """
 
     path: Path
     labels_df: pd.DataFrame
     store: PredictionsStore | None = None
+    #: This set's own classes (``load_label_mapping``'s shape); ``None`` means
+    #: its ids are the session's.
+    mappings: dict[int, dict] | None = None
 
     @property
     def name(self) -> str:
@@ -98,6 +108,31 @@ class PredictionSet:
         if self.store is None:
             return self.path.name
         return f"{self.path.parent.name}/{self.path.name}"
+
+
+@dataclass(frozen=True)
+class LabelSource:
+    """The labels a review tool reads: the working labels, or one read-only set.
+
+    Label navigation and the two review grids take their rows and their
+    vocabulary from here, so they run over a prediction set exactly as they
+    run over the working labels. Only the working labels are *writable*:
+    nothing may curate, rescore or edit the rows of a set.
+    """
+
+    name: str
+    df: pd.DataFrame | None
+    mappings: dict[int, dict]
+    writable: bool
+
+    def label_ids(self) -> list[int]:
+        """Every class of the vocabulary, background excluded."""
+        return sorted(lid for lid in self.mappings if isinstance(lid, int) and lid != 0)
+
+    def require_writable(self, action: str) -> None:
+        """Raise unless these are the working labels — a guard for every mutation."""
+        if not self.writable:
+            raise RuntimeError(f"Cannot {action}: '{self.name}' is a read-only label source")
 
 
 def add_prediction_set(sets: list[PredictionSet], new: PredictionSet) -> list[PredictionSet]:

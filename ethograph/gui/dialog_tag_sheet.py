@@ -1,6 +1,6 @@
 """Print the tags the Detect stage reads.
 
-Opened from the cover page's **Pre-recording tools**, and from **Tools ▸ Print
+Opened from the cover page's **More tools** menu, and from **Tools ▸ Print
 tag sheet…** once a dataset is loaded. Deliberately *not* from the Detect tab:
 that tab needs a video, and a video means the tags were printed and glued to the
 animals weeks earlier. The cover page is the only screen that exists before a
@@ -331,7 +331,7 @@ class TagSheetDialog(QDialog):
 
         The seed is the video **file's** resolution (:func:`~ethograph.gui.pose_fill.video_size`),
         never what is on screen: with proxy playback the displayed texture is a
-        480p re-encode, and seeding from it would inflate every minimum size by
+        low-resolution re-encode, and seeding from it would inflate every minimum size by
         the proxy's scale factor without saying so.
 
         The scene width cannot be derived from anything — nothing in a video file
@@ -352,7 +352,7 @@ class TagSheetDialog(QDialog):
             seeded.setStyleSheet("QLabel { font-size: 11px; }")
             seeded.setToolTip(
                 "Taken from the loaded video file, not from what is on screen —\n"
-                "proxy playback shows a 480p re-encode.\n\n"
+                "proxy playback shows a low-resolution re-encode.\n\n"
                 "Change it if these tags are for a different camera."
             )
             box.addWidget(seeded)

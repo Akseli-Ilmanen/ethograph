@@ -139,6 +139,8 @@ class TopBarBuilder:
         self._label_inconsistency_dialog = None
         self._spot_crop_dialog = None
         self._bulk_labels_dialog = None
+        self._feature_labels_dialog = None
+        self._neural_labels_dialog = None
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -208,6 +210,10 @@ class TopBarBuilder:
         # gui/dialog_bulk_labels.py; the Curation section keeps only the
         # Ctrl+C shortcut and the two review grids.
         menu.addAction("Labels: Bulk editing…", self._open_bulk_labels)
+        # The periods a feature spends past a threshold, as a read-only label
+        # source the grids and label navigation can walk — see
+        # gui/dialog_feature_labels.py.
+        menu.addAction("Labels: Create from a feature…", self._open_feature_labels)
 
         menu.addSeparator()
         # Drag a box on the video and read off the source pixels it covers,
@@ -239,6 +245,9 @@ class TopBarBuilder:
         if psth_open is None:
             act.setEnabled(False)
         menu.addAction("Neural: Compute firing rates…", lambda: self._popup_section("firing", "Firing rates", ephys))
+        # The same dialog as Labels: Create from a feature, for the units: a
+        # threshold on a rate read off the spikes, or a burst detector.
+        menu.addAction("Neural: Neuronal firing / burst detection…", self._open_neural_labels)
 
     def _build_model_menu(self, menu_bar):
         """Model menu — supervised modelling of the session's labels.
@@ -315,6 +324,39 @@ class TopBarBuilder:
         self._bulk_labels_dialog.show()
         self._bulk_labels_dialog.raise_()
         self._bulk_labels_dialog.activateWindow()
+
+    def _open_feature_labels(self):
+        """Threshold a feature into a read-only label source (Tools)."""
+        from .dialog_feature_labels import FeatureLabelsDialog
+        from .dialog_onset_model import base_loader
+
+        if base_loader(self.app_state) is None:
+            notify("Load a session first.", severity="warning")
+            return
+        # Rebuilt when reopened so the features and their dims are the loaded session's.
+        if self._feature_labels_dialog is None or not self._feature_labels_dialog.isVisible():
+            self._feature_labels_dialog = FeatureLabelsDialog(self.meta, parent=self.shell)
+        self._feature_labels_dialog.show()
+        self._feature_labels_dialog.raise_()
+        self._feature_labels_dialog.activateWindow()
+
+    def _open_neural_labels(self):
+        """Threshold the units' firing, or detect their bursts, into a read-only label source (Tools)."""
+        from .dialog_feature_labels import FeatureLabelsDialog, has_firing_rates
+        from .dialog_onset_model import base_loader
+
+        if base_loader(self.app_state) is None:
+            notify("Load a session first.", severity="warning")
+            return
+        if not has_firing_rates(self.meta):
+            notify("Load units first, and let at least one through the neuron table's filters.", severity="warning")
+            return
+        # Rebuilt when reopened so the units are the ones the neuron table lets through now.
+        if self._neural_labels_dialog is None or not self._neural_labels_dialog.isVisible():
+            self._neural_labels_dialog = FeatureLabelsDialog(self.meta, parent=self.shell, neural=True)
+        self._neural_labels_dialog.show()
+        self._neural_labels_dialog.raise_()
+        self._neural_labels_dialog.activateWindow()
 
     def _open_spot_crop(self):
         """Arm the rectangle tool on the clicked camera and report the box."""

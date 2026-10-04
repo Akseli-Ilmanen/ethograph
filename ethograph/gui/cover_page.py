@@ -41,7 +41,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QPixmap
+from qtpy.QtGui import QAction, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -536,7 +536,6 @@ class CoverPage(QDialog):
         outer.setContentsMargins(m, m, m, m)
         outer.setSpacing(self._px(16))
 
-        outer.addLayout(self._build_prerecording_bar())
         outer.addWidget(self._build_project_bar())
 
         body = QHBoxLayout()
@@ -613,46 +612,42 @@ class CoverPage(QDialog):
     # Layout builders
     # ------------------------------------------------------------------
 
-    def _build_prerecording_bar(self) -> QHBoxLayout:
-        """Tools for the work that happens **before** there is anything to load.
+    def _build_tools_button(self) -> QToolButton:
+        """One **More tools** menu for the rare paths that must still exist *before* a load.
 
-        The cover page is the only screen a user sees before a recording exists,
-        which is exactly when tags have to be printed — putting that behind a
-        loaded dataset (or the keypoint dialog, which needs a video) means it is
-        only reachable once it is too late to use.
-
-        A menu rather than a bare button: printing tags is the first of this
-        kind of tool, not the last.
+        Each entry is reachable only from here, yet none is what a visit to the
+        start page is for: tags are printed once per rig (and must be, before a
+        single frame exists); a DeepLabCut / LightningPose project is neither a
+        session nor a drop; the exclusion list is a setting that matters only
+        when a folder holds two ``.nc`` files, and the dialog refusing that
+        folder opens it too. So they share a menu at the edge of the project
+        bar rather than a row of buttons above the cards.
         """
-        row = QHBoxLayout()
         tools = QToolButton()
-        tools.setText("🛠  Pre-recording tools")
+        tools.setText("🛠  More tools")
         tools.setPopupMode(QToolButton.InstantPopup)
-        tools.setToolTip("Things to do before a single frame is recorded.")
+        tools.setToolTip("Print tags before recording, refine a pose project, or exclude old files")
         menu = QMenu(tools)
+        menu.addSection("Before recording")
         menu.addAction("Print tag sheet…", self._open_tag_sheet)
-        tools.setMenu(menu)
-        self._tools_button = tools
-        row.addWidget(tools)
-
-        # The exclusion list belongs on the only screen that loads data: a folder
-        # with two .nc files is refused *here*, so this is where you name the old one.
-        exclude = QPushButton("🚫  Excluded files…")
-        exclude.setToolTip("File names or globs never loaded from a session folder (e.g. *_old.nc)")
-        exclude.clicked.connect(self._open_excluded_files)
-        row.addWidget(exclude)
-
-        # A pose project is neither a session nor a drop: its own entry.
-        refine = QPushButton("🦴  Refine DLC / LightningPose training data…")
+        menu.addSection("GUI tools")
+        refine = QAction("Refine DLC / LightningPose training data…", menu)
+        refine.triggered.connect(self._open_pose_project)
         refine.setToolTip(
             "Open a DeepLabCut or LightningPose project folder (the one with videos/ and\n"
             "labeled-data/): pick training frames off the model's curves, then correct\n"
             "every extracted frame with draggable keypoints."
         )
-        refine.clicked.connect(self._open_pose_project)
-        row.addWidget(refine)
-        row.addStretch()
-        return row
+        menu.addAction(refine)
+        menu.addSection("IO settings")
+        exclude = QAction("Excluded files list…", menu)
+        exclude.triggered.connect(self._open_excluded_files)
+        exclude.setToolTip("File names or globs never loaded from a session folder (e.g. *_old.nc)")
+        menu.addAction(exclude)
+        menu.setToolTipsVisible(True)
+        tools.setMenu(menu)
+        self._tools_button = tools
+        return tools
 
     def _open_pose_project(self) -> None:
         """Refine a DeepLabCut / LightningPose project: its root folder becomes the mode."""
@@ -733,6 +728,7 @@ class CoverPage(QDialog):
         self._project_clear_btn = QPushButton("Clear")
         self._project_clear_btn.clicked.connect(self._on_clear_project)
         row.addWidget(self._project_clear_btn)
+        row.addWidget(self._build_tools_button())
         return bar
 
     def _on_drop_layout_changed(self, index: int) -> None:

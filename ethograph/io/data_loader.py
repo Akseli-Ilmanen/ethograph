@@ -342,7 +342,7 @@ class AmbiguousSessionError(ValueError):
         super().__init__(
             f"{folder} holds {names}. One session has one dataset, so these are versions of one file. "
             f"Exclude the old ones in gui_settings.yaml, e.g.   ignore_files: [{oldest}]   "
-            "(the start page's Excluded files… does it for you), or name the one to use with source:."
+            "(the start page's More tools ▸ Excluded files list… does it for you), or name the one to use with source:."
         )
 
 
@@ -463,7 +463,7 @@ def _load_session_folder(
 
     One backend per folder: a root ``.nwb`` beside ``.nc`` or ``.npz`` files is refused.
     One dataset per folder: several root ``.nc`` files are versions of one dataset and
-    raise :class:`AmbiguousSessionError` until the project's ``ignore`` list names the
+    raise :class:`AmbiguousSessionError` until the user's ``ignore_files`` names the
     old ones. A folder with none of these but ``.ethograph/alignment.nwb`` is a
     media-only session — trials from the alignment, no features yet.
     """

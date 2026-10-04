@@ -26,22 +26,29 @@ from ethograph.utils.paths import media_cache_key
 #: Bump when the encode recipe changes so stale proxies are regenerated.
 _PROXY_RECIPE_VERSION = 1
 
+#: Proxy height when the user has not chosen one, and the heights offered.
+DEFAULT_PROXY_HEIGHT = 480
+PROXY_HEIGHTS = (360, 480, 720, 1080)
+
 
 def _source_key(video_path: Path) -> str:
     """Deterministic cache key from source identity (path, size, mtime)."""
     return media_cache_key(video_path, _PROXY_RECIPE_VERSION)
 
 
-def proxy_cache_path(video_path: Path | str, cache_dir: Path | str) -> Path:
-    """Return the deterministic proxy path for *video_path* under *cache_dir*."""
+def proxy_cache_path(video_path: Path | str, cache_dir: Path | str, scale_height: int = DEFAULT_PROXY_HEIGHT) -> Path:
+    """Return the deterministic proxy path for *video_path* at *scale_height* under *cache_dir*."""
     video_path = Path(video_path)
-    return Path(cache_dir) / f"{_source_key(video_path)}.mp4"
+    # The default height keeps the bare name, so proxies cached before the
+    # height was a choice are still found.
+    suffix = "" if scale_height == DEFAULT_PROXY_HEIGHT else f"_{int(scale_height)}p"
+    return Path(cache_dir) / f"{_source_key(video_path)}{suffix}.mp4"
 
 
 def build_proxy_command(
     video_path: Path | str,
     proxy_path: Path | str,
-    scale_height: int = 480,
+    scale_height: int = DEFAULT_PROXY_HEIGHT,
     gop: int = 10,
     crf: int = 23,
     preset: str = "veryfast",
@@ -62,8 +69,9 @@ def build_proxy_command(
     elif sys.platform == "darwin":
         cmd.extend(["-hwaccel", "videotoolbox"])
 
-    # -2 keeps width even while preserving aspect ratio.
-    cmd.extend(["-i", video_path.as_posix(), "-vf", f"scale=-2:{scale_height}"])
+    # -2 keeps width even while preserving aspect ratio; min() never upscales
+    # a source that is already smaller than the proxy height.
+    cmd.extend(["-i", video_path.as_posix(), "-vf", f"scale=-2:'min(ih,{int(scale_height)})'"])
 
     if use_nvenc:
         cmd.extend(["-c:v", "h264_nvenc", "-cq", str(crf)])
@@ -82,7 +90,7 @@ def build_proxy_command(
 def generate_proxy(
     video_path: Path | str,
     proxy_path: Path | str,
-    scale_height: int = 480,
+    scale_height: int = DEFAULT_PROXY_HEIGHT,
     gop: int = 10,
     crf: int = 23,
     preset: str = "veryfast",
@@ -103,7 +111,8 @@ def generate_proxy(
         Output path (``.mp4``). Overwritten if it exists.
     scale_height : int
         Target height in pixels; width is derived to preserve aspect ratio and
-        kept even (required by H.264). ``scale=-2:H``.
+        kept even (required by H.264). A source shorter than this keeps its
+        own height. ``scale=-2:min(ih,H)``.
     gop : int
         Maximum keyframe interval in frames. Small values (e.g. 10, or 1 for
         all-intra) make seeking cheap at the cost of file size. Since the whole
@@ -166,19 +175,20 @@ def generate_proxy(
 def ensure_proxy(
     video_path: Path | str,
     cache_dir: Path | str,
+    scale_height: int = DEFAULT_PROXY_HEIGHT,
     **kwargs,
 ) -> Path:
     """Return a cached proxy for *video_path*, generating it if missing.
 
-    The cache is keyed by source identity (:func:`_source_key`), so a proxy is
-    reused across sessions and never applied to changed media. Extra keyword
+    The cache is keyed by source identity (:func:`_source_key`) and height,
+    so a proxy is reused across sessions and never applied to changed media. Extra keyword
     arguments are forwarded to :func:`generate_proxy`.
     """
     video_path = Path(video_path)
-    proxy_path = proxy_cache_path(video_path, cache_dir)
+    proxy_path = proxy_cache_path(video_path, cache_dir, scale_height)
     if proxy_path.exists():
         return proxy_path
-    return generate_proxy(video_path, proxy_path, **kwargs)
+    return generate_proxy(video_path, proxy_path, scale_height=scale_height, **kwargs)
 
 
 def proxy_cache_size(cache_dir: Path | str) -> int:

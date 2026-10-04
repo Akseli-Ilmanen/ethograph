@@ -42,6 +42,8 @@ if TYPE_CHECKING:
 _RENDER_LABEL_COLOR = "#666666"
 #: A tick is never shorter than this, so rows thinner than a pixel still show their spikes.
 _MIN_TICK_PX = 3.0
+#: Row labels on the left axis are at least this far apart; rows closer than that share one.
+_MIN_ROW_LABEL_PX = 14.0
 
 
 @dataclass(frozen=True)
@@ -80,9 +82,12 @@ class RasterPlot(BasePlot):
 
         self.time_marker.setPen(pg.mkPen("#FF4444", width=2, style=Qt.PenStyle.DotLine))
 
-        self.plot_item.getAxis("left").hide()
+        self.setLabel("left", "Unit", Fontsize="14pt")
 
         self._hw_to_global_y: dict[int, float] = {}
+        #: What the left axis writes next to a row, by row key.
+        self._row_labels: dict[int, str] = {}
+        self._row_ticks: list[tuple[float, str]] | None = None
         self._y_lookup: NDArray = np.empty(0, dtype=np.float64)
         self._channel_spacing: float = 1.0
         self._total_channels: int = 0
@@ -164,6 +169,38 @@ class RasterPlot(BasePlot):
 
         self.refresh()
 
+    def set_row_labels(self, labels: dict[int, str]) -> None:
+        """Name the rows on the left axis: the label of each row key that has one."""
+        self._row_labels = labels
+        self._update_row_ticks()
+
+    def row_at(self, y: float) -> int | None:
+        """The key of the row drawn at *y*; ``None`` where there is no row."""
+        if not self._hw_to_global_y:
+            return None
+        key, row_y = min(self._hw_to_global_y.items(), key=lambda item: abs(item[1] - y))
+        return key if abs(row_y - y) <= self._channel_spacing / 2 else None
+
+    def _update_row_ticks(self) -> None:
+        """Label the rows in view, top row first, skipping those too close to the last one written."""
+        y_lo, y_hi = self.vb.viewRange()[1]
+        min_gap = _MIN_ROW_LABEL_PX * (y_hi - y_lo) / max(self.vb.height(), 1.0)
+        in_view = sorted(
+            (
+                (y, self._row_labels[key])
+                for key, y in self._hw_to_global_y.items()
+                if key in self._row_labels and y_lo <= y <= y_hi
+            ),
+            reverse=True,
+        )
+        ticks: list[tuple[float, str]] = []
+        for y, label in in_view:
+            if not ticks or ticks[-1][0] - y >= min_gap:
+                ticks.append((y, label))
+        if ticks != self._row_ticks:
+            self._row_ticks = ticks
+            self.plot_item.getAxis("left").setTicks([ticks])
+
     # ------------------------------------------------------------------
     # Spike data API
     # ------------------------------------------------------------------
@@ -244,6 +281,7 @@ class RasterPlot(BasePlot):
         return groups
 
     def _redraw(self):
+        self._update_row_ticks()
         if not self._hw_to_global_y or not self._multi_entries:
             self._clear_drawn()
             return

@@ -6,8 +6,8 @@ dark theme had. It only styles the **Qt chrome** (menus, docks, sidebar,
 buttons, inputs) via a ``QPalette`` on the cross-platform Fusion style.
 
 Plots are deliberately left alone: the pyqtgraph panels stay white (set per
-widget in ``BasePlot``), and the ephys neural-trace / raster panels keep their
-own phy-style dark background. The pygfx video canvas paints its own dark
+widget in ``BasePlot``), and the ephys neural-trace panel keeps its own
+phy-style dark background. The pygfx video canvas paints its own dark
 background.
 """
 

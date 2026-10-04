@@ -1182,6 +1182,7 @@ class DataWidget(QWidget):
         self.app_state._all_labels_df = None
         self.app_state.clear_label_history()
         self.app_state.prediction_sets = []
+        self.app_state.label_source_path = None
         self.app_state.pred_labels_df = None
         self.app_state.pred_store = None
         self.app_state.labels_pred_store = None
@@ -3431,6 +3432,11 @@ class DataWidget(QWidget):
                 "warning",
             )
         self.app_state.video_quality_mode = "proxy" if proxy else "full"
+        self.video_mgr.sync_proxies()
+
+    def set_video_proxy_height(self, height: int):
+        """Choose the proxy's height; visible videos play the source until the new copy is ready."""
+        self.app_state.video_proxy_height = int(height)
         self.video_mgr.sync_proxies()
 
     def update_audio(self):

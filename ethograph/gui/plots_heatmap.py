@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 import pyqtgraph as pg
+from qtpy.QtGui import QColor
 
 import ethograph as eto
 from ethograph.io.plot_sources import WindowedBuffer, XarraySource, audio_display_offset
@@ -18,6 +19,13 @@ from .app_constants import (
 from .heatmap_sort import argmax_window_order, rastermap_order, row_window
 from .make_pretty import clean_display_labels
 from .plots_base import BasePlot, PanelStateMixin, ThrottleDebounce
+
+#: The ``heatmap_colormap`` setting that leaves the choice to the colour range.
+AUTO_COLORMAP = "auto"
+#: What ``AUTO_COLORMAP`` picks: a range symmetric about zero has a centre to
+#: diverge from; one that runs from zero up has none.
+DIVERGING_COLORMAP = "RdBu_r"
+SEQUENTIAL_COLORMAP = "viridis"
 
 
 @dataclass(frozen=True)
@@ -65,6 +73,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self.addItem(self.image_item)
         self.vb.invertY(True)
 
+        self._norm: _Normalization | None = None
         self._init_colormap()
         self._init_colorbar()
 
@@ -73,6 +82,9 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self._n_rows_shown = 1
         self._channel_labels = []
         self._sort_order: np.ndarray | None = None
+        #: True when whoever supplies the data already orders its columns (the
+        #: firing rates follow the neuron table): the heatmap's own sort is off.
+        self.keeps_source_order = False
         # (feature, trial, selections) the trial-window sort was last computed for.
         self._auto_sort_context: tuple | None = None
 
@@ -90,10 +102,12 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         # Cached normalization (avoids recomputing on every pan)
         self._normalized_buffer = None
         self._norm_data_id = None
-        self._norm: _Normalization | None = None
 
         # Track last-rendered labels to skip redundant axis updates
         self._last_visible_labels: list[str] | None = None
+        # Rows outlined in a colour, by row label (see set_row_highlights).
+        self._row_highlights: dict[str, tuple] = {}
+        self._highlight_items: list[pg.InfiniteLine] = []
 
         # Debounce-only (no throttle) — render is expensive; buffer check gates triggers
         self._td = ThrottleDebounce(
@@ -192,7 +206,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
 
     def _trial_sort_pending(self) -> tuple | None:
         """The (feature, trial, selections) a trial-window sort is still owed for, else None."""
-        if self.app_state.get_with_default("heatmap_sort_mode") != "trial":
+        if self.keeps_source_order or self.app_state.get_with_default("heatmap_sort_mode") != "trial":
             return None
         context = (self._effective_feature(), getattr(self.app_state, "trials_sel", None), self._get_selections_hash())
         return None if context == self._auto_sort_context else context
@@ -213,12 +227,20 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             return None
         return np.asarray(self._normalized_buffer[mask])
 
+    def _colormap_name(self) -> str:
+        """The colormap the setting names; for ``AUTO_COLORMAP``, the one the colour range calls for."""
+        name = self.app_state.get_with_default("heatmap_colormap")
+        if name != AUTO_COLORMAP:
+            return name
+        from_zero = self._norm is not None and self._norm.levels[0] == 0.0
+        return SEQUENTIAL_COLORMAP if from_zero else DIVERGING_COLORMAP
+
     def _init_colormap(self):
-        colormap_name = self.app_state.get_with_default("heatmap_colormap")
+        self._cmap_name = self._colormap_name()
         try:
-            self._cmap = pg.colormap.get(colormap_name, source="matplotlib")
+            self._cmap = pg.colormap.get(self._cmap_name, source="matplotlib")
         except (KeyError, ValueError, TypeError):
-            self._cmap = pg.colormap.get("RdBu_r", source="matplotlib")
+            self._cmap = pg.colormap.get(DIVERGING_COLORMAP, source="matplotlib")
         self.image_item.setColorMap(self._cmap)
 
     def _init_colorbar(self):
@@ -232,14 +254,12 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         )
         self.colorbar.setImageItem(self.image_item, insert_in=self.plot_item)
 
-    def update_colormap(self, name: str):
-        try:
-            cmap = pg.colormap.get(name, source="matplotlib")
-            self._cmap = cmap
-            self.image_item.setColorMap(cmap)
-            self.colorbar.setColorMap(cmap)
-        except (KeyError, ValueError, TypeError):
-            pass
+    def refresh_colormap(self) -> None:
+        """Apply the setting's colormap if it is not the one on screen."""
+        if self._colormap_name() == self._cmap_name:
+            return
+        self._init_colormap()
+        self.colorbar.setColorMap(self._cmap)
 
     # --- Context tracking (same pattern as LinePlot) ---
 
@@ -577,6 +597,8 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
 
             result = self._get_buffered_data(load_t0, load_t1)
             if result[0] is None:
+                # Nothing to show for this feature: an image left up would be another feature's.
+                self.image_item.clear()
                 return
 
             data, time_vals = result
@@ -591,7 +613,8 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
                 self._apply_trial_sort(pending, *trial_range)
             normalized = self._normalized_buffer
 
-            if self._sort_order is not None and len(self._sort_order) == normalized.shape[1]:
+            sorted_here = self._sort_order is not None and not self.keeps_source_order
+            if sorted_here and len(self._sort_order) == normalized.shape[1]:
                 normalized = normalized[:, self._sort_order]
                 sorted_labels = [self._channel_labels[i] for i in self._sort_order]
             else:
@@ -608,6 +631,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             self._n_rows_shown = n_total
 
             vmin, vmax = self._norm.levels
+            self.refresh_colormap()
 
             pixel_width = self.width() or 800
             display_data = self._downsample_for_display(normalized, pixel_width * 2)
@@ -639,8 +663,38 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             if sorted_labels != self._last_visible_labels:
                 self._update_y_axis_ticks(sorted_labels)
                 self._last_visible_labels = sorted_labels
+                self._draw_row_highlights()
         finally:
             self._rendering = False
+
+    def set_row_highlights(self, colors: dict[str, tuple]) -> None:
+        """Outline the rows with these labels, each in its RGB(A) colour; ``{}`` clears them."""
+        self._row_highlights = colors
+        self._draw_row_highlights()
+
+    def row_label_at(self, y: float) -> str | None:
+        """The label of the row drawn at *y*; ``None`` outside the rows."""
+        labels = self._last_visible_labels or []
+        row = int(np.floor(y))
+        return labels[row] if 0 <= row < len(labels) else None
+
+    def _draw_row_highlights(self) -> None:
+        """A line above and below each highlighted row on screen, so its colours stay readable."""
+        for item in self._highlight_items:
+            self.vb.removeItem(item)
+        self._highlight_items = []
+        if not self._row_highlights:
+            return
+        for row, label in enumerate(self._last_visible_labels or []):
+            color = self._row_highlights.get(label)
+            if color is None:
+                continue
+            pen = pg.mkPen(QColor(*color[:3]), width=2)
+            for y in (row, row + 1):
+                line = pg.InfiniteLine(pos=y, angle=0, pen=pen)
+                line.setZValue(Z_INDEX_BACKGROUND + 1)
+                self.vb.addItem(line, ignoreBounds=True)
+                self._highlight_items.append(line)
 
     def _update_y_axis_ticks(self, labels=None):
         """Set y-axis tick labels to channel names."""

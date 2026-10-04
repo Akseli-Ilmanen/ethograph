@@ -474,7 +474,7 @@ class IgnoredFilesDialog(QDialog):
 
     def __init__(self, app_state, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Excluded files")
+        self.setWindowTitle("Excluded files list")
         self.app_state = app_state
 
         layout = QVBoxLayout(self)

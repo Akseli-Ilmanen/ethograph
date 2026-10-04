@@ -19,7 +19,7 @@ from pathlib import Path
 
 from qtpy.QtCore import QObject, QThread, Signal
 
-from ethograph.io.video_proxy import build_proxy_command, proxy_cache_path
+from ethograph.io.video_proxy import DEFAULT_PROXY_HEIGHT, build_proxy_command, proxy_cache_path
 
 
 class _ProxyJob(QThread):
@@ -28,10 +28,11 @@ class _ProxyJob(QThread):
     #: Emitted on the main thread: (source_path, success).
     done = Signal(str, bool)
 
-    def __init__(self, source_path: str, proxy_path: Path, parent=None):
+    def __init__(self, source_path: str, proxy_path: Path, scale_height: int, parent=None):
         super().__init__(parent)
         self._source = source_path
-        self._proxy = proxy_path
+        self.proxy_path = proxy_path
+        self._scale_height = scale_height
         # Keep the real extension (…​.part.mp4) so ffmpeg can infer the muxer.
         self._tmp = proxy_path.with_suffix(".part" + proxy_path.suffix)
         self._proc: subprocess.Popen | None = None
@@ -39,15 +40,15 @@ class _ProxyJob(QThread):
 
     def run(self) -> None:  # runs in the worker thread
         try:
-            self._proxy.parent.mkdir(parents=True, exist_ok=True)
-            cmd = build_proxy_command(self._source, self._tmp)
+            self.proxy_path.parent.mkdir(parents=True, exist_ok=True)
+            cmd = build_proxy_command(self._source, self._tmp, scale_height=self._scale_height)
             self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             ret = self._proc.wait()
             if self._cancelled:
                 self._tmp.unlink(missing_ok=True)
                 return
             if ret == 0 and self._tmp.exists():
-                self._tmp.replace(self._proxy)
+                self._tmp.replace(self.proxy_path)
                 self.done.emit(self._source, True)
             else:
                 self._tmp.unlink(missing_ok=True)
@@ -82,32 +83,32 @@ class ProxyManager(QObject):
         self._cache_dir_fn = cache_dir_fn
         self._jobs: dict[str, _ProxyJob] = {}
 
-    def sync(self, sources: list[str]) -> None:
+    def sync(self, sources: list[str], scale_height: int = DEFAULT_PROXY_HEIGHT) -> None:
         """Reconcile running jobs against the currently-visible *sources*.
 
-        Cancels jobs whose source is no longer visible; starts jobs for
-        visible sources that lack a cached proxy and aren't already running.
-        An empty list cancels everything (e.g. proxy mode turned off).
+        Cancels jobs whose source is no longer visible or whose proxy is of
+        another height; starts jobs for visible sources that lack a cached
+        proxy at *scale_height* and aren't already running. An empty list
+        cancels everything (e.g. proxy mode turned off).
         """
-        wanted = set(sources)
-        for src in list(self._jobs):
-            if src not in wanted:
+        wanted = {src: proxy_cache_path(src, self._cache_dir_fn(src), scale_height) for src in sources}
+        for src, job in list(self._jobs.items()):
+            if wanted.get(src) != job.proxy_path:
                 self._stop(src)
-        for src in wanted:
+        for src, proxy in wanted.items():
             if src in self._jobs:
                 continue
-            proxy = proxy_cache_path(src, self._cache_dir_fn(src))
             if proxy.exists():
                 continue  # already cached — nothing to generate
-            self._start(src, proxy)
+            self._start(src, proxy, scale_height)
 
     def cancel_all(self) -> None:
         """Cancel and join every running job (call on close/teardown)."""
         for src in list(self._jobs):
             self._stop(src)
 
-    def _start(self, source: str, proxy: Path) -> None:
-        job = _ProxyJob(source, proxy, parent=self)
+    def _start(self, source: str, proxy: Path, scale_height: int) -> None:
+        job = _ProxyJob(source, proxy, scale_height, parent=self)
         job.done.connect(self._on_done)
         self._jobs[source] = job
         job.start()

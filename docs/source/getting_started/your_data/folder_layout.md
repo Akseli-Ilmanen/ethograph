@@ -55,8 +55,10 @@ my_project/                            # chosen on the start page
 **One session folder, one `.nc`.** A second `.nc` at the root is an old version,
 and Ethograph refuses to guess which one is current — in the GUI and in a
 `segment` or `spot` run alike. Name the old one once, on the start page
-(**Excluded files…**) or from the dialog that asks; it is kept in your
-`gui_settings.yaml` as `ignore_files` and applies in every session folder:
+(**More tools ▸ Excluded files list…**) or from the dialog that asks. The list has one
+home, `~/.ethograph/gui_settings.yaml`, as `ignore_files`; nothing in the project
+or session folder holds a copy, and the scripted `segment` / `spot` runs read the
+same file. It applies in every session folder:
 
 ```yaml
 ignore_files: [Trial_data.nc, "*_old.nc"]   # file names or globs
@@ -78,7 +80,7 @@ it belongs:
 | Used to be | Now |
 |---|---|
 | `individuals` | `extra_individuals` in `gui_settings.yaml` — added to the names your data declares, edited in **Settings ▸ Create / edit individuals…** or the sidebar's **Edit individuals…** |
-| `ignore` | `ignore_files` in `gui_settings.yaml`, edited on the start page |
+| `ignore` | `ignore_files` in `gui_settings.yaml`, edited on the start page under **More tools ▸ Excluded files list…** |
 | `pose.skeleton` | `config/skeleton/{name}.yaml`, one file per skeleton |
 | `rig` | Nothing: the wizard names the rig after the session folder |
 | `pose.source_software` | Remembered from the last time you answered the drop card |

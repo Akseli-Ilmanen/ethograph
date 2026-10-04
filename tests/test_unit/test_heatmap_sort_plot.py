@@ -124,6 +124,36 @@ def test_unnormalised_data_that_never_goes_negative_uses_the_whole_colormap(heat
     assert low == -high
 
 
+def test_auto_colormap_diverges_only_when_the_range_is_centred_on_zero(heatmap, app_state):
+    _fill_buffer(heatmap, peaks_at=[2.0, 6.0])
+    heatmap._render_heatmap(0.0, 10.0)
+    assert heatmap._cmap_name == "viridis"
+
+    app_state.heatmap_normalization = "per_channel"
+    heatmap._render_heatmap(0.0, 10.0)
+    assert heatmap._cmap_name == "RdBu_r"
+
+    # A colormap the user picked is kept whatever the range.
+    app_state.heatmap_colormap = "magma"
+    app_state.heatmap_normalization = "none"
+    heatmap._render_heatmap(0.0, 10.0)
+    assert heatmap._cmap_name == "magma"
+
+
+def test_a_highlight_follows_its_row_through_a_sort(heatmap):
+    _fill_buffer(heatmap, peaks_at=[8.0, 1.0, 5.0])
+    heatmap._render_heatmap(0.0, 10.0)
+    heatmap.set_row_highlights({"ch0": (228, 26, 28)})
+    # Row i of the image spans y in [i, i + 1].
+    assert sorted(line.value() for line in heatmap._highlight_items) == [0, 1]
+
+    heatmap.set_sort_order(np.array([1, 2, 0]))
+    assert sorted(line.value() for line in heatmap._highlight_items) == [2, 3]
+
+    heatmap.set_row_highlights({})
+    assert not heatmap._highlight_items
+
+
 def test_rastermap_orders_by_the_whole_trial_not_the_visible_window(heatmap, monkeypatch):
     rng = np.random.default_rng(0)
     phase = rng.uniform(0.0, 2.0 * np.pi, 24)

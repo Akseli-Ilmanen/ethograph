@@ -195,6 +195,86 @@ reduced size, so opening long events takes a moment; while a screenful is
 showing, the next one is already decoding in the background, so stepping on
 is quick. Clicks mean the same as in the label grid.
 
+### Looking at labels that are not yours
+
+The grids, and **Navigate by: Label**, can run over a loaded prediction set
+instead of your own labels. Once a set is loaded, the section shows **Grids
+and label navigation read** — pick the set there and all three read its rows.
+The set is **read-only**: a tile click jumps the GUI to that trial and time,
+the mode combo and **Done** are gone, and nothing you do there reaches
+`labels.tsv`. Setup lists the set's classes with a tick each, so a grid can
+be built from some of them.
+
+A set does not have to come from a model. Two entries of the Tools menu make
+one from the data itself, across the trials the table shows. They open the
+same form:
+
+- **Labels: Create from a feature…** finds every period a feature of the
+  session spends above (or below) a value: a speed, a distance, an angle.
+- **Neural: Neuronal firing / burst detection…** does the same for the loaded
+  units, on a rate read off their spikes, and adds burst detection.
+
+In the neural one, **Method** picks how. *Threshold* suits activity lasting
+hundreds of milliseconds or more. The two *Bursts* methods read the spike
+times themselves and find events too short for a rate to resolve:
+
+- **MaxInterval** uses fixed limits on the intervals between spikes: one to
+  start a burst, one to stay in it; bursts close together are merged and small
+  ones dropped. The same numbers serve every unit.
+- **logISI** lets each unit set its own limit: the valley between the
+  within-burst and between-burst peaks of its inter-spike-interval histogram,
+  taken over the trials shown. A unit whose histogram has no clear valley is
+  read with the fixed limit instead, or left without bursts if you untick
+  **Units with no clear valley**.
+
+Both give one class per unit (`unit_12`), a burst running from its first spike
+to its last, and never across two trials. They are the two detectors that came
+out ahead in [Cotterill et al. (2016)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4969396/).
+
+For a threshold, in either one:
+
+- Each dim of the feature is pinned to one value, or one dim is read **value
+  by value** (every unit, every keypoint). That gives one class per value,
+  named `{dim}_{value}` — `unit_12`, `keypoint_beakTip`. These classes live
+  with the set, not in `mapping.txt`.
+- The neural entry offers two rates read off the spikes, for the
+  units the neuron table's filters let through. `firing_rate` is binned and
+  smoothed with the settings of **Tools ▸ Neural: Compute firing rates…**.
+  `instantaneous_rate` is 1 / inter-spike interval: from each spike until the
+  next, the rate that interval implies. It has no smoothing, so a burst reads
+  as high from its first spike to its last; it is read at the same bin spacing.
+  It opens at "above 125 Hz", the burst criterion of the birdsong literature
+  (Leonardo & Fee 2005) — a starting point chosen for songbird premotor
+  neurons, to be set for your own.
+- **Measured in** sets what the threshold means. *The feature's own units* is
+  one number for every series. *Z-score* is standard deviations from each
+  series' own mean, and *percentile* a share of each series' own values (95 =
+  its top 5 %), both taken over every trial the table shows. Along a dim one
+  of those two is usually what you want: units with different baseline rates
+  share no raw threshold. A percentile assumes nothing about the distribution,
+  but gives a series that never does much its periods too.
+- **Show distribution** draws the values the threshold is compared against,
+  all series pooled, on a log count axis so the tail is visible. Drag the line
+  to set the threshold; what passes is shown beside the button. For a
+  percentile the axis stays in the feature's units and the text gives each
+  series' own cut.
+- **Stitch gaps shorter than** joins periods a brief dip split apart, then
+  **Drop periods shorter than** removes whatever is still a blip.
+- The set gets a panel of its own with one row per class, because its classes
+  can overlap in time — two units active at once — which your own labels
+  cannot. Click a period there and press **V** to play it.
+- A set with a class per unit follows the neuron table: its panel shows the
+  units the table's filters let through, in the raster's row order, so a row
+  of the panel and the same row of the raster are one unit. Select a unit in
+  the table and its row in the panel is highlighted.
+- Under the neuron table (click the raster or the ephys trace to see it) is
+  where such a set is reviewed. **Label grid…** and **Video grid…** open on the
+  filtered units; drag rows out of the table into the area to narrow the grids
+  to those units. The area is greyed out until a per-unit set exists.
+
+Nothing is written to disk: the set lasts until you remove it (the
+Predictions list in the I/O section) or load another session.
+
 ## Hard trials, and how the model did
 
 Some trials are simply difficult, and some the model barely managed. Both are

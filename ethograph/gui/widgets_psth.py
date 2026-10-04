@@ -1,7 +1,7 @@
 """PSTH popup dialog — integrates with Ethograph's EphysWidget + LabelsWidget.
 
 Opens when the user clicks "Open PSTH" in EphysWidget's traceview panel.
-Cluster selection is driven by the cluster table in EphysWidget (not duplicated
+Cluster selection is driven by the neuron table in EphysWidget (not duplicated
 here); the dialog listens to EphysWidget.cluster_selected signal.
 
 Label-aligned PSTH
@@ -183,7 +183,7 @@ class PSTHDialog(QDialog):
         self._cluster_combo.setToolTip("Select cluster to compute PSTH for")
         self._cluster_combo.currentIndexChanged.connect(self._on_cluster_combo_changed)
         gl.addLayout(self._make_stepper_row(self._cluster_combo, self._step_cluster))
-        gl.addWidget(QLabel("Units passing the Cluster Table's filters"))
+        gl.addWidget(QLabel("Units passing the Neuron table's filters"))
         layout.addWidget(g)
 
         # Align to

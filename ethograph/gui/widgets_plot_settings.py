@@ -26,8 +26,10 @@ from qtpy.QtWidgets import (
 from .app_state import AppStateSpec
 from .heatmap_sort import SORT_MODES
 from .notify import notify
+from .plots_heatmap import AUTO_COLORMAP
 
 HEATMAP_COLORMAPS = [
+    AUTO_COLORMAP,
     "RdBu_r",
     "viridis",
     "inferno",
@@ -1101,12 +1103,15 @@ class PlotSettingsWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.heatmap_panel.setLayout(layout)
 
+        # A section of its own in the sidebar: a heatmap of units is ordered
+        # by the neuron table instead and does not show it.
         sort_group = QGroupBox("Heatmap sort")
+        self.heatmap_sort_group = sort_group
         sort_layout = QGridLayout()
         sort_layout.setSpacing(2)
         sort_layout.setContentsMargins(2, 2, 2, 2)
         sort_group.setLayout(sort_layout)
-        layout.addWidget(sort_group)
+        main_layout.addWidget(sort_group)
 
         sort_layout.addWidget(QLabel("Mode:"), 0, 0)
         self.heatmap_sort_combo = QComboBox()
@@ -1184,8 +1189,13 @@ class PlotSettingsWidget(QWidget):
 
         hm_layout.addWidget(QLabel("Colormap:"), 0, 0)
         self.heatmap_colormap_combo = QComboBox()
-        self.heatmap_colormap_combo.addItems(HEATMAP_COLORMAPS)
-        self.heatmap_colormap_combo.currentTextChanged.connect(self._on_heatmap_colormap_changed)
+        for name in HEATMAP_COLORMAPS:
+            self.heatmap_colormap_combo.addItem("Auto" if name == AUTO_COLORMAP else name, name)
+        self.heatmap_colormap_combo.setToolTip(
+            "Auto: RdBu_r when the colour range is centred on zero (normalised data),\n"
+            "viridis when it runs from zero up (unnormalised data that is never negative)."
+        )
+        self.heatmap_colormap_combo.currentIndexChanged.connect(self._on_heatmap_colormap_changed)
         hm_layout.addWidget(self.heatmap_colormap_combo, 0, 1)
 
         hm_layout.addWidget(QLabel("Excl. percentile:"), 0, 2)
@@ -1208,7 +1218,7 @@ class PlotSettingsWidget(QWidget):
     def _restore_heatmap_defaults(self):
         cmap = self.app_state.get_with_default("heatmap_colormap")
         if cmap in HEATMAP_COLORMAPS:
-            self.heatmap_colormap_combo.setCurrentText(cmap)
+            self.heatmap_colormap_combo.setCurrentIndex(self.heatmap_colormap_combo.findData(cmap))
 
         self.heatmap_percentile_spin.setValue(self.app_state.get_with_default("heatmap_exclusion_percentile"))
 
@@ -1292,11 +1302,11 @@ class PlotSettingsWidget(QWidget):
         if not fitted:
             notify("No heatmap data in this trial", "warning")
 
-    def _on_heatmap_colormap_changed(self, colormap_name: str):
-        self.app_state.heatmap_colormap = colormap_name
+    def _on_heatmap_colormap_changed(self, _index: int):
+        self.app_state.heatmap_colormap = self.heatmap_colormap_combo.currentData()
         if self.plot_container:
             for heatmap in self.plot_container.heatmap_plots:
-                heatmap.update_colormap(colormap_name)
+                heatmap.refresh_colormap()
                 heatmap._clear_buffer()
                 heatmap.update_plot_content()
 
