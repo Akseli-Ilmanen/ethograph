@@ -480,3 +480,11 @@ class TestSeveralEventsPerTrial:
             config_from_dict(self._minimal(tmp_path, max_events_per_trial=0), tmp_path)
         with pytest.raises(ValueError, match="min_event_gap_s"):
             config_from_dict(self._minimal(tmp_path, min_event_gap_s=0.0), tmp_path)
+
+    def test_the_absence_floor_is_the_shared_one_and_stays_a_probability(self, tmp_path):
+        from ethograph.labels.confidence import MIN_PEAK
+
+        assert config_from_dict(self._minimal(tmp_path), tmp_path).infer.min_peak == MIN_PEAK
+        assert config_from_dict(self._minimal(tmp_path, min_peak=0), tmp_path).infer.min_peak == 0
+        with pytest.raises(ValueError, match="min_peak"):
+            config_from_dict(self._minimal(tmp_path, min_peak=1.5), tmp_path)

@@ -45,6 +45,7 @@ from .app_constants import (
     PLOT_CONTAINER_SIZE_HINT_HEIGHT,
 )
 from .audio_player import AudioPlayer
+from .individual_colors import individual_swatches
 from .label_drawing_mixin import LabelDrawingMixin
 from .plots_audiotrace import AudioTracePlot
 from .plots_base import ThrottleDebounce, right_gutter_width
@@ -172,11 +173,14 @@ class CurrentLabelIndicator(QLabel):
         self.move(max(0, x), self._MARGIN)
 
 
-def add_pin_choices(menu: QMenu, names: list[str], pinned: str | None, sidebar: str | None, choose) -> None:
+def add_pin_choices(
+    menu: QMenu, names: list[str], pinned: str | None, sidebar: str | None, choose, app_state=None
+) -> None:
     """One radio choice for a panel's individual: follow the sidebar, or one name.
 
     Exactly one entry is checked, so the menu itself says the two are
-    alternatives. *choose* is called with ``None`` (follow) or a name.
+    alternatives. *choose* is called with ``None`` (follow) or a name. With
+    *app_state*, every name carries the swatch the overlay draws it in.
     """
     group = QActionGroup(menu)
     group.setExclusive(True)
@@ -186,8 +190,11 @@ def add_pin_choices(menu: QMenu, names: list[str], pinned: str | None, sidebar: 
     follow.triggered.connect(lambda _=False: choose(None))
     group.addAction(follow)
     menu.addSeparator()
+    swatches = individual_swatches(app_state, names) if app_state is not None else {}
     for name in names:
         action = menu.addAction(name)
+        if name in swatches:
+            action.setIcon(swatches[name])
         action.setCheckable(True)
         action.setChecked(pinned == name)
         action.triggered.connect(lambda _=False, n=name: choose(n))
@@ -566,7 +573,12 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         menu.addSeparator()
         sub = menu.addMenu("Individual")
         add_pin_choices(
-            sub, names, plot.pinned_individual, self.app_state.sidebar_individual(), lambda n: self.pin_panel(plot, n)
+            sub,
+            names,
+            plot.pinned_individual,
+            self.app_state.sidebar_individual(),
+            lambda n: self.pin_panel(plot, n),
+            app_state=self.app_state,
         )
 
     def pin_panel(self, plot, individual: str | None) -> None:

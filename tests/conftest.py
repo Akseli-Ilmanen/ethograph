@@ -127,10 +127,6 @@ def pytest_configure(config):
     if not GUI_AVAILABLE:
         return
 
-    from ethograph.gui.plots_space import ensure_geometry_library
-
-    ensure_geometry_library()
-
     _ensure_dataset("birdpark")
     assert BIRDPARK_NC.exists(), f"BirdPark NC not found after download: {BIRDPARK_NC}"
 

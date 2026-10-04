@@ -10,17 +10,19 @@ page.
 
 ```
 mapping.txt             # the label vocabulary the GUI falls back on
-config/
-  segment.yaml          # action segmentation — copy into a project and edit
-  spot.yaml             # pixel event spotting — same
-  space/*.yaml          # reference geometries drawn behind the Space plot
+segment/segment.yaml    # action segmentation — copy into a project and edit
+spot/spot.yaml          # pixel event spotting — same
 ```
 
-## Reference geometries (`config/space/`)
+## Reference geometries (`space/`)
 
-Each `*.yaml` is one selectable geometry, identified by its filename (without
-extension); all `references` in the file are drawn together. Users add their
-own by dropping more files into `~/.ethograph/defaults/config/space/`.
+Not shipped here: the Space plot's reference geometries are a library like the
+skeleton's, read nearest first from the session's `.ethograph/space/`, the
+project's `space/` and the starter project's `~/.ethograph/defaults/space/`
+(`plots_space.geometry_dirs`). The Moll et al., 2025 template writes its arena
+(`ethograph/assets/space/moll2025.yaml`) into its own session. Each `*.yaml` is
+one selectable geometry, identified by its filename (without extension); all
+`references` in the file are drawn together.
 
 Pick the one drawn under **Data → Space controls → "Library geometry:"**, or
 set it as a default in `gui_settings.yaml` (global) or a dataset's

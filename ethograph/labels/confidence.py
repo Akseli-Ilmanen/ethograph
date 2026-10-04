@@ -78,9 +78,13 @@ def focus_window_s(tolerance_s: float) -> float:
 
 
 #: Below this peak height a curve is "nearly nothing everywhere": its
-#: ``focus`` and ``ratio`` read 0, so every confidence built on them is 0
-#: — flagged for review, never dropped. Without it a single surviving
-#: 3-frame blip at 0.02 would be the cleanest bump imaginable and read 1.0.
+#: ``focus`` and ``ratio`` read 0, so every confidence built on them is 0.
+#: Without it a single surviving 3-frame blip at 0.02 would be the cleanest
+#: bump imaginable and read 1.0. It is also the default of the pixel
+#: spotter's ``infer.min_peak``, below which a class is absent from the
+#: trial and no label is written at all. Deliberately low: a false positive
+#: costs one keypress in frame-by-frame review, a missed event can never be
+#: reviewed, and a curve this low scores near 0 anyway.
 MIN_PEAK = 0.05
 
 #: Every statistic a model may write as its confidence, by name.

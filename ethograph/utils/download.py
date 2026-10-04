@@ -1,6 +1,7 @@
 """Download example datasets from GitHub releases."""
 
 import logging
+import shutil
 import time
 from pathlib import Path
 from typing import Callable
@@ -202,9 +203,10 @@ def ensure_default_configs() -> None:
 def write_example_configs(dataset_key: str, dest: Path) -> None:
     """Write bundled config files into ``dest/.ethograph/``.
 
-    Existing files are kept — they hold user state (edited mappings, the
-    auto-saved layout in local_settings.yaml) that re-selecting a template
-    must not reset."""
+    A name may hold a subfolder (``space/moll2025.yaml``); a ``Path`` value is
+    a bundled file copied as is, anything else is written as text. Existing
+    files are kept — they hold user state (edited mappings, the auto-saved
+    layout in local_settings.yaml) that re-selecting a template must not reset."""
     configs = DATASETS.get(dataset_key, {}).get("configs")
     if not configs:
         return
@@ -214,7 +216,12 @@ def write_example_configs(dataset_key: str, dest: Path) -> None:
     config_dir.mkdir(parents=True, exist_ok=True)
     for name, content in configs.items():
         path = config_dir / name
-        if not path.exists():
+        if path.exists():
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(content, Path):
+            shutil.copyfile(content, path)
+        else:
             path.write_text(content, encoding="utf-8")
 
 

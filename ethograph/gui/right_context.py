@@ -21,6 +21,7 @@ plot type     sections shown
 ``heatmap``   Xarray coords, Overlays, Heatmap, shared axes
 ``space``     Xarray coords, Space-plot, shared axes
 ``radial``    Radial-plot (feature + which value is up)
+``skeleton``  Skeleton-plot (individuals, keypoints, colour)
 ============  ==================================================
 
 Neuron panels — the Phy trace, the spike raster and the firing-rate heatmap —
@@ -68,6 +69,10 @@ _CONTEXT_MAP: dict[str, list[str]] = {
     # Radial (compass): its feature + which value points up. No shared axes —
     # it has no time axis to autoscale or lock.
     "radial": ["radialplot"],
+    # Skeleton: the pose at the time marker, drawn in the data's own space.
+    # Its controls are the instance's (individuals, keypoints, colour); the
+    # pose's design (sizes, base colours) is the video's Pose section.
+    "skeleton": ["skeletonplot"],
     # Phy-like ephys trace: the full Kilosort trace controls (channel/gain/
     # pyramid/probe select + cluster table), borrowed from EphysWidget. No
     # shared axes group — autoscale/lock-axes don't apply to the trace view.
@@ -93,6 +98,7 @@ _CONTEXT_TITLE: dict[str, str] = {
     "firing_rate": "Heatmap settings",
     "space": "Space plot settings",
     "radial": "Radial plot settings",
+    "skeleton": "Skeleton plot settings",
     "ephys": "Phy viewer settings",
     "raster": "Raster settings",
     "neo": "Neo viewer settings",

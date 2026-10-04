@@ -6,7 +6,7 @@ with curated point labels, one camera, and plain E2E-Spot {cite:p}`hong2022e2esp
 on pixels only. It trains on two sessions, is scored on the third, and writes
 predictions you then open in the GUI next to the labels you drew.
 
-Everything here is a default. {doc}`index` is the same pipeline with the
+Everything here is a default. {doc}`guide` is the same pipeline with the
 choices put back in: pose features, MSAGSM.
 
 ethograph does not install PyTorch for you. Install it first, then the extra
@@ -34,7 +34,9 @@ No features, and no preprocessing. The model reads the frames.
 
 ## 2. `spot.yaml`
 
-Put this beside your data. It is the whole config:
+Put this in a folder of its own, `spot/` in your project folder: the file's folder
+is the pipeline's `root`, where `dataset/`, `features/` and `runs/` land. It is the
+whole config:
 
 ```yaml
 sessions:
@@ -69,7 +71,7 @@ Four things worth knowing about it:
   (`individual: crow_1`). The GUI draws a label only for the individual it
   names, and inference stops with an error rather than guess.
 - **No `features:` section.** That is what makes this option 2 in
-  {doc}`index`: pixels in, events out.
+  {doc}`guide`: pixels in, events out.
 
 ## 3. Train and score
 
@@ -109,7 +111,7 @@ export frames for this session. Open ses-03 in the GUI and load the TSV with
 **File ▸ Import labels…**. Every predicted event arrives as `automated`, drawn
 dotted, and carries a `confidence` read from the shape of its curve. The
 curves are saved next to the TSV, so frame-by-frame review shows where the
-model hesitated. See {doc}`../curation`.
+model hesitated. See {ref}`target-curation-frame`.
 
 ## Where to go from here
 
@@ -119,7 +121,7 @@ model hesitated. See {doc}`../curation`.
   labelled event counts as positive. Fit them to how fast your events are
   before changing anything else. See {ref}`spot-config-clip`.
 - **A wider temporal aperture**: `model.architecture=rny008_msagsm`, then
-  `project.compare()` shows the two runs side by side (see {doc}`index`).
+  `project.compare()` shows the two runs side by side (see {doc}`guide`).
 - **You have pose**: list pose variables under `features:` and the model reads
   them next to the pixels. See {doc}`multimodal`.
 - **Every session held out in turn**: `project.cross_validate()`, so each

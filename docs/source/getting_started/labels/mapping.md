@@ -71,11 +71,9 @@ you open uses it.
 ```
 my_project/
     ├── mapping.txt                    # the project's label_id → name vocabulary
-    ├── data/                          # optional: your session folders, if you keep them here
-    ├── config/
-    │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
-    │   ├── spot.yaml                  # pixel event-spotting config
-    │   └── space/                     # reference geometries for the Space plot
+    ├── skeleton/                      # one YAML per skeleton
+    ├── segment/segment.yaml           # action-segmentation config (copy from ~/.ethograph/defaults/)
+    └── spot/spot.yaml                 # pixel event-spotting config
 ```
 
 ```{tip}

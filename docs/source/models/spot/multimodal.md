@@ -25,7 +25,7 @@ rate exactly as the clip is against the video's. The columns are z-scored on
 the training split; the statistics are saved, so a session predicted later is
 put on the training scale rather than its own.
 
-## The features ride into the GRU
+## Input feature for GRU
 
 With `features:` listed, `train()` hands the pixel model the columns as a
 **second input**, concatenated to the CNN features before the bi-GRU. The run

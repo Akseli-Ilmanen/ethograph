@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import gzip
 import json
+import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -171,6 +173,46 @@ class TestCurveLength:
         assert {k: v.shape for k, v in curves.items()} == {31: (500,), 32: (500,)}
         _, bare = spot_entry(entry, config, clip)
         assert bare[31].shape == (51,)  # without a length there is nothing better than the last candidate
+
+
+class TestAbsentClass:
+    """A curve that never rises above ``infer.min_peak`` writes no label: the
+    class is absent from the trial, not uncertain. Every other not-found
+    curve is written at confidence 0, because a missing label cannot be
+    reviewed."""
+
+    def _entry(self, scores):
+        return {
+            "video": "v",
+            "fps": 100.0,
+            "events": [{"label": "label_31", "frame": f, "score": s} for f, s in scores],
+        }
+
+    def _spot(self, tmp_path, entry, **infer):
+        from ethograph.spot.prediction_sets import spot_entry
+
+        root = Path(tempfile.mkdtemp(dir=tmp_path))  # one run folder per call
+        data = {"sessions": [str(root / "s.nc")], "labels": {"classes": [31]}, "root": str(root), "infer": infer}
+        config = config_from_dict(data, root)
+        clip = run_clip(_run(root, stride=1), fps=100.0)
+        return spot_entry(entry, config, clip, num_frames=500)
+
+    def test_a_blip_is_absent_by_default_and_written_at_zero(self, tmp_path):
+        blip = self._entry([(250, 0.02)])
+        events, curves = self._spot(tmp_path, blip)
+        assert events == [] and 31 in curves  # the curve is kept for review either way
+        (event,) = self._spot(tmp_path, blip, min_peak=0)[0]
+        assert event.frame == 250 and event.confidence == 0.0 and not event.stats.found
+
+    def test_a_curve_still_climbing_at_the_end_is_written_and_flagged(self, tmp_path):
+        rising = self._entry([(f, f / 500) for f in range(400, 500)])
+        (event,) = self._spot(tmp_path, rising)[0]
+        assert event.confidence == 0.0 and not event.stats.found
+
+    def test_the_floor_can_be_raised(self, tmp_path):
+        bump = self._entry([(249, 0.2), (250, 0.3), (251, 0.2)])
+        assert len(self._spot(tmp_path, bump)[0]) == 1
+        assert self._spot(tmp_path, bump, min_peak=0.5)[0] == []
 
 
 class TestPredictionIndividual:

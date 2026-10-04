@@ -141,7 +141,7 @@ untouched either way. Nothing about the labels is ever modified.
 
 Ethograph maintains one column itself: **`curated`** is `yes` when every label
 of the trial is `manual` or `curated` and `no` while any is still a model's
-unreviewed `automated` output (see {doc}`../models/curation`) — text rather
+unreviewed `automated` output (see {doc}`../models/curation/index`) — text rather
 than `1`/`0`, so the funnel filter offers it as a yes/no checklist. It is
 refreshed every few seconds while you curate rather than on every edit, so
 labelling never waits on a file write, and it flips back to `no` whenever new

@@ -28,7 +28,8 @@ in front (`predictions_mstcn_20260101/<stem>_predictions.tsv`); a plain
 `.tsv` keeps its own name.
 
 The Predictions group lists every set currently loaded. Select one to make
-it the source of **Update confidence (+ PDF)**; **Remove** unloads it and
+it current — the Curation section's **Confidence curves…** falls back to
+it when the labels carry no run of their own; **Remove** unloads it and
 closes its panel. A run folder's frame-by-frame confidence curve is drawn
 dashed inside that run's own panel, on its 0–1 axis, and nowhere else —
 the **Confidence** checkbox shows or hides it on every panel at once. A

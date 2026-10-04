@@ -86,8 +86,11 @@ def _linux_preflight() -> None:
 
 def _require_gui_extra(exc: ImportError) -> None:
     """Turn a missing GUI dependency into an actionable install hint."""
+    # A DLL load failure is an ImportError without a module name; its text
+    # is the only clue (typically a Qt built against another Python).
+    cause = f"{exc.name} is missing" if exc.name else str(exc)
     sys.exit(
-        f"ethograph: the GUI dependencies are not installed ({exc.name} is missing).\n"
+        f"ethograph: the GUI dependencies are not installed ({cause}).\n"
         '\n    pip install "ethograph[gui]"          # GUI\n'
         '    pip install "ethograph[gui,audio]"    # GUI + audio\n'
         "\nThe plain `ethograph` install is the library only (TrialTree, I/O, labels)."
@@ -148,16 +151,15 @@ def launch():
 
     try:
         from ethograph.gui import theme
+        from ethograph.gui.dialog_fit import install_dialog_fitter
         from ethograph.gui.main_window import EthographMainWindow
-        from ethograph.gui.plots_space import ensure_geometry_library
         from ethograph.gui.widgets_meta import MetaWidget
     except ImportError as exc:
         _require_gui_extra(exc)
 
-    ensure_geometry_library()
-
     app = QApplication.instance() or QApplication(sys.argv)
     theme.apply_theme(app)
+    install_dialog_fitter(app)
 
     shell = EthographMainWindow()
     meta_widget = MetaWidget(shell)

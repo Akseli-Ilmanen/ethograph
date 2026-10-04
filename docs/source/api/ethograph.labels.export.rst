@@ -14,5 +14,4 @@ ethograph.labels.export
     :toctree:
     :nosignatures:
 
-    correct_offsets_trial
     enrich_labels_df

@@ -2,7 +2,7 @@
 
 ``project.yaml`` is gone: the individuals and the excluded-file globs are the
 user's (``gui_settings.yaml``), the skeleton is one YAML per skeleton under
-``config/skeleton/``, and the rest were defaults the GUI remembers by itself.
+``skeleton/``, and the rest were defaults the GUI remembers by itself.
 An old file is folded into the settings that replaced it, once.
 """
 

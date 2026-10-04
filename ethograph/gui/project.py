@@ -8,7 +8,7 @@ project keeps a registry of the session folders dropped while it was open, so
 the cover page can list and reopen them.
 
 **The project folder holds files, never a settings file.** ``mapping.txt``, the
-pipeline configs under ``config/``, the skeleton library, the runs — each is read
+skeleton library, each pipeline's folder with its YAML and runs — each is read
 from its own path. What used to be ``project.yaml`` is gone: the individuals and
 the ignored-file globs are the user's (``gui_settings.yaml``, so they follow the
 person rather than a folder that may be copied between machines), the skeleton is
@@ -19,7 +19,9 @@ Layout::
 
     my_study/
     ├── mapping.txt                   # the label vocabulary
-    ├── config/skeleton/*.yaml        # the skeleton library
+    ├── skeleton/*.yaml               # the skeleton library
+    ├── workflows/, wizard/           # curation workflows, Data wizard notebooks
+    ├── segment/, spot/               # a pipeline's YAML and, beside it, its data and runs
     └── sessions.txt                  # one session folder per line, oldest first
 
     D:/rig/2026-09-06/                # the dropped folder, now a session

@@ -11,6 +11,7 @@ from qtpy.QtWidgets import QApplication, QWidget
 from ethograph.gui.app_state import ObservableAppState
 from ethograph.gui.dialog_bulk_labels import LabelBulkEditDialog
 from ethograph.gui.widgets_curation import CurationPanel
+from ethograph.labels.curation import ConfidenceCut
 from ethograph.labels.intervals import LABELING_AUTOMATED, LABELING_MANUAL
 
 
@@ -132,7 +133,21 @@ class TestGuardedActions:
         _label_item(dialog, 4).setCheckState(Qt.Checked)
         _label_item(dialog, 6).setCheckState(Qt.Checked)
         dialog._curate()
-        assert calls == [(("all", {4, 6}), {"confirm": True})]
+        assert calls == [(("all", {4, 6}), {"confirm": True, "cut": None})]
+
+    def test_the_confidence_cut_reaches_the_panel_only_when_ticked(self, dialog, monkeypatch):
+        """Off, the panel gets no cut; on, both numbers as typed — the trial
+        half and the segment half, which the panel applies as one rule."""
+        calls = []
+        monkeypatch.setattr(dialog.panel, "curate_trial_labels", lambda *a, **kw: calls.append(kw["cut"]) or 0)
+        dialog.all_labels_cb.setChecked(True)
+        assert not dialog.trial_confidence_edit.isEnabled()
+        dialog.confident_cb.setChecked(True)
+        assert dialog.trial_confidence_edit.isEnabled()
+        dialog.trial_confidence_edit.setValue(0.8)
+        dialog.segment_confidence_edit.setValue(0.5)
+        dialog._curate()
+        assert calls == [ConfidenceCut(0.8, 0.5)]
 
     def test_delete_reaches_the_panel(self, dialog, monkeypatch):
         calls = []
@@ -149,6 +164,14 @@ class TestGuardedActions:
         dialog._purge()
         assert calls == [(("filtered", 0.25, None), {"confirm": True})]
 
+    def test_stitch_reaches_the_panel_with_the_gap(self, dialog, monkeypatch):
+        calls = []
+        monkeypatch.setattr(dialog.panel, "stitch_trial_labels", lambda *a, **kw: calls.append((a, kw)) or 0)
+        dialog.stitch_spin.setValue(0.05)
+        dialog.all_labels_cb.setChecked(True)
+        dialog._stitch()
+        assert calls == [(("filtered", 0.05, None), {"confirm": True})]
+
     def test_an_empty_checklist_refuses_rather_than_meaning_every_class(self, dialog, monkeypatch):
         """scope_mask reads an empty set as "every class" — the dialog must
         never let an unticked checklist silently touch everything."""
@@ -156,12 +179,3 @@ class TestGuardedActions:
         monkeypatch.setattr(dialog.panel, "delete_trial_labels", lambda *a, **kw: called.append(True))
         dialog._delete()  # default state: All off, nothing ticked
         assert called == []
-
-    def test_correct_offsets_reaches_the_panel_and_ignores_the_checklist(self, dialog, monkeypatch):
-        """Offset correction is never label-scoped, so it must run even with
-        the checklist empty — unlike curate/delete/purge."""
-        calls = []
-        monkeypatch.setattr(dialog.panel, "correct_offsets", lambda *a, **kw: calls.append((a, kw)) or 2)
-        dialog.trial_scope_combo.setCurrentIndex(dialog.trial_scope_combo.findData("single"))
-        dialog._correct_offsets()
-        assert calls == [(("single",), {"confirm": True})]

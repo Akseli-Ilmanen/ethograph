@@ -8,13 +8,14 @@ the DataLoader so xarray, pynapple, and NWB sources all work.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import yaml
 from qtpy.QtCore import QEvent, Qt, QTimer, Signal
+from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -30,8 +31,11 @@ from ethograph.features.preprocessing import interpolate_nans
 from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_lineplot import MultiColoredLineItem
+from ethograph.gui.project import project_dir_of
+from ethograph.gui.space_shapes import Shape, axis_ticks, parse_shapes, shape_wireframe
 from ethograph.io.catalog import INDIVIDUAL_DIMS, DataLoader
-from ethograph.utils.paths import defaults_dir, seed_defaults
+from ethograph.io.session_layout import settings_dir
+from ethograph.utils.paths import defaults_dir
 
 logger = logging.getLogger(__name__)
 
@@ -99,54 +103,99 @@ def load_geometry_yaml(path: Path) -> Optional[dict]:
         return yaml.safe_load(f)
 
 
-#: User library of reference geometries. Drop a ``*.yaml`` file here (a
-#: ``references:`` list of vertices/edges) to make it selectable — by file
-#: stem — in the Space controls / persist-able as a default via
-#: ``space_library_geometry`` in gui_settings.yaml or local_settings.yaml.
-GEOMETRY_LIBRARY_DIR = defaults_dir("config") / "space"
+def geometry_config(base: dict, shapes: Iterable[Shape]) -> dict:
+    """*base* (a loaded geometry file) with its ``shapes`` replaced; its raw ``references`` kept as they were."""
+    cfg = {key: value for key, value in base.items() if key != "shapes"}
+    if not cfg.get("references"):
+        cfg.pop("references", None)
+    cfg["shapes"] = [shape.to_dict() for shape in shapes]
+    return cfg
 
 
-def ensure_geometry_library() -> Path:
-    """Seed the geometry library (with every other bundled default) and return it.
+def write_geometry_yaml(path: Path, cfg: dict) -> None:
+    """Write a geometry file the library reads back (:func:`load_library_geometries`)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("# Space geometry, edited in Settings > Edit space geometry. Units are the data's own.\n")
+        yaml.safe_dump(cfg, f, sort_keys=False, default_flow_style=None)
 
-    ``seed_defaults`` copies each shipped file only when it is missing, so a
-    user's edits to a bundled geometry stick; a deleted one comes back.
+
+#: The library of reference geometries: one ``*.yaml`` per geometry (a
+#: ``references:`` list of vertices/edges), selectable by file stem in the
+#: Space controls and persist-able via ``space_library_geometry`` in
+#: gui_settings.yaml or local_settings.yaml. The folder has this name inside a
+#: session's ``.ethograph/``, a project folder and the starter project alike.
+GEOMETRY_DIRNAME = "space"
+
+
+def geometry_dirs(session: Path | str | None, project: Path | str | None) -> list[Path]:
+    """The directories searched, nearest first: the session's, the project's, the starter project's.
+
+    The same rule as ``mapping.txt`` and the skeleton library: a file in the
+    session's ``.ethograph/space/`` shadows the project's ``space/``, which
+    shadows the user's own under ``~/.ethograph/defaults/``. A template writes
+    its arena into its own session, so it never needs the home folder.
     """
-    seed_defaults()
-    GEOMETRY_LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
-    return GEOMETRY_LIBRARY_DIR
+    dirs: list[Path] = []
+    if session is not None:
+        dirs.append(settings_dir(session) / GEOMETRY_DIRNAME)
+    if project is not None:
+        dirs.append(Path(project) / GEOMETRY_DIRNAME)
+    dirs.append(defaults_dir(GEOMETRY_DIRNAME))
+    return dirs
 
 
-def load_library_geometries(lib_dir: Path | None = None) -> dict[str, list["ReferenceGeometry"]]:
-    """Parse every YAML file in the geometry library, keyed by file stem.
+def geometry_dirs_of(app_state) -> list[Path]:
+    """:func:`geometry_dirs` for the loaded session and the project it works in."""
+    source = getattr(app_state, "nc_file_path", None) or getattr(app_state, "nwb_file_path", None)
+    return geometry_dirs(source or None, project_dir_of(app_state))
+
+
+def library_geometry_files(dirs: Iterable[Path]) -> dict[str, Path]:
+    """Every geometry file in *dirs*, keyed by file stem, the nearest (first) directory winning."""
+    files: dict[str, Path] = {}
+    for lib_dir in reversed(list(dirs)):  # farthest first, so nearest overwrites
+        if lib_dir.is_dir():
+            files.update({path.stem: path for path in sorted(lib_dir.glob("*.y*ml"))})
+    return files
+
+
+def load_library_geometries(dirs: Iterable[Path]) -> dict[str, list["ReferenceGeometry"]]:
+    """Every geometry in *dirs*, keyed by file stem, the nearest (first) directory winning.
 
     One file = one selectable geometry (e.g. ``moll2025.yaml`` →
-    ``"moll2025"``); all of a file's ``references`` are drawn together.
-    Unparsable files are skipped with a log message (user-supplied input).
+    ``"moll2025"``); all of a file's ``references`` and ``shapes`` are drawn
+    together. Unparsable files are skipped with a log message (user-supplied input).
     """
-    lib_dir = GEOMETRY_LIBRARY_DIR if lib_dir is None else Path(lib_dir)
     geometries: dict[str, list[ReferenceGeometry]] = {}
-    if not lib_dir.is_dir():
-        return geometries
-    for path in sorted(lib_dir.glob("*.y*ml")):
+    for stem, path in library_geometry_files(dirs).items():
         cfg = load_geometry_yaml(path)
         if not cfg:
             continue
         try:
-            refs = _parse_references(cfg)
+            refs = parse_geometry(cfg)
         except Exception:
             logger.exception("Failed to parse geometry library file %s", path)
             continue
         if refs:
-            geometries[path.stem] = refs
+            geometries[stem] = refs
     return geometries
+
+
+def parse_geometry(cfg: dict) -> list[ReferenceGeometry]:
+    """Everything a geometry config draws: its raw ``references`` and its parametric ``shapes``."""
+    refs = _parse_references(cfg)
+    for shape in parse_shapes(cfg):
+        vertices, edges = shape_wireframe(shape)
+        refs.append(ReferenceGeometry(name=shape.name, vertices=vertices, edges=edges, color=shape.color))
+    return refs
 
 
 def _parse_references(cfg: dict) -> list[ReferenceGeometry]:
     """Parse a geometry config's ``references`` list (name/vertices/edges/color)
     into :class:`ReferenceGeometry` objects."""
     refs: list[ReferenceGeometry] = []
-    for entry in cfg.get("references", []):
+    for entry in cfg.get("references") or []:
         verts = np.array(entry["vertices"], dtype=np.float64)
         edges = [tuple(e) for e in entry["edges"]]
         refs.append(
@@ -209,6 +258,132 @@ def _render_reference_3d(gl_widget, ref: ReferenceGeometry):
     gl_widget.addItem(wireframe)
 
 
+def load_reference_geometries(app_state) -> list[ReferenceGeometry]:
+    """Reference geometry to overlay, resolved from the geometry library.
+
+    ``app_state.space_library_geometry`` (chosen in the Space controls, or set
+    as a default in gui_settings.yaml / local_settings.yaml) is the stem of a
+    YAML file in the geometry library (:func:`geometry_dirs`); all of that
+    file's references are drawn. While Settings ▸ Edit space geometry is open, its
+    unsaved edit (``app_state.space_geometry_preview``) stands in for the file.
+    """
+    selected = getattr(app_state, "space_library_geometry", None)
+    if not selected:
+        return []
+    preview = getattr(app_state, "space_geometry_preview", None)
+    if preview and preview.get("name") == selected:
+        return parse_geometry(preview["config"])
+    dirs = geometry_dirs_of(app_state)
+    refs = load_library_geometries(dirs).get(selected)
+    if refs is None:
+        logger.warning("Geometry file %r not found in %s", selected, [str(d) for d in dirs])
+        return []
+    return refs
+
+
+def clear_reference_items(widget) -> None:
+    """Remove previously drawn reference geometry from a 2D or 3D canvas."""
+    if widget is None:
+        return
+    if isinstance(widget, gl.GLViewWidget):
+        for item in list(widget.items):
+            if getattr(item, "_is_reference", False):
+                widget.removeItem(item)
+    else:
+        plot_item = widget.getPlotItem()
+        for item in list(plot_item.items):
+            if getattr(item, "_is_reference", False):
+                plot_item.removeItem(item)
+
+
+def draw_reference_geometry(widget, app_state) -> None:
+    """(Re)draw the library's reference geometry on a 2D or 3D canvas.
+
+    Idempotent: old reference items are removed first, so this runs on every
+    render — a library-geometry / show-references change re-renders every
+    open space or skeleton plot without a widget rebuild.
+    """
+    clear_reference_items(widget)
+    if widget is None or not getattr(app_state, "space_show_references", True):
+        return
+    for ref in load_reference_geometries(app_state):
+        try:
+            draw_reference(widget, ref)
+        except Exception:
+            logger.exception("Failed to draw reference %s", ref.name)
+    preview = getattr(app_state, "space_geometry_preview", None)
+    if preview and preview.get("axes") and preview.get("name") == getattr(app_state, "space_library_geometry", None):
+        axes = preview["axes"]
+        draw_axes_cross(widget, axes["center"], axes["half_length"])
+
+
+#: x, y, z in the colours every 3D tool gives them.
+AXIS_COLORS = ((220, 40, 40), (30, 160, 60), (40, 90, 230))
+
+
+def _tick_label(value: float) -> str:
+    return f"{value:.6g}"
+
+
+def draw_axes_cross(widget, center, half_length: float) -> None:
+    """X/Y(/Z) lines through *center*, numbered in data coordinates — the shape being edited.
+
+    Drawn as reference items, so :func:`clear_reference_items` removes them with the geometry.
+    """
+    center = np.asarray(center, dtype=np.float64)
+    is_gl = isinstance(widget, gl.GLViewWidget)
+    font = QFont()
+    font.setPointSize(8)
+    for axis, (name, rgb) in enumerate(zip("XYZ", AXIS_COLORS)):
+        if axis == 2 and not is_gl:
+            break
+        direction = np.zeros(3)
+        direction[axis] = half_length
+        ends = np.array([center - direction, center + direction])
+        ticks = axis_ticks(float(center[axis]), half_length)
+        labels = [(t, _tick_label(t)) for t in ticks]
+        # The name just past the end, clear of the last number.
+        labels.append((float(center[axis] + 1.12 * half_length), name))
+        if is_gl:
+            line = gl.GLLinePlotItem(
+                pos=ends.astype(np.float32),
+                color=tuple(c / 255.0 for c in rgb) + (1.0,),
+                width=2,
+                antialias=True,
+                mode="lines",
+                glOptions="opaque",
+            )
+            line._is_reference = True
+            widget.addItem(line)
+            for value, text in labels:
+                pos = center.copy()
+                pos[axis] = value
+                item = gl.GLTextItem(pos=pos, text=text, color=QColor(*rgb), font=font)
+                item._is_reference = True
+                widget.addItem(item)
+        else:
+            plot_item = widget.getPlotItem()
+            line = pg.PlotCurveItem(x=ends[:, 0], y=ends[:, 1], pen=pg.mkPen(color=rgb, width=2))
+            line._is_reference = True
+            plot_item.addItem(line)
+            for value, text in labels:
+                pos = center.copy()
+                pos[axis] = value
+                item = pg.TextItem(text=text, color=rgb, anchor=(0.5, 0.0) if axis == 0 else (0.0, 0.5))
+                item.setFont(font)
+                item.setPos(float(pos[0]), float(pos[1]))
+                item._is_reference = True
+                plot_item.addItem(item)
+
+
+def draw_reference(widget, ref: ReferenceGeometry) -> None:
+    """Add one reference wireframe to a 2D or 3D canvas; :func:`clear_reference_items` removes it."""
+    if isinstance(widget, gl.GLViewWidget):
+        _render_reference_3d(widget, ref)
+    else:
+        _render_reference_2d(widget.getPlotItem(), ref)
+
+
 # ---------------------------------------------------------------------------
 # Rendering helpers
 # ---------------------------------------------------------------------------
@@ -242,7 +417,28 @@ def _render_3d(gl_widget, X, Y, Z, color_data=None):
     return line
 
 
-def _auto_camera_3d(gl_widget, X, Y, Z):
+def make_space_widget(view_3d: bool) -> tuple[QWidget, bool]:
+    """A white-background canvas for spatial data: ``(widget, is_3d)``.
+
+    A ``GLViewWidget`` when *view_3d* and OpenGL is available, else a
+    ``PlotWidget`` — the second element says which was made, so a caller asked
+    for 3D can fall back to 2D controls. Shared by the space plot and the
+    skeleton panel, so both look and behave alike.
+    """
+    if view_3d:
+        try:
+            widget = gl.GLViewWidget()
+            widget.setBackgroundColor("w")
+            widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            return widget, True
+        except Exception:
+            logger.warning("OpenGL unavailable, falling back to 2D view")
+    widget = pg.PlotWidget()
+    widget.setBackground("w")
+    return widget, False
+
+
+def auto_camera_3d(gl_widget, X, Y, Z):
     """Set a reasonable default camera for 3D data."""
     cx, cy, cz = float(np.nanmean(X)), float(np.nanmean(Y)), float(np.nanmean(Z))
     extent = (
@@ -475,6 +671,8 @@ class SpacePlot(IndividualPinMixin, QWidget):
         app_state.space_hide_zeros_changed.connect(self._on_settings_changed)
         app_state.space_show_references_changed.connect(self._on_settings_changed)
         app_state.space_library_geometry_changed.connect(self._on_settings_changed)
+        # A shape being edited redraws only the geometry, per keystroke.
+        app_state.space_geometry_preview_changed.connect(self._draw_references)
 
         self._set_3d_visible(False)
         super().hide()
@@ -1023,7 +1221,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
         if use_3d:
             _render_3d(self.space_widget, data_x, data_y, data_z, color_data)
             if rebuilt:
-                _auto_camera_3d(self.space_widget, data_x, data_y, data_z)
+                auto_camera_3d(self.space_widget, data_x, data_y, data_z)
         else:
             _render_2d(self.space_widget, data_x, data_y, color_data)
             plot_item = self.space_widget.getPlotItem()
@@ -1110,23 +1308,13 @@ class SpacePlot(IndividualPinMixin, QWidget):
             self.space_widget.hide()
             self.space_widget.deleteLater()
 
-        if view_3d:
-            try:
-                self.space_widget = gl.GLViewWidget()
-                self.space_widget.setBackgroundColor("w")
-                self.space_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            except Exception:
-                logger.warning("OpenGL unavailable, falling back to 2D view")
-                self.cb_3d.blockSignals(True)
-                self.cb_3d.setChecked(False)
-                self.cb_3d.blockSignals(False)
-                self.space_widget = pg.PlotWidget()
-                self.space_widget.setBackground("w")
-        else:
-            self.space_widget = pg.PlotWidget()
-            self.space_widget.setBackground("w")
+        self.space_widget, is_3d = make_space_widget(view_3d)
+        if view_3d and not is_3d:
+            self.cb_3d.blockSignals(True)
+            self.cb_3d.setChecked(False)
+            self.cb_3d.blockSignals(False)
 
-        if not isinstance(self.space_widget, gl.GLViewWidget):
+        if not is_3d:
             # Manually only: programmatic setRange (percentile limits, restore,
             # incoming sync) must not re-broadcast, or two synced plots loop.
             vb = self.space_widget.getPlotItem().vb
@@ -1174,61 +1362,9 @@ class SpacePlot(IndividualPinMixin, QWidget):
         the 2D/3D boundary."""
         self._restore_ranges(state)
 
-    def _load_references(self) -> list[ReferenceGeometry]:
-        """Reference geometry to overlay, resolved from the geometry library.
-
-        ``app_state.space_library_geometry`` (chosen in the Space controls, or
-        set as a default in gui_settings.yaml / local_settings.yaml) is the
-        stem of a YAML file in ``~/.ethograph/defaults/config/space/``; all of that
-        file's references are drawn.
-        """
-        selected = getattr(self.app_state, "space_library_geometry", None)
-        if not selected:
-            return []
-        refs = load_library_geometries().get(selected)
-        if refs is None:
-            logger.warning("Geometry file %r not found in %s", selected, GEOMETRY_LIBRARY_DIR)
-            return []
-        return refs
-
-    def _draw_references(self):
-        """(Re)draw all reference geometry items.
-
-        Idempotent: old reference items are removed first, so this runs on
-        every render — a library-geometry / show-references change re-renders
-        every open space plot without a widget rebuild.
-        """
-        self._clear_reference_items()
-        if not getattr(self.app_state, "space_show_references", True):
-            return
-        refs = self._load_references()
-        if not refs:
-            return
-
-        is_gl = isinstance(self.space_widget, gl.GLViewWidget)
-        for ref in refs:
-            try:
-                if is_gl:
-                    _render_reference_3d(self.space_widget, ref)
-                else:
-                    plot_item = self.space_widget.getPlotItem()
-                    _render_reference_2d(plot_item, ref)
-            except Exception:
-                logger.exception("Failed to draw reference %s", ref.name)
-
-    def _clear_reference_items(self):
-        """Remove previously drawn reference geometry items."""
-        if self.space_widget is None:
-            return
-        if isinstance(self.space_widget, gl.GLViewWidget):
-            for item in list(self.space_widget.items):
-                if getattr(item, "_is_reference", False):
-                    self.space_widget.removeItem(item)
-        else:
-            plot_item = self.space_widget.getPlotItem()
-            for item in list(plot_item.items):
-                if getattr(item, "_is_reference", False):
-                    plot_item.removeItem(item)
+    def _draw_references(self, *_args):
+        """(Re)draw all reference geometry items — see :func:`draw_reference_geometry`."""
+        draw_reference_geometry(self.space_widget, self.app_state)
 
     # --- Percentile axis limits (zoom constraints) --------------------------
 

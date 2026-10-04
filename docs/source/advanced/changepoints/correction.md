@@ -9,7 +9,19 @@ producing more consistent annotations.
 
 ## How it works
 
-The correction runs four steps in sequence:
+```{figure} ../../_static/media/changepoint_correction.png
+:alt: Two-step schematic: purge and stitch, then changepoint correction against a speed trace
+:width: 100%
+
+Step 1 drops labels shorter than the minimum duration (red crosses) and
+merges same-label neighbours across small gaps. Step 2 moves every remaining
+boundary (arrows) to the nearest changepoint of the feature — here the turning
+points of a speed trace, shown in the inset as the circles the onset and offset
+of each label snap to.
+```
+
+The correction runs four steps in sequence. The figure's step 1 is the first
+two; its step 2 is the third:
 
 1. **Purge short intervals** — remove labels shorter than the minimum duration.
 2. **Stitch gaps** — merge adjacent same-label intervals separated by a small gap.

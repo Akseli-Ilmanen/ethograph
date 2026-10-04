@@ -38,6 +38,7 @@ from ethograph.labels.intervals import (
     LABELING_METHODS,
     SUBJECT_COLUMNS,
     ensure_labeling_method,
+    stitch_intervals,
 )
 
 #: Metadata-table column holding the per-trial verdict: "yes" when every
@@ -48,8 +49,10 @@ CURATED_COLUMN = "curated"
 CURATED_YES = "yes"
 CURATED_NO = "no"
 
-#: Visit order of the boundaries of one label: START before END.
-FIELD_RANK = {"point": 0, "start": 0, "end": 1}
+#: Visit order of the boundaries of one label: START before END. A "label"
+#: target is the whole label (segment review), one per row.
+FIELD_LABEL = "label"
+FIELD_RANK = {"point": 0, "start": 0, "end": 1, FIELD_LABEL: 0}
 
 #: How :func:`build_review_queue` orders the boundaries in scope.
 #: "trial" walks every boundary of a trial before moving to the next trial
@@ -181,6 +184,64 @@ def curate_trials(
     return curate_rows(all_df, mask)
 
 
+@dataclass(frozen=True)
+class ConfidenceCut:
+    """The two thresholds a trial-by-trial review reads a trial against.
+
+    A trial is *confident* when its mean frame confidence reaches ``trial``
+    **and** none of its automated labels in scope sits below ``segment``.
+    Both halves are needed: one doubtful action inside a long confident
+    trial barely moves the mean, and that action is the one a model gets
+    wrong. Either half at ``0`` is off.
+    """
+
+    trial: float = 0.0
+    segment: float = 0.0
+
+    def __post_init__(self) -> None:
+        for name in ("trial", "segment"):
+            value = getattr(self, name)
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} threshold must lie in [0, 1], got {value!r}")
+
+    @property
+    def active(self) -> bool:
+        return self.trial > 0.0 or self.segment > 0.0
+
+
+def confident_trials(
+    trials,
+    means: dict[str, float],
+    all_df: pd.DataFrame | None,
+    label_ids: set[int] | None,
+    cut: ConfidenceCut,
+) -> list:
+    """The subset of *trials* that pass *cut*, in the given order.
+
+    *means* is ``{trial: mean frame confidence}`` (see
+    :func:`~ethograph.labels.review_metrics.trial_confidence_means`); a trial
+    it does not name fails the trial half whenever that half is on — no
+    curve, no verdict. The segment half reads the automated labels of
+    *label_ids* (``None`` = every class), never manual or curated ones: a
+    human already vouched for those.
+    """
+    low_segment: set[str] = set()
+    if cut.segment > 0.0 and all_df is not None and not all_df.empty:
+        df = ensure_labeling_method(all_df)
+        automated = df[(df["labeling_method"] == LABELING_AUTOMATED) & scope_mask(df, label_ids)]
+        low = automated[automated["confidence"].astype(float) < cut.segment]
+        low_segment = set(low["trial"].astype(str))
+    out = []
+    for trial in trials:
+        key = str(trial)
+        if cut.trial > 0.0 and (key not in means or means[key] < cut.trial):
+            continue
+        if key in low_segment:
+            continue
+        out.append(trial)
+    return out
+
+
 def curate_label(all_df: pd.DataFrame | None, inst: dict) -> tuple[pd.DataFrame | None, int]:
     """Curate one label (identified as :func:`row_mask` does, within its trial)."""
     if all_df is None or all_df.empty:
@@ -250,6 +311,32 @@ def purge_short_labels(
     durations = all_df["offset_s"].astype(float) - all_df["onset_s"].astype(float)
     short = in_scope & is_state & (durations < min_duration_s)
     return delete_rows(all_df, short)
+
+
+def stitch_labels(
+    trial_df: pd.DataFrame,
+    max_gap_s: float,
+    label_ids: set[int] | None = None,
+) -> tuple[pd.DataFrame, int]:
+    """Merge same-class state labels of one trial whose gap is under *max_gap_s*.
+
+    Only rows whose class is in *label_ids* are candidates; every other row
+    (other classes, point events) passes through untouched. The merge rule
+    itself is :func:`~ethograph.labels.intervals.stitch_intervals`, the one
+    the changepoint correction uses. Returns (table, rows absorbed).
+    """
+    if trial_df is None or trial_df.empty:
+        return trial_df, 0
+    candidate = scope_mask(trial_df, label_ids) & (trial_df["event_type"] == EVENT_TYPE_STATE)
+    if not candidate.any():
+        return trial_df, 0
+    stitched = stitch_intervals(trial_df[candidate].copy(), max_gap_s)
+    n = int(candidate.sum()) - len(stitched)
+    if not n:
+        return trial_df, 0
+    out = pd.concat([trial_df[~candidate], stitched], ignore_index=True)
+    out.sort_values("onset_s", inplace=True, kind="stable", na_position="last")
+    return out.reset_index(drop=True), n
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +422,8 @@ def curated_column_differs(metadata_df: pd.DataFrame | None, status: dict[str, b
 
 @dataclass
 class ReviewTarget:
-    """One boundary to review frame by frame.
+    """One boundary to review frame by frame, or one whole label to review as
+    a segment.
 
     ``inst`` is shared between the start and end targets of the same state
     event, so committing a new start updates the onset the end target (and
@@ -343,7 +431,7 @@ class ReviewTarget:
     """
 
     inst: dict
-    field: str  # "point" | "start" | "end"
+    field: str  # "point" | "start" | "end" | "label"
 
 
 def _inst_from_row(row) -> dict:
@@ -358,7 +446,9 @@ def _inst_from_row(row) -> dict:
     }
 
 
-def _targets_for_inst(inst: dict) -> list[ReviewTarget]:
+def _targets_for_inst(inst: dict, *, whole: bool = False) -> list[ReviewTarget]:
+    if whole:
+        return [ReviewTarget(inst, FIELD_LABEL)]
     is_point = inst["event_type"] == EVENT_TYPE_POINT or not math.isfinite(inst["offset_s"])
     if is_point:
         return [ReviewTarget(inst, "point")]
@@ -373,13 +463,16 @@ def build_review_queue(
     allowed_trials: set[str] | None = None,
     automated_only: bool = False,
     order: str = REVIEW_ORDER_TRIAL,
+    whole_labels: bool = False,
 ) -> list[ReviewTarget]:
     """Every boundary of the labels in scope, sorted per *order*.
 
-    One target per point event, a start then an end target per state event.
-    *order* (:data:`REVIEW_ORDERS`) is "trial" (each trial visited once, in
-    time order — the default) or "label" (each class visited once, across
-    every trial in time order, before the next class). *allowed_trials* (as
+    One target per point event, a start then an end target per state event;
+    with *whole_labels* one ``"label"`` target per row instead (the segment
+    review edits both boundaries of a label in one go). *order*
+    (:data:`REVIEW_ORDERS`) is "trial" (each trial visited once, in time
+    order — the default) or "label" (each class visited once, across every
+    trial in time order, before the next class). *allowed_trials* (as
     strings) is the trials-table filter. *automated_only* skips manual and
     already-curated labels — a human already vouched for those, so a
     from-scratch review has nothing to add.
@@ -401,7 +494,7 @@ def build_review_queue(
     rows = df[mask].sort_values(sort_cols)
     targets: list[ReviewTarget] = []
     for _, row in rows.iterrows():
-        targets.extend(_targets_for_inst(_inst_from_row(row)))
+        targets.extend(_targets_for_inst(_inst_from_row(row), whole=whole_labels))
     return targets
 
 

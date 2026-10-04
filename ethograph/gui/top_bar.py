@@ -46,7 +46,9 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from ethograph.gui.dialog_space_geometry import SpaceGeometryDialog
 from ethograph.gui.notify import notify
+from ethograph.gui.plots_skeleton import POSE_FEATURE, SKELETON_3D, skeleton_plot_types
 from ethograph.gui.project import project_dir_of
 from ethograph.utils.paths import ethograph_home
 
@@ -267,6 +269,7 @@ class TopBarBuilder:
         menu.addAction("LightGBM: Predict…", self._open_onset_predict)
         menu.addSeparator()
         menu.addAction("Curation workflows…", self._open_curation_workflows)
+        menu.addAction("Curator feedback…", self._open_curator_feedback)
 
     def _open_onset_train(self):
         from .dialog_onset_model import TrainOnsetDialog
@@ -298,6 +301,13 @@ class TopBarBuilder:
         if panel is None:
             return
         panel.open_workflows()
+
+    def _open_curator_feedback(self):
+        """Score the curated trials against the model and flag the hard ones."""
+        panel = getattr(getattr(self.meta, "labels_widget", None), "curation_panel", None)
+        if panel is None:
+            return
+        panel.open_feedback()
 
     def _open_label_inconsistencies(self):
         """Filter the trials table by what the labels do (Tools)."""
@@ -518,6 +528,7 @@ class TopBarBuilder:
         menu.addAction("Create / edit label mapping.txt…", self._open_label_mapping)
         menu.addAction("Create / edit individuals…", self._open_individuals)
         menu.addAction("Edit skeleton…", self._open_skeleton_settings)
+        menu.addAction("Edit space geometry…", self._open_space_geometry)
         menu.addSeparator()
         menu.addAction("Open GUI settings folder (.ethograph)…", self._open_ethograph_home)
         self.open_project_action = menu.addAction("Open project settings folder…", self._open_project_folder)
@@ -562,6 +573,45 @@ class TopBarBuilder:
         )
         dialog.exec_()
         self._refresh_skeleton(dw)
+
+    def _open_space_geometry(self):
+        """Non-modal and narrow, docked at the window's right edge, so the plots it draws into stay in view."""
+        dialog = getattr(self, "_space_geometry_dialog", None)
+        if dialog is not None and dialog.isVisible():
+            dialog.raise_()
+            dialog.activateWindow()
+            return
+        dw = getattr(self.meta, "data_widget", None)
+        plot_settings = getattr(self.meta, "plot_settings_widget", None)
+        dialog = SpaceGeometryDialog(
+            self.app_state,
+            on_saved=plot_settings.populate_space_library_combo if plot_settings is not None else None,
+            panels_open=(lambda: bool(dw.space_plots or dw.skeleton_plots)) if dw is not None else None,
+            open_panel=(lambda: self._open_geometry_panel(dw)) if dw is not None else None,
+            data_center=(lambda: self._pose_center(dw)) if dw is not None else None,
+            parent=self.shell,
+        )
+        frame = self.shell.frameGeometry()
+        dialog.move(max(frame.right() - dialog.width(), frame.left()), frame.top() + 80)
+        dialog.show()
+        self._space_geometry_dialog = dialog
+
+    def _open_geometry_panel(self, data_widget) -> None:
+        """The pose in 3D when the data has one, else a 3D space plot."""
+        if SKELETON_3D in skeleton_plot_types(self.app_state, POSE_FEATURE):
+            data_widget.add_skeleton_plot(view_3d=True)
+        else:
+            data_widget.add_space_plot(view_3d=True)
+
+    @staticmethod
+    def _pose_center(data_widget) -> tuple[float, float, float] | None:
+        """Where the animal is at the time marker: the middle of the first skeleton plot's points."""
+        for plot in data_widget.skeleton_plots:
+            frame = plot.current_frame()
+            if frame is not None and len(frame.points):
+                mid = (frame.points.min(axis=0) + frame.points.max(axis=0)) / 2.0
+                return (float(mid[0]), float(mid[1]), float(mid[2]))
+        return None
 
     @staticmethod
     def _refresh_skeleton(data_widget):

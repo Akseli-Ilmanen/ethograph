@@ -5,7 +5,7 @@ Here is a minimalistic setup for training an action segmentation model: Three cu
 features, one `c2f_tcn` {cite:p}`singhania2021c2ftcn` trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.
 
-Everything here is a default. {doc}`index` is the same pipeline with the
+Everything here is a default. {doc}`guide` is the same pipeline with the
 choices put back in.
 
 ethograph does not install PyTorch for you. Install it first, then the extra
@@ -59,8 +59,9 @@ Labels come out of the GUI as they always do: `labels.tsv` in the session folder
 
 ## 2. `segment.yaml`
 
-Put this beside your data. It is the whole config — every key not written
-here has a default that is fine for a first run.
+Put this in a folder of its own, `segment/` in your project folder: the file's
+folder is the pipeline's `root`, where `data/` and `runs/` land. It is the whole
+config — every key not written here has a default that is fine for a first run.
 
 ```yaml
 sessions:
@@ -145,7 +146,7 @@ re-run never overwrites an earlier one — and the TSV in it is the GUI's own
 labels format. Open ses-03 in the GUI and load it
 with **File ▸ Import labels…**: every row arrives as `automated`, drawn dotted
 next to your curated labels, and confirming one makes it `curated`. See
-{doc}`../curation`.
+{doc}`../curation/index`.
 
 ## Where to go from here
 
@@ -167,9 +168,9 @@ next to your curated labels, and confirming one makes it `curated`. See
   temporal context is actually buying you.
 - **Better features**: distances between individuals, headings and changepoint
   proximity, all built with the session — see
-  {doc}`index` and {mod}`ethograph.features.geometry`.
+  {doc}`guide` and {mod}`ethograph.features.geometry`.
 - **The real workflow**: `project.search()` to find hyperparameters on a
   validation split, then `project.cross_validate()` to hold out each session
   in turn — so every session ends up with predictions from a model that never
-  saw it, not just ses-03. That is {doc}`index`.
+  saw it, not just ses-03. That is {doc}`guide`.
 - **Every key**, with its default: {doc}`config`.

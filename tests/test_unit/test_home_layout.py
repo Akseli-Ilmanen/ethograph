@@ -78,12 +78,27 @@ class TestMigration:
         assert (home / "cache" / "weights" / "cotracker" / "w.pth").exists()
         assert (home / "defaults" / "runs" / "lightgbm" / "pecks" / "model.joblib").exists()
         assert not (home / "defaults" / "runs" / "lightgbm" / "cotracker").exists()
-        assert (home / "defaults" / "config" / "space" / "arena.yaml").exists()
+        assert (home / "defaults" / "space" / "arena.yaml").exists()
         assert (home / "defaults" / "mapping.txt").exists()
         assert not (home / "models").exists()
         assert not (home / "proxies").exists()
         assert (home / "gui_settings.yaml").exists()
         assert len(moved) == 5
+
+    def test_a_defaults_config_folder_is_flattened(self, home: Path):
+        old = home / "defaults" / "config"
+        (old / "skeleton").mkdir(parents=True)
+        (old / "skeleton" / "crow.yaml").write_text("connections: []\n")
+        (old / "space").mkdir()
+        (old / "space" / "arena.yaml").write_text("references: []\n")
+        (old / "segment.yaml").write_text("sessions: []\n")
+
+        migrate_home_layout()
+
+        assert (home / "defaults" / "skeleton" / "crow.yaml").exists()
+        assert (home / "defaults" / "space" / "arena.yaml").exists()
+        assert (home / "defaults" / "segment" / "segment.yaml").exists()
+        assert not old.exists(), "the emptied config/ folder goes with it"
 
     def test_never_overwrites_an_existing_destination(self, home: Path):
         (home / "workflows").mkdir()
@@ -114,7 +129,6 @@ class TestSeed:
         expected.discard(Path("README.md"))
         assert {p.relative_to(defaults_dir()) for p in written} == expected
         assert (defaults_dir() / "mapping.txt").read_text() == DEFAULT_MAPPING_PATH.read_text()
-        assert (defaults_dir() / "config" / "space" / "moll2025.yaml").is_file()
         assert find_config("mapping.txt") == defaults_dir("mapping.txt")
 
     def test_an_edited_file_is_kept_and_a_missing_one_returns(self, home: Path):
@@ -123,7 +137,7 @@ class TestSeed:
         seed_defaults()
         mapping = defaults_dir("mapping.txt")
         mapping.write_text("0 Background\n1 Mine\n")
-        (defaults_dir() / "config" / "segment.yaml").unlink()
+        (defaults_dir() / "segment" / "segment.yaml").unlink()
 
         written = seed_defaults()
 
@@ -135,18 +149,18 @@ class TestSeed:
         from ethograph.utils.paths import seed_defaults
 
         seed_defaults()
-        cfg = load_config(defaults_dir("config") / "segment.yaml")
+        cfg = load_config(defaults_dir("segment") / "segment.yaml")
         assert cfg.features.labels.mapping == defaults_dir("mapping.txt")
-        assert cfg.root == defaults_dir()
+        assert cfg.root == defaults_dir("segment"), "runs and data grow beside the YAML"
 
     def test_shipped_spot_config_builds(self, home: Path):
         from ethograph.spot.config import load_config
         from ethograph.utils.paths import seed_defaults
 
         seed_defaults()
-        cfg = load_config(defaults_dir("config") / "spot.yaml")
+        cfg = load_config(defaults_dir("spot") / "spot.yaml")
         assert cfg.labels.classes == [11]
-        assert cfg.root == defaults_dir()
+        assert cfg.root == defaults_dir("spot")
 
 
 class TestMappingResolution:

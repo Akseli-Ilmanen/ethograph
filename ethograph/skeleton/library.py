@@ -2,14 +2,14 @@
 
 Qt-free. A skeleton is a study-level answer ("this is what a crow looks like"),
 not a per-session one, so it lives in a file next to the other study assets —
-the same shape as the Space plot's geometry library (``config/space/``), and for
+the same shape as the Space plot's geometry library (``space/``), and for
 the same reason: a study with a crow rig and a mouse rig has *two* skeletons, and
 one inline blob in one settings file cannot hold both.
 
 Two directories are read, nearest first:
 
-* ``{project}/config/skeleton/*.yaml`` — this study's, shareable and diffable;
-* ``~/.ethograph/defaults/config/skeleton/*.yaml`` — the user's own, available
+* ``{project}/skeleton/*.yaml`` — this study's, shareable and diffable;
+* ``~/.ethograph/defaults/skeleton/*.yaml`` — the user's own, available
   with no project folder at all.
 
 A name that exists in both resolves to the project's. Which one is drawn is
@@ -36,8 +36,8 @@ def library_dirs(project: Path | str | None) -> list[Path]:
     """The directories searched, nearest first: the project's, then the user's own."""
     dirs: list[Path] = []
     if project is not None:
-        dirs.append(Path(project) / "config" / SKELETON_DIRNAME)
-    dirs.append(defaults_dir("config") / SKELETON_DIRNAME)
+        dirs.append(Path(project) / SKELETON_DIRNAME)
+    dirs.append(defaults_dir(SKELETON_DIRNAME))
     return dirs
 
 

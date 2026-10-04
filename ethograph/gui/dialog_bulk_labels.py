@@ -1,16 +1,17 @@
-"""Label bulk editing: curate / delete / purge / correct-offsets across a
-chosen trial and label scope.
+"""Label bulk editing: curate / delete / purge / stitch across a chosen trial
+and label scope.
 
 Opened from **Tools ▸ Label bulk editing…** (`top_bar.py`). Everything here
 drives :class:`~ethograph.gui.widgets_curation.CurationPanel`'s own bulk
 methods (`curate_trial_labels`, `delete_trial_labels`, `purge_trial_labels`,
-`correct_offsets`) — this dialog is a form in front of them, not a second
-implementation. Every one of these is also a :mod:`~ethograph.labels.workflow`
-step (``curate_trials``, ``delete_labels``, ``purge_labels``,
-``correct_offsets``), so anything doable here can be recorded and replayed.
+`stitch_trial_labels`)
+— this dialog is a form in front of them, not a second implementation. Every
+one of these is also a :mod:`~ethograph.labels.workflow` step
+(``curate_trials``, ``delete_labels``, ``purge_labels``, ``stitch_labels``), so
+anything doable
+here can be recorded and replayed.
 
-Two choices apply to curate/delete/purge (offset correction is never scoped
-by label class — see below):
+Two choices apply to every action:
 
 * **Trials** — one of :data:`~ethograph.labels.workflow.TRIAL_SCOPE_CHOICES`
   (current trial / all trials / the trials table's filtered set / what its
@@ -43,14 +44,22 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
 )
 
+from ethograph.gui.dialog_label_gridview import ConfidenceEdit
 from ethograph.gui.notify import notify
 from ethograph.labels import workflow as wf
+from ethograph.labels.curation import ConfidenceCut
 
 logger = logging.getLogger(__name__)
 
 #: The purge spin box opens here — short enough to catch stray clicks and
 #: jitter, not so short it silently keeps something meant as background.
 _DEFAULT_PURGE_S = 0.010
+#: The stitch spin box opens at the Changepoints tab's own default gap.
+_DEFAULT_STITCH_S = 0.015
+#: Where the confidence cut opens: a trial's mean below the first, or any
+#: automated label below the second, keeps the trial out of a bulk curate.
+_DEFAULT_TRIAL_CONFIDENCE = 0.75
+_DEFAULT_SEGMENT_CONFIDENCE = 0.6
 
 
 def _curation_panel(meta):
@@ -89,7 +98,7 @@ class LabelBulkEditDialog(QDialog):
         lay.addWidget(self._build_curate_group())
         lay.addWidget(self._build_delete_group())
         lay.addWidget(self._build_purge_group())
-        lay.addWidget(self._build_correct_offsets_group())
+        lay.addWidget(self._build_stitch_group())
 
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.reject)
@@ -136,10 +145,28 @@ class LabelBulkEditDialog(QDialog):
     def _build_curate_group(self) -> QGroupBox:
         group = QGroupBox("Curate")
         lay = QVBoxLayout(group)
-        hint = QLabel("Every automated label in the classes above becomes curated. Manual labels stay manual.")
+        hint = QLabel(
+            "Every automated label in the classes above becomes curated. Manual labels stay manual. "
+            "With the cut on, a trial is skipped — left for you to open — when its mean frame "
+            "confidence is below the first number or any of its automated labels is below the second."
+        )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: grey; font-size: 10px;")
         lay.addWidget(hint)
+        self.confident_cb = QCheckBox("Only trials the model is confident on")
+        self.confident_cb.setChecked(False)
+        self.confident_cb.toggled.connect(self._on_confident_toggled)
+        lay.addWidget(self.confident_cb)
+        cut_row = QHBoxLayout()
+        cut_row.addWidget(QLabel("Trial mean ≥"))
+        self.trial_confidence_edit = ConfidenceEdit(_DEFAULT_TRIAL_CONFIDENCE)
+        cut_row.addWidget(self.trial_confidence_edit)
+        cut_row.addWidget(QLabel("and every label ≥"))
+        self.segment_confidence_edit = ConfidenceEdit(_DEFAULT_SEGMENT_CONFIDENCE)
+        cut_row.addWidget(self.segment_confidence_edit)
+        cut_row.addStretch(1)
+        lay.addLayout(cut_row)
+        self._on_confident_toggled(False)
         self.curate_btn = QPushButton("Curate…")
         self.curate_btn.setAutoDefault(False)
         self.curate_btn.clicked.connect(self._curate)
@@ -187,22 +214,30 @@ class LabelBulkEditDialog(QDialog):
         lay.addLayout(row)
         return group
 
-    def _build_correct_offsets_group(self) -> QGroupBox:
-        group = QGroupBox("Correct offsets")
+    def _build_stitch_group(self) -> QGroupBox:
+        group = QGroupBox("Stitch labels")
         lay = QVBoxLayout(group)
         hint = QLabel(
-            "Pulls back each label's offset across a near-zero gap to the next onset of the\n"
-            "same subject, so every interval is strictly separated (pynapple can then resolve\n"
-            "them). Not scoped by label class above — a subject's whole sequence has to be\n"
-            "seen together to find a gap."
+            "Merges same-class state labels of one individual whose gap is below the threshold. "
+            "Point events are never touched."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: grey; font-size: 10px;")
         lay.addWidget(hint)
-        self.correct_offsets_btn = QPushButton("Correct offsets…")
-        self.correct_offsets_btn.setAutoDefault(False)
-        self.correct_offsets_btn.clicked.connect(self._correct_offsets)
-        lay.addWidget(self.correct_offsets_btn)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Stitch gaps shorter than:"))
+        self.stitch_spin = QDoubleSpinBox()
+        self.stitch_spin.setRange(0.0, 100000.0)
+        self.stitch_spin.setDecimals(3)
+        self.stitch_spin.setSingleStep(0.005)
+        self.stitch_spin.setSuffix(" s")
+        self.stitch_spin.setValue(_DEFAULT_STITCH_S)
+        row.addWidget(self.stitch_spin)
+        self.stitch_btn = QPushButton("Stitch…")
+        self.stitch_btn.setAutoDefault(False)
+        self.stitch_btn.clicked.connect(self._stitch)
+        row.addWidget(self.stitch_btn)
+        lay.addLayout(row)
         return group
 
     # ------------------------------------------------------------------
@@ -211,6 +246,15 @@ class LabelBulkEditDialog(QDialog):
 
     def _on_all_labels_toggled(self, checked: bool) -> None:
         self.label_list.setEnabled(not checked)
+
+    def _on_confident_toggled(self, checked: bool) -> None:
+        self.trial_confidence_edit.setEnabled(checked)
+        self.segment_confidence_edit.setEnabled(checked)
+
+    def _confidence_cut(self) -> ConfidenceCut | None:
+        if not self.confident_cb.isChecked():
+            return None
+        return ConfidenceCut(self.trial_confidence_edit.value(), self.segment_confidence_edit.value())
 
     def _trial_scope(self) -> str:
         return str(self.trial_scope_combo.currentData())
@@ -245,7 +289,11 @@ class LabelBulkEditDialog(QDialog):
         run(label_ids)
 
     def _curate(self) -> None:
-        self._guarded(lambda label_ids: self.panel.curate_trial_labels(self._trial_scope(), label_ids, confirm=True))
+        self._guarded(
+            lambda label_ids: self.panel.curate_trial_labels(
+                self._trial_scope(), label_ids, confirm=True, cut=self._confidence_cut()
+            )
+        )
 
     def _delete(self) -> None:
         self._guarded(lambda label_ids: self.panel.delete_trial_labels(self._trial_scope(), label_ids, confirm=True))
@@ -257,10 +305,9 @@ class LabelBulkEditDialog(QDialog):
             )
         )
 
-    def _correct_offsets(self) -> None:
-        # No label-class guard: offset correction reads a whole subject's
-        # sequence, so the checklist above does not apply to it.
-        if self.panel is None:
-            notify("No Curation section in this window.", severity="warning")
-            return
-        self.panel.correct_offsets(self._trial_scope(), confirm=True)
+    def _stitch(self) -> None:
+        self._guarded(
+            lambda label_ids: self.panel.stitch_trial_labels(
+                self._trial_scope(), self.stitch_spin.value(), label_ids, confirm=True
+            )
+        )

@@ -89,7 +89,7 @@ def ethograph_home() -> Path:
 #   logs/               per-machine session logs
 #   cache/              derived media keyed by content, safe to wipe
 #   defaults/           a project directory's layout, used while no project
-#                       is open: mapping.txt, config/space/, runs/lightgbm/,
+#                       is open: mapping.txt, skeleton/, space/, runs/lightgbm/,
 #                       workflows/, wizard/
 #
 # Everything about a *study* is meant to live in a project directory; these
@@ -109,7 +109,14 @@ HOME_LAYOUT_MOVES: dict[str, str] = {
     "models/cotracker": f"{CACHE_DIRNAME}/weights/cotracker",
     "models": f"{DEFAULTS_DIRNAME}/runs/lightgbm",
     "workflows": f"{DEFAULTS_DIRNAME}/workflows",
-    "geometries": f"{DEFAULTS_DIRNAME}/config/space",
+    # The project folder is flat: what a release kept under defaults/config/
+    # now sits beside mapping.txt, each pipeline in a folder of its own.
+    f"{DEFAULTS_DIRNAME}/config/skeleton": f"{DEFAULTS_DIRNAME}/skeleton",
+    f"{DEFAULTS_DIRNAME}/config/space": f"{DEFAULTS_DIRNAME}/space",
+    f"{DEFAULTS_DIRNAME}/config/segment.yaml": f"{DEFAULTS_DIRNAME}/segment/segment.yaml",
+    f"{DEFAULTS_DIRNAME}/config/spot.yaml": f"{DEFAULTS_DIRNAME}/spot/spot.yaml",
+    f"{DEFAULTS_DIRNAME}/config/octron.yaml": f"{DEFAULTS_DIRNAME}/octron/octron.yaml",
+    "geometries": f"{DEFAULTS_DIRNAME}/space",
     "mapping.txt": f"{DEFAULTS_DIRNAME}/mapping.txt",
     "alignment_wizard": f"{DEFAULTS_DIRNAME}/wizard",
 }
@@ -133,8 +140,8 @@ def logs_dir() -> Path:
 
 
 #: The project folder every install starts from, shipped as package data
-#: (``ethograph/defaults/``: mapping.txt, config/segment.yaml, config/spot.yaml,
-#: config/space/*.yaml).
+#: (``ethograph/defaults/``: mapping.txt, segment/segment.yaml, spot/spot.yaml,
+#: octron/octron.yaml).
 BUNDLED_DEFAULTS_DIR = Path(__file__).resolve().parents[1] / "defaults"
 
 
@@ -173,7 +180,7 @@ def migrate_home_layout(home: Path | None = None) -> list[tuple[Path, Path]]:
     exists and the new one does not; a destination that already exists is left
     alone and the old path is kept, so nothing is ever overwritten.  Entries
     are applied in order, which is why ``models/cotracker`` precedes
-    ``models``.
+    ``models``.  A ``defaults/config/`` left empty by the moves is removed.
 
     Returns
     -------
@@ -193,6 +200,9 @@ def migrate_home_layout(home: Path | None = None) -> list[tuple[Path, Path]]:
         shutil.move(str(old), str(new))
         logger.info("Moved %s -> %s", old, new)
         moved.append((old, new))
+    stale = home / DEFAULTS_DIRNAME / "config"
+    if stale.is_dir() and not any(stale.iterdir()):
+        stale.rmdir()
     return moved
 
 

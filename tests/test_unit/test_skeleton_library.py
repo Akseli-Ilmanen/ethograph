@@ -33,7 +33,7 @@ def home(tmp_path: Path, monkeypatch) -> Path:
 
 def test_a_skeleton_round_trips_without_a_project(home: Path):
     path = save_skeleton("crow", _skeleton("beak", "tail"))
-    assert path == home / "defaults" / "config" / "skeleton" / "crow.yaml"
+    assert path == home / "defaults" / "skeleton" / "crow.yaml"
     assert load_skeletons()["crow"]["keypoints"] == ["beak", "tail"]
 
     assert delete_skeleton("crow") is True
@@ -65,7 +65,7 @@ def test_one_skeleton_needs_no_choosing(home: Path):
 
 
 def test_a_file_that_is_not_a_skeleton_is_skipped_not_raised(home: Path):
-    folder = home / "defaults" / "config" / "skeleton"
+    folder = home / "defaults" / "skeleton"
     folder.mkdir(parents=True)
     (folder / "notes.yaml").write_text("just: a note\n", encoding="utf-8")
     (folder / "broken.yaml").write_text("{[unparsable\n", encoding="utf-8")

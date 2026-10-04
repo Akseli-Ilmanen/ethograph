@@ -65,6 +65,7 @@ from ethograph.gui.notify import notify
 from ethograph.gui.project import project_dir_of
 from ethograph.labels import onset_model as om
 from ethograph.labels import workflow as wf
+from ethograph.labels.curation import ConfidenceCut
 
 logger = logging.getLogger(__name__)
 
@@ -314,19 +315,11 @@ def _apply_methods(setup, choice: str) -> None:
         setup.method_combo.setCurrentIndex(index)
 
 
-def _apply_grid_mode(mode_bar, mode: str, mark_flagged: bool) -> None:
-    """Put a grid's mode bar into *mode*, optionally pre-clicking the flagged.
-
-    A mode the bar does not offer — a workflow stored when ``navigate`` was
-    still one — leaves the grid on its own default rather than failing.
-    """
-    index = mode_bar.mode_combo.findData(mode)
-    if index >= 0:
-        mode_bar.mode_combo.setCurrentIndex(index)
-    # Through the button, so the bar's own rule holds: pre-clicking the
-    # flagged tiles only means anything where a click means "uncurated".
-    if mark_flagged and mode_bar.mark_flagged_btn.isEnabled():
-        mode_bar.mark_flagged_btn.click()
+def _pre_tag(verdict_bar, mark_flagged: bool) -> None:
+    """Press a grid's Tag low-confidence when the step asks for it — through
+    the button, so what the workflow does is what a user would."""
+    if mark_flagged and verdict_bar.tag_flagged_btn.isEnabled():
+        verdict_bar.tag_flagged_btn.click()
 
 
 def _panel_title(entry: Any) -> str:
@@ -433,9 +426,7 @@ def _run_label_grid(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
             if dialog.grid_view is None and dialog.isVisible():
                 dialog.generate()
             if dialog.grid_view is not None:
-                _apply_grid_mode(
-                    dialog.grid_view.mode_bar, str(step.value("grid_mode")), bool(step.value("mark_flagged"))
-                )
+                _pre_tag(dialog.grid_view.verdict_bar, bool(step.value("mark_flagged")))
 
         runner.after_shown(dialog, build)
     return True
@@ -464,9 +455,24 @@ def _run_video_grid(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
             if dialog.player is None and dialog.isVisible():
                 dialog.generate()
             if dialog.player is not None:
-                _apply_grid_mode(dialog.player.mode_bar, str(step.value("grid_mode")), False)
+                _pre_tag(dialog.player.verdict_bar, bool(step.value("mark_flagged")))
 
         runner.after_shown(dialog, build)
+    return True
+
+
+def _run_segment_review(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
+    panel = _require_panel(runner.meta)
+    state = runner.app_state
+    state.frame_review_automated_only = bool(step.value("automated_only"))
+    state.curation_next_curates = bool(step.value("next_curates"))
+    state.curation_mode = "segment"
+    panel.automated_only_cb.setChecked(bool(step.value("automated_only")))
+    panel.next_curates_cb.setChecked(bool(step.value("next_curates")))
+    if not panel.start_review():
+        runner.note.emit("Segment review had nothing to walk — skipped.")
+        return False
+    runner._wait_for(panel.review_finished, "Segment review running — finish or stop it to continue.")
     return True
 
 
@@ -497,9 +503,14 @@ def _label_ids_kwargs(step: wf.WorkflowStep) -> dict:
     return {"label_ids": set(ids)} if ids else {}
 
 
+def _confidence_cut(step: wf.WorkflowStep) -> ConfidenceCut | None:
+    cut = ConfidenceCut(float(step.value("trial_confidence")), float(step.value("label_confidence")))
+    return cut if cut.active else None
+
+
 def _run_curate_trials(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
     panel = _require_panel(runner.meta)
-    n = panel.curate_trial_labels(str(step.value("which")), **_label_ids_kwargs(step))
+    n = panel.curate_trial_labels(str(step.value("which")), cut=_confidence_cut(step), **_label_ids_kwargs(step))
     runner.note.emit(f"Curated {n} label(s).")
     return False
 
@@ -520,10 +531,31 @@ def _run_purge_labels(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
     return False
 
 
-def _run_correct_offsets(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
+def _run_stitch_labels(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
     panel = _require_panel(runner.meta)
-    n = panel.correct_offsets(str(step.value("which")))
-    runner.note.emit(f"Corrected {n} offset(s).")
+    n = panel.stitch_trial_labels(str(step.value("which")), float(step.value("max_gap_s")), **_label_ids_kwargs(step))
+    runner.note.emit(f"Stitched {n} label(s).")
+    return False
+
+
+def _run_correct_changepoints(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
+    """Press the Changepoints tab's correction button, ticking its master
+    switch first — a user would have to, the buttons are disabled without it."""
+    widget = getattr(runner.meta, "changepoints_widget", None)
+    if widget is None:
+        raise WorkflowError("No Changepoints tab in this window.")
+    which = str(step.value("which"))
+    widget.changepoint_correction_checkbox.setChecked(True)
+    widget._cp_correction(which)
+    runner.note.emit(f"Changepoint correction applied: {wf.CP_SCOPE_CHOICES[which].lower()}.")
+    return False
+
+
+def _run_score_trials(runner: WorkflowRunner, step: wf.WorkflowStep) -> bool:
+    """Press Score now: measure, never flag."""
+    panel = _require_panel(runner.meta)
+    panel.run_review()
+    runner.note.emit("Trials scored.")
     return False
 
 
@@ -544,11 +576,14 @@ _HANDLERS: dict[str, Callable[[WorkflowRunner, wf.WorkflowStep], bool]] = {
     "scope": _run_scope,
     "label_grid": _run_label_grid,
     "video_grid": _run_video_grid,
+    "segment_review": _run_segment_review,
     "frame_review": _run_frame_review,
     "curate_trials": _run_curate_trials,
     "delete_labels": _run_delete_labels,
     "purge_labels": _run_purge_labels,
-    "correct_offsets": _run_correct_offsets,
+    "stitch_labels": _run_stitch_labels,
+    "correct_changepoints": _run_correct_changepoints,
+    "score_trials": _run_score_trials,
     "save_labels": _run_save_labels,
 }
 
@@ -604,6 +639,9 @@ def capture_params(kind: str, meta) -> dict[str, Any]:
         params["window_s"] = float(state.get_with_default("refine_window_s"))
         params["automated_only"] = bool(state.get_with_default("frame_review_automated_only"))
         params["next_curates"] = bool(state.get_with_default("curation_next_curates"))
+    elif kind == "segment_review":
+        params["automated_only"] = bool(state.get_with_default("frame_review_automated_only"))
+        params["next_curates"] = bool(state.get_with_default("curation_next_curates"))
     return params
 
 
@@ -627,8 +665,8 @@ def describe_step(step: wf.WorkflowStep) -> str:
     if step.kind == "label_grid":
         panels = step.value("panels") or []
         extra = f" + {len(panels)} panel(s)" if panels else ""
-        mode = wf.GRID_MODE_CHOICES.get(str(step.value("grid_mode")), "?")
-        return f"{_cameras_phrase(step)} · {int(step.value('columns'))} columns{extra} · {mode}"
+        tagged = " · low-confidence tagged" if step.value("mark_flagged") else ""
+        return f"{_cameras_phrase(step)} · {int(step.value('columns'))} columns{extra}{tagged}"
     if step.kind == "video_grid":
         return (
             f"{_cameras_phrase(step)} · {int(step.value('per_page'))} clips, "
@@ -637,18 +675,33 @@ def describe_step(step: wf.WorkflowStep) -> str:
     if step.kind == "frame_review":
         scope = "automated only" if step.value("automated_only") else "every label in scope"
         return f"{float(step.value('window_s')):.2f} s window · {scope}"
+    if step.kind == "segment_review":
+        scope = "automated only" if step.value("automated_only") else "every label in scope"
+        curates = "N curates" if step.value("next_curates") else "N only moves on"
+        return f"{scope} · {curates}"
     if step.kind in ("curate_trials", "delete_labels"):
         noun = wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
         ids = step.value("label_ids") or []
         classes = ", ".join(str(i) for i in ids) if ids else "the curation scope"
-        return f"{noun} · {classes}"
+        cut = _confidence_cut(step) if step.kind == "curate_trials" else None
+        if cut is None:
+            return f"{noun} · {classes}"
+        return (
+            f"{noun} · {classes} · confident only (mean ≥ {format_confidence(cut.trial)}, "
+            f"labels ≥ {format_confidence(cut.segment)})"
+        )
     if step.kind == "purge_labels":
         noun = wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
         ids = step.value("label_ids") or []
         classes = ", ".join(str(i) for i in ids) if ids else "the curation scope"
         return f"{noun} · {classes} · shorter than {float(step.value('min_duration_s')):g} s"
-    if step.kind == "correct_offsets":
-        return wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
+    if step.kind == "stitch_labels":
+        noun = wf.TRIAL_SCOPE_CHOICES.get(str(step.value("which")), "?")
+        ids = step.value("label_ids") or []
+        classes = ", ".join(str(i) for i in ids) if ids else "the curation scope"
+        return f"{noun} · {classes} · gaps shorter than {float(step.value('max_gap_s')):g} s"
+    if step.kind == "correct_changepoints":
+        return f"{wf.CP_SCOPE_CHOICES.get(str(step.value('which')), '?')} · the Changepoints tab's settings"
     return step.spec().summary
 
 

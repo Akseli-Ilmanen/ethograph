@@ -1,6 +1,7 @@
 """Heatmap plot for visualizing feature sub-dimensions as color-coded rows."""
 
 from dataclasses import dataclass, replace
+from dataclasses import dataclass, replace
 from typing import Optional
 
 import numpy as np
@@ -26,6 +27,30 @@ AUTO_COLORMAP = "auto"
 #: diverge from; one that runs from zero up has none.
 DIVERGING_COLORMAP = "RdBu_r"
 SEQUENTIAL_COLORMAP = "viridis"
+
+
+@dataclass(frozen=True)
+class _Normalization:
+    """What ``(data - mean) / std`` uses for one normalisation mode, and the colour range it gives."""
+
+    mode: str
+    n_columns: int
+    mean: np.ndarray | float
+    std: np.ndarray | float
+    levels: tuple[float, float] = (-1.0, 1.0)
+
+    @classmethod
+    def measure(cls, data: np.ndarray, mode: str) -> "_Normalization":
+        """Per-column statistics (``per_channel``), one pair for all (``global``), or none."""
+        n_columns = data.shape[1]
+        if mode == "none":
+            return cls(mode, n_columns, 0.0, 1.0)
+        if mode == "global":
+            std = float(np.nanstd(data))
+            return cls(mode, n_columns, float(np.nanmean(data)), std if std > 0 else 1.0)
+        std = np.nanstd(data, axis=0)
+        std[std == 0] = 1
+        return cls(mode, n_columns, np.nanmean(data, axis=0), std)
 
 
 @dataclass(frozen=True)
@@ -102,6 +127,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         # Cached normalization (avoids recomputing on every pan)
         self._normalized_buffer = None
         self._norm_data_id = None
+        self._cached_levels: tuple[float, float] | None = None
 
         # Track last-rendered labels to skip redundant axis updates
         self._last_visible_labels: list[str] | None = None
@@ -170,6 +196,25 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         if order is None:
             return False
         self.set_sort_order(order)
+        return True
+
+    def sort_by_rastermap(self) -> bool:
+        """Order rows by Rastermap, fitted on the whole trial window; keep that order.
+
+        Raises ``ValueError`` when the heatmap has too few rows for the fit.
+        """
+        trial_range = self._trial_sort_range()
+        if trial_range is None:
+            return False
+        # Load the whole window first: the fit is over the trial, not over what is on screen.
+        if self._get_buffered_data(*trial_range)[0] is None:
+            return False
+        t0, t1 = self.get_current_xlim()
+        self._render_heatmap(t0, t1)
+        data = self.get_normalized_data_for_range(*trial_range)
+        if data is None:
+            return False
+        self.set_sort_order(rastermap_order(data))
         return True
 
     def sort_by_rastermap(self) -> bool:
@@ -630,8 +675,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             n_total = normalized.shape[1]
             self._n_rows_shown = n_total
 
-            vmin, vmax = self._norm.levels
-            self.refresh_colormap()
+            vmin, vmax = self._cached_levels or self._compute_symmetric_levels(normalized)
 
             pixel_width = self.width() or 800
             display_data = self._downsample_for_display(normalized, pixel_width * 2)

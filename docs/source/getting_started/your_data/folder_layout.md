@@ -7,50 +7,25 @@ you:
 |---|---|---|
 | **Session folder** — one per recording | You: the session file. The GUI: labels, alignment, layout. | Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session's videos is itself a fine session folder, but nothing requires it. |
 | **Project folder** — one per research project | You, on the start page. | Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag & drop. Your session folders can live here too, but don't have to — Ethograph never copies data into it. |
-| `~/.ethograph/` | The GUI. | Your settings, caches, and the **starter project** — the project folder a fresh install begins in. |
+| `~/.ethograph/` | The GUI. | Your global settings, caches, and a **starter project folder**. |
 
 ## The project folder
 
-**A project folder is always set.** A fresh install starts in the *starter
-project*, `~/.ethograph/defaults/` — it ships a `mapping.txt`, the example configs
-and the reference geometries, so the GUI works the moment you open it and a quick
-look at a dataset needs no set-up at all.
-
-Choose a folder of your own before you start a study: labelling writes the label
-names, and models write their configs and runs, into the project folder, and
-having that be the starter one means every study shares a single vocabulary. The
-start page's **Project folder** bar says which one you are in and links here;
-**Clear** returns to the starter project rather than to none.
-
-```{note}
-**Changed in a recent version.** The project folder used to be optional, and
-`project.yaml` inside it held the individuals, the excluded files and the
-skeleton. Neither is true any more — see [what moved where](#what-moved-out-of-projectyaml)
-below. Nothing is lost: opening a folder that still has a `project.yaml` folds its
-lists into your settings once and tells you it did.
-```
-
-Sessions are *listed* from wherever they are, so you can keep your session folders
-inside the project (as below) or on another drive. Either way, the folder holds
-what you build on top of them:
-
 ```
 my_project/                            # chosen on the start page
-    ├── data/                          # optional: your session folders, if you keep them here
     ├── mapping.txt                    # the project's label_id → name vocabulary
-    ├── config/
-    │   ├── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/config/)
-    │   ├── spot.yaml                  # pixel event-spotting config
-    │   ├── skeleton/                  # one YAML per skeleton (crow.yaml, mouse.yaml, …)
-    │   └── space/                     # reference geometries for the Space plot
-    ├── runs/
-    │   └── lightgbm/                  # lightgbm models trained from the Model menu
-    ├── feral/                         # FERAL's inputs, checkpoints and embeddings (models/segment/feral)
+    │
+    ├── skeleton/                      # one YAML per skeleton (crow.yaml, mouse.yaml, …)
+    ├── space/                         # reference geometries for the Space plot, one YAML each
     ├── workflows/                     # curation workflows
     ├── wizard/                        # Data wizard notebooks, one per rig
-    └── sessions.txt                   # session folders made by drag & drop with this project set, reopenable
+    ├── segment/
+    │   └── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/segment/)
+    └── spot/
+        └── spot.yaml                  # pixel event-spotting config (copy from ~/.ethograph/defaults/spot/)
 ```
 
+<<<<<<< HEAD
 ```{important}
 **One session folder, one `.nc`.** A second `.nc` at the root is an old version,
 and Ethograph refuses to guess which one is current — in the GUI and in a
@@ -124,6 +99,8 @@ a `mapping.txt`, the example configs and the geometries — it *is* a project fo
 not a fallback, which is why a fresh install can label and plot straight away. See
 {ref}`target-label-mapping` for how the mapping is resolved between a session and
 its project.
+=======
+>>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 
 ## The session folder
 
@@ -132,6 +109,7 @@ One per recording. A folder is a session when it holds `.ethograph/alignment.nwb
 `.nc` files in it are feature layers, and there may be none. Session files are named
 by the folder, never by a data file: `labels.tsv`, `metadata.tsv`, `labels/`. On the
 start page, open the folder (or any data file in it). Per backend:
+
 
 ::::{tab-set}
 
@@ -145,7 +123,8 @@ session_01/
     ├── .ethograph/
     │   ├── alignment.nwb              # Media paths, trial timing, stream offsets
     │   ├── local_settings.yaml        # Session-specific GUI state
-    │   └── mapping.txt                # Optional: overrides the project's for this session
+    │   ├── mapping.txt                # Optional: overrides the project's for this session
+    │   └── space/                     # Optional: this session's reference geometries
     │
     ├── labels/
     │   ├── backups/
@@ -246,6 +225,14 @@ You write the session file and the media folders. Everything under
 `.ethograph/` and `labels/backups/` is created by the GUI on first load and
 first save.
 
+:::{important}
+**One session folder, one `.nc`.** A second `.nc` at the root is an old version,
+and Ethograph refuses to guess which one is current — in the GUI and in a
+`segment` or `spot` run alike. Name the old one once, on the start page
+(**Excluded files…**) or from the dialog that asks; it is kept in your
+`gui_settings.yaml` as `ignore_files` and applies in every session folder:
+:::
+
 ## The home folder
 
 ```
@@ -253,5 +240,5 @@ first save.
     ├── gui_settings.yaml              # your layout, playback and dialog folders
     ├── logs/
     ├── cache/                         # video proxies, extracted audio, example data — safe to delete
-    └── defaults/                      # the starter project: mapping.txt, config/, …
+    └── defaults/                      # the starter project: mapping.txt, skeleton/, space/, segment/, spot/, …
 ```

@@ -13,14 +13,15 @@ from ethograph.gui.widgets_curation import CurationPanel, drag_label_ids
 from ethograph.gui.widgets_navigation import NavigationWidget
 from ethograph.labels import onset_curves
 from ethograph.labels import review_metrics as rm
-from ethograph.labels.curation import CURATED_COLUMN
+from ethograph.labels import workflow as wf
+from ethograph.labels.curation import CURATED_COLUMN, ConfidenceCut
 from ethograph.labels.intervals import (
     HUMAN_CONFIDENCE,
     LABELING_AUTOMATED,
     LABELING_CURATED,
     LABELING_MANUAL,
     add_interval,
-    empty_intervals,
+    delete_interval,
 )
 from ethograph.labels.tsv_store import save_labels_tsv
 
@@ -46,16 +47,37 @@ class _FakeVideo:
 
 
 class _LabelsStub(QWidget):
+    """The labels widget's selection + Ctrl+E surface, as the panel drives it."""
+
     def __init__(self, mappings):
         super().__init__()
         self._mappings = mappings
         self.active_branch: int | None = None
+        self.current_labels_pos: int | None = None
+        self.current_labels: int | None = None
+        self.current_labels_is_prediction = False
+        self.old_labels_pos: int | None = None
+        self.old_labels: int | None = None
+        self.ready_for_label_click = False
+        self.first_click: float | None = None
+        self.played = 0
 
     def refresh_labels_shapes_layer(self):
         pass
 
     def set_active_branch(self, branch_idx: int) -> None:
         self.active_branch = branch_idx
+
+    def _edit_label(self) -> None:
+        self.old_labels_pos = self.current_labels_pos
+        self.old_labels = self.current_labels
+        self.ready_for_label_click = True
+
+    def _reset_label_clicks(self) -> None:
+        self.first_click = None
+
+    def _play_segment(self) -> None:
+        self.played += 1
 
 
 class _TrialsStub:
@@ -257,12 +279,26 @@ class TestTrialLevel:
         vouch for labels across every trial."""
         asked = []
         monkeypatch.setattr(
-            panel, "_confirm_bulk_curate", lambda which, label_ids, total, n: asked.append((which, total, n)) or False
+            panel,
+            "_confirm_bulk_curate",
+            lambda which, label_ids, total, n, cut=None: asked.append((which, total, n)) or False,
         )
         assert panel.curate_visible_trials(confirm=True) == 0
         assert asked == [("filtered", 3, 2)]
         # Declined: nothing moved.
         assert _row(panel.app_state, "0", 4, 1.0)["labeling_method"] == LABELING_AUTOMATED
+
+    def test_the_confidence_cut_skips_the_trials_the_model_doubts(self, panel, monkeypatch):
+        """Trial by trial: a trial is bulk-curated only when its mean passes
+        *and* no automated label of it falls below the segment cut — trial 0
+        carries a 0.3 label, so its high mean does not save it."""
+        monkeypatch.setattr(panel, "_confidence_curves", lambda trials: {str(t): np.full(4, 0.95) for t in trials})
+        assert panel.curate_trial_labels(wf.TRIAL_SCOPE_FILTERED, None, cut=ConfidenceCut(0.5, 0.5)) == 1
+        assert _row(panel.app_state, "1", 4, 0.5)["labeling_method"] == LABELING_CURATED
+        assert _row(panel.app_state, "0", 4, 1.0)["labeling_method"] == LABELING_AUTOMATED
+        assert _row(panel.app_state, "0", 6, 2.5)["labeling_method"] == LABELING_AUTOMATED
+        # The trial half alone: a mean of 0.95 fails a 0.99 cut, and nothing moves.
+        assert panel.curate_trial_labels(wf.TRIAL_SCOPE_FILTERED, None, cut=ConfidenceCut(0.99, 0.0)) == 0
 
     def test_a_workflow_step_does_not_ask(self, panel, monkeypatch):
         """A recorded step is already a deliberate choice."""
@@ -427,53 +463,6 @@ class TestPurgeScoped:
         assert len(panel.app_state._all_labels_df) == 3
         assert panel.app_state.undo_label_edit() is not None
         assert len(panel.app_state._all_labels_df) == 4
-
-
-class TestCorrectOffsetsScoped:
-    """``correct_offsets_trial`` looks at *every* row of a subject's sequence,
-    points included, so these replace trial 0 with a clean, controlled pair
-    of states rather than building on the shared fixture's point events."""
-
-    def _set_two_states(self, panel, gap: float):
-        df = add_interval(empty_intervals(), 2.0, 3.0, 8, "a")
-        df = add_interval(df, 3.0 + gap, 5.0, 8, "a")
-        panel.app_state.set_trial_intervals("0", df)
-        panel.app_state.label_intervals = df
-
-    def test_pulls_back_the_offset_across_a_near_zero_gap(self, panel):
-        self._set_two_states(panel, gap=0.00003)  # under the 1e-4 s eps
-        assert panel.correct_offsets("filtered") == 1
-        df = panel.app_state._all_labels_df
-        first = df[(df["trial"] == "0") & (df["onset_s"] == 2.0)].iloc[0]
-        assert first["offset_s"] == pytest.approx(3.00003 - 1e-4)
-
-    def test_no_gaps_is_a_no_op(self, panel):
-        self._set_two_states(panel, gap=1.0)  # well clear of the eps
-        assert panel.correct_offsets("filtered") == 0
-
-    def test_confirm_asks_before_correcting(self, panel, monkeypatch):
-        self._set_two_states(panel, gap=0.00003)
-        asked = []
-        monkeypatch.setattr(panel, "_confirm_bulk_correct", lambda which, n: asked.append((which, n)) or False)
-        assert panel.correct_offsets("filtered", confirm=True) == 0
-        assert asked == [("filtered", 2)]
-        # Declined: nothing moved.
-        df = panel.app_state._all_labels_df
-        first = df[(df["trial"] == "0") & (df["onset_s"] == 2.0)].iloc[0]
-        assert first["offset_s"] == 3.0
-
-    def test_a_workflow_step_does_not_ask(self, panel, monkeypatch):
-        monkeypatch.setattr(panel, "_confirm_bulk_correct", lambda *a: pytest.fail("must not ask"))
-        self._set_two_states(panel, gap=0.00003)
-        assert panel.correct_offsets("filtered") == 1
-
-    def test_correction_is_undoable_per_trial(self, panel):
-        self._set_two_states(panel, gap=0.00003)
-        panel.correct_offsets("filtered")
-        assert panel.app_state.undo_label_edit() is not None
-        df = panel.app_state._all_labels_df
-        first = df[(df["trial"] == "0") & (df["onset_s"] == 2.0)].iloc[0]
-        assert first["offset_s"] == 3.0
 
 
 # ---------------------------------------------------------------------------
@@ -673,6 +662,108 @@ class TestFrameReview:
         assert not panel.session_active
 
 
+# ---------------------------------------------------------------------------
+# Segment review
+# ---------------------------------------------------------------------------
+
+
+def _pos_of(df, labels: int) -> int:
+    return int(df.index[df["labels"] == labels][0])
+
+
+class TestSegmentReview:
+    """One whole label per stop; a jump arms it for a two-click re-placement."""
+
+    def test_queue_is_one_target_per_label(self, panel):
+        _set_mode(panel, "segment")
+        got = [(t.inst["trial"], t.inst["labels"], t.field) for t in panel.build_queue()]
+        assert got == [("0", 4, "label"), ("0", 8, "label"), ("0", 6, "label"), ("1", 4, "label")]
+
+    def test_start_arms_the_label_as_ctrl_e_would_and_binds_no_enter(self, panel):
+        _set_mode(panel, "segment")
+        assert panel.start_review(idx=1)  # trial 0, label 8 (2.0-3.0)
+        lw = panel.labels_widget
+        assert lw.old_labels_pos == _pos_of(panel.app_state.label_intervals, 8)
+        assert lw.current_labels == 8
+        assert lw.ready_for_label_click is True
+        assert "click" in panel.delta_label.text()
+        keys = {s.key().toString() for s in panel._session_shortcuts}
+        assert {"Backspace", "Del", "B", "N"} <= keys
+        assert not ({"Return", "Enter"} & keys)
+        assert not panel.window_row.isVisibleTo(panel)
+
+    def test_needs_no_video(self, panel):
+        _set_mode(panel, "segment")
+        panel.app_state.video = None
+        assert panel.start_review() is True
+
+    def test_enter_never_moves_a_segment(self, panel):
+        _set_mode(panel, "segment")
+        panel.start_review(idx=1)
+        panel.app_state.current_frame = panel.app_state.video.time_to_frame(2.5, round_nearest=True)
+        panel._confirm()
+        assert _row(panel.app_state, "0", 8, 2.0)["offset_s"] == 3.0
+
+    def test_next_curates_and_forgets_a_half_placed_edit(self, panel):
+        _set_mode(panel, "segment")
+        panel.start_review(idx=0)  # trial 0, label 4 (automated)
+        lw = panel.labels_widget
+        lw.first_click = 1.2  # one click in, no second
+        panel.next_curates_cb.setChecked(True)
+        panel._next()
+        assert _row(panel.app_state, "0", 4, 1.0)["labeling_method"] == LABELING_CURATED
+        assert lw.first_click is None
+        assert panel.current_index == 1
+        # ...and the new stop is armed in turn.
+        assert lw.old_labels_pos == _pos_of(panel.app_state.label_intervals, 8)
+
+    def test_a_finished_edit_moves_the_target_and_replays(self, panel):
+        _set_mode(panel, "segment")
+        panel.start_review(idx=1)  # label 8, 2.0-3.0
+        state = panel.app_state
+        lw = panel.labels_widget
+        # What the labels widget does on the second click: the old row goes,
+        # the new one lands (manual), is selected, and the panel is told.
+        df = delete_interval(state.label_intervals, lw.old_labels_pos)
+        df = add_interval(df, 2.2, 3.1, 8, "a")
+        state.label_intervals = df
+        state.set_trial_intervals("0", df)
+        lw.old_labels_pos = None
+        lw.ready_for_label_click = False
+        lw.current_labels_pos = _pos_of(df, 8)
+        panel.note_labels_edited()
+        target = panel.targets[panel.current_index]
+        assert (target.inst["onset_s"], target.inst["offset_s"]) == (2.2, 3.1)
+        assert lw.played == 1
+        assert "moved" in panel.delta_label.text()
+        panel._next()  # the moved label is manual already: nothing to curate, just on
+        assert _row(state, "0", 8, 2.2)["labeling_method"] == LABELING_MANUAL
+        assert panel.current_index == 2
+
+    def test_delete_removes_the_label_and_moves_on(self, panel):
+        _set_mode(panel, "segment")
+        panel.start_review(idx=1)
+        panel._delete_current()
+        df = panel.app_state._all_labels_df
+        assert not ((df["trial"] == "0") & (df["labels"] == 8)).any()
+        assert panel.targets[panel.current_index].inst["labels"] == 6
+
+    def test_leaving_the_mode_ends_the_session(self, panel):
+        _set_mode(panel, "segment")
+        panel.start_review()
+        _set_mode(panel, "frame")
+        assert not panel.session_active
+        assert panel.labels_widget.ready_for_label_click is False
+
+    def test_a_grid_jump_targets_the_whole_label(self, panel):
+        _set_mode(panel, "segment")
+        inst = {"trial": "0", "labels": 8, "onset_s": 2.0, "offset_s": 3.0, "individual": "a", "individual_rec": ""}
+        assert panel.reviews_on_jump()
+        assert panel.start_review_at(inst, "end")
+        target = panel.targets[panel.current_index]
+        assert target.field == "label" and target.inst["labels"] == 8
+
+
 class TestAutomatedOnlyFilter:
     """Frame-by-frame review skips manual/curated boundaries by default."""
 
@@ -858,10 +949,8 @@ class TestHardTrialsAndReview:
         panel.toggle_difficulty()
         assert state.curation_active
         assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_HARD})
-        # The table now says hard (the stub does not write back) → the box follows, and the next press clears.
+        # The table now says hard (the stub does not write back) → the next press clears.
         state.metadata_df[rm.DIFFICULTY_COLUMN] = ["hard", ""]
-        panel._sync_hard_checkbox()
-        assert panel.hard_cb.isChecked()
         panel.toggle_difficulty()
         assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_NORMAL})
 
@@ -892,7 +981,7 @@ class TestHardTrialsAndReview:
         panel.sync_metadata()
         assert calls == []
 
-    def test_run_review_writes_scores_and_flags_hard(self, panel, tmp_path):
+    def test_run_review_writes_scores_and_never_flags(self, panel, tmp_path):
         state = panel.app_state
         session = tmp_path / "s" / "s.nc"
         session.parent.mkdir()
@@ -925,5 +1014,100 @@ class TestHardTrialsAndReview:
         written = dict(panel._trials_stub.written)
         assert written[rm.REVIEW_F1_POINT] == {"0": pytest.approx(0.8)}
         assert written[rm.REVIEW_F1_STATE] == {"0": 0.0}
-        assert written[rm.DIFFICULTY_COLUMN] == {"0": rm.DIFFICULTY_HARD}
-        assert "1 of 1" in panel.review_label.text()
+        # A score is a measurement; the hard flag is the human's, from the histogram.
+        assert rm.DIFFICULTY_COLUMN not in written
+        assert "Scored 1" in panel.review_message
+
+    def test_confidence_curves_write_the_trial_mean_and_never_difficulty(self, panel, monkeypatch, tmp_path):
+        """The curves button measures: model_confidence per trial from the run
+        behind the labels, a PDF, and not a word in the difficulty column."""
+        from ethograph.gui import widgets_curation as wc
+
+        state = panel.app_state
+        state.nc_file_path = str(tmp_path / "s" / "s.nc")
+        state.metadata_df = pd.DataFrame({"trial": ["0", "1"]})
+
+        class _Store:
+            def get_confidence(self, trial, dt, individual=None):
+                return np.array([0.2, 0.4]) if str(trial) == "1" else None
+
+        state.labels_pred_store = _Store()
+        opened: list = []
+        monkeypatch.setattr(wc, "plot_confidence_pdf", lambda *a, **k: (tmp_path / "curves.pdf", {}))
+        monkeypatch.setattr(wc, "open_path", lambda p: opened.append(p))
+        panel.export_confidence_pdf()
+        written = dict(panel._trials_stub.written)
+        assert written[rm.MODEL_CONFIDENCE_COLUMN] == {"1": pytest.approx(0.3)}
+        assert rm.DIFFICULTY_COLUMN not in written
+        assert opened == [tmp_path / "curves.pdf"]
+
+    def test_flag_trials_hard_adds_and_never_removes(self, panel):
+        state = panel.app_state
+        state.metadata_df = pd.DataFrame({"trial": ["0", "1"], rm.DIFFICULTY_COLUMN: ["", "hard"]})
+        assert panel.flag_trials_hard({"0"}) == 1
+        assert panel._trials_stub.written[-1] == (rm.DIFFICULTY_COLUMN, {"0": rm.DIFFICULTY_HARD})
+        assert panel.flag_trials_hard(set()) == 0
+
+    def test_histogram_flags_what_the_chosen_threshold_selects(self, panel):
+        """The dialog reads the score columns, the human sets the cut, one press flags."""
+        from ethograph.gui.dialog_review_histogram import ReviewHistogramDialog
+
+        state = panel.app_state
+        state.metadata_df = pd.DataFrame(
+            {
+                "trial": ["0", "1", "2", "3", "4"],
+                rm.REVIEW_F1_STATE: [0.9, 0.3, np.nan, 0.95, 0.85],
+                rm.REVIEW_F1_POINT: [np.nan, 0.8, 0.4, np.nan, 0.9],
+            }
+        )
+        flagged: list[set[str]] = []
+        dialog = ReviewHistogramDialog(state, lambda trials: flagged.append(set(trials)) or len(trials))
+        try:
+            dialog.threshold_spin.setValue(0.5)
+            assert dialog.flagged() == {"1", "2"}
+            assert state.review_flag_threshold == 0.5
+            assert "2 of 5" in dialog.count_label.text()
+            assert "more than" in dialog.count_label.text()  # 40 %: warned
+            dialog.threshold_spin.setValue(0.35)
+            assert dialog.flagged() == {"1"}
+            assert "more than" not in dialog.count_label.text()
+            dialog._flag()
+            assert flagged == [{"1"}]
+        finally:
+            dialog.close()
+
+    def test_histogram_with_no_scores_flags_nothing(self, panel):
+        from ethograph.gui.dialog_review_histogram import ReviewHistogramDialog
+
+        panel.app_state.metadata_df = pd.DataFrame({"trial": ["0", "1"]})
+        dialog = ReviewHistogramDialog(panel.app_state, lambda trials: 0)
+        try:
+            assert dialog.flagged() == set()
+            assert not dialog.flag_btn.isEnabled()
+        finally:
+            dialog.close()
+
+    def test_feedback_dialog_sets_the_tolerance_and_follows_the_score_summary(self, panel):
+        """The popup holds the tolerance override and shows what the panel last scored."""
+        from ethograph.gui.dialog_curator_feedback import CuratorFeedbackDialog
+
+        dialog = CuratorFeedbackDialog(panel)
+        try:
+            dialog.tolerance_spin.setValue(0.25)
+            assert panel.app_state.review_tolerance_s == 0.25
+            dialog.tolerance_spin.setValue(0.0)
+            assert panel.app_state.review_tolerance_s is None
+            panel._report_review("Scored 3 trial(s)")
+            assert dialog.status_label.text() == "Scored 3 trial(s)"
+        finally:
+            dialog.close()
+
+    def test_confidence_never_flags_a_trial(self, panel, tmp_path):
+        """Trial 0 holds a 0.3-confidence label and no run predicted into it:
+        nothing is flagged. Low confidence is the curator's cue to look, not
+        the model's cue to train harder — that comes only from disagreement."""
+        state = panel.app_state
+        state.nc_file_path = str(tmp_path / "s" / "s.nc")
+        state.metadata_df = pd.DataFrame({"trial": ["0", "1"]})
+        assert panel.run_review() == {}
+        assert rm.DIFFICULTY_COLUMN not in dict(panel._trials_stub.written)

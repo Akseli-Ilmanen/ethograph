@@ -145,6 +145,15 @@ class TestValidate:
         assert any("unknown step kind" in p for p in problems)
 
 
+def test_a_retired_parameter_is_dropped_on_load():
+    """A workflow saved when a grid click still had modes names ``grid_mode``;
+    it loads without it and validates clean."""
+    raw = {"name": "old", "steps": [{"kind": "label_grid", "params": {"grid_mode": "uncurate", "columns": 4}}]}
+    workflow = wf.CurationWorkflow.from_dict(raw)
+    assert workflow.steps[0].params == {"columns": 4}
+    assert wf.validate(workflow) == []
+
+
 def test_every_step_kind_has_a_handler():
     """The contract between the model and the runner — an added kind cannot
     be forgotten on the GUI side."""
@@ -390,6 +399,47 @@ class TestRunner:
         dcw._run_scope(runner, wf.WorkflowStep("scope"))
         assert recorded["ids"] == [3, 7]
         assert runner.app_state.curation_mode == "manual"
+
+    def test_correct_changepoints_presses_the_tab_s_button(self, qapp):
+        """The step is the Changepoints tab's own button, master switch ticked
+        first — the buttons are disabled without it."""
+        runner = dcw.WorkflowRunner(_MetaStub())
+        pressed: list[str] = []
+
+        class _Switch:
+            checked = False
+
+            def setChecked(self, value):
+                self.checked = bool(value)
+
+        class _TabStub:
+            changepoint_correction_checkbox = _Switch()
+
+            def _cp_correction(self, mode):
+                pressed.append(mode)
+
+        runner.meta.changepoints_widget = _TabStub()
+        dcw._run_correct_changepoints(runner, wf.WorkflowStep("correct_changepoints", {"which": "single_trial"}))
+        assert pressed == ["single_trial"]
+        assert runner.meta.changepoints_widget.changepoint_correction_checkbox.checked
+
+    def test_score_trials_presses_score_now_and_nothing_else(self, qapp):
+        runner = dcw.WorkflowRunner(_MetaStub())
+        pressed: list[int] = []
+
+        class _PanelStub:
+            def run_review(self):
+                pressed.append(1)
+                return {}
+
+        runner.meta.labels_widget = type("L", (), {"curation_panel": _PanelStub()})()
+        dcw._run_score_trials(runner, wf.WorkflowStep("score_trials"))
+        assert pressed == [1]
+
+    def test_correct_changepoints_without_the_tab_stops_the_workflow(self, qapp):
+        runner = dcw.WorkflowRunner(_MetaStub())
+        with pytest.raises(dcw.WorkflowError):
+            dcw._run_correct_changepoints(runner, wf.WorkflowStep("correct_changepoints"))
 
 
 # ----------------------------------------------------------------------

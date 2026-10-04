@@ -14,6 +14,13 @@ a user turns automated labels into curated ones:
     the current trial.
   - *Inspect is enough (trial level)*: merely opening a trial curates its
     automated labels in scope.
+  - *Segment review*: the state labels in scope become a queue of whole
+    labels walked one by one; each jump plays the label with the navigation
+    padding around it and arms it for editing exactly as **Ctrl+E** would,
+    so two left clicks (new start, new end) re-place it. **Backspace**
+    deletes, **B**/**N** go back / next — *N* curates the label it leaves
+    when the checkbox says so, and **Enter** does nothing here: a label
+    that plays right needs no key but N.
   - *Frame-by-frame review*: the labels in scope become a queue of
     boundaries walked one by one, each centred in a small view window.
     ``←``/``→`` nudge the video, **Enter** commits the frame on screen as the
@@ -23,7 +30,7 @@ a user turns automated labels into curated ones:
     by default) leaves manual/curated boundaries out of the queue — a human
     already vouched for those, so there is nothing to re-review.
 
-* **Order** (next to Mode) — how the frame-by-frame queue is walked
+* **Order** (next to Mode) — how a review queue is walked
   (:data:`~ethograph.labels.curation.REVIEW_ORDERS`, saved to
   ``gui_settings.yaml``): *Trial-by-trial* finishes every boundary of one
   trial before moving to the next; *Label-by-label* finishes every instance
@@ -76,8 +83,8 @@ import math
 from pathlib import Path
 
 import numpy as np
-from qtpy.QtCore import Qt, QTimer, Signal
-from qtpy.QtGui import QKeySequence, QShortcut
+from qtpy.QtCore import Qt, QTimer, QUrl, Signal
+from qtpy.QtGui import QDesktopServices, QKeySequence, QShortcut
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -94,6 +101,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from ethograph.gui.dialog_curator_feedback import CuratorFeedbackDialog
 from ethograph.gui.dialog_label_gridview import confidence_display
 from ethograph.gui.label_drawing_mixin import draw_key
 from ethograph.gui.notify import notify
@@ -106,9 +114,12 @@ from ethograph.labels.curation import (
     CURATED_COLUMN,
     CURATED_NO,
     CURATED_YES,
+    FIELD_LABEL,
     REVIEW_ORDER_TRIAL,
+    ConfidenceCut,
     ReviewTarget,
     build_review_queue,
+    confident_trials,
     curate_label,
     curate_trials,
     curated_column_differs,
@@ -117,9 +128,9 @@ from ethograph.labels.curation import (
     purge_short_labels,
     queue_index_of,
     row_mask,
+    stitch_labels,
     targets_from_seeds,
 )
-from ethograph.labels.export import correct_offsets_trial
 from ethograph.labels.intervals import (
     HUMAN_CONFIDENCE,
     LABELING_AUTOMATED,
@@ -127,7 +138,11 @@ from ethograph.labels.intervals import (
     LABELING_MANUAL,
     delete_interval,
     ensure_labeling_method,
+    get_interval_bounds,
 )
+from ethograph.labels.plots import plot_confidence_pdf
+from ethograph.labels.predictions import PredictionsStore
+from ethograph.labels.tsv_store import set_trial_in_tsv
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +155,12 @@ METADATA_SYNC_MS = 5000
 CURATION_MODES = {
     "manual": "Manual (trial level)",
     "inspect": "Inspect is enough (trial level)",
+    "segment": "Segment review",
     "frame": "Frame-by-frame review",
 }
+
+#: The modes that walk a queue (Start review / Stop review).
+REVIEW_MODES = ("segment", "frame")
 
 #: Frame-by-frame review order (``labels/curation.REVIEW_ORDERS``): key → combo text.
 REVIEW_ORDERS = {
@@ -163,26 +182,53 @@ _TRIAL_SCOPE_NOUN = {key: text.split(" (")[0].lower() for key, text in wf.TRIAL_
 #: which a caller like the bulk-editing dialog's "All" checkbox passes on purpose.
 _SCOPE_UNSET = object()
 
+
+def open_path(path) -> None:
+    """Open *path* with the system's default application."""
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+
+
 _MODE_HINTS = {
     "manual": "Editing a label makes it manual · Ctrl+C curates every automated label in scope of this trial.",
     "inspect": "Opening a trial curates its automated labels in scope — looking is enough.",
+    "segment": (
+        "Walk the labels in scope one at a time: each plays, and two clicks (new start, new end) "
+        "re-place it. N moves on and curates."
+    ),
     "frame": "Walk the labels in scope boundary by boundary and use shortcuts (below) to approve/edit.",
 }
 
-_FIELD_TITLES = {"point": "POINT", "start": "START", "end": "END"}
+_FIELD_TITLES = {"point": "POINT", "start": "START", "end": "END", FIELD_LABEL: "SEGMENT"}
+
+#: What the delta line says while a segment is armed for editing.
+_SEGMENT_HINT = "click the new start, then the new end  ·  V replays"
 
 #: Linger on a just-committed boundary this long before jumping to the next
 #: seed, so the user sees the label land where they put it.
 _CONFIRM_PAUSE_MS = 100
 
-_KEYS_SCHEMATIC = (
-    "<table cellspacing='2' style='color:#bbb; font-size:10px;'>"
-    "<tr><td><b>←</b> / <b>→</b></td><td>one frame</td>"
-    "<td>&nbsp;&nbsp;<b>Enter</b></td><td>confirm this frame</td></tr>"
-    "<tr><td><b>B</b> / <b>N</b></td><td>back / next</td>"
-    "<td>&nbsp;&nbsp;<b>Backspace</b></td><td>delete the event</td></tr>"
-    "</table>"
-)
+_KEY_ROWS = {
+    "frame": [
+        ("←  /  →", "step the video one frame back / forward"),
+        ("Enter", "confirm: the frame on screen becomes the boundary and the review moves on"),
+        ("Backspace  /  Delete", "this event should not exist — delete it and move on"),
+        ("B", "back to the previous boundary"),
+        ("N", "next boundary (curates the one you leave when the box is ticked)"),
+        ("Space", "play / pause"),
+    ],
+    "segment": [
+        ("click, click", "re-place the label: the first click is its new start, the second its new end"),
+        ("V", "play the label again"),
+        ("Backspace  /  Delete", "this label should not exist — delete it and move on"),
+        ("B", "back to the previous label"),
+        ("N", "next label (curates the one you leave when the box is ticked)"),
+        ("Space", "play / pause"),
+    ],
+}
+_KEY_ROWS_ALWAYS = [
+    ("Ctrl+C", "curate every automated label in scope of this trial"),
+    ("Ctrl+T", "flag this trial as hard (again: back to normal) — shown more often when training"),
+]
 
 
 def drag_label_ids(text: str) -> list[int]:
@@ -298,24 +344,14 @@ class ScopeDropArea(QFrame):
 
 
 class ShortcutsPopup(QDialog):
-    """The frame-by-frame keys, drawn as a little schematic."""
+    """A review mode's keys, drawn as a little schematic."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, mode: str = "frame"):
         super().__init__(parent)
-        self.setWindowTitle("Frame-by-frame review keys")
+        self.setWindowTitle(f"{CURATION_MODES[mode]} keys")
         self.setModal(False)
         lay = QVBoxLayout(self)
-        rows = [
-            ("←  /  →", "step the video one frame back / forward"),
-            ("Enter", "confirm: the frame on screen becomes the boundary and the review moves on"),
-            ("Backspace  /  Delete", "this event should not exist — delete it and move on"),
-            ("B", "back to the previous boundary"),
-            ("N", "next boundary (curates the one you leave when the box is ticked)"),
-            ("Space", "play / pause"),
-            ("Ctrl+C", "curate every automated label in scope of this trial"),
-            ("Ctrl+T", "flag this trial as hard (again: back to normal) — shown more often when training"),
-        ]
-        for key, what in rows:
+        for key, what in _KEY_ROWS[mode] + _KEY_ROWS_ALWAYS:
             row = QHBoxLayout()
             key_label = QLabel(key)
             key_label.setStyleSheet(
@@ -339,11 +375,14 @@ class ShortcutsPopup(QDialog):
 
 
 class CurationPanel(QGroupBox):
-    """Scope + mode + frame-by-frame review, under the label tables."""
+    """Scope + mode + the two review modes, under the label tables."""
 
-    #: A frame-by-frame review session ended (finished, stopped or torn down).
-    #: How a curation workflow knows the reviewer is done with that step.
+    #: A review session (segment or frame-by-frame) ended — finished, stopped
+    #: or torn down. How a curation workflow knows the reviewer is done.
     review_finished = Signal()
+
+    #: The score summary changed (Model ▸ Curator feedback shows it).
+    review_scored = Signal(str)
 
     def __init__(self, app_state, labels_widget, parent=None):
         super().__init__("Curation", parent)
@@ -358,11 +397,12 @@ class CurationPanel(QGroupBox):
         self._workflow_dialog = None
         self._shortcuts_popup: ShortcutsPopup | None = None
 
-        # Frame-by-frame review state (one session at a time)
+        # Review state (one session at a time, in the mode it started in)
         self._targets: list[ReviewTarget] = []
         self._idx = 0
         self._seed_frame: int | None = None
         self._session_active = False
+        self._session_mode = "frame"
         self._advance_pending = False
         self._jumping = False
         self._frame_conn = False
@@ -380,7 +420,8 @@ class CurationPanel(QGroupBox):
         #: cleared the moment any trial is automated again (a new prediction
         #: run), so finishing the curation fires it exactly once.
         self._review_done = False
-        self._syncing_hard = False
+        self.review_message = ""
+        self._feedback_dialog = None
 
         self._build_ui()
 
@@ -445,14 +486,14 @@ class CurationPanel(QGroupBox):
         for key, text in REVIEW_ORDERS.items():
             self.order_combo.addItem(text, key)
         self.order_combo.setToolTip(
-            "Frame-by-frame review order — Trial-by-trial walks a trial's boundaries\n"
-            "then moves on; Label-by-label finishes one class across every trial first."
+            "Review order — Trial-by-trial walks a trial's labels then moves on;\n"
+            "Label-by-label finishes one class across every trial first."
         )
         self.order_combo.currentIndexChanged.connect(self._on_order_combo)
         mode_row.addWidget(self.order_combo, stretch=1)
         lay.addLayout(mode_row)
 
-        # ── Frame-by-frame review ───────────────────────────────────
+        # ── Segment / frame-by-frame review ─────────────────────────
         self.frame_group = QWidget()
         frame_lay = QVBoxLayout(self.frame_group)
         frame_lay.setContentsMargins(0, 2, 0, 0)
@@ -470,7 +511,11 @@ class CurationPanel(QGroupBox):
         self.delta_label.setAlignment(Qt.AlignCenter)
         frame_lay.addWidget(self.delta_label)
 
-        win_row = QHBoxLayout()
+        # The view window is the frame review's; the segment review shows the
+        # whole label with the navigation padding, so the row hides with it.
+        self.window_row = QWidget()
+        win_row = QHBoxLayout(self.window_row)
+        win_row.setContentsMargins(0, 0, 0, 0)
         win_row.addWidget(QLabel("View window:"))
         self.window_spin = QDoubleSpinBox()
         self.window_spin.setRange(0.02, 600.0)
@@ -496,7 +541,7 @@ class CurationPanel(QGroupBox):
         )
         self.lock_checkbox.toggled.connect(self._on_lock_toggled)
         win_row.addWidget(self.lock_checkbox)
-        frame_lay.addLayout(win_row)
+        frame_lay.addWidget(self.window_row)
 
         review_opts_row = QHBoxLayout()
         self.next_curates_cb = QCheckBox("Click N curates current")
@@ -518,7 +563,7 @@ class CurationPanel(QGroupBox):
         self.automated_only_cb.toggled.connect(lambda v: setattr(self.app_state, "frame_review_automated_only", v))
         review_opts_row.addWidget(self.automated_only_cb)
 
-        self.auto_advance_cb = QCheckBox("Jump to next after Enter/Backspace")
+        self.auto_advance_cb = QCheckBox("Jump to next after ↵/⌫")
         self.auto_advance_cb.setToolTip(
             "Ticked: confirming (Enter) or deleting (Backspace) a boundary\n"
             "moves on to the next target automatically. Untick to stay put."
@@ -528,21 +573,18 @@ class CurationPanel(QGroupBox):
         review_opts_row.addWidget(self.auto_advance_cb)
         frame_lay.addLayout(review_opts_row)
 
-        keys_row = QHBoxLayout()
-        keys = QLabel(_KEYS_SCHEMATIC)
-        keys.setTextFormat(Qt.RichText)
-        keys_row.addWidget(keys, stretch=1)
+        review_btns_row = QHBoxLayout()
         self.shortcuts_btn = QPushButton("Shortcuts…")
         self.shortcuts_btn.setAutoDefault(False)
         self.shortcuts_btn.clicked.connect(self._show_shortcuts)
-        keys_row.addWidget(self.shortcuts_btn, alignment=Qt.AlignTop)
-        frame_lay.addLayout(keys_row)
+        review_btns_row.addWidget(self.shortcuts_btn)
 
         self.start_stop_btn = QPushButton("Start review")
         self.start_stop_btn.setAutoDefault(False)
         self.start_stop_btn.setDefault(False)
         self.start_stop_btn.clicked.connect(self._toggle_session)
-        frame_lay.addWidget(self.start_stop_btn)
+        review_btns_row.addWidget(self.start_stop_btn)
+        frame_lay.addLayout(review_btns_row)
         lay.addWidget(self.frame_group)
 
         # ── Tools ───────────────────────────────────────────────────
@@ -576,69 +618,17 @@ class CurationPanel(QGroupBox):
         )
         self.video_grid_btn.clicked.connect(self.open_video_grid)
         tools_row.addWidget(self.video_grid_btn)
+        self.curves_pdf_btn = QPushButton("Confidence curves…")
+        self.curves_pdf_btn.setAutoDefault(False)
+        self.curves_pdf_btn.setToolTip(
+            "Each trial's mean frame confidence into the metadata table's model_confidence\n"
+            "column — sort or filter the trials table on it to decide which trials to open\n"
+            "and which to curate in bulk — and a PDF of every trial's curve with its labels.\n"
+            "From the runs behind the labels, else the prediction set selected in the I/O tab."
+        )
+        self.curves_pdf_btn.clicked.connect(self.export_confidence_pdf)
+        tools_row.addWidget(self.curves_pdf_btn)
         lay.addLayout(tools_row)
-
-        # ── Hard trials + post-curation review ──────────────────────
-        review_row = QHBoxLayout()
-        self.hard_cb = QCheckBox("Hard trial (Ctrl+T)")
-        self.hard_cb.setToolTip(
-            "Flag this trial as hard in the metadata table's difficulty column —\n"
-            "the model barely managed it, or it is just difficult. A training run\n"
-            "with train.oversample draws hard trials more often."
-        )
-        self.hard_cb.toggled.connect(self._on_hard_toggled)
-        review_row.addWidget(self.hard_cb)
-        review_row.addStretch(1)
-        review_row.addWidget(QLabel("Flag below F1:"))
-        self.review_threshold_spin = QDoubleSpinBox()
-        self.review_threshold_spin.setRange(0.0, 1.0)
-        self.review_threshold_spin.setDecimals(2)
-        self.review_threshold_spin.setSingleStep(0.05)
-        self.review_threshold_spin.setToolTip(
-            "Once every trial is curated, each trial's final labels are scored against\n"
-            "what its prediction run wrote (state labels at IoU ≥ 0.5, point labels within\n"
-            "the run's own tolerance). A trial whose F1 falls below this is flagged hard."
-        )
-        self.review_threshold_spin.setValue(float(self.app_state.get_with_default("review_flag_threshold")))
-        self.review_threshold_spin.valueChanged.connect(
-            lambda v: setattr(self.app_state, "review_flag_threshold", float(v))
-        )
-        self.review_threshold_spin.editingFinished.connect(self.review_threshold_spin.clearFocus)
-        review_row.addWidget(self.review_threshold_spin)
-        review_row.addWidget(QLabel("Tolerance:"))
-        self.review_tolerance_spin = QDoubleSpinBox()
-        self.review_tolerance_spin.setRange(0.0, 10.0)
-        self.review_tolerance_spin.setDecimals(3)
-        self.review_tolerance_spin.setSingleStep(0.01)
-        self.review_tolerance_spin.setSpecialValueText("run's own")
-        self.review_tolerance_spin.setSuffix(" s")
-        self.review_tolerance_spin.setToolTip(
-            'Point-event tolerance for the review. Left at "run\'s own", each run is judged\n'
-            "at the tolerance its model was trained to (read from the run folder). Set it to\n"
-            "compare runs trained at different tolerances, or for a run folder that carries none."
-        )
-        override = self.app_state.get_with_default("review_tolerance_s")
-        self.review_tolerance_spin.setValue(float(override) if override else 0.0)
-        self.review_tolerance_spin.valueChanged.connect(
-            lambda v: setattr(self.app_state, "review_tolerance_s", float(v) if v > 0 else None)
-        )
-        self.review_tolerance_spin.editingFinished.connect(self.review_tolerance_spin.clearFocus)
-        review_row.addWidget(self.review_tolerance_spin)
-        self.review_btn = QPushButton("Score now")
-        self.review_btn.setAutoDefault(False)
-        self.review_btn.setToolTip(
-            "Run the post-curation review over the trials the table shows without waiting\n"
-            "for the last trial to be curated."
-        )
-        self.review_btn.clicked.connect(lambda: self.run_review())
-        review_row.addWidget(self.review_btn)
-        lay.addLayout(review_row)
-
-        self.review_label = QLabel("")
-        self.review_label.setTextFormat(Qt.PlainText)
-        self.review_label.setWordWrap(True)
-        self.review_label.setStyleSheet("font-size: 10px; color: #bbb;")
-        lay.addWidget(self.review_label)
 
         self.status_label = QLabel("")
         self.status_label.setTextFormat(Qt.RichText)
@@ -790,11 +780,19 @@ class CurationPanel(QGroupBox):
 
     def _apply_mode(self, key: str) -> None:
         self.mode_combo.setToolTip(_MODE_HINTS[key])
-        self.frame_group.setVisible(key == "frame")
-        if key != "frame" and self._session_active:
+        self.frame_group.setVisible(key in REVIEW_MODES)
+        self.window_row.setVisible(key == "frame")
+        self.auto_advance_cb.setText("Jump to next after ⌫" if key == "segment" else "Jump to next after ↵/⌫")
+        # The queue is the mode's (boundaries vs whole labels): leaving the
+        # mode a session started in ends it.
+        if self._session_active and key != self._session_mode:
             self._stop()
         if key == "inspect" and self.app_state.ready:
             self.curate_current_trial(quiet=True)
+
+    def reviews_on_jump(self) -> bool:
+        """Whether a grid's double-click should drop into a review session."""
+        return self.mode() in REVIEW_MODES
 
     # ------------------------------------------------------------------
     # Review order
@@ -887,7 +885,12 @@ class CurationPanel(QGroupBox):
         return list(visible)  # filtered
 
     def curate_trial_labels(
-        self, which: str = wf.TRIAL_SCOPE_FILTERED, label_ids=_SCOPE_UNSET, confirm: bool = False, quiet: bool = False
+        self,
+        which: str = wf.TRIAL_SCOPE_FILTERED,
+        label_ids=_SCOPE_UNSET,
+        confirm: bool = False,
+        quiet: bool = False,
+        cut: ConfidenceCut | None = None,
     ) -> int:
         """Curate every automated label of *label_ids*, across the trials *which* names.
 
@@ -895,6 +898,11 @@ class CurationPanel(QGroupBox):
         pass an explicit set (or ``None`` for every class) to bypass it — what
         the bulk-editing dialog's own checkbox list does. Manual labels are
         never rewritten.
+
+        *cut* keeps only the trials the model is confident on
+        (:func:`~ethograph.labels.curation.confident_trials`): the rest are
+        left automated for the reviewer to open. The trial means come from
+        the same curves **Confidence curves…** reads.
 
         *confirm* asks first: from the GUI this is one click away from marking
         labels nobody looked at as seen, which is the one thing the
@@ -910,12 +918,19 @@ class CurationPanel(QGroupBox):
             return 0
         scope = self.scope() if label_ids is _SCOPE_UNSET else label_ids
         trials = self.trials_for_scope(which)
+        if cut is not None and cut.active:
+            means = rm.trial_confidence_means(self._confidence_curves(trials)) if cut.trial > 0.0 else {}
+            trials = confident_trials(trials, means, self.app_state._all_labels_df, scope, cut)
+            if not trials:
+                if not quiet:
+                    notify(f"No trial passes the confidence cut across the {_TRIAL_SCOPE_NOUN[which]}.")
+                return 0
         df, total = curate_trials(self.app_state._all_labels_df, trials, scope)
         if not total:
             if not quiet:
                 notify(f"Nothing left to curate in scope across the {_TRIAL_SCOPE_NOUN[which]}.")
             return 0
-        if confirm and not self._confirm_bulk_curate(which, scope, total, len(trials)):
+        if confirm and not self._confirm_bulk_curate(which, scope, total, len(trials), cut):
             return 0
         message = None if quiet else f"Curated {total} label(s) across {len(trials)} trial(s)."
         return self._commit(df, total, message=message)
@@ -932,7 +947,9 @@ class CurationPanel(QGroupBox):
         """
         return self.curate_trial_labels(wf.TRIAL_SCOPE_FILTERED, confirm=confirm)
 
-    def _confirm_bulk_curate(self, which: str, label_ids, total: int, n_trials: int) -> bool:
+    def _confirm_bulk_curate(
+        self, which: str, label_ids, total: int, n_trials: int, cut: ConfidenceCut | None = None
+    ) -> bool:
         """Ask before marking labels across many trials as seen by a human.
 
         Curating is **not** undoable: ``Ctrl+Z`` walks per-trial snapshots
@@ -946,8 +963,14 @@ class CurationPanel(QGroupBox):
         box.setIcon(QMessageBox.Warning)
         box.setWindowTitle(f"Curate: {noun}")
         box.setText(f"Mark {total} automated label(s) as curated, across {n_trials} {noun}, in {classes}?")
+        passing = ""
+        if cut is not None and cut.active:
+            passing = (
+                f"Only the {n_trials} trial(s) the model is confident on: mean confidence at least "
+                f"{cut.trial:g} and every automated label at least {cut.segment:g}.\n\n"
+            )
         box.setInformativeText(
-            "Curated means a human has approved them — labels you have not looked at "
+            passing + "Curated means a human has approved them — labels you have not looked at "
             "will be marked as though you had.\n\n"
             "This cannot be undone: Ctrl+Z does not take back a curation. Nothing "
             "reaches disk until you save, so closing without saving still discards it."
@@ -1061,6 +1084,71 @@ class CurationPanel(QGroupBox):
             activate_reason="labels purged",
         )
 
+    def stitch_trial_labels(
+        self,
+        which: str = wf.TRIAL_SCOPE_FILTERED,
+        max_gap_s: float = 0.015,
+        label_ids=_SCOPE_UNSET,
+        confirm: bool = False,
+    ) -> int:
+        """Merge same-class state labels of *label_ids* separated by less than
+        *max_gap_s*, in the trials *which* names. Point events are never touched.
+
+        The merge rule is the changepoint correction's own
+        (:func:`~ethograph.labels.intervals.stitch_intervals`); this is that
+        one step alone, over a chosen scope, without the snap. *label_ids*
+        defaults to the curation scope area; each touched trial is
+        snapshotted first, so ``Ctrl+Z`` can take the stitch back one trial at
+        a time.
+        """
+        if not self.app_state.ready:
+            return 0
+        scope = self.scope() if label_ids is _SCOPE_UNSET else label_ids
+        trials = self.trials_for_scope(which)
+        stitched: dict = {}
+        total = 0
+        for trial in trials:
+            df, n = stitch_labels(self.app_state.get_trial_intervals(trial), max_gap_s, scope)
+            if not n:
+                continue
+            stitched[trial] = df
+            total += n
+        if not total:
+            notify(f"Nothing in scope closer than {max_gap_s:g} s across the {_TRIAL_SCOPE_NOUN[which]}.")
+            return 0
+        if confirm and not self._confirm_bulk_stitch(which, scope, total, len(stitched), max_gap_s):
+            return 0
+        all_df = self.app_state._all_labels_df
+        for trial, df in stitched.items():
+            self.app_state.record_label_edit(f"Stitch labels: {which} (trial {trial})", trial=trial)
+            all_df = set_trial_in_tsv(all_df, trial, df)
+        return self._commit(
+            all_df,
+            total,
+            message=f"Stitched {total} label(s) closer than {max_gap_s:g} s across {len(stitched)} trial(s).",
+            activate_reason="labels stitched",
+        )
+
+    def _confirm_bulk_stitch(self, which: str, label_ids, total: int, n_trials: int, max_gap_s: float) -> bool:
+        """Ask before stitching — a merged label is one label, and the seam is gone."""
+        classes = "every label class" if label_ids is None else f"{len(label_ids)} label class(es)"
+        noun = _TRIAL_SCOPE_NOUN[which]
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle(f"Stitch labels: {noun}")
+        box.setText(
+            f"Merge {total} label(s) into their neighbours closer than {max_gap_s:g} s, "
+            f"across {n_trials} {noun}, in {classes}?"
+        )
+        box.setInformativeText(
+            "Same class, same individual, gap below the threshold. Point events are never touched.\n\n"
+            "Ctrl+Z can take it back one trial at a time while this session is open. Nothing\n"
+            "reaches disk until you save, so closing without saving still discards it."
+        )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.No)
+        return box.exec() == QMessageBox.Yes
+
     def _confirm_bulk_purge(self, which: str, label_ids, total: int, n_trials: int, min_duration_s: float) -> bool:
         """Ask before purging short labels — there is no server-side undo past Ctrl+Z."""
         classes = "every label class" if label_ids is None else f"{len(label_ids)} label class(es)"
@@ -1073,70 +1161,6 @@ class CurationPanel(QGroupBox):
         )
         box.setInformativeText(
             "Point events have no duration and are never touched.\n\n"
-            "Ctrl+Z can take it back one trial at a time while this session is open. Nothing\n"
-            "reaches disk until you save, so closing without saving still discards it."
-        )
-        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        box.setDefaultButton(QMessageBox.No)
-        return box.exec() == QMessageBox.Yes
-
-    def correct_offsets(self, which: str = wf.TRIAL_SCOPE_FILTERED, confirm: bool = False) -> int:
-        """Pull back each label's offset across a near-zero gap to the next onset
-        of the same subject, in the trials *which* names — the export step that
-        makes every interval strictly separated so pynapple can resolve them.
-
-        Unlike curate/delete/purge this is never scoped by label class: a
-        subject's whole sequence of labels has to be seen together to find a
-        gap between two of them. Each touched trial is snapshotted first, so
-        Ctrl+Z can take a trial's correction back.
-        """
-        if not self.app_state.ready:
-            return 0
-        trials = self.trials_for_scope(which)
-        if not trials:
-            notify(f"No trials to correct across the {_TRIAL_SCOPE_NOUN[which]}.")
-            return 0
-        if confirm and not self._confirm_bulk_correct(which, len(trials)):
-            return 0
-        total_corrected = 0
-        total_negative = 0
-        touched = []
-        for trial in trials:
-            corrected_df, corrected, negative = correct_offsets_trial(self.app_state.get_trial_intervals(trial))
-            total_negative += negative
-            if not corrected:
-                continue
-            self.app_state.record_label_edit(f"Correct offsets: {which} (trial {trial})", trial=trial)
-            self.app_state.set_trial_intervals(trial, corrected_df)
-            touched.append(trial)
-            total_corrected += corrected
-        if self.app_state.trials_sel is not None:
-            self.app_state.label_intervals = self.app_state.get_trial_intervals(self.app_state.trials_sel)
-        if not total_corrected:
-            notify(f"Nothing to correct across the {_TRIAL_SCOPE_NOUN[which]}.")
-            return 0
-        message = f"Corrected {total_corrected} offset(s) across {len(touched)} trial(s)."
-        if total_negative:
-            message += f" {total_negative} negative gap(s) found — check for overlapping intervals."
-        notify(message, "warning" if total_negative else None)
-        self.app_state.changes_saved = False
-        self.app_state.curation_changed.emit()
-        self._refresh_status()
-        if self.plot_container is not None:
-            self.plot_container.schedule_labels_redraw()
-        if self.data_widget is not None:
-            self.data_widget.update_main_plot(preserve_x_range=True)
-        return total_corrected
-
-    def _confirm_bulk_correct(self, which: str, n_trials: int) -> bool:
-        """Ask before correcting offsets across many trials — a low-risk fix, but still an edit."""
-        noun = _TRIAL_SCOPE_NOUN[which]
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Warning)
-        box.setWindowTitle(f"Correct offsets: {noun}")
-        box.setText(f"Pull back offsets across near-zero gaps, in {n_trials} {noun}?")
-        box.setInformativeText(
-            "Every subject's whole sequence is affected, not just the classes in scope.\n\n"
             "Ctrl+Z can take it back one trial at a time while this session is open. Nothing\n"
             "reaches disk until you save, so closing without saving still discards it."
         )
@@ -1159,6 +1183,8 @@ class CurationPanel(QGroupBox):
         """A label was placed, moved, deleted or undone — the verdict may have changed."""
         self.app_state.curation_changed.emit()
         self._refresh_status()
+        if self._session_active and self._session_mode == "segment":
+            self._sync_segment_after_edit()
 
     # ------------------------------------------------------------------
     # Status + metadata
@@ -1240,7 +1266,7 @@ class CurationPanel(QGroupBox):
         self._review_when_done(status)
 
     # ------------------------------------------------------------------
-    # Hard trials + post-curation review (labels/review_metrics.py)
+    # Curator feedback: hand flags + post-curation review (labels/review_metrics.py)
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -1261,8 +1287,9 @@ class CurationPanel(QGroupBox):
         """Score every trial the table shows against the run that predicted it.
 
         Writes ``review_f1_state`` / ``review_f1_point`` into the metadata
-        table, flags trials below the threshold as hard (never un-flagging a
-        hand-set one), and says what it found.
+        table — a measurement, nothing more. Which of those trials the next
+        training run should see more often is decided by a human, from the
+        histogram (Model ▸ Curator feedback) or by hand.
         """
         trials_widget = self._trials_widget()
         session = getattr(self.app_state, "nc_file_path", None)
@@ -1275,24 +1302,104 @@ class CurationPanel(QGroupBox):
             tolerance_override_s=self.app_state.review_tolerance_s,
         )
         if not reviews:
-            message = rm.summary(reviews, set())
-            self.review_label.setText(message)
-            notify(message)
+            self._report_review(rm.summary(reviews))
             return reviews
         self.activate("review scored")
-        hard = rm.flag_hard(reviews, float(self.app_state.review_flag_threshold))
         for column, values in rm.review_columns(reviews).items():
             scored = {t: v for t, v in values.items() if not math.isnan(v)}
             if scored:
                 trials_widget.set_column_values(column, scored)
-        difficulty = rm.difficulty_values(getattr(self.app_state, "metadata_df", None), hard, reviews.keys())
-        if difficulty:
-            trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, difficulty)
-        message = rm.summary(reviews, hard)
-        self.review_label.setText(message)
-        notify(message)
-        self._sync_hard_checkbox()
+        self._report_review(rm.summary(reviews))
         return reviews
+
+    def _report_review(self, message: str) -> None:
+        self.review_message = message
+        self.review_scored.emit(message)
+        notify(message)
+
+    def flag_trials_hard(self, trials: set[str]) -> int:
+        """Flag *trials* hard in the metadata table — the histogram's one
+        press. Only ever adds; ``Ctrl+T`` takes one back. Returns how many
+        changed."""
+        trials_widget = self._trials_widget()
+        if not trials or trials_widget is None or not self.app_state.ready:
+            return 0
+        self.activate("trials flagged")
+        values = rm.difficulty_values(getattr(self.app_state, "metadata_df", None), set(trials), trials)
+        if values:
+            trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, values)
+        notify(f"Flagged {len(values)} trial(s) hard.")
+        return len(values)
+
+    # ------------------------------------------------------------------
+    # Frame confidence curves: the runs behind the labels
+    # ------------------------------------------------------------------
+
+    def _curve_store_for(self, trial):
+        """The prediction run whose curve *trial* is judged on: the run the
+        labels were imported from, else the run on disk that predicted the
+        trial, else the prediction set selected in the I/O tab."""
+        store = getattr(self.app_state, "labels_pred_store", None)
+        if store is not None:
+            return store
+        session = getattr(self.app_state, "nc_file_path", None)
+        if session:
+            source = rm.get_trial_meta(self.app_state._all_labels_df, trial).get("prediction_source")
+            folder = rm.resolve_run(session, trial, source if isinstance(source, str) and source else None)
+            if folder is not None:
+                cached = self._run_stores.get(folder)
+                if cached is None:
+                    cached = self._run_stores[folder] = PredictionsStore(folder)
+                return cached
+        return getattr(self.app_state, "pred_store", None)
+
+    def _confidence_curves(self, trials) -> dict[str, np.ndarray | None]:
+        """``{trial: frame confidence curve or None}`` for *trials*."""
+        self._run_stores: dict = {}
+        individual = self.app_state.selected_individual()
+        out: dict[str, np.ndarray | None] = {}
+        for trial in trials:
+            store = self._curve_store_for(trial)
+            out[str(trial)] = store.get_confidence(trial, self.app_state.dt, individual=individual) if store else None
+        return out
+
+    def export_confidence_pdf(self) -> None:
+        """Trial-level confidence, two ways: each trial's mean frame confidence
+        into the metadata table (``model_confidence``, a number to sort and
+        filter on), and every trial's curve with its labels as a PDF the
+        system viewer opens. A review surface, like the grids: it decides
+        nothing about a trial, and never touches ``difficulty``."""
+        if not self.app_state.ready:
+            return
+        trials = list(self.app_state.trials or [])
+        curves = self._confidence_curves(trials)
+        if not any(c is not None for c in curves.values()):
+            notify(
+                "No frame confidence curves: the labels carry no prediction run with probabilities, "
+                "and no run is selected in the I/O tab.",
+                severity="warning",
+            )
+            return
+        means = rm.trial_confidence_means(curves)
+        trials_widget = self._trials_widget()
+        if means and trials_widget is not None:
+            self.activate("trial confidence scored")
+            trials_widget.set_column_values(rm.MODEL_CONFIDENCE_COLUMN, means)
+        mappings = getattr(self.labels_widget, "_mappings", None) or {}
+        try:
+            pdf_path, _highlighted = plot_confidence_pdf(
+                {t: curves.get(str(t)) for t in trials},
+                self.app_state._all_labels_df,
+                self.app_state.dt,
+                mappings,
+                confidence_threshold=0.0,
+                segment_confidence_threshold=0.0,
+            )
+        except (OSError, ValueError, KeyError) as exc:
+            notify(f"Confidence PDF failed: {exc}", severity="error")
+            return
+        notify(f"model_confidence written for {len(means)} trial(s); wrote {Path(pdf_path).name}")
+        open_path(pdf_path)
 
     def _trial_is_hard(self, trial) -> bool:
         mdf = getattr(self.app_state, "metadata_df", None)
@@ -1300,19 +1407,6 @@ class CurationPanel(QGroupBox):
             return False
         hit = mdf["trial"].astype(str) == str(trial)
         return bool(hit.any()) and rm.is_hard(mdf.loc[hit, rm.DIFFICULTY_COLUMN].iloc[0])
-
-    def _sync_hard_checkbox(self) -> None:
-        trial = getattr(self.app_state, "trials_sel", None)
-        self._syncing_hard = True
-        try:
-            self.hard_cb.setEnabled(trial is not None and self.app_state.ready)
-            self.hard_cb.setChecked(trial is not None and self._trial_is_hard(trial))
-        finally:
-            self._syncing_hard = False
-
-    def _on_hard_toggled(self, checked: bool) -> None:
-        if not self._syncing_hard:
-            self.set_difficulty(bool(checked))
 
     def set_difficulty(self, hard: bool, trial=None) -> None:
         """Write *trial*'s (default: the current one) difficulty to the metadata table."""
@@ -1325,7 +1419,6 @@ class CurationPanel(QGroupBox):
         value = rm.DIFFICULTY_HARD if hard else rm.DIFFICULTY_NORMAL
         trials_widget.set_column_values(rm.DIFFICULTY_COLUMN, {str(trial): value})
         notify(f"Trial {trial}: {value}.")
-        self._sync_hard_checkbox()
 
     def toggle_difficulty(self) -> None:
         """Ctrl+T: the current trial hard ↔ normal."""
@@ -1343,8 +1436,8 @@ class CurationPanel(QGroupBox):
         self.deactivate()
         self.app_state.curve_run_path = None
         self._review_done = False
-        self.review_label.setText("")
-        self._sync_hard_checkbox()
+        self.review_message = ""
+        self.review_scored.emit("")
 
     def _on_trial_changed(self) -> None:
         if not self.app_state.ready:
@@ -1354,7 +1447,6 @@ class CurationPanel(QGroupBox):
             # settle before the trial's labels are restamped and redrawn.
             QTimer.singleShot(0, lambda: self.curate_current_trial(quiet=True))
         self._refresh_status()
-        self._sync_hard_checkbox()
         if self._session_active and not self._jumping:
             self._follow_trial()
 
@@ -1415,6 +1507,16 @@ class CurationPanel(QGroupBox):
         self._workflow_dialog.raise_()
         self._workflow_dialog.activateWindow()
 
+    def open_feedback(self) -> None:
+        """Model ▸ Curator feedback…: score the trials, flag the hard ones."""
+        if self.meta is None:
+            return
+        if self._feedback_dialog is None or not self._feedback_dialog.isVisible():
+            self._feedback_dialog = CuratorFeedbackDialog(self, parent=self.window())
+        self._feedback_dialog.show()
+        self._feedback_dialog.raise_()
+        self._feedback_dialog.activateWindow()
+
     # ==================================================================
     # Frame-by-frame review session
     # ==================================================================
@@ -1443,13 +1545,15 @@ class CurationPanel(QGroupBox):
         return self.nav._visible_trials()
 
     def build_queue(self) -> list[ReviewTarget]:
-        """Every boundary of the labels in scope, in the trials the table shows."""
+        """The labels in scope, in the trials the table shows: every boundary
+        (frame-by-frame) or every whole label (segment review)."""
         return build_review_queue(
             self.app_state._all_labels_df,
             self.scope(),
             allowed_trials=self._allowed_trials(),
             automated_only=self.automated_only_cb.isChecked(),
             order=self.order(),
+            whole_labels=self.mode() == "segment",
         )
 
     def _toggle_session(self) -> None:
@@ -1459,8 +1563,12 @@ class CurationPanel(QGroupBox):
             self.start_review()
 
     def start_review(self, idx: int = 0) -> bool:
-        """Walk the scope's boundaries from *idx*. Returns whether a session started."""
-        if not self._video_ready():
+        """Walk the scope's queue from *idx*. Returns whether a session started.
+
+        The frame review nudges video frames, so it needs a video; the
+        segment review plays whatever the session has (audio alone will do).
+        """
+        if self.mode() != "segment" and not self._video_ready():
             return False
         targets = self.build_queue()
         if not targets:
@@ -1471,11 +1579,18 @@ class CurationPanel(QGroupBox):
 
     def start_review_at(self, inst: dict, field: str = "point") -> bool:
         """Drop into the review at *inst* (a grid tile): the scope's queue if
-        the label is in it, else a one-label queue."""
-        if self.mode() != "frame":
+        the label is in it, else a one-label queue.
+
+        In segment review the tile's boundary does not matter — the whole
+        label is the target; outside both review modes the frame review is
+        entered.
+        """
+        if self.mode() not in REVIEW_MODES:
             idx = self.mode_combo.findData("frame")
             self.mode_combo.setCurrentIndex(idx)
-        if not self._video_ready():
+        if self.mode() == "segment":
+            field = FIELD_LABEL
+        elif not self._video_ready():
             return False
         targets = self.build_queue()
         idx = queue_index_of(targets, inst, field)
@@ -1521,6 +1636,7 @@ class CurationPanel(QGroupBox):
         self._n_confirmed = 0
         self._n_deleted = 0
         self._session_active = True
+        self._session_mode = self.mode()
         self._advance_pending = False
         self.start_stop_btn.setText("Stop review")
         self._install_session_shortcuts()
@@ -1540,13 +1656,16 @@ class CurationPanel(QGroupBox):
         if not (n_confirmed or n_deleted):
             return
         parts = []
-        if n_confirmed:
+        if n_confirmed and self._session_mode == "segment":
+            parts.append(f"moved {n_confirmed} label{'' if n_confirmed == 1 else 's'}")
+        elif n_confirmed:
             parts.append(f"confirmed {n_confirmed} boundar{'y' if n_confirmed == 1 else 'ies'}")
         if n_deleted:
             parts.append(f"deleted {n_deleted} event{'' if n_deleted == 1 else 's'}")
         notify(f"{'Done' if done else 'Stopped'} — {' and '.join(parts)}. Save with Ctrl+S.")
 
     def _teardown(self) -> None:
+        self._disarm_edit()
         self._session_active = False
         self._advance_pending = False
         self._seed_frame = None
@@ -1645,13 +1764,15 @@ class CurationPanel(QGroupBox):
         if self._session_shortcuts:
             return
         bindings = [
-            (Qt.Key_Return, self._confirm),
-            (Qt.Key_Enter, self._confirm),
             (Qt.Key_Backspace, self._delete_current),
             (Qt.Key_Delete, self._delete_current),
             (Qt.Key_B, self._back),
             (Qt.Key_N, self._next),
         ]
+        if self._session_mode == "frame":
+            # Enter confirms a frame; a segment is re-placed by clicking, so
+            # the key stays free (and cannot commit a half-placed label).
+            bindings += [(Qt.Key_Return, self._confirm), (Qt.Key_Enter, self._confirm)]
         for key, slot in bindings:
             shortcut = QShortcut(QKeySequence(key), self.window())
             shortcut.setContext(Qt.ApplicationShortcut)
@@ -1680,8 +1801,9 @@ class CurationPanel(QGroupBox):
         self._session_shortcuts = []
 
     def _show_shortcuts(self) -> None:
+        mode = self._session_mode if self._session_active else self.mode()
         if self._shortcuts_popup is None or not self._shortcuts_popup.isVisible():
-            self._shortcuts_popup = ShortcutsPopup(self.window())
+            self._shortcuts_popup = ShortcutsPopup(self.window(), mode if mode in REVIEW_MODES else "frame")
         self._shortcuts_popup.show()
         self._shortcuts_popup.raise_()
 
@@ -1754,7 +1876,11 @@ class CurationPanel(QGroupBox):
         self._jump_current()
 
     def _jump_current(self) -> None:
+        self._disarm_edit()
         target = self._targets[self._idx]
+        if target.field == FIELD_LABEL:
+            self._jump_segment(target.inst)
+            return
         inst = target.inst
         seed_rel = self._seed_rel(target)
         if self.nav is not None:
@@ -1777,18 +1903,98 @@ class CurationPanel(QGroupBox):
         self._update_delta()
         self._draw_curves()
 
+    # ------------------------------------------------------------------
+    # Segment review: play the label, arm it for a two-click edit
+    # ------------------------------------------------------------------
+
+    def _jump_segment(self, inst: dict) -> None:
+        """Show the whole label with the navigation padding, play it, and arm it."""
+        if self.nav is not None:
+            self._jumping = True
+            try:
+                self.nav.jump_to_label_instance(
+                    {**inst, "row_idx": self._global_row_idx(inst)},
+                    seek_rel=inst["onset_s"],
+                    play=math.isfinite(inst["offset_s"]),
+                )
+            finally:
+                self._jumping = False
+        self._seed_frame = None
+        self._update_target_display()
+        self._arm_edit()
+        self._draw_curves()
+
+    def _arm_edit(self) -> None:
+        """Select the current label and enter the labels widget's edit mode.
+
+        What ``Ctrl+E`` does after a click on the label, minus the click: the
+        next two plot clicks re-place it (start, then end). Edits go by click
+        even when the labelling mode is keys, so one gesture serves the whole
+        review; a label outside the active branch is refused by
+        ``_edit_label`` itself, and stays only playable.
+        """
+        found = self._current_row()
+        if found is None:
+            return
+        _df, row_idx = found
+        lw = self.labels_widget
+        lw.current_labels_pos = row_idx
+        lw.current_labels = int(self._targets[self._idx].inst["labels"])
+        lw.current_labels_is_prediction = False
+        lw._edit_label()
+        if lw.old_labels_pos is None:
+            self.delta_label.setText("")
+            return
+        lw.ready_for_label_click = True
+        self.delta_label.setText(_SEGMENT_HINT)
+
+    def _disarm_edit(self) -> None:
+        """Forget a half-placed edit: a label left with one click in keeps
+        its old boundaries."""
+        if self._session_mode != "segment":
+            return  # only the segment review arms the labels widget
+        lw = self.labels_widget
+        if lw.old_labels_pos is None and not lw.ready_for_label_click:
+            return
+        lw.old_labels_pos = None
+        lw.old_labels = None
+        lw._reset_label_clicks()
+        lw.ready_for_label_click = False
+
+    def _sync_segment_after_edit(self) -> None:
+        """The armed label was re-placed (its row is gone, the new one is
+        selected): the target follows it, and the new segment plays so the
+        result is seen before N."""
+        target = self._targets[self._idx]
+        if target.field != FIELD_LABEL:
+            return
+        df = self.app_state.label_intervals
+        if df is None or df.empty or row_mask(df, target.inst).any():
+            return
+        pos = self.labels_widget.current_labels_pos
+        if pos is None or pos not in df.index:
+            return
+        onset_s, offset_s, _labels = get_interval_bounds(df, pos)
+        target.inst["onset_s"] = float(onset_s)
+        target.inst["offset_s"] = float(offset_s)
+        self._n_confirmed += 1
+        self._update_target_display()
+        self.delta_label.setText("✓ moved  ·  V replays  ·  N next")
+        self.labels_widget._play_segment()
+
     def _update_target_display(self) -> None:
         target = self._targets[self._idx]
         inst = target.inst
         mappings = getattr(self.labels_widget, "_mappings", {}) or {}
         mapping = mappings.get(inst["labels"], {})
         name = mapping.get("name", str(inst["labels"]))
-        self.target_label.setText(f"{name} ({inst['labels']}) — {_FIELD_TITLES[target.field]}")
-        self.target_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {_color_hex(mapping)};")
-        parts = [f"{self._idx + 1} / {len(self._targets)}", f"trial {inst['trial']}"]
-        individual = inst.get("individual")
-        if individual is not None and not (isinstance(individual, float) and math.isnan(individual)):
-            parts.append(str(individual))
+        # Just the name, in the class colour; the boundary only where it matters
+        # (a state event's start or end), then who vouches for it and how sure.
+        self.target_label.setText(name)
+        self.target_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {_color_hex(mapping)};")
+        parts = []
+        if target.field in ("start", "end"):
+            parts.append(_FIELD_TITLES[target.field].lower())
         method = self._current_method()
         if method:
             parts.append(method)
@@ -1827,11 +2033,12 @@ class CurationPanel(QGroupBox):
             self._update_delta()
 
     def _update_delta(self) -> None:
-        if self._seed_frame is None:
-            self.delta_label.setText("")
+        """A frame step clears the feedback line. It used to print a running
+        "moved ±N frames"; the video shows where the playhead is, and Enter
+        says what it did. The segment review's hint stays up."""
+        if self._targets and self._targets[self._idx].field == FIELD_LABEL:
             return
-        delta = int(getattr(self.app_state, "current_frame", self._seed_frame)) - self._seed_frame
-        self.delta_label.setText(f"moved {delta:+d} frames")
+        self.delta_label.setText("")
 
     # ------------------------------------------------------------------
     # Verdicts
@@ -1865,6 +2072,8 @@ class CurationPanel(QGroupBox):
         if not self._session_active or self._advance_pending:
             return
         target = self._targets[self._idx]
+        if target.field == FIELD_LABEL:
+            return  # a segment is re-placed by clicking, never by Enter
         inst = target.inst
         video = getattr(self.app_state, "video", None)
         if video is None:
@@ -1943,6 +2152,7 @@ class CurationPanel(QGroupBox):
         if found is None:
             return
         df, row_idx = found
+        self._disarm_edit()
         self.app_state.record_label_edit("delete event", trial=trial)
         df = delete_interval(df, row_idx)
         self.app_state.label_intervals = df
