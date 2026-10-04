@@ -197,7 +197,6 @@ def bind_global_shortcuts(meta_widget):
 
     bind("Shift+C", cycle_cameras, guarded=True)
     bind("Shift+M", lambda: app_state.toggle_key_sel("mics", data_widget), guarded=True)
-    bind("Ctrl+H", data_widget.cycle_neural_view)
 
     bind("Ctrl+Right", lambda: changepoints_widget.jump_changepoint(+1))
     bind("Ctrl+Left", lambda: changepoints_widget.jump_changepoint(-1))

@@ -1,19 +1,21 @@
-"""Spike raster plot — one dot per spike at (time, best_channel_y).
+"""Spike raster — the spikes of every unit the cluster table lets through, one row each.
 
-Uses pg.ScatterPlotItem for hardware-accelerated rendering with
-viewport-culled, debounced updates so the Qt event queue never floods
-during zoom/pan.  Supports single-color (all spikes gray) and per-cluster
-coloring when multiple neurons are selected.
+A tick per spike while the view is sparse, spike counts per pixel once it is
+crowded (``raster_render.choose_render``). Either way only what the viewport
+needs is drawn, rebuilt on a debounce so zoom/pan never floods the Qt event
+queue. Spikes are black on white; units selected in the cluster table are
+drawn in their colours.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pyqtgraph as pg
 from numpy.typing import NDArray
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import QRectF, Qt, Signal
 from qtpy.QtGui import QColor
 
 from .app_constants import (
@@ -23,22 +25,52 @@ from .app_constants import (
     Z_INDEX_TIME_MARKER,
 )
 from .plots_base import BasePlot, ThrottleDebounce
+from .raster_render import (
+    MAX_TICKS,
+    TICK_ROW_FRACTION,
+    TICK_WIDTH_AUTO,
+    SpikeGroup,
+    auto_tick_width,
+    choose_render,
+    density_image,
+    tick_segments,
+)
 
 if TYPE_CHECKING:
     from ethograph.io.plot_sources import PlotSource
 
-_PHY_BG = "#000000"
-_PHY_AXIS = "#AAAAAA"
-_DOT_COLOR = QColor(180, 180, 180, 200)
-_DOT_WIDTH = 3
-_MAX_DOTS_PER_GROUP = 50_000
+_RENDER_LABEL_COLOR = "#666666"
+#: A tick is never shorter than this, so rows thinner than a pixel still show their spikes.
+_MIN_TICK_PX = 3.0
+
+
+@dataclass(frozen=True)
+class _Drawn:
+    """What is on screen: how it was rendered, over which time buffer, for which view."""
+
+    render: str
+    t0: float
+    t1: float
+    x_span: float
+    y_range: tuple[float, float]
+    size: tuple[int, int]
+
+    def covers(self, x_lo: float, x_hi: float, y_range: tuple[float, float], size: tuple[int, int]) -> bool:
+        """Whether a pan to this view needs nothing redrawn; any zoom or resize does."""
+        if y_range != self.y_range or size != self.size:
+            return False
+        span = x_hi - x_lo
+        if not np.isclose(span, self.x_span, rtol=1e-3):
+            return False
+        margin = span * BUFFER_COVERAGE_MARGIN
+        return self.t0 <= x_lo - margin and self.t1 >= x_hi + margin
 
 
 class RasterPlot(BasePlot):
-    """Spike raster: dots at (spike_time, channel_y_position).
+    """Spike raster: each spike at ``(spike_time, y of its row)``.
 
-    Mirrors the ephys trace y-coordinate space so spikes align visually
-    with their best channels.
+    A row is whatever ``sync_y_axis`` maps a row key to: a probe channel's
+    depth in the ephys trace's y-space, or a unit's own row.
     """
 
     y_range_changed = Signal()
@@ -46,48 +78,59 @@ class RasterPlot(BasePlot):
     def __init__(self, app_state, parent=None):
         super().__init__(app_state, parent)
 
-        self.setBackground(_PHY_BG)
-        for axis_name in ("left", "bottom"):
-            axis = self.plot_item.getAxis(axis_name)
-            axis.setPen(pg.mkPen(_PHY_AXIS))
-            axis.setTextPen(pg.mkPen(_PHY_AXIS))
         self.time_marker.setPen(pg.mkPen("#FF4444", width=2, style=Qt.PenStyle.DotLine))
 
         self.plot_item.getAxis("left").hide()
 
         self._hw_to_global_y: dict[int, float] = {}
+        self._y_lookup: NDArray = np.empty(0, dtype=np.float64)
         self._channel_spacing: float = 1.0
         self._total_channels: int = 0
+        #: True while the rows are the ephys trace's channels, so the two panels share a y-range.
+        self.follows_trace_y: bool = True
 
-        # One ScatterPlotItem per color group; rebuilt on viewport change.
-        self._scatter_items: list[pg.ScatterPlotItem] = []
-        self._scatter_t0: float | None = None
-        self._scatter_t1: float | None = None
+        self._tick_items: list[pg.PlotCurveItem] = []
+        self._image_item = pg.ImageItem()
+        self._image_item.setZValue(Z_INDEX_TIME_MARKER - 2)
+        self._image_item.hide()
+        self.vb.addItem(self._image_item, ignoreBounds=True)
+        # Says which rendering is on screen whenever it is not the ticks a raster is expected to show.
+        self._render_label = pg.TextItem(color=_RENDER_LABEL_COLOR, anchor=(0, 0))
+        self._render_label.setParentItem(self.vb)
+        self._render_label.setPos(4, 2)
+        self._render_label.hide()
+        self._drawn: _Drawn | None = None
+        #: Pixel width of the ticks last drawn: the user's, or the one picked for the view.
+        self.tick_width: int = 1
 
         self._source: PlotSource | None = None
 
-        # Full sorted spike arrays (source of truth).
-        self._spike_times: NDArray | None = None
-        self._best_channels: NDArray | None = None
-        self._multi_entries: list[tuple[NDArray, NDArray, tuple]] | None = None
+        # One (times, row keys, colour) entry per colour, times sorted (source of truth).
+        self._multi_entries: list[SpikeGroup] = []
 
         # Debounce viewport-driven rebuilds so rapid zoom/pan doesn't flood
         # the Qt event queue with expensive setData() calls.
         self._td = ThrottleDebounce(
             debounce_ms=RASTER_DEBOUNCE_MS,
-            throttle_cb=self._update_visible_dots,
-            debounce_cb=self._update_visible_dots,
+            throttle_cb=self._redraw,
+            debounce_cb=self._redraw,
         )
 
         self.vb.sigRangeChanged.connect(self._on_range_changed)
+        self.vb.sigResized.connect(self._on_range_changed)
         self.vb.sigYRangeChanged.connect(self._emit_y_range)
 
     def _on_range_changed(self):
-        if self._spike_times is not None or self._multi_entries is not None:
+        if self._multi_entries:
             self._td.trigger()
 
     def _emit_y_range(self):
         self.y_range_changed.emit()
+
+    @property
+    def render(self) -> str | None:
+        """``"ticks"`` or ``"density"`` — what is on screen now; ``None`` when nothing is."""
+        return None if self._drawn is None else self._drawn.render
 
     # ------------------------------------------------------------------
     # Y-axis sync
@@ -99,58 +142,51 @@ class RasterPlot(BasePlot):
         spacing: float,
         total_channels: int,
     ):
+        """Set the rows: the y of each row key, ``spacing`` apart, starting at y = 0.
+
+        The y-range is reset only when the row space itself changed, so a
+        redraw of the same rows keeps the user's zoom.
+        """
+        resized = (total_channels, spacing) != (self._total_channels, self._channel_spacing)
         self._hw_to_global_y = hw_to_global_y
         self._channel_spacing = spacing
         self._total_channels = total_channels
+        self._y_lookup = np.full(max(hw_to_global_y, default=-1) + 1, np.nan, dtype=np.float64)
+        for key, y in hw_to_global_y.items():
+            self._y_lookup[key] = y
 
         if total_channels > 0:
             margin = spacing * 1.0
             y_max = (total_channels - 1) * spacing + margin
             self.vb.setLimits(yMin=-margin, yMax=y_max)
-            self.vb.setYRange(-margin, y_max, padding=0)
+            if resized:
+                self.vb.setYRange(-margin, y_max, padding=0)
 
-        self._update_visible_dots()
+        self.refresh()
 
     # ------------------------------------------------------------------
     # Spike data API
     # ------------------------------------------------------------------
 
-    def set_spike_data(self, spike_times: NDArray, best_channels: NDArray):
-        self._multi_entries = None
-        if len(spike_times) == 0:
-            self._spike_times = None
-            self._best_channels = None
-            self._clear_scatter_items()
-            return
-
-        order = np.argsort(spike_times)
-        self._spike_times = spike_times[order]
-        self._best_channels = best_channels[order]
-        self._scatter_t0 = None
-        self._update_visible_dots()
-
-    def set_multi_cluster_spike_data(
-        self,
-        entries: list[tuple[NDArray, NDArray, tuple]],
-    ):
-        # Pre-sort each cluster by time so searchsorted works correctly.
+    def set_multi_cluster_spike_data(self, entries: list[SpikeGroup]):
+        # Pre-sort each colour group by time so searchsorted works correctly.
         sorted_entries = []
-        for times, channels, color in entries:
+        for times, rows, color in entries:
             if len(times) == 0:
                 continue
-            order = np.argsort(times)
-            sorted_entries.append((times[order], channels[order], color))
+            order = np.argsort(times, kind="stable")
+            sorted_entries.append((times[order], rows[order], color))
         self._multi_entries = sorted_entries
-        self._spike_times = None
-        self._best_channels = None
-        self._scatter_t0 = None
-        self._update_visible_dots()
+        self.refresh()
 
     def clear_spike_data(self):
-        self._spike_times = None
-        self._best_channels = None
-        self._multi_entries = None
-        self._clear_scatter_items()
+        self._multi_entries = []
+        self._clear_drawn()
+
+    def refresh(self) -> None:
+        """Redraw now, whatever is already on screen (new spikes, rows or render mode)."""
+        self._drawn = None
+        self._redraw()
 
     # ------------------------------------------------------------------
     # BasePlot overrides
@@ -173,126 +209,111 @@ class RasterPlot(BasePlot):
         self._source = source
 
     # ------------------------------------------------------------------
-    # Internal – scatter management
+    # Internal – viewport-culled drawing (called via ThrottleDebounce or directly)
     # ------------------------------------------------------------------
 
-    def _clear_scatter_items(self):
-        for item in self._scatter_items:
-            try:
-                self.vb.removeItem(item)
-            except (RuntimeError, ValueError):
-                pass
-        self._scatter_items.clear()
-        self._scatter_t0 = None
-        self._scatter_t1 = None
+    def _clear_ticks(self):
+        for item in self._tick_items:
+            self.vb.removeItem(item)
+        self._tick_items.clear()
 
-    def _covers_range(self, x_lo: float, x_hi: float) -> bool:
-        if self._scatter_t0 is None:
-            return False
-        margin = (x_hi - x_lo) * BUFFER_COVERAGE_MARGIN
-        return self._scatter_t0 <= x_lo - margin and self._scatter_t1 >= x_hi + margin
+    def _clear_drawn(self):
+        self._clear_ticks()
+        self._image_item.hide()
+        self._render_label.hide()
+        self._drawn = None
 
-    def _add_scatter(self, x: NDArray, y: NDArray, color):
-        scatter = pg.ScatterPlotItem(
-            x=x,
-            y=y,
-            pen=None,
-            brush=pg.mkBrush(color),
-            size=_DOT_WIDTH,
-            symbol="o",
-            useCache=True,
-        )
-        scatter.setZValue(Z_INDEX_TIME_MARKER - 1)
-        self.vb.addItem(scatter, ignoreBounds=True)
-        self._scatter_items.append(scatter)
+    def _rows_to_y(self, rows: NDArray) -> tuple[NDArray, NDArray]:
+        """The y of each row key, and which keys have a row at all."""
+        known = (rows >= 0) & (rows < len(self._y_lookup))
+        y = self._y_lookup[np.where(known, rows, 0)]
+        return y, known & ~np.isnan(y)
 
-    # ------------------------------------------------------------------
-    # Viewport-culled update (called via ThrottleDebounce or directly)
-    # ------------------------------------------------------------------
+    def _spikes_in_buffer(self, t0: float, t1: float, y_lo: float, y_hi: float) -> list[SpikeGroup]:
+        """Per colour, the spikes inside the time buffer whose rows touch the visible y-range."""
+        half_row = self._channel_spacing / 2
+        groups = []
+        for times, rows, color in self._multi_entries:
+            # X-cull via searchsorted (O(log n), times is pre-sorted).
+            i0 = int(np.searchsorted(times, t0, side="left"))
+            i1 = int(np.searchsorted(times, t1, side="right"))
+            y, has_row = self._rows_to_y(rows[i0:i1])
+            on_screen = has_row & (y >= y_lo - half_row) & (y <= y_hi + half_row)
+            if on_screen.any():
+                groups.append((times[i0:i1][on_screen], y[on_screen], color))
+        return groups
 
-    def _update_visible_dots(self):
-        if not self._hw_to_global_y:
+    def _redraw(self):
+        if not self._hw_to_global_y or not self._multi_entries:
+            self._clear_drawn()
             return
 
         (x_lo, x_hi), (y_lo, y_hi) = self.vb.viewRange()
-
-        if self._covers_range(x_lo, x_hi):
+        size = (max(int(self.vb.width()), 1), max(int(self.vb.height()), 1))
+        if self._drawn is not None and self._drawn.covers(x_lo, x_hi, (y_lo, y_hi), size):
             return
 
-        self._clear_scatter_items()
+        span = x_hi - x_lo
+        pad = span * DEFAULT_BUFFER_MULTIPLIER_EPHYS / 2
+        t0, t1 = x_lo - pad, x_hi + pad
+        groups = self._spikes_in_buffer(t0, t1, y_lo, y_hi)
 
-        x_span = x_hi - x_lo
-        x_buf = x_span * DEFAULT_BUFFER_MULTIPLIER_EPHYS / 2
-        draw_x0 = x_lo - x_buf
-        draw_x1 = x_hi + x_buf
-        self._scatter_t0 = draw_x0
-        self._scatter_t1 = draw_x1
+        n_in_view = sum(int(np.count_nonzero((t >= x_lo) & (t <= x_hi))) for t, _, _ in groups)
+        rows_in_view = min(max((y_hi - y_lo) / self._channel_spacing, 1.0), float(self._total_channels))
+        # Rows thinner than a pixel cannot be told apart, so a pixel row is the cell then.
+        n_cells = int(size[0] * min(rows_in_view, size[1]))
+        mode = self.app_state.get_with_default("raster_render_mode")
+        render = choose_render(mode, self.render or "ticks", n_in_view, n_cells)
 
-        if self._multi_entries is not None:
-            for times, channels, color in self._multi_entries:
-                self._draw_visible(times, channels, draw_x0, draw_x1, y_lo, y_hi, QColor(*color))
-        elif self._spike_times is not None and self._best_channels is not None:
-            self._draw_visible(
-                self._spike_times,
-                self._best_channels,
-                draw_x0,
-                draw_x1,
-                y_lo,
-                y_hi,
-                _DOT_COLOR,
-            )
+        if render == "ticks":
+            self._draw_ticks(groups, (y_hi - y_lo) / size[1], n_in_view, n_cells)
+            self._render_label.hide()
+        else:
+            self._draw_density(groups, t0, t1, max(round(size[0] * (t1 - t0) / span), 1), y_lo, y_hi, size[1])
+            refused = mode == "ticks" and n_in_view > MAX_TICKS
+            self._render_label.setText("Density — too many spikes in view for ticks" if refused else "Density")
+            self._render_label.show()
+        self._drawn = _Drawn(render, t0, t1, span, (y_lo, y_hi), size)
 
-    def _draw_visible(
+    def _draw_ticks(self, groups: list[SpikeGroup], y_per_px: float, n_in_view: int, n_cells: int):
+        self._clear_ticks()
+        self._image_item.hide()
+        half_height = max(self._channel_spacing * TICK_ROW_FRACTION, _MIN_TICK_PX * y_per_px) / 2
+        width = self.app_state.get_with_default("raster_tick_width")
+        if width == TICK_WIDTH_AUTO:
+            width = auto_tick_width(n_in_view, n_cells, 2 * half_height / y_per_px)
+        self.tick_width = width
+        for times, y, color in groups:
+            x, ys = tick_segments(times, y, half_height)
+            pen = pg.mkPen(QColor(*color), width=width)
+            # Flat, so a wide tick is no taller than a thin one.
+            pen.setCapStyle(Qt.PenCapStyle.FlatCap)
+            item = pg.PlotCurveItem(x, ys, connect="pairs", pen=pen, skipFiniteCheck=True)
+            item.setZValue(Z_INDEX_TIME_MARKER - 1)
+            self.vb.addItem(item, ignoreBounds=True)
+            self._tick_items.append(item)
+
+    def _draw_density(
         self,
-        times: NDArray,
-        channels: NDArray,
-        x_lo: float,
-        x_hi: float,
+        groups: list[SpikeGroup],
+        t0: float,
+        t1: float,
+        n_x: int,
         y_lo: float,
         y_hi: float,
-        color,
+        height_px: int,
     ):
-        # 1. X-cull via searchsorted (O(log n), times is pre-sorted).
-        i0 = int(np.searchsorted(times, x_lo, side="left"))
-        i1 = int(np.searchsorted(times, x_hi, side="right"))
-        if i1 <= i0:
-            return
-        t_vis = times[i0:i1]
-        ch_vis = channels[i0:i1]
-
-        # 2. Downsample BEFORE channel mapping so the map runs on ≤50K rows.
-        if len(t_vis) > _MAX_DOTS_PER_GROUP:
-            step = max(1, len(t_vis) // _MAX_DOTS_PER_GROUP)
-            t_vis = t_vis[::step]
-            ch_vis = ch_vis[::step]
-
-        # 3. Map hardware channel indices → global Y positions.
-        y_pos, valid = self._map_channels_to_y(ch_vis)
-        t_vis = t_vis[valid]
-        y_pos = y_pos[valid]
-        if len(t_vis) == 0:
-            return
-
-        # 4. Y-cull.
-        y_mask = (y_pos >= y_lo) & (y_pos <= y_hi)
-        t_vis = t_vis[y_mask]
-        y_pos = y_pos[y_mask]
-        if len(t_vis) == 0:
-            return
-
-        self._add_scatter(t_vis, y_pos, color)
-
-    def _map_channels_to_y(self, channels: NDArray) -> tuple[NDArray, NDArray]:
-        hw_map = self._hw_to_global_y
-        unique_chs = np.unique(channels)
-        max_ch = int(unique_chs.max()) if len(unique_chs) > 0 else 0
-        lookup = np.full(max_ch + 1, np.nan, dtype=np.float64)
-        for ch in unique_chs:
-            y = hw_map.get(int(ch))
-            if y is not None:
-                lookup[int(ch)] = y
-
-        clipped = np.clip(channels.astype(int), 0, len(lookup) - 1)
-        y_positions = lookup[clipped]
-        valid = ~np.isnan(y_positions)
-        return y_positions, valid
+        self._clear_ticks()
+        spacing = self._channel_spacing
+        last_row = self._total_channels - 1
+        # Row k is the band [k - 1/2, k + 1/2] * spacing; the image spans the visible ones.
+        k_lo = int(np.clip(np.floor(y_lo / spacing + 0.5), 0, last_row))
+        k_hi = int(np.clip(np.floor(y_hi / spacing + 0.5), k_lo, last_row))
+        n_rows = k_hi - k_lo + 1
+        y0 = (k_lo - 0.5) * spacing
+        # One cell per row while rows are at least a pixel tall, else one per pixel.
+        n_y = min(n_rows, height_px)
+        image = density_image(groups, t0, t1, n_x, y0, n_rows * spacing / n_y, n_y)
+        self._image_item.setImage(image, autoLevels=False)
+        self._image_item.setRect(QRectF(t0, y0, t1 - t0, n_rows * spacing))
+        self._image_item.show()

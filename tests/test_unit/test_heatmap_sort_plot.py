@@ -93,6 +93,60 @@ def test_row_window_takes_neighbours_in_sorted_order(heatmap, app_state):
     assert heatmap.image_item.image.shape[1] == 2
 
 
+def test_rows_keep_their_scale_when_a_pan_loads_other_data(heatmap, app_state):
+    """The statistics are the context's first load's; a later buffer is scaled by them, not by itself."""
+    app_state.heatmap_normalization = "per_channel"
+    _fill_buffer(heatmap, peaks_at=[2.0, 6.0])
+    first = heatmap._norm
+
+    heatmap._buffered_data = heatmap._buffered_data * 10.0
+    heatmap._normalize_buffer()
+
+    assert heatmap._norm is first
+    assert heatmap._normalized_buffer.max() > 5 * first.levels[1]
+
+    # A new context measures again.
+    heatmap._clear_buffer()
+    _fill_buffer(heatmap, peaks_at=[2.0, 6.0])
+    assert heatmap._norm is not first
+
+
+def test_unnormalised_data_that_never_goes_negative_uses_the_whole_colormap(heatmap, app_state):
+    _fill_buffer(heatmap, peaks_at=[2.0, 6.0])
+    assert heatmap._norm.levels[0] == 0.0
+
+    heatmap._clear_buffer()
+    time = np.linspace(0.0, 10.0, 101)
+    heatmap._buffered_data = np.stack([np.sin(time), np.cos(time)], axis=1)
+    heatmap._buffered_time = time
+    heatmap._normalize_buffer()
+    low, high = heatmap._norm.levels
+    assert low == -high
+
+
+def test_rastermap_orders_by_the_whole_trial_not_the_visible_window(heatmap, monkeypatch):
+    rng = np.random.default_rng(0)
+    phase = rng.uniform(0.0, 2.0 * np.pi, 24)
+    time = np.linspace(0.0, 10.0, 1001)
+    noise = 0.2 * rng.standard_normal((len(time), 24))
+    heatmap._buffered_data = np.sin(2.0 * time[:, None] + phase[None, :]) + noise
+    heatmap._buffered_time = time
+    heatmap._buffer_t0, heatmap._buffer_t1 = 0.0, 10.0
+    heatmap._n_channels = 24
+    heatmap._channel_labels = [f"ch{i}" for i in range(24)]
+    monkeypatch.setattr(heatmap, "_trial_sort_range", lambda: (0.0, 10.0))
+    # A sliver of the trial is on screen; the fit must not be limited to it.
+    heatmap.plot_item.setXRange(4.0, 4.1, padding=0)
+
+    assert heatmap.sort_by_rastermap()
+
+    def neighbour_distance(p):
+        return np.abs(np.angle(np.exp(1j * np.diff(p)))).mean()
+
+    # Fitted on the sliver alone the order is no better than the shuffled one.
+    assert neighbour_distance(phase[heatmap._sort_order]) < 0.7 * neighbour_distance(phase)
+
+
 def test_sort_button_sorts_only_the_active_heatmap(heatmap, qtbot, app_state, monkeypatch):
     other = _make_heatmap(qtbot, app_state, monkeypatch)
     _fill_buffer(heatmap, peaks_at=[8.0, 1.0, 5.0])

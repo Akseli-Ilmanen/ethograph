@@ -86,6 +86,9 @@ gui = [
     "opencv-contrib-python-headless",
     # Reading tag36h11 markers on the Detect tab (AprilTag 3).
     "pupil-apriltags",
+    # Row order by similarity for the spike raster and the heatmap
+    # (gui/heatmap_sort.py). Its own dependencies are all listed above already.
+    "rastermap",
 ]
 
 # Audio: waveform display, spectrogram, vocalisation analysis

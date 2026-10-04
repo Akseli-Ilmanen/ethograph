@@ -8,6 +8,7 @@ import numpy as np
 from qtpy.QtCore import QSignalBlocker, Qt, QTimer
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -1114,7 +1115,9 @@ class PlotSettingsWidget(QWidget):
         self.heatmap_sort_combo.setToolTip(
             "Rows ordered by the window holding their largest mean: earliest on top.\n"
             "Trial window: re-sorted whenever the trial changes.\n"
-            "Visible window: sorted when the button is pressed, then kept."
+            "Visible window: sorted when the button is pressed, then kept.\n"
+            "Rastermap: rows with similar activity next to each other; fitted on the\n"
+            "trial when the button is pressed, then kept."
         )
         self.heatmap_sort_combo.currentIndexChanged.connect(self._on_heatmap_sort_mode_changed)
         sort_layout.addWidget(self.heatmap_sort_combo, 0, 1, 1, 3)
@@ -1141,6 +1144,11 @@ class PlotSettingsWidget(QWidget):
         self.heatmap_sort_now_btn.setToolTip("Sort rows by their peak inside the visible x-range and keep that order")
         self.heatmap_sort_now_btn.clicked.connect(self._on_heatmap_sort_now_clicked)
         sort_layout.addWidget(self.heatmap_sort_now_btn, 2, 0, 1, 4)
+
+        self.heatmap_rastermap_btn = QPushButton("Fit Rastermap on this trial")
+        self.heatmap_rastermap_btn.setToolTip("Order rows by similarity of their activity over the trial and keep it")
+        self.heatmap_rastermap_btn.clicked.connect(self._on_heatmap_rastermap_clicked)
+        sort_layout.addWidget(self.heatmap_rastermap_btn, 3, 0, 1, 4)
 
         rows_group = QGroupBox("Heatmap rows")
         rows_layout = QGridLayout()
@@ -1216,6 +1224,7 @@ class PlotSettingsWidget(QWidget):
         with QSignalBlocker(self.heatmap_sort_overlap_spin):
             self.heatmap_sort_overlap_spin.setValue(self.app_state.get_with_default("heatmap_sort_overlap"))
         self.heatmap_sort_now_btn.setEnabled(mode == "visible")
+        self.heatmap_rastermap_btn.setEnabled(mode == "rastermap")
 
         percent = self.app_state.get_with_default("heatmap_row_percent")
         position = self.app_state.get_with_default("heatmap_row_position")
@@ -1238,6 +1247,7 @@ class PlotSettingsWidget(QWidget):
         mode = self.heatmap_sort_combo.currentData()
         self.app_state.heatmap_sort_mode = mode
         self.heatmap_sort_now_btn.setEnabled(mode == "visible")
+        self.heatmap_rastermap_btn.setEnabled(mode == "rastermap")
         if not self.plot_container:
             return
         for heatmap in self.plot_container.heatmap_plots:
@@ -1245,7 +1255,7 @@ class PlotSettingsWidget(QWidget):
                 heatmap.set_sort_order(None)
             elif mode == "trial":
                 heatmap.resort_for_trial()
-            # "visible": the current order stays until the button is pressed.
+            # "visible" / "rastermap": the current order stays until the button is pressed.
 
     def _on_heatmap_sort_params_changed(self, _value: float):
         self.app_state.heatmap_sort_window_s = self.heatmap_sort_window_spin.value()
@@ -1263,6 +1273,24 @@ class PlotSettingsWidget(QWidget):
             return
         if not heatmap.sort_by_visible_window():
             notify("No heatmap data in the visible window", "warning")
+
+    def _on_heatmap_rastermap_clicked(self):
+        if not self.plot_container:
+            return
+        heatmap = self.plot_container.heatmap_plot
+        if heatmap is None:
+            notify("Open a heatmap panel first", "warning")
+            return
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            fitted = heatmap.sort_by_rastermap()
+        except ValueError as e:
+            notify(str(e), "warning")
+            return
+        finally:
+            QApplication.restoreOverrideCursor()
+        if not fitted:
+            notify("No heatmap data in this trial", "warning")
 
     def _on_heatmap_colormap_changed(self, colormap_name: str):
         self.app_state.heatmap_colormap = colormap_name

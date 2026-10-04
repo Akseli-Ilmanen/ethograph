@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +19,7 @@ from qtpy.QtCore import (
 from qtpy.QtGui import QBrush, QColor, QPen, QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -42,11 +44,7 @@ from qtpy.QtWidgets import (
 )
 from scipy.ndimage import gaussian_filter1d
 
-from ethograph.features.neural import (
-    build_tsgroup,
-    compute_pca,
-    firing_rate_to_xarray,
-)
+from ethograph.features.neural import SpikeTable, build_tsgroup, instantaneous_rate
 from ethograph.gui.notify import notify
 from ethograph.gui.table_filter import (
     SORT_ROLE,
@@ -61,13 +59,35 @@ from ethograph.utils.qt import (
     set_combo_to_value,
 )
 
+from ..io.catalog import PlotData
+from ..io.derived import DerivedFeature, derived_loader_for
 from ..io.ephys_loader import _NeoWrapper as _RefNeo
 from ..io.ephys_loader import load_ephys
 from ..io.plot_sources import FileSource
 from ..io.validation import EPHYS_EXTENSIONS_RAW
 from .app_constants import CLUSTER_TABLE_MAX_HEIGHT, CLUSTER_TABLE_ROW_HEIGHT
+from .heatmap_sort import RASTERMAP_MAX_SAMPLES, RASTERMAP_MIN_ROWS, rastermap_order
+from .raster_render import (
+    MAX_TICK_WIDTH,
+    RENDER_MODES,
+    ROW_ORDERS,
+    TICK_WIDTH_AUTO,
+    group_by_color,
+    order_units,
+)
 
 logger = logging.getLogger(__name__)
+
+#: The feature the firing rates are shown as: one column per unit, re-binned for every trial.
+FIRING_RATE_FEATURE = "firing_rate"
+#: The same units' rate as 1 / inter-spike interval — read across trials only, never a panel's feature.
+INSTANT_RATE_FEATURE = "instantaneous_rate"
+#: The rates a :class:`FiringRateReader` reads off the spikes.
+SPIKE_RATE_FEATURES = (FIRING_RATE_FEATURE, INSTANT_RATE_FEATURE)
+#: The dim a firing rate's columns are picked by when it is read across trials.
+FIRING_RATE_UNIT_DIM = "unit"
+#: Bins x units above which the firing rate is refused — the matrix would not fit in memory.
+_FIRING_RATE_MAX_CELLS = 50_000_000
 
 _CLUSTER_COLORS = [
     (228, 26, 28),  # red
@@ -466,6 +486,9 @@ def _write_params_py(folder: Path, params: dict):
 
 _COLOR_ROLE = Qt.UserRole + 2
 
+#: Raster dots of a unit that passes the cluster table's filters but is not selected.
+_UNSELECTED_DOT_COLOR = (0, 0, 0)
+
 
 class _ChannelFilterProxy(MultiColumnFilterProxy):
     """Column filtering plus the probe view's "only these channels" restriction.
@@ -520,10 +543,57 @@ class _ClusterIdDelegate(QStyledItemDelegate):
             super().paint(painter, option, index)
 
 
+class FiringRateReader:
+    """Firing rates over any window behind ``select()`` — the part of a loader a trial sweep reads.
+
+    Either of :data:`SPIKE_RATE_FEATURES`: the binned, smoothed rate of the
+    Firing rates panel, or the instantaneous one (``1 / ISI``), read at that
+    panel's bin spacing so both land on the same time grid. The dim is
+    :data:`FIRING_RATE_UNIT_DIM`: pinned to one unit it returns that unit's
+    rate, left free every unit's, one column each.
+    """
+
+    def __init__(self, widget: EphysWidget, unit_ids: list[int]) -> None:
+        self._widget = widget
+        self._unit_ids = unit_ids
+        self._trains: dict[int, np.ndarray] = {}
+
+    def _train(self, unit_id: int) -> np.ndarray:
+        """One unit's spike times over the whole session, read once."""
+        if unit_id not in self._trains:
+            self._trains[unit_id] = np.asarray(self._widget._tsgroup[unit_id].times(), dtype=np.float64)
+        return self._trains[unit_id]
+
+    def _instantaneous(self, unit_ids: list[int], t0: float, t1: float) -> tuple[np.ndarray, np.ndarray]:
+        """``1 / ISI`` of *unit_ids* on the panel's bin grid over ``[t0, t1]``.
+
+        The interval a grid time falls in may start before the window, so
+        each unit's whole train is consulted, not the window's spikes.
+        """
+        bin_size = self._widget.fr_bin_spin.value()
+        centers = t0 + (np.arange(int(np.floor((t1 - t0) / bin_size + 1e-9))) + 0.5) * bin_size
+        rates = np.column_stack([instantaneous_rate(self._train(cid), centers) for cid in unit_ids])
+        return rates.astype(np.float32), centers
+
+    def select(self, feature: str, selections: dict[str, str], t0: float, t1: float) -> PlotData | None:
+        pinned = selections.get(FIRING_RATE_UNIT_DIM)
+        unit_ids = self._unit_ids if pinned is None else [cid for cid in self._unit_ids if str(cid) == pinned]
+        if feature not in SPIKE_RATE_FEATURES or not unit_ids:
+            return None
+        if feature == INSTANT_RATE_FEATURE:
+            rates, centers = self._instantaneous(unit_ids, t0, t1)
+        else:
+            rates, centers = self._widget._bin_rates(unit_ids, t0, t1)
+        if pinned is not None:
+            return PlotData(time=centers, data=rates[:, 0])
+        return PlotData(time=centers, data=rates, dim_labels=[str(cid) for cid in unit_ids])
+
+
 class EphysWidget(QWidget):
     """Ephys controls with toggle-button tabs: Ephys trace | Neuron jumping."""
 
     cluster_selected = Signal(int)  # emitted when a single cluster row is selected
+    unit_filter_changed = Signal()  # the cluster table's filters changed which units pass
 
     def __init__(self, shell, app_state, parent=None):
         super().__init__(parent=parent)
@@ -547,6 +617,10 @@ class EphysWidget(QWidget):
         self._tsgroup = None
         self._neurons_source: str | None = None  # "kilosort" or "pynapple"
         self._pynapple_cid_to_row: dict[int, int] = {}  # cluster_id → raster row index
+        # Every spike in one time-sorted table, built once per loaded TsGroup.
+        self._spike_table_cache: tuple[nap.TsGroup, SpikeTable] | None = None
+        # Unit ids in the order the last Rastermap fit gave them.
+        self._rastermap_units: list[int] | None = None
         self._current_cluster_id_for_psth: int | None = None
         self._psth_dialog = None
         self._kilosort_sr: float | None = None
@@ -751,6 +825,58 @@ class EphysWidget(QWidget):
             QHeaderView::section:last { border-right: none; }
         """)
         self.cluster_table.selectionModel().selectionChanged.connect(self._on_cluster_row_selected)
+        # layoutChanged, not the header's sortIndicatorChanged: that one fires before the rows have moved.
+        self._cluster_proxy.layoutChanged.connect(self._on_cluster_table_sorted)
+
+        raster_row = QHBoxLayout()
+        raster_row.setSpacing(4)
+        raster_row.setContentsMargins(0, 0, 0, 0)
+        raster_row.addWidget(QLabel("Raster:"))
+        self.raster_render_combo = QComboBox()
+        for key, label in RENDER_MODES.items():
+            self.raster_render_combo.addItem(label, key)
+        self.raster_render_combo.setToolTip(
+            "Auto: a tick per spike, and spike counts per pixel once the view is too crowded for ticks.\n"
+            "Ticks / Density: always that one."
+        )
+        self.raster_render_combo.setCurrentIndex(
+            max(0, self.raster_render_combo.findData(self.app_state.get_with_default("raster_render_mode")))
+        )
+        self.raster_render_combo.currentIndexChanged.connect(self._on_raster_render_changed)
+        raster_row.addWidget(self.raster_render_combo)
+
+        raster_row.addWidget(QLabel("Tick width:"))
+        self.raster_tick_width_spin = QSpinBox()
+        self.raster_tick_width_spin.setRange(TICK_WIDTH_AUTO, MAX_TICK_WIDTH)
+        self.raster_tick_width_spin.setSpecialValueText("Auto")
+        self.raster_tick_width_spin.setSuffix(" px")
+        self.raster_tick_width_spin.setToolTip(
+            "Auto: as wide as the view allows, bold when spikes are sparse and thin when they are close together.\n"
+            "Any other value is used as it is."
+        )
+        self.raster_tick_width_spin.setValue(self.app_state.get_with_default("raster_tick_width"))
+        self.raster_tick_width_spin.valueChanged.connect(self._on_raster_tick_width_changed)
+        raster_row.addWidget(self.raster_tick_width_spin)
+
+        raster_row.addWidget(QLabel("Rows:"))
+        self.raster_row_order_combo = QComboBox()
+        for key, label in ROW_ORDERS.items():
+            self.raster_row_order_combo.addItem(label, key)
+        self.raster_row_order_combo.setToolTip(
+            "Probe depth: a row per channel, aligned with the trace panel (Kilosort only).\n"
+            "Cluster table: a row per unit, in the table's order — sort the table to reorder.\n"
+            "Rastermap: a row per unit, units with similar activity next to each other."
+        )
+        self.raster_row_order_combo.currentIndexChanged.connect(self._on_raster_row_order_changed)
+        raster_row.addWidget(self.raster_row_order_combo)
+
+        self.rastermap_fit_btn = QPushButton("Refit")
+        self.rastermap_fit_btn.setToolTip("Fit Rastermap again on the units and trial shown now")
+        self.rastermap_fit_btn.clicked.connect(self._fit_rastermap)
+        raster_row.addWidget(self.rastermap_fit_btn)
+        raster_row.addStretch()
+        layout.addLayout(raster_row)
+        self._sync_row_order_combo()
 
         cluster_table_header = QLabel("Cluster Table")
         cluster_table_header.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaa; padding: 2px 0px 0px 2px;")
@@ -862,7 +988,7 @@ class EphysWidget(QWidget):
             self.plot_container.ephys_trace_plot.update_plot_content(xmin, xmax)
 
         if self._tsgroup is not None:
-            self._populate_raster_all_spikes()
+            self._draw_raster()
 
     def _on_ephys_channel_changed(self, channel: int):
         stream_sel = getattr(self.app_state, "ephys_stream_sel", None)
@@ -877,29 +1003,28 @@ class EphysWidget(QWidget):
             xmin, xmax = self.plot_container.get_current_xlim()
             self.plot_container.ephys_trace_plot.update_plot_content(xmin, xmax)
 
-    def set_neural_view(self, mode: str):
-        """Switch between '1-ch Trace', 'Multi Trace', 'Raster'."""
-        if not self.plot_container:
+    def n_units(self) -> int:
+        """How many spike-sorted units are loaded (0 gates the raster source off)."""
+        return 0 if self._tsgroup is None else len(self._tsgroup)
+
+    def show_raster(self) -> None:
+        """Show the raster panel, filled for the current window."""
+        self.plot_container.set_raster_visible(True)
+        self.apply_probe_order()
+        self.refresh_raster()
+
+    def show_firing_rates(self) -> str | None:
+        """Make the firing rates a feature for the current trial; its name, or ``None`` if there is nothing to bin."""
+        return FIRING_RATE_FEATURE if self._compute_firing_rates() else None
+
+    def refresh_raster(self) -> None:
+        """Redraw the raster for the current window: the selected clusters, else every unit."""
+        if self._tsgroup is None:
             return
-
-        ephys_plot = self.plot_container.ephys_trace_plot
-
-        if mode == "Multi Trace":
-            self.plot_container.set_neural_panel_mode("trace")
-            ephys_plot.auto_channel_spacing()
-            if self.ephys_auto_gain_cb.isChecked():
-                self._apply_auto_gain()
-            ephys_plot.autoscale()
-            self.ephys_channel_spin.setEnabled(False)
-
-        elif mode == "Raster":
-            self.ephys_channel_spin.setEnabled(False)
-            ephys_plot.auto_channel_spacing()
-            self.plot_container.set_neural_panel_mode("raster")
-
-        if self.data_widget:
-            xmin, xmax = self.plot_container.get_current_xlim()
-            self.data_widget.update_main_plot(t0=xmin, t1=xmax)
+        if self._multi_cluster_colors:
+            self._redraw_selected_clusters()
+        else:
+            self._draw_raster()
 
     def _on_ephys_gain_changed(self, value: float):
         if self.ephys_auto_gain_cb.isChecked():
@@ -973,10 +1098,6 @@ class EphysWidget(QWidget):
 
         self._custom_channel_set = hw_channels
         self._apply_probe_channel_filter()
-
-        if self.data_widget and hasattr(self.data_widget, "neural_view_combo"):
-            if self.data_widget.neural_view_combo.currentText() != "Multi Trace":
-                self.data_widget.neural_view_combo.setCurrentText("Multi Trace")
 
         if self.plot_container and self.plot_container.is_ephystrace():
             ephys_plot = self.plot_container.ephys_trace_plot
@@ -1110,17 +1231,19 @@ class EphysWidget(QWidget):
         self._kilosort_params = ks_params
 
         cluster_info_path = folder / "cluster_info.tsv"
-        if cluster_info_path.exists():
-            self._cluster_df = self._load_file(cluster_info_path, pd.read_csv, sep="\t")
-        else:
-            notify("No cluster_info.tsv found — cluster table will be empty.", "warning")
-            self._cluster_df = None
+        self._cluster_df = (
+            self._load_file(cluster_info_path, pd.read_csv, sep="\t") if cluster_info_path.exists() else None
+        )
 
         self._spike_clusters = self._load_file(folder / "spike_clusters.npy", np.load, flatten=True)
         self._spike_samples = self._load_file(folder / "spike_times.npy", np.load, flatten=True)
         if self._spike_samples is not None and self._spike_clusters is not None:
             self._spike_times_s = self._spike_samples.astype(np.float64) / ks_sr
             self._tsgroup = build_tsgroup(self._spike_times_s, self._spike_clusters)
+            if self._cluster_df is None:
+                # The table is the unit filter, so it lists the units even without Phy's metadata.
+                notify("No cluster_info.tsv found — the cluster table lists the units without metadata.", "warning")
+                self._cluster_df = self._build_cluster_df_from_tsgroup(self._tsgroup)
         self._channel_positions = self._load_file(folder / "channel_positions.npy", np.load)
         self._channel_map = self._load_file(folder / "channel_map.npy", np.load, flatten=True)
         self._templates = self._load_file(folder / "templates.npy", np.load)
@@ -1147,9 +1270,10 @@ class EphysWidget(QWidget):
         if self._phy_loader is not None and self.plot_container:
             self.configure_ephys_trace_plot()
 
+        self._rastermap_units = None
+        self._sync_row_order_combo()
         if self._tsgroup is not None:
-            self._register_neuron_features()
-            self._populate_raster_all_spikes()
+            self._draw_raster()
 
         self.app_state.has_neurons = True
 
@@ -1203,11 +1327,12 @@ class EphysWidget(QWidget):
 
         self._probe_row.hide()
 
-        self._register_neuron_features()
+        self._rastermap_units = None
+        self._sync_row_order_combo()
+        self._draw_raster()
         self.app_state.has_neurons = True
-
-        if self.data_widget:
-            self.data_widget.show_neural_panel()
+        if self.meta_widget is not None:
+            self.meta_widget.refresh_source_popup()
 
         # Check for IntervalSets in the loaded data
         self._check_pynapple_intervalsets(data, path.name)
@@ -1285,60 +1410,179 @@ class EphysWidget(QWidget):
             return ephys_offset
         return self._trial_start_session() + ephys_offset
 
-    def _populate_raster_all_spikes(self):
-        if not self.plot_container or self._tsgroup is None:
-            return
+    def filtered_unit_ids(self) -> list[int]:
+        """Ids of the units passing the cluster table's filters — the one unit filter.
 
-        trial_ep = self._trial_ep()
-        offset = self._ephys_offset()
-        if trial_ep is None:
-            return
+        Every consumer of units (raster, firing rates, PSTH) reads this, the
+        way every trial operation reads ``app_state.trials``. Table order.
+        """
+        if self._tsgroup is None:
+            return []
+        cid_col = self._find_col_by_header("", exact="id")
+        if cid_col is None:
+            return []
+        loaded = {int(cid) for cid in self._tsgroup.keys()}
+        ids = []
+        for row in range(self._cluster_proxy.rowCount()):
+            item = self._source_item(row, cid_col)
+            if item is not None and item.text() and int(item.text()) in loaded:
+                ids.append(int(item.text()))
+        return ids
 
-        trial_tsg = self._tsgroup.restrict(trial_ep)
+    def _on_unit_filter_changed(self) -> None:
+        self._draw_raster()
+        self._refresh_firing_rates()
+        self.unit_filter_changed.emit()
+
+    def _spike_table(self) -> SpikeTable:
+        """Every spike of the loaded units, time-sorted; rebuilt only when the TsGroup is replaced."""
+        if self._spike_table_cache is None or self._spike_table_cache[0] is not self._tsgroup:
+            self._spike_table_cache = (self._tsgroup, SpikeTable.from_tsgroup(self._tsgroup))
+        return self._spike_table_cache[1]
+
+    def _row_order(self) -> str:
+        """The row order in effect (a ``ROW_ORDERS`` key): depth needs a probe."""
+        order = self.app_state.get_with_default("raster_row_order")
+        if order == "depth" and self._neurons_source != "kilosort":
+            return "table"
+        return order
+
+    def _depth_ordered_channels(self) -> np.ndarray:
+        """The probe's hardware channels, top of the probe first."""
+        all_ch = self.plot_container.ephys_trace_plot._all_ordered_channels()
+        if len(all_ch) == 0 and self._probe_channel_order is not None:
+            # No raw recording behind the trace panel: the probe's own depth order.
+            all_ch = self._probe_channel_order
+        return all_ch
+
+    def _unit_channels(self, unit_ids: list[int]) -> dict[int, int]:
+        """The hardware channel each Kilosort unit sits on: its template's best, else the table's."""
+        best = self._build_cluster_best_channel_map()
+        table_ch: dict[int, int] = {}
+        if self._cluster_df is not None and {"cluster_id", "ch"} <= set(self._cluster_df.columns):
+            known = self._cluster_df.dropna(subset=["cluster_id", "ch"])
+            table_ch = dict(zip(known["cluster_id"].astype(int), known["ch"].astype(int)))
+        return {cid: best.get(cid, table_ch.get(cid, 0)) for cid in unit_ids}
+
+    def ordered_unit_ids(self) -> list[int]:
+        """The filtered units in the raster's row order, top row first — the one unit order.
+
+        Everything that lists units by row (raster, firing rates) reads this,
+        so their rows agree.
+        """
+        unit_ids = self.filtered_unit_ids()
+        order = self._row_order()
+        if order == "rastermap":
+            return order_units(unit_ids, self._rastermap_units)
+        if order == "depth":
+            channels = self._unit_channels(unit_ids)
+            rank = {int(hw): i for i, hw in enumerate(self._depth_ordered_channels())}
+            return sorted(unit_ids, key=lambda cid: rank.get(channels[cid], len(rank)))
+        return unit_ids
+
+    def _raster_rows(self, unit_ids: list[int]) -> dict[int, int]:
+        """The raster row key of each unit, after syncing the raster's y-axis to them.
+
+        By depth, Kilosort units sit at their best channel (the trace panel's
+        y-space); in every other order each unit gets a row of its own, in the
+        order ``unit_ids`` come in.
+        """
         raster = self.plot_container.raster_plot
-
-        if self._neurons_source == "kilosort":
-            ephys_plot = self.plot_container.ephys_trace_plot
-            sr = self._kilosort_sr
-            if sr is None or sr <= 0:
-                return
-
-            best_ch_map = self._build_cluster_best_channel_map()
-            times_list, channels_list = [], []
-            for cid, ts in trial_tsg.items():
-                t = ts.times() - offset
-                if len(t):
-                    times_list.append(t)
-                    channels_list.append(np.full(len(t), best_ch_map.get(int(cid), 0), dtype=np.int32))
-
-            all_ch = ephys_plot._all_ordered_channels()
+        if self._row_order() == "depth":
+            raster.follows_trace_y = True
+            all_ch = self._depth_ordered_channels()
             total = len(all_ch)
             if total > 0:
-                spacing = ephys_plot.buffer.channel_spacing
-                hw_to_y = {int(hw): (total - 1 - i) * spacing for i, hw in enumerate(all_ch)}
-                raster.sync_y_axis(hw_to_y, spacing, total)
-        else:
-            # Pynapple mode: map each cluster to a y-row by index
-            cluster_ids = sorted(trial_tsg.keys())
-            total = len(cluster_ids)
-            spacing = 1.0
-            cid_to_row = {int(cid): i for i, cid in enumerate(cluster_ids)}
-            self._pynapple_cid_to_row = cid_to_row
-            hw_to_y = {i: (total - 1 - i) * spacing for i in range(total)}
-            raster.sync_y_axis(hw_to_y, spacing, total)
+                spacing = self.plot_container.ephys_trace_plot.buffer.channel_spacing
+                raster.sync_y_axis({int(hw): (total - 1 - i) * spacing for i, hw in enumerate(all_ch)}, spacing, total)
+            return self._unit_channels(unit_ids)
+        raster.follows_trace_y = False
+        rows = {cid: i for i, cid in enumerate(unit_ids)}
+        total = len(rows)
+        raster.sync_y_axis({i: float(total - 1 - i) for i in range(total)}, 1.0, total)
+        self._pynapple_cid_to_row = rows
+        return rows
 
-            times_list, channels_list = [], []
-            for cid, ts in trial_tsg.items():
-                t = ts.times() - offset
-                if len(t):
-                    times_list.append(t)
-                    channels_list.append(np.full(len(t), cid_to_row.get(int(cid), 0), dtype=np.int32))
+    def _draw_raster(self) -> None:
+        """The filtered units in grey; the selected ones among them in their colours."""
+        if not self.plot_container or self._tsgroup is None:
+            return
+        trial_ep = self._trial_ep()
+        if trial_ep is None:
+            return
+        rows = self._raster_rows(self.ordered_unit_ids())
+        times, units = self._spike_table().window(float(trial_ep.start[0]), float(trial_ep.end[0]))
+        entries = group_by_color(
+            times - self._ephys_offset(), units, rows, self._multi_cluster_colors, _UNSELECTED_DOT_COLOR
+        )
+        self.plot_container.raster_plot.set_multi_cluster_spike_data(entries)
 
-        if times_list:
-            all_times = np.concatenate(times_list)
-            all_channels = np.concatenate(channels_list)
-            order = np.argsort(all_times)
-            raster.set_spike_data(all_times[order], all_channels[order])
+    # ------------------------------------------------------------------
+    # Raster rendering + row order
+    # ------------------------------------------------------------------
+
+    def _sync_row_order_combo(self) -> None:
+        """Show the row order in effect, and grey out probe depth for units without a probe."""
+        combo = self.raster_row_order_combo
+        combo.model().item(combo.findData("depth")).setEnabled(self._neurons_source == "kilosort")
+        order = self._row_order()
+        combo.blockSignals(True)
+        combo.setCurrentIndex(combo.findData(order))
+        combo.blockSignals(False)
+        self.rastermap_fit_btn.setEnabled(order == "rastermap")
+
+    def _on_raster_render_changed(self, _index: int) -> None:
+        self.app_state.raster_render_mode = self.raster_render_combo.currentData()
+        if self.plot_container:
+            self.plot_container.raster_plot.refresh()
+
+    def _on_raster_tick_width_changed(self, width: int) -> None:
+        self.app_state.raster_tick_width = width
+        if self.plot_container:
+            self.plot_container.raster_plot.refresh()
+
+    def _on_raster_row_order_changed(self, _index: int) -> None:
+        self.app_state.raster_row_order = self.raster_row_order_combo.currentData()
+        self._sync_row_order_combo()
+        if self._row_order() == "rastermap" and self._rastermap_units is None:
+            # Picking the order asks for the fit; the button is for fitting it again.
+            self._fit_rastermap()
+            return
+        self._draw_raster()
+        self._refresh_firing_rates()
+
+    def _on_cluster_table_sorted(self, *_) -> None:
+        if self._row_order() == "table":
+            self._draw_raster()
+            self._refresh_firing_rates()
+
+    def _fit_rastermap(self) -> None:
+        """Fit Rastermap on the filtered units' spike counts over the visible window; keep the order."""
+        if self._tsgroup is None:
+            return
+        unit_ids = self.filtered_unit_ids()
+        trial_ep = self._trial_ep()
+        if trial_ep is None:
+            return
+        if len(unit_ids) < RASTERMAP_MIN_ROWS:
+            notify(f"Rastermap needs at least {RASTERMAP_MIN_ROWS} units; {len(unit_ids)} pass the filters.", "warning")
+            return
+        t_start, t_stop = float(trial_ep.start[0]), float(trial_ep.end[0])
+        # The user's bin, widened only when the window would exceed what the fit takes.
+        bin_size = max(self.app_state.fr_bin_size, (t_stop - t_start) / RASTERMAP_MAX_SAMPLES)
+        counts, _ = self._spike_table().count(unit_ids, t_start, t_stop, bin_size)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            order = rastermap_order(counts)
+        except ValueError as e:
+            notify(str(e), "warning")
+            return
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._rastermap_units = [unit_ids[i] for i in order]
+        self._draw_raster()
+        self._refresh_firing_rates()
+        notify(f"Rastermap order fitted on {len(unit_ids)} units")
 
     def _build_cluster_best_channel_map(self) -> dict[int, int]:
         if self._templates is None or self._channel_map is None:
@@ -1662,6 +1906,7 @@ class EphysWidget(QWidget):
                     self._filter_cat_active.pop(logical_col, None)
                 self._cluster_proxy.set_cat_filter(logical_col, allowed)
                 self._update_header_active_filters()
+                self._on_unit_filter_changed()
         elif logical_col in self._filter_num_cols:
             current = self._filter_num_active.get(logical_col)
             dialog = NumericFilterDialog(logical_col, current, self)
@@ -1675,6 +1920,7 @@ class EphysWidget(QWidget):
                     self._filter_num_active[logical_col] = f
                     self._cluster_proxy.set_numeric_filter(logical_col, op, val)
                 self._update_header_active_filters()
+                self._on_unit_filter_changed()
 
     def _update_header_active_filters(self):
         active = set(self._filter_cat_active.keys()) | set(self._filter_num_active.keys())
@@ -1701,6 +1947,8 @@ class EphysWidget(QWidget):
     def _on_cluster_row_selected(self, _selected=None, _deselected=None):
         indexes = self.cluster_table.selectionModel().selectedRows()
         if not indexes:
+            if self._multi_cluster_colors:
+                self._clear_multi_cluster_mode()
             return
 
         hw_col_idx = self._find_col_by_header("ch (")
@@ -1769,7 +2017,6 @@ class EphysWidget(QWidget):
 
         self._multi_cluster_colors.clear()
         cluster_entries = []
-        raster_entries = []
 
         for i, idx in enumerate(indexes):
             proxy_row = idx.row()
@@ -1784,29 +2031,17 @@ class EphysWidget(QWidget):
             color = _CLUSTER_COLORS[i % len(_CLUSTER_COLORS)]
             self._multi_cluster_colors[cluster_id] = color
 
-            times_global = self._tsgroup[cluster_id].restrict(trial_ep).times()
-            times_local = times_global - offset
-
-            ks_ch = self._get_ks_channel_for_row(proxy_row, hw_col_idx)
-
             if has_ephys_trace:
+                times_global = self._tsgroup[cluster_id].restrict(trial_ep).times()
                 samples_abs = np.round(times_global * sr).astype(np.int64)
+                ks_ch = self._get_ks_channel_for_row(proxy_row, hw_col_idx)
                 channels = self._best_channels_for_cluster(cluster_id, ks_ch)
-                cluster_entries.append((times_local, samples_abs, channels, color))
-                best_ch = channels[0] if channels else ks_ch
-            elif self._neurons_source == "pynapple":
-                best_ch = self._pynapple_cid_to_row.get(cluster_id, 0)
-            else:
-                best_ch = ks_ch
-
-            raster_entries.append((times_local, np.full(len(times_local), best_ch, dtype=np.int32), color))
+                cluster_entries.append((times_global - offset, samples_abs, channels, color))
 
         self._apply_cluster_colors_to_table()
         if has_ephys_trace:
             ephys_plot.set_multi_cluster_spike_data(cluster_entries)
-
-        raster = self.plot_container.raster_plot
-        raster.set_multi_cluster_spike_data(raster_entries)
+        self._draw_raster()
 
     def _on_visible_channels_changed(self, _first: int, _last: int):
         pass
@@ -1817,6 +2052,7 @@ class EphysWidget(QWidget):
             self._cluster_proxy.set_visible_channel_filter(set(int(c) for c in self._custom_channel_set), ch_col)
         else:
             self._cluster_proxy.set_visible_channel_filter(None, None)
+        self._on_unit_filter_changed()
 
     def _select_clusters_all_visible(self):
         """Select all filtered-visible rows, highlight their spikes, then disable auto-highlight."""
@@ -1839,9 +2075,7 @@ class EphysWidget(QWidget):
         self._apply_cluster_colors_to_table()
         if self.plot_container and self.plot_container.is_ephystrace():
             self.plot_container.ephys_trace_plot.clear_spike_overlays()
-        if self.plot_container:
-            self.plot_container.raster_plot.clear_spike_data()
-            self._populate_raster_all_spikes()
+        self._draw_raster()
 
     def _apply_cluster_colors_to_table(self):
         model = self._cluster_model
@@ -1964,28 +2198,17 @@ class EphysWidget(QWidget):
         trial_ep = self._trial_ep()
         if trial_ep is None:
             return
-        offset = self._ephys_offset()
-        times_global = self._tsgroup[cluster_id].restrict(trial_ep).times()
-        times_local = times_global - offset
-
         # Draw waveforms on ephys trace (Kilosort only)
         if self._neurons_source == "kilosort" and self.plot_container.is_ephystrace():
-            ephys_plot = self.plot_container.ephys_trace_plot
             sr = self._kilosort_sr
             if sr is not None and sr > 0:
+                times_global = self._tsgroup[cluster_id].restrict(trial_ep).times()
                 samples_abs = np.round(times_global * sr).astype(np.int64)
                 channels = self._best_channels_for_cluster(cluster_id, channel)
-                ephys_plot.set_spike_data(times_local, samples_abs, channels)
-                best_ch = channels[0] if channels else channel
-            else:
-                best_ch = channel
-        elif self._neurons_source == "pynapple":
-            best_ch = self._pynapple_cid_to_row.get(cluster_id, 0)
-        else:
-            best_ch = channel
-
-        raster = self.plot_container.raster_plot
-        raster.set_spike_data(times_local, np.full(len(times_local), best_ch, dtype=np.int32))
+                self.plot_container.ephys_trace_plot.set_spike_data(
+                    times_global - self._ephys_offset(), samples_abs, channels
+                )
+        self._draw_raster()
 
     def _best_channels_for_cluster(self, cluster_id: int, fallback_channel: int) -> list[int]:
         if (
@@ -2053,15 +2276,6 @@ class EphysWidget(QWidget):
         group.setLayout(group_layout)
         layout.addWidget(group)
 
-        row1 = QHBoxLayout()
-        row1.addWidget(QLabel("Clusters:"))
-        self.fr_group_combo = QComboBox()
-        self.fr_group_combo.addItems(["All", "good", "good + mua", "mua", "Selected in table"])
-        self.fr_group_combo.setToolTip("Which clusters to include in firing rate computation")
-        self.fr_group_combo.currentTextChanged.connect(self._on_fr_param_changed)
-        row1.addWidget(self.fr_group_combo)
-        group_layout.addLayout(row1)
-
         row2 = QHBoxLayout()
         row2.addWidget(QLabel("Bin (s):"))
         self.fr_bin_spin = QDoubleSpinBox()
@@ -2086,255 +2300,143 @@ class EphysWidget(QWidget):
         row3 = QHBoxLayout()
         self.fr_compute_btn = QPushButton("Compute")
         self.fr_compute_btn.setToolTip("Compute firing rates for the current trial")
-        self.fr_compute_btn.clicked.connect(lambda: self._compute_firing_rates(force=True))
+        self.fr_compute_btn.clicked.connect(self._on_fr_compute_clicked)
         row3.addWidget(self.fr_compute_btn)
         self.fr_status_label = QLabel("")
         row3.addWidget(self.fr_status_label)
         row3.addStretch()
         group_layout.addLayout(row3)
 
-        pca_group = QGroupBox("PCA")
-        pca_layout = QVBoxLayout()
-        pca_layout.setSpacing(2)
-        pca_layout.setContentsMargins(2, 2, 2, 2)
-        pca_group.setLayout(pca_layout)
-        layout.addWidget(pca_group)
-
-        self.pca_zscore_cb = QCheckBox("Z-score clusters")
-        self.pca_zscore_cb.setChecked(True)
-        self.pca_zscore_cb.setToolTip("Z-score each cluster's firing rate before PCA")
-        pca_layout.addWidget(self.pca_zscore_cb)
-
-        self.pca_btn = QPushButton("Compute PCA")
-        self.pca_btn.setToolTip("Project firing rates to PC space via SVD")
-        self.pca_btn.clicked.connect(self._compute_pca)
-        pca_layout.addWidget(self.pca_btn)
-
-        self.pca_status_label = QLabel("")
-        pca_layout.addWidget(self.pca_status_label)
-
         main_layout.addWidget(self.firing_rate_panel)
 
     def _on_fr_param_changed(self):
         self.app_state.fr_bin_size = self.fr_bin_spin.value()
         self.app_state.fr_sigma = self.fr_sigma_spin.value()
-        self._fr_cache_key = None
+        self._refresh_firing_rates()
 
-    def _get_selected_cluster_ids(self) -> np.ndarray | None:
-        selection = self.fr_group_combo.currentText()
-
-        if selection == "Selected in table":
-            ids = self._get_table_selected_cluster_ids()
-            if ids is None or len(ids) == 0:
-                notify("No clusters selected in the table.", "warning")
-                return None
-            return ids
-
-        if self._cluster_df is None or "cluster_id" not in self._cluster_df.columns:
-            return None
-
-        if selection == "All":
-            return self._cluster_df["cluster_id"].values
-
-        if "group" not in self._cluster_df.columns:
-            return self._cluster_df["cluster_id"].values
-
-        group_map = {
-            "good": ["good"],
-            "mua": ["mua"],
-            "good + mua": ["good", "mua"],
-        }
-        allowed = group_map.get(selection, ["good"])
-        mask = self._cluster_df["group"].isin(allowed)
-        ids = self._cluster_df.loc[mask, "cluster_id"].values
-        if len(ids) == 0:
-            notify(
-                f"No clusters with group '{selection}' found in cluster table.",
-                "warning",
-            )
-            return None
-        return ids
-
-    def _get_table_selected_cluster_ids(self) -> np.ndarray | None:
-        cid_col = self._find_col_by_header("", exact="id")
-        if cid_col is None:
-            return None
-        indexes = self.cluster_table.selectionModel().selectedRows()
-        if not indexes:
-            return None
-        ids = []
-        for idx in indexes:
-            item = self._source_item(idx.row(), cid_col)
-            if item is not None:
-                try:
-                    ids.append(int(item.text()))
-                except (ValueError, TypeError):
-                    pass
-        return np.array(ids) if ids else None
-
-    def _compute_firing_rates(self, force: bool = False):
-        if self._tsgroup is None:
-            return
-
-        trial = self.app_state.trials_sel
-        if not trial:
-            return
-
-        cluster_ids = self._get_selected_cluster_ids()
-        if cluster_ids is None:
-            # Fallback: use all clusters from the TsGroup
-            cluster_ids = np.array(list(self._tsgroup.keys()))
-        bin_size = self.fr_bin_spin.value()
-        sigma = self.fr_sigma_spin.value()
-        group_text = self.fr_group_combo.currentText()
-
-        cache_key = (trial, bin_size, sigma, group_text)
-        if not force and self._fr_cache_key == cache_key:
-            return
-        self._fr_cache_key = cache_key
-
-        ds = self.app_state.dt.trial(trial) if self.app_state.dt is not None else self.app_state.ds
-        start_time = self.app_state.nwb_alignment.start_time(trial)
-        # The firing rate is stored as a trial-relative feature, so bin over
-        # the trial's span on the spike clock — trial_bounds, not
-        # window_bounds, whose clock depends on the scope (mixing the two put
-        # t_stop before t_start for any trial not starting at 0).
+    def _trial_span_spike_clock(self) -> tuple[float, float] | None:
+        """The current trial's start and stop on the spike clock, whatever the display basis."""
         bounds = self.app_state.trial_bounds
         if bounds is None:
-            return
+            return None
+        start = self._trial_start_session() + float(getattr(self.app_state, "ephys_offset", 0.0) or 0.0)
+        return start, start + bounds.duration
 
-        da = firing_rate_to_xarray(
-            self._spike_times_s,
-            self._spike_clusters,
-            bin_size,
-            t_start=start_time,
-            t_stop=start_time + bounds.duration,
-            cluster_ids=cluster_ids,
-            _tsgroup=self._tsgroup,
+    def _compute_firing_rates(self, force: bool = False) -> bool:
+        """Bin the filtered units' spikes over the current trial into the ``firing_rate`` feature.
+
+        One column per unit, in the raster's row order, on the display clock.
+        The feature is a snapshot of this trial; ``on_trial_changed`` bins the
+        next one. Returns whether the feature now holds this trial's rates.
+        """
+        loader = derived_loader_for(self.app_state)
+        span = self._trial_span_spike_clock()
+        if self._tsgroup is None or not self.plot_container or loader is None or span is None:
+            return False
+
+        unit_ids = self.ordered_unit_ids()
+        if not unit_ids:
+            notify("No units pass the cluster table's filters.", "warning")
+            return False
+        bin_size = self.fr_bin_spin.value()
+        sigma = self.fr_sigma_spin.value()
+
+        cache_key = (self.app_state.trials_sel, bin_size, sigma, tuple(unit_ids), self.app_state.display_basis)
+        if not force and self._fr_cache_key == cache_key and loader.is_derived(FIRING_RATE_FEATURE):
+            return True
+
+        t_start, t_stop = span
+        n_cells = int((t_stop - t_start) / bin_size) * len(unit_ids)
+        if n_cells > _FIRING_RATE_MAX_CELLS:
+            notify(
+                f"Firing rates of {len(unit_ids)} units in {bin_size:g} s bins over this trial would be "
+                f"{n_cells:,} values — raise the bin size or filter the cluster table.",
+                "warning",
+            )
+            return False
+
+        rates, centers = self._bin_rates(unit_ids, t_start, t_stop)
+
+        loader.register(
+            DerivedFeature(
+                FIRING_RATE_FEATURE,
+                time=centers - self._ephys_offset(),
+                values=rates,
+                dim_labels=[str(cid) for cid in unit_ids],
+                n_columns=len(unit_ids),
+            )
         )
+        self._fr_cache_key = cache_key
+        self.fr_status_label.setText(f"{len(unit_ids)} units (cluster table filter)")
+        if self.data_widget:
+            self.data_widget.refresh_feature_choices()
+        return True
 
+    def _bin_rates(self, unit_ids: list[int], t_start: float, t_stop: float) -> tuple[np.ndarray, np.ndarray]:
+        """Smoothed rates of *unit_ids* over ``[t_start, t_stop]`` (spike clock), with the panel's bin and σ.
+
+        Shape ``(n_bins, n_units)`` and the bin centres, on the spike clock.
+        """
+        bin_size = self.fr_bin_spin.value()
+        sigma = self.fr_sigma_spin.value()
+        counts, centers = self._spike_table().count(unit_ids, t_start, t_stop, bin_size)
+        rates = (counts / bin_size).astype(np.float32)
         if sigma > 0:
-            smoothed = gaussian_filter1d(da.values, sigma, axis=1)
-            da = da.copy(data=smoothed)
+            rates = gaussian_filter1d(rates, sigma, axis=0)
+        return rates, centers
 
-        da = da.assign_coords(time_fr=da.coords["time_fr"].values - start_time)
+    def firing_rate_units(self) -> list[str]:
+        """The units a firing rate can be read for, as the ``firing_rate`` feature lists them."""
+        return [str(cid) for cid in self.ordered_unit_ids()]
 
-        new_ds = ds.copy()
-        if "firing_rate" in new_ds.data_vars:
-            new_ds = new_ds.drop_vars("firing_rate")
-        new_ds["firing_rate"] = da
+    def firing_rate_windows(self, trials: list) -> Iterator[tuple[object, FiringRateReader, float, float, float]]:
+        """Yield ``(trial, reader, t0, t1, shift)`` per trial: its firing rates, read on the spike clock.
 
-        if self.app_state.dt is not None:
-            self.app_state.dt.update_trial(trial, lambda _: new_ds)
-        self.app_state.ds = new_ds
-        self.fr_status_label.setText(f"{len(cluster_ids)} clusters ({group_text})")
-        self._enable_feature_item("Firing rate")
-        self._update_cluster_id_combo()
-
-        if self.app_state.ready:
-            features_combo = self.data_widget.combos.get("features")
-            if features_combo is not None:
-                set_combo_to_value(features_combo, "firing_rate")
-                self.data_widget.apply_panel_control("features", get_combo_value(features_combo))
-            self.data_widget.update_main_plot()
-
-    def _register_neuron_features(self):
-        if not self.data_widget:
+        The ``firing_rate`` feature is a snapshot of the trial on screen;
+        this is the same reading for any trial, so an operation over
+        ``app_state.trials`` can use the rates too. *shift* subtracted from
+        the reader's times makes them trial-relative. A trial the session
+        has no timing for is left out.
+        """
+        collection = getattr(self.app_state, "source_collection", None)
+        align = getattr(self.app_state, "nwb_alignment", None)
+        if self._tsgroup is None or collection is None or align is None:
             return
+        reader = FiringRateReader(self, self.ordered_unit_ids())
+        ephys_offset = float(getattr(self.app_state, "ephys_offset", 0.0) or 0.0)
+        for trial in trials:
+            idx = collection.trial_index(trial)
+            if idx is None:
+                continue
+            start = float(align.start_time(trial) or 0.0) + ephys_offset
+            yield trial, reader, start, start + collection.trial_range(idx).duration, start
 
-        features_list = self.data_widget.catalog.features if self.data_widget.catalog else []
-        features_combo = self.data_widget.combos.get("features")
-
-        _display_to_var = {"Firing rate": "firing_rate", "PCA": "pca"}
-        for display_name, var_name in _display_to_var.items():
-            if display_name not in features_list:
-                features_list.append(display_name)
-            if features_combo is not None and find_combo_index(features_combo, var_name) < 0:
-                features_combo.addItem(display_name, var_name)
-                self._set_combo_item_enabled(features_combo, display_name, False)
-
-    def _set_combo_item_enabled(self, combo: QComboBox, text: str, enabled: bool):
-        idx = find_combo_index(combo, text)
-        if idx < 0:
+    def _refresh_firing_rates(self) -> None:
+        """Re-bin the firing rates if they are a feature: the trial, the units or the bin changed."""
+        loader = derived_loader_for(self.app_state)
+        if loader is None or not loader.is_derived(FIRING_RATE_FEATURE):
             return
-        model = combo.model()
-        item = model.item(idx)
-        if item is not None:
-            if enabled:
-                item.setFlags(item.flags() | Qt.ItemIsEnabled)
-            else:
-                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+        if not self._compute_firing_rates(force=True):
+            # Nothing to bin here: a stale snapshot would show another trial's rates as this one's.
+            loader.unregister(FIRING_RATE_FEATURE)
+            if self.data_widget:
+                self.data_widget.refresh_feature_choices()
+            return
+        for plot in [*self.plot_container.line_plots, *self.plot_container.heatmap_plots]:
+            if plot._effective_feature() == FIRING_RATE_FEATURE:
+                plot.resync_selections()
+                plot.invalidate_data()
+                plot.update_plot()
 
-    def _enable_feature_item(self, display_name: str):
-        if not self.data_widget:
+    def _on_fr_compute_clicked(self) -> None:
+        """Compute the firing rates and show them in the active feature panel."""
+        if not self._compute_firing_rates(force=True) or not self.app_state.ready:
             return
         features_combo = self.data_widget.combos.get("features")
         if features_combo is not None:
-            self._set_combo_item_enabled(features_combo, display_name, True)
-
-    def _disable_feature_item(self, display_name: str):
-        if not self.data_widget:
-            return
-        features_combo = self.data_widget.combos.get("features")
-        if features_combo is not None:
-            self._set_combo_item_enabled(features_combo, display_name, False)
-
-    def _update_cluster_id_combo(self):
-        if not self.data_widget:
-            return
-        da = self.app_state.ds.get("firing_rate")
-        if da is not None and "cluster_id" in da.dims:
-            cluster_ids = [str(c) for c in da.coords["cluster_id"].values]
-            if "cluster_id" not in self.data_widget.combos:
-                self.data_widget._create_combo_widget("cluster_id", cluster_ids)
-            else:
-                combo = self.data_widget.combos["cluster_id"]
-                combo.blockSignals(True)
-                combo.clear()
-                combo.addItems(cluster_ids)
-                combo.blockSignals(False)
-
-    def _compute_pca(self):
-        ds = self.app_state.ds
-        if ds is None or "firing_rate" not in ds.data_vars:
-            notify("Compute firing rates first before running PCA.", "warning")
-            return
-
-        fr_da = ds["firing_rate"]
-        pca_da = compute_pca(fr_da, n_components=3, zscore=self.pca_zscore_cb.isChecked())
-
-        trial = self.app_state.trials_sel
-        new_ds = ds.copy()
-        if "pca" in new_ds.data_vars:
-            new_ds = new_ds.drop_vars("pca")
-        new_ds["pca"] = pca_da
-
-        if self.app_state.dt is not None:
-            self.app_state.dt.update_trial(trial, lambda _: new_ds)
-        self.app_state.ds = new_ds
-
-        ev = pca_da.attrs["explained_variance"]
-        self.pca_status_label.setText(f"PC1: {ev[0]:.1%}  PC2: {ev[1]:.1%}  PC3: {ev[2]:.1%}")
-
-        self._enable_feature_item("PCA")
-
-        # Switch to space plot so user can see PCA in the axis combos
-        slot1 = getattr(self.data_widget, "space_view_combo", None)
-        if slot1 is not None:
-            slot1.setCurrentText("Space Plot")
-
-        pca_da = self.app_state.ds["pca"]
-        if "pc" in pca_da.dims:
-            pc_labels = [str(c) for c in pca_da.coords["pc"].values]
-            if "pc" not in self.data_widget.combos:
-                self.data_widget._create_combo_widget("pc", pc_labels)
-
-        if self.app_state.ready:
-            features_combo = self.data_widget.combos.get("features")
-            if features_combo is not None:
-                set_combo_to_value(features_combo, "pca")
-                self.app_state.set_key_sel("features", get_combo_value(features_combo))
-            self.data_widget.update_main_plot()
+            set_combo_to_value(features_combo, FIRING_RATE_FEATURE)
+            self.data_widget.apply_panel_control("features", get_combo_value(features_combo))
+        self.data_widget.update_main_plot()
 
     def _get_any_ephys_loader(self):
         if self._phy_reader is not None:
@@ -2403,23 +2505,13 @@ class EphysWidget(QWidget):
         spin.setValue(max(spin.minimum(), min(new_val, spin.maximum())))
 
     def on_trial_changed(self):
-        self._fr_cache_key = None
         if not self.data_widget:
             return
-        self._disable_feature_item("Firing rate")
-        self._disable_feature_item("PCA")
-        self.fr_status_label.setText("")
-        self.pca_status_label.setText("")
-
-        features_combo = self.data_widget.combos.get("features")
-        if features_combo is not None and get_combo_value(features_combo) in (
-            "firing_rate",
-            "pca",
-        ):
-            features_combo.setCurrentIndex(0)
+        # The firing rates are a snapshot of one trial: bin the new one in their place.
+        self._refresh_firing_rates()
 
         self.configure_ephys_trace_plot()
-        self._redraw_selected_clusters()
+        self.refresh_raster()
         if self.data_widget:
             self.data_widget.refresh_neo_panels()
 

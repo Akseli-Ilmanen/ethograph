@@ -63,6 +63,9 @@ _CONTEXT_MAP: dict[str, list[str]] = {
     # pyramid/probe select + cluster table), borrowed from EphysWidget. No
     # shared axes group — autoscale/lock-axes don't apply to the trace view.
     "ephys": ["phy"],
+    # Raster: the same section, for its cluster table — selecting units there
+    # is what colours them in the raster.
+    "raster": ["phy"],
     # Neo trace (generic per-modality stream): channels are chosen at drop time
     # via the source popup; the sidebar exposes per-panel gain + channel spacing.
     "neo": ["neocontrols"],
@@ -81,6 +84,7 @@ _CONTEXT_TITLE: dict[str, str] = {
     "space": "Space plot settings",
     "radial": "Radial plot settings",
     "ephys": "Phy viewer settings",
+    "raster": "Raster settings",
     "neo": "Neo viewer settings",
 }
 

@@ -154,6 +154,8 @@ class ConsolePanel(QWidget):
         self.app_state = app_state
         self._bound: dict[str, Root] = {}
         self._times: list[np.ndarray] = []
+        # Names of the derived features assigned here — the ones a reset may drop.
+        self._features: set[str] = set()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
@@ -320,6 +322,7 @@ class ConsolePanel(QWidget):
                     self.write(f"# {reason}")
                 continue
             loader.register(derived)
+            self._features.add(name)
             kind = "snapshot" if derived.is_snapshot else derived.describe()
             self.write(f"# added feature '{name}'  ({kind})")
             added = True
@@ -397,13 +400,20 @@ class ConsolePanel(QWidget):
             self.features_changed.emit()
 
     def _drop_variables(self) -> list[str]:
-        """Forget every binding and derived feature; return the names dropped."""
+        """Forget every binding and every derived feature made here; return the names dropped.
+
+        A derived feature the console did not assign (the firing rates, a
+        camera's motion trace) belongs to whoever registered it and stays.
+        """
         loader = getattr(self.app_state, "data_loader", None)
         dropped: list[str] = []
         if isinstance(loader, DerivedLoader):
             for name in list(loader.derived):
+                if name not in self._features:
+                    continue
                 loader.unregister(name)
                 dropped.append(name)
+        self._features.clear()
         for name in list(self.ns):
             if name not in _RESERVED:
                 del self.ns[name]

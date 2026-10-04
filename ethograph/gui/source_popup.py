@@ -111,6 +111,10 @@ def allowed_plot_types(kind: str, name: str, app_state) -> list[str]:
         return ["Prediction timeline"]
     if kind == "phy":
         return ["Phy TraceView"]
+    if kind == "raster":
+        return ["Raster"]
+    if kind == "firing_rate":
+        return ["Heatmap"]
     if kind == "feature":
         options = ["Lineplot"]
         n = feature_ncols(app_state, name)
@@ -307,7 +311,7 @@ class SourcePopup(QWidget):
         self._list.addItem(item)
         return item
 
-    def refresh(self, catalog=None, neo_streams=None, phy_available=False):
+    def refresh(self, catalog=None, neo_streams=None, phy_available=False, n_units=0):
         """Repopulate from the current session (cameras, mics, features).
 
         *catalog* is the loaded DataCatalog: its ``feature_choices()`` is the
@@ -316,6 +320,8 @@ class SourcePopup(QWidget):
         *neo_streams* are Neo stream/modality display names (EMG, accelerometer,
         …); each is a "neo" source whose channels are picked on drop.
         *phy_available* adds the raw-data "Ephys (Phy-like viewer)" source.
+        *n_units* is how many spike-sorted units are loaded; any adds the raster
+        and the firing-rate heatmap.
         """
         self._list.clear()
         sio = getattr(self.app_state, "nwb_alignment", None)
@@ -353,11 +359,17 @@ class SourcePopup(QWidget):
         # one Neo source per stream/modality (EMG, accelerometer, amplifier…).
         # Dropping a Neo source opens a channel picker; each drop = a new panel.
         if phy_available or neo_streams:
-            self._add_header("Ephys")
+            self._add_header("Ephys: raw traces")
             if phy_available:
                 self._add_source("Phy (Multi-channel trace)", "phy", "phy")
             for stream in neo_streams or []:
                 self._add_source(f"Neo ({stream})", "neo", str(stream))
+
+        # The spikes themselves, and the same spikes binned into a rate per unit.
+        if n_units:
+            self._add_header("Ephys: spikes")
+            self._add_source(f"Spike raster ({n_units} units)", "raster", "raster")
+            self._add_source(f"Firing rate ({n_units} units)", "firing_rate", "firing_rate")
 
         features: list[str] = catalog.feature_choices() if catalog is not None else []
         ds = getattr(self.app_state, "ds", None)

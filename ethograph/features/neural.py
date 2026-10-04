@@ -1,4 +1,4 @@
-"""Compute firing rates, PCA, and PSTH from spike times using pynapple.
+"""Compute firing rates from spike times using pynapple.
 
 Assumes spike_times are in seconds and sorted ascending (standard for Kilosort/Phy).
 
@@ -26,13 +26,12 @@ session open, every time.
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
 import pynapple as nap
 import xarray as xr
-
-from ethograph.io import schema
 
 
 def build_tsgroup(
@@ -76,6 +75,63 @@ def build_tsgroup(
     return nap.TsGroup(units, time_support=time_support)
 
 
+@dataclass(frozen=True)
+class SpikeTable:
+    """Every spike of a ``TsGroup`` in one time-sorted table.
+
+    A window of it is one binary search, however many units there are —
+    restricting the group unit by unit is one pynapple call each.
+    """
+
+    times: np.ndarray
+    units: np.ndarray
+
+    @classmethod
+    def from_tsgroup(cls, tsgroup: nap.TsGroup) -> "SpikeTable":
+        unit_ids = [int(uid) for uid in tsgroup.keys()]
+        trains = [np.asarray(tsgroup[uid].times(), dtype=np.float64) for uid in unit_ids]
+        if not trains:
+            return cls(np.empty(0, dtype=np.float64), np.empty(0, dtype=np.int64))
+        times = np.concatenate(trains)
+        units = np.repeat(np.asarray(unit_ids, dtype=np.int64), [len(train) for train in trains])
+        order = np.argsort(times, kind="stable")
+        return cls(times[order], units[order])
+
+    def window(self, t_start: float, t_stop: float) -> tuple[np.ndarray, np.ndarray]:
+        """Spike times and their unit ids inside ``[t_start, t_stop]``."""
+        i0 = int(np.searchsorted(self.times, t_start, side="left"))
+        i1 = int(np.searchsorted(self.times, t_stop, side="right"))
+        return self.times[i0:i1], self.units[i0:i1]
+
+    def count(
+        self, unit_ids: Sequence[int], t_start: float, t_stop: float, bin_size: float
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Spike counts of ``unit_ids`` in bins of ``bin_size`` seconds from ``t_start``.
+
+        Returns the counts, shape ``(n_bins, n_units)`` with the columns in
+        the order of ``unit_ids``, and the centre of each bin. Only whole bins
+        are counted; a remainder shorter than a bin is left out.
+        """
+        if bin_size <= 0:
+            raise ValueError(f"bin_size must be positive, got {bin_size}")
+        columns = np.asarray(unit_ids, dtype=np.int64)
+        n_bins = int(np.floor((t_stop - t_start) / bin_size + 1e-9))
+        centers = t_start + (np.arange(n_bins) + 0.5) * bin_size
+        if n_bins <= 0 or len(columns) == 0:
+            return np.zeros((max(n_bins, 0), len(columns)), dtype=np.int64), centers
+
+        times, units = self.window(t_start, t_start + n_bins * bin_size)
+        by_id = np.argsort(columns, kind="stable")
+        found = np.searchsorted(columns, units, sorter=by_id)
+        found[found == len(columns)] = 0
+        column = by_id[found]
+        bin_index = np.floor((times - t_start) / bin_size).astype(np.int64)
+        keep = (columns[column] == units) & (bin_index < n_bins)
+        flat = bin_index[keep] * len(columns) + column[keep]
+        counts = np.bincount(flat, minlength=n_bins * len(columns))
+        return counts.reshape(n_bins, len(columns)), centers
+
+
 def firing_rate_by_cluster(
     spike_times: np.ndarray,
     spike_clusters: np.ndarray,
@@ -114,8 +170,10 @@ def firing_rate_by_cluster(
         Cluster ID for each row, shape ``(n_clusters,)``.
     """
     if _tsgroup is not None:
-        if cluster_ids is None:
-            cluster_ids = np.array(list(_tsgroup.keys()))
+        if cluster_ids is not None:
+            # pynapple refuses a subset whose keys are not in its own (sorted) order.
+            _tsgroup = _tsgroup[np.sort(np.asarray(cluster_ids))]
+        cluster_ids = np.array(list(_tsgroup.keys()))
         if t_start is None:
             t_start = float(_tsgroup.time_support.start[0])
         if t_stop is None:
@@ -142,62 +200,6 @@ def firing_rate_by_cluster(
     bin_centers = counts.times()
 
     return rates, bin_centers, cluster_ids
-
-
-def compute_pca(
-    firing_rate: xr.DataArray,
-    n_components: int = 3,
-    zscore: bool = True,
-) -> xr.DataArray:
-    """Project population firing rates into PCA space via SVD.
-
-    Parameters
-    ----------
-    firing_rate : xarray.DataArray
-        Firing rates with dims ``("cluster_id", "time_fr")``.
-    n_components : int
-        Number of principal components to keep.
-    zscore : bool
-        Z-score each cluster's firing rate before PCA.
-
-    Returns
-    -------
-    xarray.DataArray
-        Scores with dims ``("time_fr", "pc")``, coords
-        ``pc=["PC1", "PC2", ...]``, and ``attrs["explained_variance"]``.
-    """
-    X = firing_rate.values.T  # (time, clusters)
-
-    if zscore:
-        mean = X.mean(axis=0)
-        std = X.std(axis=0)
-        std[std == 0] = 1.0
-        X = (X - mean) / std
-
-    U, S, _ = np.linalg.svd(X, full_matrices=False)
-    scores = U[:, :n_components] * S[:n_components]
-
-    total_var = (S**2).sum()
-    explained = (S[:n_components] ** 2) / total_var
-
-    pc_labels = [f"PC{i + 1}" for i in range(n_components)]
-
-    return schema.describe(
-        xr.DataArray(
-            data=scores,
-            dims=("time_fr", "pc"),
-            coords={
-                "time_fr": firing_rate.coords["time_fr"].values,
-                "pc": pc_labels,
-            },
-            attrs={
-                "explained_variance": explained.tolist(),
-                "zscore": zscore,
-                "n_clusters": firing_rate.sizes["cluster_id"],
-            },
-        ),
-        schema.NEURAL_FEATURE,
-    )
 
 
 def firing_rate_to_xarray(
@@ -253,6 +255,27 @@ def firing_rate_to_xarray(
         },
         attrs={"bin_size": bin_size, "units": "Hz"},
     )
+
+
+def instantaneous_rate(spike_times: np.ndarray, at: np.ndarray) -> np.ndarray:
+    """The instantaneous firing rate at each of *at*: ``1 / ISI`` of the inter-spike interval it falls in.
+
+    The birdsong field's definition — from each spike until the next, the
+    rate is the reciprocal of that interval — so the rate is a step function
+    with no bin and no smoothing, and a burst reads as high from its first
+    spike. Before the first spike and from the last one on there is no
+    interval to read, and the rate is 0. *spike_times* is sorted ascending;
+    spikes at the same instant count once.
+    """
+    spikes = np.unique(np.asarray(spike_times, dtype=np.float64))
+    at = np.asarray(at, dtype=np.float64)
+    rate = np.zeros(len(at), dtype=np.float64)
+    if len(spikes) < 2:
+        return rate
+    interval = np.searchsorted(spikes, at, side="right") - 1
+    inside = (interval >= 0) & (interval < len(spikes) - 1)
+    rate[inside] = 1.0 / np.diff(spikes)[interval[inside]]
+    return rate
 
 
 # ---------------------------------------------------------------------------

@@ -129,7 +129,6 @@ work even with no labelling mode armed; the rest need one.
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+H` | Cycle neural view: Multi Trace -> Raster |
 | `Ctrl+=` / `Ctrl+-` | Increase / decrease channel spacing |
 | `Alt+Right` / `Alt+Left` | Jump to next / previous spike |
 | **Ctrl+Wheel** | Adjust display gain |
