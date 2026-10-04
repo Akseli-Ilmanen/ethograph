@@ -1206,6 +1206,11 @@ window.runMermaid = runMermaid;</script>
 <span class="n">_GAP_COLOR</span> <span class="o">=</span> <span class="p">[</span><span class="mi">128</span> <span class="o">/</span> <span class="mf">255.0</span><span class="p">,</span> <span class="mi">128</span> <span class="o">/</span> <span class="mf">255.0</span><span class="p">,</span> <span class="mi">128</span> <span class="o">/</span> <span class="mf">255.0</span><span class="p">]</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">label_color</span><span class="p">(</span><span class="n">label_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The colour class *label_id* is drawn in — one palette for every vocabulary."""</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">_LABEL_COLORS</span><span class="p">[</span><span class="n">label_id</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">_LABEL_COLORS</span><span class="p">)])</span> <span class="o">/</span> <span class="mf">255.0</span>
+
+
 <div class="viewcode-block" id="load_label_mapping">
 <a class="viewcode-back" href="../../../api/labels.html#ethograph.labels.intervals.load_label_mapping">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_label_mapping</span><span class="p">(</span>
@@ -1290,7 +1295,7 @@ window.runMermaid = runMermaid;</script>
                     <span class="n">event_type</span> <span class="o">=</span> <span class="n">EVENT_TYPE_STATE</span>
                 <span class="n">label_mappings</span><span class="p">[</span><span class="n">label_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
                     <span class="s2">"name"</span><span class="p">:</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                    <span class="s2">"color"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">_LABEL_COLORS</span><span class="p">[</span><span class="n">label_id</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">_LABEL_COLORS</span><span class="p">)])</span> <span class="o">/</span> <span class="mf">255.0</span><span class="p">,</span>
+                    <span class="s2">"color"</span><span class="p">:</span> <span class="n">label_color</span><span class="p">(</span><span class="n">label_id</span><span class="p">),</span>
                     <span class="s2">"branch"</span><span class="p">:</span> <span class="n">branch</span><span class="p">,</span>
                     <span class="s2">"event_type"</span><span class="p">:</span> <span class="n">event_type</span><span class="p">,</span>
                 <span class="p">}</span>

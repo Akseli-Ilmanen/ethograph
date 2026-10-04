@@ -863,11 +863,21 @@ window.runMermaid = runMermaid;</script>
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PredictionSet</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""One imported prediction file: its rows, and the run's store when it came from a run folder."""</span>
+<span class="w">    </span><span class="sd">"""One read-only labels table shown beside the working labels.</span>
+
+<span class="sd">    Usually an imported prediction file: its rows, and the run's store when</span>
+<span class="sd">    it came from a run folder. A table made in memory</span>
+<span class="sd">    (:mod:`ethograph.labels.feature_events`) has no file — its *path* is only</span>
+<span class="sd">    its name, the key every panel and list finds it by — and brings its own</span>
+<span class="sd">    vocabulary in *mappings*, since its classes are not in ``mapping.txt``.</span>
+<span class="sd">    """</span>
 
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
     <span class="n">labels_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
     <span class="n">store</span><span class="p">:</span> <span class="n">PredictionsStore</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: This set's own classes (``load_label_mapping``'s shape); ``None`` means</span>
+    <span class="c1">#: its ids are the session's.</span>
+    <span class="n">mappings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -880,6 +890,31 @@ window.runMermaid = runMermaid;</script>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LabelSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The labels a review tool reads: the working labels, or one read-only set.</span>
+
+<span class="sd">    Label navigation and the two review grids take their rows and their</span>
+<span class="sd">    vocabulary from here, so they run over a prediction set exactly as they</span>
+<span class="sd">    run over the working labels. Only the working labels are *writable*:</span>
+<span class="sd">    nothing may curate, rescore or edit the rows of a set.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">mappings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span>
+    <span class="n">writable</span><span class="p">:</span> <span class="nb">bool</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">label_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Every class of the vocabulary, background excluded."""</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">lid</span> <span class="k">for</span> <span class="n">lid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mappings</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lid</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">lid</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">require_writable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Raise unless these are the working labels — a guard for every mutation."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">writable</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot </span><span class="si">{</span><span class="n">action</span><span class="si">}</span><span class="s2">: '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">' is a read-only label source"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">add_prediction_set</span><span class="p">(</span><span class="n">sets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PredictionSet</span><span class="p">],</span> <span class="n">new</span><span class="p">:</span> <span class="n">PredictionSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">PredictionSet</span><span class="p">]:</span>

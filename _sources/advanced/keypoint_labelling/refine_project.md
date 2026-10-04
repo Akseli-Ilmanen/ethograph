@@ -1,7 +1,7 @@
 (target-refine-project)=
 # Refining a DeepLabCut / LightningPose project
 
-**Start page ▸ Refine DLC / LightningPose training data…** opens a pose
+**Start page ▸ More tools ▸ Refine DLC / LightningPose training data…** opens a pose
 project *folder* — the one with `videos/` and `labeled-data/` — and turns it
 into two views of the same training set. Where {doc}`refine_imported`
 corrects a pose file inside a session, this works on the project the way the

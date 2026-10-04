@@ -25,6 +25,82 @@ my_project/                            # chosen on the start page
         └── spot.yaml                  # pixel event-spotting config (copy from ~/.ethograph/defaults/spot/)
 ```
 
+<<<<<<< HEAD
+```{important}
+**One session folder, one `.nc`.** A second `.nc` at the root is an old version,
+and Ethograph refuses to guess which one is current — in the GUI and in a
+`segment` or `spot` run alike. Name the old one once, on the start page
+(**More tools ▸ Excluded files list…**) or from the dialog that asks. The list has one
+home, `~/.ethograph/gui_settings.yaml`, as `ignore_files`; nothing in the project
+or session folder holds a copy, and the scripted `segment` / `spot` runs read the
+same file. It applies in every session folder:
+
+```yaml
+ignore_files: [Trial_data.nc, "*_old.nc"]   # file names or globs
+```
+
+A file named explicitly (`source: .../Trial_data3.nc`) is always loaded, whatever
+the list says. The list is yours rather than the project's on purpose: a project
+folder may be copied to another machine, and which file is current is answered by
+whoever is sitting in front of it.
+```
+
+### What moved out of `project.yaml`
+
+**There is no `project.yaml` any more.** The project folder holds *files* — the
+label vocabulary, the pipeline configs, the skeletons, the runs — and nothing you
+have to learn a settings schema for. What used to live in that file now lives where
+it belongs:
+
+| Used to be | Now |
+|---|---|
+| `individuals` | `extra_individuals` in `gui_settings.yaml` — added to the names your data declares, edited in **Settings ▸ Create / edit individuals…** or the sidebar's **Edit individuals…** |
+| `ignore` | `ignore_files` in `gui_settings.yaml`, edited on the start page under **More tools ▸ Excluded files list…** |
+| `pose.skeleton` | `config/skeleton/{name}.yaml`, one file per skeleton |
+| `rig` | Nothing: the wizard names the rig after the session folder |
+| `pose.source_software` | Remembered from the last time you answered the drop card |
+
+If you already have a `project.yaml`, choosing that project folder folds its
+`individuals` and `ignore` lists into your settings once and says so. The file is
+left alone; nothing reads it afterwards.
+
+### Who can be labelled
+
+**The data names its individuals; your own list only adds to them.** First what
+the data declares — the session record, else the dataset's `individual` dimension
+([movement](https://movement.neuroinformatics.dev)'s convention, and the spelling
+a pose file carries: `position (time, individual, keypoint, space)`; the older
+plural `individuals` is read too) — then `extra_individuals`. There is no mode and
+no override, so the answer is always a superset of what your data declares, and
+the dialog shows exactly that: the data's names greyed out on top, yours editable
+below.
+
+Until somebody is named *and* a `mapping.txt` holds a class, the Labels tab is
+greyed out and the label keys refuse to place anything — there is no individual to
+attribute a label to. The tab says which half is missing and opens the dialog that
+fixes it.
+
+### The skeleton
+
+One YAML per skeleton in `config/skeleton/`, named by its file (`crow.yaml` →
+"crow"), because a study with two rigs has two skeletons. **Settings ▸ Edit
+skeleton…** draws one on your pose data and saves it under a name; with no project
+folder it goes to your own library under `~/.ethograph/defaults/config/skeleton/`,
+so drawing a skeleton never requires a project either.
+
+Precedence: a skeleton you drew for this session outranks everything, then the
+data's own (an NWB that carries one) and the library's in the order the dialog
+asks for — **the data's by default**, since a file that describes its own skeleton
+is usually right. Pick the library's to edit a skeleton without touching an NWB.
+A library holding exactly one skeleton needs no choosing.
+
+The starter project, `~/.ethograph/defaults/`, has this same shape and ships with
+a `mapping.txt`, the example configs and the geometries — it *is* a project folder,
+not a fallback, which is why a fresh install can label and plot straight away. See
+{ref}`target-label-mapping` for how the mapping is resolved between a session and
+its project.
+=======
+>>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 
 ## The session folder
 

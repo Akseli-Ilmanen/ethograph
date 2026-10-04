@@ -386,6 +386,9 @@
 <li class="toctree-l2"><a class="reference internal" href="trials.html">Trials</a></li>
 <li class="toctree-l2"><a class="reference internal" href="media_alignment.html">Media alignment (w. neuroconv)</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Ephys recordings</a></li>
+
+
+
 <li class="toctree-l2"><a class="reference internal" href="folder_layout.html">Folder layout</a></li>
 </ul>
 </details></li>
@@ -507,7 +510,27 @@
 </section>
 <section id="spikes-raster-and-firing-rate">
 <span id="target-ephys-spikes"></span><h2>Spikes: raster and firing rate<a class="headerlink" href="#spikes-raster-and-firing-rate" title="Link to this heading">#</a></h2>
+</section>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="head-once-spike-sorted-units-are-loaded-a-kilosort-folder-or-a-pynapple-file-with-a-units-group-add-panel-offers-two-panels-under-the-ephys-spikes-header-both-show-the-units-that-pass-the-neuron-tables-filters">
+<h1>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+Once spike-sorted units are loaded (a Kilosort folder or a pynapple file with a <code class="docutils literal notranslate"><span class="pre">units</span></code> group), <strong>➕ Add panel</strong> offers two panels under the <strong>Ephys: spikes</strong> header. Both show the units that pass the neuron table’s filters.<a class="headerlink" href="#head-once-spike-sorted-units-are-loaded-a-kilosort-folder-or-a-pynapple-file-with-a-units-group-add-panel-offers-two-panels-under-the-ephys-spikes-header-both-show-the-units-that-pass-the-neuron-tables-filters" title="Link to this heading">#</a></h1>
 <p>Once spike-sorted units are loaded (a Kilosort folder or a pynapple file with a <code class="docutils literal notranslate"><span class="pre">units</span></code> group), <strong>➕ Add panel</strong> offers two panels under the <strong>Ephys: spikes</strong> header. Both show the units that pass the cluster table’s filters.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>4757530969aedb060f3f6bf02ad1d359e363cab4</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p></p></th>
@@ -520,34 +543,91 @@
 <td><p>Every spike, one row per channel or per unit</p></td>
 <td><p>Spikes binned into a rate per unit, as a heatmap</p></td>
 </tr>
-<tr class="row-odd"><td><p>Settings</p></td>
-<td><p><strong>Raster</strong> and <strong>Rows</strong> above the cluster table</p></td>
-<td><p>Bin size and smoothing under the <strong>Neural: Compute firing rates…</strong> menu entry; colours and sorting in the heatmap settings</p></td>
+<tr class="row-odd"><td><p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p></td>
+<td><p></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Settings</p></td>
+<td><p><strong>Raster display</strong> in the sidebar</p></td>
+<td><p>Bin size and smoothing under the <strong>Neural: Compute firing rates…</strong> menu entry; colours and normalisation in the heatmap settings</p></td>
 </tr>
 </tbody>
 </table>
 </div>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="the-firing-rate-is-binned-for-the-trial-on-screen-and-re-binned-when-the-trial-the-neuron-tables-filters-or-the-bin-settings-change">
+<h1>The firing rate is binned for the trial on screen and re-binned when the trial, the neuron table’s filters or the bin settings change.<a class="headerlink" href="#the-firing-rate-is-binned-for-the-trial-on-screen-and-re-binned-when-the-trial-the-neuron-tables-filters-or-the-bin-settings-change" title="Link to this heading">#</a></h1>
+<p>| Settings | <strong>Raster</strong> and <strong>Rows</strong> above the cluster table | Bin size and smoothing under the <strong>Neural: Compute firing rates…</strong> menu entry; colours and sorting in the heatmap settings |</p>
 <p>The firing rate is binned for the trial on screen and re-binned when the trial, the cluster table’s filters or the bin settings change.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>4757530969aedb060f3f6bf02ad1d359e363cab4</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
 <section id="raster-rendering">
-<h3>Raster rendering<a class="headerlink" href="#raster-rendering" title="Link to this heading">#</a></h3>
+<h2>Raster rendering<a class="headerlink" href="#raster-rendering" title="Link to this heading">#</a></h2>
 <p>The <strong>Raster</strong> setting chooses how spikes are drawn:</p>
 <ul class="simple">
 <li><p><strong>Auto</strong> (default) — a tick per spike. When the view holds more spikes than there are pixels to draw them in, it switches to a density image: spike counts per pixel, darker where there are more. The panel says <em>Density</em> in its corner while that is on screen.</p></li>
 <li><p><strong>Ticks</strong> / <strong>Density</strong> — always that one. Ticks are still replaced by the density image above 500 000 spikes in view.</p></li>
 </ul>
 <p><strong>Tick width</strong> is <em>Auto</em> by default: ticks are drawn as wide as the view allows, up to 3 px when spikes are sparse and 1 px when they are close together. Set a pixel value to fix the width instead.</p>
-<p>Units selected in the cluster table keep their colours in both renderings. With many units, zoom the y-axis or filter the cluster table to get back to individual ticks.</p>
+<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+Units selected in the neuron table keep their colours in both renderings. With many units, zoom the y-axis or filter the neuron table to get back to individual ticks.</p>
 </section>
 <section id="row-order">
-<h3>Row order<a class="headerlink" href="#row-order" title="Link to this heading">#</a></h3>
+<h2>Row order<a class="headerlink" href="#row-order" title="Link to this heading">#</a></h2>
+<p>Clicking the Phy-like viewer, the raster or the firing-rate heatmap shows that panel’s own settings and, under them, <strong>Neuron table settings</strong>: the neuron table and the <strong>Row order</strong> every panel of units follows. Changing it reorders the raster, the firing-rate heatmap and per-unit label panels together.</p>
+<ul class="simple">
+<li><p><strong>Probe depth</strong> — a row per channel, aligned with the Phy-like viewer (Kilosort only).</p></li>
+<li><p><strong>Neuron table</strong> — a row per unit in the table’s order; sort the table by any column to reorder.</p></li>
+<li><p><strong>Rastermap</strong> — units of similar activity next to each other. Needs at least 10 units. The order is fitted on the trial shown when you pick it and then kept; <strong>Refit</strong> fits it again.</p></li>
+<li><p><strong>Peak time (each trial)</strong> — units ordered by when their firing rate peaks, earliest on top, re-sorted on every trial. The window length next to the setting is how long a stretch a peak is looked for in.</p></li>
+<li><p><strong>Peak time (visible window)</strong> — the same over what is on screen; sorted when you pick it and again on <strong>Sort now</strong>, then kept.</p></li>
+</ul>
+<p>The firing-rate heatmap has no sort of its own. Any other heatmap keeps the <strong>Heatmap sort</strong> group, which includes <a class="reference external" href="https://github.com/MouseLand/rastermap">Rastermap</a> for a feature with enough rows.</p>
+</section>
+<section id="selecting-units">
+<h2>Selecting units<a class="headerlink" href="#selecting-units" title="Link to this heading">#</a></h2>
+</section>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="units-selected-in-the-neuron-table-are-drawn-in-their-colours-in-the-raster-outlined-in-the-firing-rate-heatmap-and-marked-in-per-unit-label-panels-ctrl-click-a-row-in-the-raster-or-the-firing-rate-heatmap-to-add-that-unit-to-the-selection-or-to-take-it-out-again">
+<h1>Units selected in the neuron table are drawn in their colours in the raster, outlined in the firing-rate heatmap and marked in per-unit label panels. <strong>Ctrl+click</strong> a row in the raster or the firing-rate heatmap to add that unit to the selection, or to take it out again.<a class="headerlink" href="#units-selected-in-the-neuron-table-are-drawn-in-their-colours-in-the-raster-outlined-in-the-firing-rate-heatmap-and-marked-in-per-unit-label-panels-ctrl-click-a-row-in-the-raster-or-the-firing-rate-heatmap-to-add-that-unit-to-the-selection-or-to-take-it-out-again" title="Link to this heading">#</a></h1>
+<p>Units selected in the cluster table keep their colours in both renderings. With many units, zoom the y-axis or filter the cluster table to get back to individual ticks.</p>
+<section id="id1">
+<h2>Row order<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
 <p>The <strong>Rows</strong> setting applies to the raster, and the firing-rate heatmap lists its units in the same order:</p>
 <ul class="simple">
 <li><p><strong>Probe depth</strong> — a row per channel, aligned with the Phy-like viewer (Kilosort only).</p></li>
 <li><p><strong>Cluster table</strong> — a row per unit in the table’s order; sort the table by any column to reorder.</p></li>
 <li><p><strong>Rastermap</strong> — a row per unit, with units of similar activity next to each other. Needs at least 10 units. The order is fitted on the trial shown when you pick it and then kept; <strong>Refit</strong> fits it again. <a class="reference external" href="https://github.com/MouseLand/rastermap">Rastermap</a> is also a sort mode of every heatmap (<strong>Heatmap sort → Rastermap</strong>), for any feature with enough rows.</p></li>
 </ul>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>4757530969aedb060f3f6bf02ad1d359e363cab4</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
 <hr class="docutils" />
-</section>
 </section>
 <section id="supported-formats">
 <span id="target-ephys-formats"></span><h2>Supported formats<a class="headerlink" href="#supported-formats" title="Link to this heading">#</a></h2>
@@ -737,13 +817,22 @@
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Ephys recordings</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#load-it-drag-drop">Load it — drag &amp; drop</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-ephys-trace-viewers">Two ephys trace viewers</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spikes-raster-and-firing-rate">Spikes: raster and firing rate</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#raster-rendering">Raster rendering</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#row-order">Row order</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spikes-raster-and-firing-rate">Spikes: raster and firing rate</a></li>
 </ul>
 </li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#head-once-spike-sorted-units-are-loaded-a-kilosort-folder-or-a-pynapple-file-with-a-units-group-add-panel-offers-two-panels-under-the-ephys-spikes-header-both-show-the-units-that-pass-the-neuron-tables-filters">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+Once spike-sorted units are loaded (a Kilosort folder or a pynapple file with a <code class="docutils literal notranslate"><span class="pre">units</span></code> group), <strong>➕ Add panel</strong> offers two panels under the <strong>Ephys: spikes</strong> header. Both show the units that pass the neuron table’s filters.</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#the-firing-rate-is-binned-for-the-trial-on-screen-and-re-binned-when-the-trial-the-neuron-tables-filters-or-the-bin-settings-change">The firing rate is binned for the trial on screen and re-binned when the trial, the neuron table’s filters or the bin settings change.</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#raster-rendering">Raster rendering</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#row-order">Row order</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#selecting-units">Selecting units</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#units-selected-in-the-neuron-table-are-drawn-in-their-colours-in-the-raster-outlined-in-the-firing-rate-heatmap-and-marked-in-per-unit-label-panels-ctrl-click-a-row-in-the-raster-or-the-firing-rate-heatmap-to-add-that-unit-to-the-selection-or-to-take-it-out-again">Units selected in the neuron table are drawn in their colours in the raster, outlined in the firing-rate heatmap and marked in per-unit label panels. <strong>Ctrl+click</strong> a row in the raster or the firing-rate heatmap to add that unit to the selection, or to take it out again.</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Row order</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supported-formats">Supported formats</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#known-formats-headers-auto-detected">Known formats (headers auto-detected)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#raw-binary-dat-bin-raw">Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>)</a></li>
@@ -757,6 +846,9 @@
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ephys-with-multiple-trials">Ephys with multiple trials</a></li>
 </ul>
+</li>
+</ul>
+
   </nav></div>
 
   <div class="sidebar-secondary-item">
