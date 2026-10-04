@@ -1,12 +1,12 @@
 """Heatmap plot for visualizing feature sub-dimensions as color-coded rows."""
 
+from dataclasses import dataclass, replace
 from typing import Optional
 
 import numpy as np
 import pyqtgraph as pg
 
 import ethograph as eto
-from ethograph.features.preprocessing import z_normalize
 from ethograph.io.plot_sources import WindowedBuffer, XarraySource, audio_display_offset
 
 from .app_constants import (
@@ -15,9 +15,33 @@ from .app_constants import (
     HEATMAP_DEBOUNCE_MS,
     Z_INDEX_BACKGROUND,
 )
-from .heatmap_sort import argmax_window_order, row_window
+from .heatmap_sort import argmax_window_order, rastermap_order, row_window
 from .make_pretty import clean_display_labels
 from .plots_base import BasePlot, PanelStateMixin, ThrottleDebounce
+
+
+@dataclass(frozen=True)
+class _Normalization:
+    """What ``(data - mean) / std`` uses for one normalisation mode, and the colour range it gives."""
+
+    mode: str
+    n_columns: int
+    mean: np.ndarray | float
+    std: np.ndarray | float
+    levels: tuple[float, float] = (-1.0, 1.0)
+
+    @classmethod
+    def measure(cls, data: np.ndarray, mode: str) -> "_Normalization":
+        """Per-column statistics (``per_channel``), one pair for all (``global``), or none."""
+        n_columns = data.shape[1]
+        if mode == "none":
+            return cls(mode, n_columns, 0.0, 1.0)
+        if mode == "global":
+            std = float(np.nanstd(data))
+            return cls(mode, n_columns, float(np.nanmean(data)), std if std > 0 else 1.0)
+        std = np.nanstd(data, axis=0)
+        std[std == 0] = 1
+        return cls(mode, n_columns, np.nanmean(data, axis=0), std)
 
 
 class HeatmapPlot(PanelStateMixin, BasePlot):
@@ -65,9 +89,8 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
 
         # Cached normalization (avoids recomputing on every pan)
         self._normalized_buffer = None
-        self._cached_norm_mode = None
         self._norm_data_id = None
-        self._cached_levels: tuple[float, float] | None = None
+        self._norm: _Normalization | None = None
 
         # Track last-rendered labels to skip redundant axis updates
         self._last_visible_labels: list[str] | None = None
@@ -133,6 +156,25 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         if order is None:
             return False
         self.set_sort_order(order)
+        return True
+
+    def sort_by_rastermap(self) -> bool:
+        """Order rows by Rastermap, fitted on the whole trial window; keep that order.
+
+        Raises ``ValueError`` when the heatmap has too few rows for the fit.
+        """
+        trial_range = self._trial_sort_range()
+        if trial_range is None:
+            return False
+        # Load the whole window first: the fit is over the trial, not over what is on screen.
+        if self._get_buffered_data(*trial_range)[0] is None:
+            return False
+        t0, t1 = self.get_current_xlim()
+        self._render_heatmap(t0, t1)
+        data = self.get_normalized_data_for_range(*trial_range)
+        if data is None:
+            return False
+        self.set_sort_order(rastermap_order(data))
         return True
 
     def resort_for_trial(self) -> None:
@@ -225,31 +267,33 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
         self._buffer_t0 = 0.0
         self._buffer_t1 = 0.0
         self._normalized_buffer = None
-        self._cached_norm_mode = None
         self._norm_data_id = None
-        self._cached_levels = None
+        self._norm = None
         self._last_visible_labels = None
 
     def _normalize_buffer(self):
+        """Normalise the buffer with the statistics of this context's first load.
+
+        The statistics and the colour range are measured once per (feature,
+        trial, selections) and then held, so a row keeps its colours while the
+        view pans to data loaded later.
+        """
         if self._buffered_data is None:
             self._normalized_buffer = None
-            self._cached_levels = None
             return
         norm_mode = self.app_state.get_with_default("heatmap_normalization")
         data = self._buffered_data
-        if norm_mode == "none":
-            normalized = np.asarray(data, dtype=np.float32)
-        elif norm_mode == "global":
-            mu = np.nanmean(data)
-            std = np.nanstd(data)
-            normalized = ((data - mu) / std if std > 0 else data - mu).astype(np.float32)
-        else:
-            normalized = z_normalize(data).astype(np.float32)
+        norm = self._norm
+        measured = norm is None or norm.mode != norm_mode or norm.n_columns != data.shape[1]
+        if measured:
+            norm = _Normalization.measure(data, norm_mode)
+        normalized = ((data - norm.mean) / norm.std).astype(np.float32)
         np.nan_to_num(normalized, copy=False, nan=0.0)
+        if measured:
+            norm = replace(norm, levels=self._compute_levels(normalized, norm_mode))
+        self._norm = norm
         self._normalized_buffer = normalized
-        self._cached_norm_mode = norm_mode
         self._norm_data_id = id(self._buffered_data)
-        self._cached_levels = self._compute_symmetric_levels(normalized)
 
     def _downsample_for_display(self, data: np.ndarray, max_samples: int) -> np.ndarray:
         n_samples = data.shape[0]
@@ -484,15 +528,23 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
 
     # --- Rendering ---
 
-    def _compute_symmetric_levels(self, data: np.ndarray) -> tuple[float, float]:
-        """Compute symmetric color range using exclusion percentile from app_state."""
+    def _compute_levels(self, data: np.ndarray, norm_mode: str) -> tuple[float, float]:
+        """Colour range from the exclusion percentile in app_state.
+
+        Symmetric around zero, which is where normalised data is centred.
+        Unnormalised data that never goes below zero (a rate, a count, a
+        distance) has no centre to be symmetric about and runs from zero up,
+        so it uses the whole colormap.
+        """
         percentile = self.app_state.get_with_default("heatmap_exclusion_percentile")
         valid = data[np.isfinite(data)]
         if len(valid) == 0:
             return -1.0, 1.0
-        vmax = np.percentile(np.abs(valid), percentile)
+        vmax = float(np.percentile(np.abs(valid), percentile))
         if vmax < 1e-10:
             vmax = 1.0
+        if norm_mode == "none" and valid.min() >= 0:
+            return 0.0, vmax
         return -vmax, vmax
 
     def update_plot_content(self, t0: Optional[float] = None, t1: Optional[float] = None):
@@ -532,7 +584,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
                 return
 
             norm_mode = self.app_state.get_with_default("heatmap_normalization")
-            if self._normalized_buffer is None or self._norm_data_id != id(data) or self._cached_norm_mode != norm_mode:
+            if self._normalized_buffer is None or self._norm_data_id != id(data) or self._norm.mode != norm_mode:
                 self._normalize_buffer()
 
             if pending is not None and trial_range is not None:
@@ -555,7 +607,7 @@ class HeatmapPlot(PanelStateMixin, BasePlot):
             n_total = normalized.shape[1]
             self._n_rows_shown = n_total
 
-            vmin, vmax = self._cached_levels or self._compute_symmetric_levels(normalized)
+            vmin, vmax = self._norm.levels
 
             pixel_width = self.width() or 800
             display_data = self._downsample_for_display(normalized, pixel_width * 2)

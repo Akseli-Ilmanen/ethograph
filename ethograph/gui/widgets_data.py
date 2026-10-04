@@ -1655,21 +1655,7 @@ class DataWidget(QWidget):
         self.panels_row3_layout.addWidget(self.sort_channels_btn)
         self.panels_row3_layout.addStretch()
 
-        # Row 5: neural view combo
-        self._neural_view_label = QLabel("View:")
-        self.neural_view_combo = QComboBox()
-        self.neural_view_combo.setObjectName("neural_view_combo")
-        self.neural_view_combo.addItems(["Multi Trace", "Raster"])
-        self.neural_view_combo.currentTextChanged.connect(self._on_neural_view_changed)
-        self.panels_row5_layout.addWidget(self._neural_view_label)
-        self.panels_row5_layout.addWidget(self.neural_view_combo)
-        self._neural_view_label.hide()
-        self.neural_view_combo.hide()
-        self.panels_row5_layout.addStretch()
-
         if self.app_state.has_neurons and self.ephys_widget:
-            self._neural_view_label.show()
-            self.neural_view_combo.show()
             # Wire the Phy loader/source so it renders instantly when the user
             # adds the Phy viewer from the popup — but keep the panel hidden.
             self.ephys_widget.configure_ephys_trace_plot()
@@ -1739,18 +1725,6 @@ class DataWidget(QWidget):
             return
         time, confidence = curve
         self.plot_container.show_confidence_plot(time + self.app_state.to_display(trial, 0.0), confidence)
-
-    def cycle_neural_view(self):
-        if not hasattr(self, "neural_view_combo") or not self.neural_view_combo.isVisible():
-            return
-        next_index = (self.neural_view_combo.currentIndex() + 1) % self.neural_view_combo.count()
-        self.neural_view_combo.setCurrentIndex(next_index)
-
-    def _on_neural_view_changed(self, mode: str):
-        if not self.app_state.ready or not mode:
-            return
-        if self.ephys_widget:
-            self.ephys_widget.set_neural_view(mode)
 
     # ------------------------------------------------------------------
     # Neo trace panels (one instance per stream/modality)
@@ -1983,15 +1957,6 @@ class DataWidget(QWidget):
 
     def _is_autoscale_on(self) -> bool:
         return self.plot_settings_widget is not None and self.plot_settings_widget.autoscale_checkbox.isChecked()
-
-    def show_neural_panel(self):
-        """Show the neural panel (trace or raster, per the neural view combo)."""
-        if not self.plot_container:
-            return
-        mode = self.neural_view_combo.currentText() if hasattr(self, "neural_view_combo") else "Multi Trace"
-        self.plot_container.set_neural_panel_mode("raster" if mode == "Raster" else "trace")
-        if self._is_autoscale_on():
-            self.plot_container.ephys_trace_plot.vb.enableAutoRange(x=False, y=True)
 
     def _update_view_mode_items(self, feature_sel: str):
         """Update view_mode_combo items based on available data.
@@ -3147,6 +3112,7 @@ class DataWidget(QWidget):
                 pc.remove_panel(plot)
         if not self.app_state.has_neurons:
             pc.set_ephys_visible(False)
+            pc.set_raster_visible(False)
 
     def _validate_media_files(
         self,

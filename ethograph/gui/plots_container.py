@@ -1024,12 +1024,8 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
                 continue
             if plot is not None:
                 self.pin_panel(plot, e.get("individual"))
-        if "raster" in types:
-            self.set_neural_panel_mode("raster")
-        elif "ephys" in types:
-            self.set_neural_panel_mode("trace")
-        else:
-            self.set_ephys_visible(False)
+        self.set_ephys_visible("ephys" in types)
+        self.set_raster_visible("raster" in types)
 
         for e in entries:
             if e.get("type") in ("lineplot", "heatmap"):
@@ -1366,7 +1362,6 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             return
         self._panel_visible["ephys"] = visible
         if not visible:
-            self._panel_visible["raster"] = False
             self.ephys_trace_plot.buffer.loader = None
             self.ephys_trace_plot.set_source(None)
         self._update_panel_visibility()
@@ -1374,27 +1369,16 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def set_raster_visible(self, visible: bool):
         self._set_panel_visible("raster", visible)
 
-    def set_neural_panel_mode(self, mode: str):
-        """Switch between 'trace' and 'raster' for the neural panel slot."""
-        if mode == "trace":
-            show_ephys, show_raster = True, False
-        elif mode == "raster":
-            show_ephys, show_raster = False, True
-        else:
-            return
-
-        v = self._panel_visible
-        if v["ephys"] != show_ephys or v["raster"] != show_raster:
-            v["ephys"] = show_ephys
-            v["raster"] = show_raster
-            self._update_panel_visibility()
-
     # ------------------------------------------------------------------
     # Bidirectional y-axis sync: ephys <-> raster
     # ------------------------------------------------------------------
 
+    def _raster_follows_trace(self) -> bool:
+        """The raster shares the trace's y-axis only while its rows are the trace's channels."""
+        return self._panel_visible["raster"] and self.raster_plot.follows_trace_y
+
     def _sync_raster_y_from_ephys(self):
-        if self._syncing_y or not self._panel_visible["raster"]:
+        if self._syncing_y or not self._raster_follows_trace():
             return
         self._syncing_y = True
         try:
@@ -1404,7 +1388,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             self._syncing_y = False
 
     def _sync_ephys_y_from_raster(self):
-        if self._syncing_y or not self._panel_visible["raster"]:
+        if self._syncing_y or not self._raster_follows_trace():
             return
         self._syncing_y = True
         try:
@@ -1416,7 +1400,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def _on_ephys_y_space_changed(self):
         ep = self.ephys_trace_plot
         total = len(ep._total_ordered_channels)
-        if total == 0:
+        if total == 0 or not self.raster_plot.follows_trace_y:
             return
         spacing = ep.buffer.channel_spacing
         self.raster_plot.sync_y_axis(ep._hw_to_global_y, spacing, total)

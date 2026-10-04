@@ -408,7 +408,7 @@ class MetaWidget(GridSectionContainer):
                 video_area.camera_view_removed.connect(self.active_panels.unregister)
 
     _CONTEXT_KINDS = frozenset(
-        {"audiotrace", "spectrogram", "lineplot", "heatmap", "space", "radial", "skeleton", "ephys", "neo"}
+        {"audiotrace", "spectrogram", "lineplot", "heatmap", "space", "radial", "skeleton", "ephys", "raster", "neo"}
     )
 
     def _track_subject_panel(self, widget) -> None:
@@ -423,8 +423,7 @@ class MetaWidget(GridSectionContainer):
         """A panel was clicked → track it, and show its controls in the sidebar.
 
         The green edge is drawn by the manager for every panel; here we only swap
-        the sidebar context for panels that have one (ephys/neo/raster keep the
-        current sidebar — their controls live in the top-bar Neural menu)."""
+        the sidebar context for panels that have one."""
         from .active_panel import PanelKind
 
         kind = reg.kind
@@ -485,9 +484,15 @@ class MetaWidget(GridSectionContainer):
         ew = self.ephys_widget
         return bool(getattr(self.app_state, "has_neurons", False)) and ew is not None and ew.has_phy_trace()
 
+    def _n_units(self) -> int:
+        """How many spike-sorted units are loaded (0 = no raster to offer)."""
+        ew = self.ephys_widget
+        return ew.n_units() if ew is not None else 0
+
     def refresh_source_popup(self):
         """Repopulate the add-panel popup from the current session (Media,
-        Features, Neo streams, and the Phy trace when raw ephys is loaded)."""
+        Features, Neo streams, the Phy trace when raw ephys is loaded, and the
+        raster when units are)."""
         try:
             neo_streams = self.data_widget.neo_stream_names()
         except Exception:  # ephys probing must never block the add-panel popup
@@ -497,6 +502,7 @@ class MetaWidget(GridSectionContainer):
             catalog=self.data_widget.catalog,
             neo_streams=neo_streams,
             phy_available=self._phy_available(),
+            n_units=self._n_units(),
         )
 
     def _on_source_dropped(self, kind: str, name: str):
@@ -587,6 +593,10 @@ class MetaWidget(GridSectionContainer):
             self._add_neo_panel(name)
         elif kind == "phy":
             self._add_phy_panel()
+        elif kind == "raster":
+            self._add_raster_panel()
+        elif kind == "firing_rate":
+            self._add_firing_rate_panel()
         elif kind == "video":
             self._add_camera_view(name)
         elif kind == "image":
@@ -694,10 +704,35 @@ class MetaWidget(GridSectionContainer):
         if ew is None or not ew.has_phy_trace():
             notify("No raw ephys/Kilosort data loaded for the Phy viewer.", "warning")
             return
-        pc.set_neural_panel_mode("trace")
+        pc.set_ephys_visible(True)
         ew.configure_ephys_trace_plot()
         self._activate_panel(pc.ephys_trace_plot, "ephys")
         pc.schedule_labels_redraw()
+
+    def _add_raster_panel(self):
+        """Add (or re-show) the spike raster. Like the Phy trace it is a
+        singleton toggled visible; the two are independent panels."""
+        ew = self.ephys_widget
+        pc = self.plot_container
+        if ew is None or not ew.n_units():
+            notify("No spike-sorted units loaded for the raster.", "warning")
+            return
+        ew.show_raster()
+        self._activate_panel(pc.raster_plot, "raster")
+        pc.schedule_labels_redraw()
+
+    def _add_firing_rate_panel(self):
+        """Bin the units' spikes for this trial and open a heatmap on them, one row per unit."""
+        ew = self.ephys_widget
+        if ew is None or not ew.n_units():
+            notify("No spike-sorted units loaded for firing rates.", "warning")
+            return
+        feature = ew.show_firing_rates()
+        if feature is None:
+            return
+        plot = self.plot_container.add_panel("heatmap", feature=feature)
+        if plot is not None:
+            self._activate_panel(plot, "heatmap")
 
     def _add_neo_panel(self, stream_name: str):
         """Dropping a Neo stream/modality → pick channels (default all) → add a
@@ -1101,6 +1136,7 @@ class MetaWidget(GridSectionContainer):
             catalog=self.data_widget.catalog,
             neo_streams=self.data_widget.neo_stream_names(),
             phy_available=self._phy_available(),
+            n_units=self._n_units(),
         )
         self._relocate_overlay_checkboxes()
         self._set_default_context()

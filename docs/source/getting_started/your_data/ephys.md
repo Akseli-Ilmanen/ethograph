@@ -26,7 +26,7 @@ Ethograph recognises a Kilosort folder by the `spike_times.npy` inside it, and r
 (target-ephys-viewers)=
 ## Two ephys trace viewers
 
-Raw traces can be shown in either of two panels, added from **➕ Add panel** (`Shift+N`) under the **Ephys** header.
+Raw traces can be shown in either of two panels, added from **➕ Add panel** (`Shift+N`) under the **Ephys: raw traces** header.
 
 | | **Neo (`stream`)** | **Ephys (Phy-like viewer)** |
 |---|---|---|
@@ -34,6 +34,39 @@ Raw traces can be shown in either of two panels, added from **➕ Add panel** (`
 | Strength | Wide format compatibility | Fast zooming across many channels, with Kilosort spike waveforms overlaid on the trace |
 
 The Phy-like viewer is inspired by [phy](https://github.com/cortex-lab/phy).
+
+---
+
+(target-ephys-spikes)=
+## Spikes: raster and firing rate
+
+Once spike-sorted units are loaded (a Kilosort folder or a pynapple file with a `units` group), **➕ Add panel** offers two panels under the **Ephys: spikes** header. Both show the units that pass the cluster table's filters.
+
+| | **Spike raster** | **Firing rate** |
+|---|---|---|
+| Shows | Every spike, one row per channel or per unit | Spikes binned into a rate per unit, as a heatmap |
+| Settings | **Raster** and **Rows** above the cluster table | Bin size and smoothing under the **Neural: Compute firing rates…** menu entry; colours and sorting in the heatmap settings |
+
+The firing rate is binned for the trial on screen and re-binned when the trial, the cluster table's filters or the bin settings change.
+
+### Raster rendering
+
+The **Raster** setting chooses how spikes are drawn:
+
+- **Auto** (default) — a tick per spike. When the view holds more spikes than there are pixels to draw them in, it switches to a density image: spike counts per pixel, darker where there are more. The panel says *Density* in its corner while that is on screen.
+- **Ticks** / **Density** — always that one. Ticks are still replaced by the density image above 500 000 spikes in view.
+
+**Tick width** is *Auto* by default: ticks are drawn as wide as the view allows, up to 3 px when spikes are sparse and 1 px when they are close together. Set a pixel value to fix the width instead.
+
+Units selected in the cluster table keep their colours in both renderings. With many units, zoom the y-axis or filter the cluster table to get back to individual ticks.
+
+### Row order
+
+The **Rows** setting applies to the raster, and the firing-rate heatmap lists its units in the same order:
+
+- **Probe depth** — a row per channel, aligned with the Phy-like viewer (Kilosort only).
+- **Cluster table** — a row per unit in the table's order; sort the table by any column to reorder.
+- **Rastermap** — a row per unit, with units of similar activity next to each other. Needs at least 10 units. The order is fitted on the trial shown when you pick it and then kept; **Refit** fits it again. [Rastermap](https://github.com/MouseLand/rastermap) is also a sort mode of every heatmap (**Heatmap sort → Rastermap**), for any feature with enough rows.
 
 ---
 

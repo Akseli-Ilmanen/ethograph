@@ -397,6 +397,10 @@ class PanelStateMixin:
         if "selections" in self.panel_state:
             self.panel_state["selections"] = self._sanitize_selections(self.panel_state["selections"])
 
+    def invalidate_data(self) -> None:
+        """Reload on the next render: the feature's data changed under an unchanged name."""
+        self._current_feature = None
+
     def _ensure_panel_state(self):
         """Fork any still-missing state keys from the current globals on first
         render, so later global changes can never leak into this panel."""

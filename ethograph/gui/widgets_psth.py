@@ -31,7 +31,6 @@ from qtpy.QtCore import Qt, Signal  # noqa: E402
 from qtpy.QtGui import QPixmap  # noqa: E402
 from qtpy.QtWidgets import (  # noqa: E402
     QApplication,
-    QCheckBox,
     QComboBox,
     QDialog,
     QDoubleSpinBox,
@@ -125,6 +124,7 @@ class PSTHDialog(QDialog):
         self._populate_align_combo()
         self._populate_condition_combo()
         self._populate_cluster_combo()
+        self.ephys_widget.unit_filter_changed.connect(self._populate_cluster_combo)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -183,17 +183,7 @@ class PSTHDialog(QDialog):
         self._cluster_combo.setToolTip("Select cluster to compute PSTH for")
         self._cluster_combo.currentIndexChanged.connect(self._on_cluster_combo_changed)
         gl.addLayout(self._make_stepper_row(self._cluster_combo, self._step_cluster))
-        filter_row = QHBoxLayout()
-        self._filter_visible_cb = QCheckBox("Filter to visible in Cluster Table")
-        self._filter_visible_cb.setChecked(True)
-        self._filter_visible_cb.toggled.connect(self._populate_cluster_combo)
-        filter_row.addWidget(self._filter_visible_cb)
-        refresh_btn = QPushButton("↻")
-        refresh_btn.setFixedWidth(28)
-        refresh_btn.setToolTip("Refresh cluster list from Cluster Table")
-        refresh_btn.clicked.connect(self._populate_cluster_combo)
-        filter_row.addWidget(refresh_btn)
-        gl.addLayout(filter_row)
+        gl.addWidget(QLabel("Units passing the Cluster Table's filters"))
         layout.addWidget(g)
 
         # Align to
@@ -372,34 +362,12 @@ class PSTHDialog(QDialog):
     # Combo population
     # ------------------------------------------------------------------
 
-    def _get_visible_cluster_ids(self) -> list[int]:
-        proxy = self.ephys_widget._cluster_proxy
-        model = self.ephys_widget._cluster_model
-        cluster_col = 0
-        for col in range(model.columnCount()):
-            h = model.horizontalHeaderItem(col)
-            if h and h.text() == "cluster_id":
-                cluster_col = col
-                break
-        ids = []
-        for row in range(proxy.rowCount()):
-            val = proxy.data(proxy.index(row, cluster_col))
-            try:
-                ids.append(int(val))
-            except (ValueError, TypeError):
-                pass
-        return ids
-
     def _populate_cluster_combo(self):
         prev_id = self._cluster_combo.currentData()
         self._cluster_combo.blockSignals(True)
         self._cluster_combo.clear()
 
-        if self._filter_visible_cb.isChecked():
-            cluster_ids = self._get_visible_cluster_ids()
-        else:
-            tsgroup = getattr(self.ephys_widget, "_tsgroup", None)
-            cluster_ids = sorted(tsgroup.keys()) if tsgroup is not None else []
+        cluster_ids = self.ephys_widget.filtered_unit_ids()
 
         df = getattr(self.ephys_widget, "_cluster_df", None)
         for cid in cluster_ids:
