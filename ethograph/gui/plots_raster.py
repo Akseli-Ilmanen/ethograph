@@ -42,11 +42,8 @@ if TYPE_CHECKING:
 _RENDER_LABEL_COLOR = "#666666"
 #: A tick is never shorter than this, so rows thinner than a pixel still show their spikes.
 _MIN_TICK_PX = 3.0
-<<<<<<< HEAD
 #: Row labels on the left axis are at least this far apart; rows closer than that share one.
 _MIN_ROW_LABEL_PX = 14.0
-=======
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 
 
 @dataclass(frozen=True)
@@ -88,12 +85,9 @@ class RasterPlot(BasePlot):
         self.setLabel("left", "Unit", Fontsize="14pt")
 
         self._hw_to_global_y: dict[int, float] = {}
-<<<<<<< HEAD
         #: What the left axis writes next to a row, by row key.
         self._row_labels: dict[int, str] = {}
         self._row_ticks: list[tuple[float, str]] | None = None
-=======
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
         self._y_lookup: NDArray = np.empty(0, dtype=np.float64)
         self._channel_spacing: float = 1.0
         self._total_channels: int = 0
@@ -174,7 +168,6 @@ class RasterPlot(BasePlot):
                 self.vb.setYRange(-margin, y_max, padding=0)
 
         self.refresh()
-<<<<<<< HEAD
 
     def set_row_labels(self, labels: dict[int, str]) -> None:
         """Name the rows on the left axis: the label of each row key that has one."""
@@ -207,8 +200,6 @@ class RasterPlot(BasePlot):
         if ticks != self._row_ticks:
             self._row_ticks = ticks
             self.plot_item.getAxis("left").setTicks([ticks])
-=======
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 
     # ------------------------------------------------------------------
     # Spike data API
@@ -290,10 +281,7 @@ class RasterPlot(BasePlot):
         return groups
 
     def _redraw(self):
-<<<<<<< HEAD
         self._update_row_ticks()
-=======
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
         if not self._hw_to_global_y or not self._multi_entries:
             self._clear_drawn()
             return

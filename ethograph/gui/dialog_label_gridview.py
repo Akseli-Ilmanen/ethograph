@@ -1666,13 +1666,9 @@ class GridVerdictBar(QWidget):
     nothing else.
     """
 
-<<<<<<< HEAD
     mode_changed = Signal(str)
 
     def __init__(self, meta, entries_fn, restyle_fn, flagged_fn=None, parent=None, *, read_only: bool = False):
-=======
-    def __init__(self, meta, entries_fn, restyle_fn, flagged_fn=None, parent=None):
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
         super().__init__(parent)
         self.meta = meta
         self._entries_fn = entries_fn
@@ -1742,14 +1738,9 @@ class GridVerdictBar(QWidget):
         self._sync_count()
 
     def apply_done(self) -> int:
-<<<<<<< HEAD
         """Curate what the mode selects; the entries are restamped to match."""
         if self._read_only:
             raise RuntimeError("Cannot curate the labels of a read-only label source")
-=======
-        """Curate every untagged automated label on screen; the entries are
-        restamped to match."""
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
         panel = curation_panel_of(self.meta)
         entries = list(self._entries_fn())
         insts = self.verdicts.insts_for_done(entries)
@@ -1900,13 +1891,9 @@ class LabelGridView(QWidget):
             flagged_fn=self._flagged_entries,
             read_only=read_only,
         )
-<<<<<<< HEAD
         layout.addWidget(self.mode_bar)
         if read_only:
             self.mode_bar.hide()
-=======
-        layout.addWidget(self.verdict_bar)
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 
         self.hint = QLabel("")
         self.hint.setStyleSheet("color: grey; font-size: 10px;")
@@ -1969,7 +1956,6 @@ class LabelGridView(QWidget):
         self.count_label.setText(f"{shown} labels" if shown == total else f"{shown} of {total} labels")
 
     def _sync_hint(self, *_args) -> None:
-<<<<<<< HEAD
         if self._read_only:
             self.hint.setText(
                 f"A read-only label source: click a frame to jump the GUI to that trial and time.{self._filter_note()}"
@@ -1979,9 +1965,6 @@ class LabelGridView(QWidget):
             click = "Click the frames that are right, then Done curates those labels."
         else:
             click = "Click the frames that are wrong, then Done curates every other label."
-=======
-        click = "Click the frames that are wrong to tag them for review; Done curates every other label."
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
         panel = curation_panel_of(self.meta)
         if panel is not None and panel.reviews_on_jump():
             jump = "Double-click a frame to review that label in the main GUI."
@@ -2169,22 +2152,16 @@ class LabelGridView(QWidget):
             cell.setVisible(True)
 
     def _on_tile_clicked(self, entry: FrameEntry):
-<<<<<<< HEAD
         """A single click is the verdict the mode names — a jump where there
         are no verdicts to give (a read-only label source)."""
         if self._read_only:
             self._jump(entry)
             return
         self.mode_bar.click(entry)
-=======
-        """A single click is the verdict the mode names."""
-        self.verdict_bar.click(entry)
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 
     def _on_tile_double_clicked(self, entry: FrameEntry, field_name: str = TILE_POINT):
         """A double click navigates, in every mode. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
-<<<<<<< HEAD
         navigating leaves the verdicts exactly as they were."""
         if not self._read_only:
             self.mode_bar.click(entry)
@@ -2197,19 +2174,6 @@ class LabelGridView(QWidget):
         panel = curation_panel_of(self.meta)
         if not self._read_only and panel is not None and panel.mode() == "frame":
             panel.start_review_at(entry_inst(entry), entry.boundary)
-=======
-        navigating leaves the verdicts exactly as they were. On a state tile
-        the frame clicked says which boundary: the onset or the offset."""
-        self.verdict_bar.click(entry)
-        self._jump(entry, field_name)
-
-    def _jump(self, entry: FrameEntry, field_name: str = TILE_POINT):
-        """Go there — into the review when the curation panel is in a review
-        mode, else a plain jump to that boundary's time."""
-        panel = curation_panel_of(self.meta)
-        if panel is not None and panel.reviews_on_jump():
-            panel.start_review_at(entry_inst(entry), field_name)
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
             return
         nav = getattr(self.meta, "navigation_widget", None)
         if nav is None:

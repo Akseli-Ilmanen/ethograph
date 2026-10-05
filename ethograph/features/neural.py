@@ -257,7 +257,6 @@ def firing_rate_to_xarray(
     )
 
 
-<<<<<<< HEAD
 #: The instantaneous rate above which the birdsong literature calls spikes a burst:
 #: "A burst was defined as the interval over which the instantaneous firing rate
 #: exceeded a threshold of 125 Hz" — Leonardo A, Fee MS (2005). Ensemble coding of
@@ -268,8 +267,6 @@ def firing_rate_to_xarray(
 BURST_INSTANTANEOUS_RATE_HZ = 125.0
 
 
-=======
->>>>>>> 4757530969aedb060f3f6bf02ad1d359e363cab4
 def instantaneous_rate(spike_times: np.ndarray, at: np.ndarray) -> np.ndarray:
     """The instantaneous firing rate at each of *at*: ``1 / ISI`` of the inter-spike interval it falls in.
 
