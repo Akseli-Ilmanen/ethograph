@@ -169,15 +169,6 @@ A system ffmpeg is picked up automatically, or set `ETHOGRAPH_FFMPEG`. The
 bundled one has no NVENC, so GPU proxy encoding falls back to `libx264`; for
 NVENC use `conda install -c conda-forge ffmpeg`.
 
-(target-keypoint-fill)=
-**PosePAL keypoint fill** (GPU only) — the spline and optical-flow fills come
-with `gui`; PosePAL needs torch and CoTracker3
-(see {doc}`../advanced/keypoint_labelling/fill`):
-
-```bash
-uv pip install --torch-backend=auto torch "cotracker @ git+https://github.com/facebookresearch/co-tracker.git@82e02e8029753ad4ef13cf06be7f4fc5facdda4d"
-```
-
 ## Where settings live
 
 Global settings live in `~/.ethograph` (override with `ETHOGRAPH_HOME`):

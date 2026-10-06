@@ -636,12 +636,6 @@ low-resolution proxies that make seeking long, high-resolution videos smoother.
 A system ffmpeg is picked up automatically, or set <code class="docutils literal notranslate"><span class="pre">ETHOGRAPH_FFMPEG</span></code>. The
 bundled one has no NVENC, so GPU proxy encoding falls back to <code class="docutils literal notranslate"><span class="pre">libx264</span></code>; for
 NVENC use <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">ffmpeg</span></code>.</p>
-<p id="target-keypoint-fill"><strong>PosePAL keypoint fill</strong> (GPU only) — the spline and optical-flow fills come
-with <code class="docutils literal notranslate"><span class="pre">gui</span></code>; PosePAL needs torch and CoTracker3
-(see <a class="reference internal" href="../advanced/keypoint_labelling/fill.html"><span class="doc">5. Fill</span></a>):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span><span class="s2">"cotracker @ git+https://github.com/facebookresearch/co-tracker.git@82e02e8029753ad4ef13cf06be7f4fc5facdda4d"</span>
-</pre></div>
-</div>
 </section>
 <section id="where-settings-live">
 <h2>Where settings live<a class="headerlink" href="#where-settings-live" title="Link to this heading">#</a></h2>

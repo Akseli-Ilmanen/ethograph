@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>LightGBM for point events &#8212; ethograph</title>
+    <title>Refinement &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'models/onset_model';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/refinement';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/models/onset_model.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/refinement.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Action segmentation" href="segment/index.html" />
-    <link rel="prev" title="Trial windows" href="trial_windows.html" />
+    <link rel="next" title="Trial metadata" href="metadata.html" />
+    <link rel="prev" title="7. Visualizing &amp; exporting" href="classroom_pose_estimation/export.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -151,15 +151,15 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
     Advanced
   </a>
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="index.html">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
     Models
   </a>
 </li>
@@ -287,15 +287,15 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
     Advanced
   </a>
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="index.html">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../models/index.html">
     Models
   </a>
 </li>
@@ -379,33 +379,27 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="trial_windows.html">Trial windows</a></li>
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">LightGBM (point events, CPU-only)</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="segment/index.html">Action segmentation (state events)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="segment/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="segment/guide.html">Full guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="segment/config.html">Config reference</a></li>
-<li class="toctree-l2"><a class="reference internal" href="segment/video_features.html">Video features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="segment/feral.html">FERAL</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="changepoints/index.html">Changepoints</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="changepoints/overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changepoints/kinematic.html">Kinematic changepoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changepoints/audio.html">Audio changepoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changepoints/ruptures.html">Ruptures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="spot/index.html">PES (point events from pixels)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="spot/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/guide.html">Full guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/peaks.html">From probabilities to events</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/multimodal.html">Pixels + pose</a></li>
-<li class="toctree-l2"><a class="reference internal" href="spot/config.html">Config reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="classroom_pose_estimation/index.html">Classroom pose estimation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="classroom_pose_estimation/labelling.html">1-2. Define keypoints and label frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classroom_pose_estimation/detect.html">3. Detect — optional, if your animals wear tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classroom_pose_estimation/fill.html">5. Fill</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classroom_pose_estimation/correction.html">6. The correction loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classroom_pose_estimation/export.html">7. Visualizing &amp; exporting</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="curation/index.html">Curation (reviewing predictions)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="curation/guide.html">Full guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/modes.html">Ways to curate</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/grids.html">Review grids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/confidence.html">Model confidence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/difficulty.html">Curator feedback</a></li>
-<li class="toctree-l2"><a class="reference internal" href="curation/workflows.html">Curation workflows</a></li>
-</ul>
-</details></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Refinement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Trial metadata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playback.html">Video &amp; Audio playback</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shortcuts.html">Keyboard Shortcuts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 </ul>
 </div>
 </nav></div>
@@ -447,9 +441,9 @@
       </a>
     </li>
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Models</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Advanced</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">LightGBM for point events</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Refinement</span></li>
   </ul>
 </nav>
 </div>
@@ -466,98 +460,144 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="lightgbm-for-point-events">
-<span id="target-onset-model"></span><h1>LightGBM for point events<a class="headerlink" href="#lightgbm-for-point-events" title="Link to this heading">#</a></h1>
-<p>A small classifier that predicts <strong>point events</strong> — the first time a mouse
-touches a lever, the frame a bird lands, the moment a beak opens — from a
-local window of your existing features. Label the moment in a handful of
-trials, tick the features it should look at, and it fills in the rest.</p>
-<p>Unlike <a class="reference internal" href="segment/index.html"><span class="doc">action segmentation</span></a> and
-<a class="reference internal" href="spot/index.html"><span class="doc">pixel event spotting</span></a>, this model is <strong>entirely in the
-GUI</strong>: no Python scripting, no config files, no GPU. It trains and predicts on
-an ordinary CPU in seconds, so it is the right starting point if you are not
-comfortable with code.</p>
-<p><strong>Model ▸ LightGBM: Train…</strong> and <strong>Model ▸ LightGBM: Predict…</strong></p>
-<p>Under the hood it is scikit-learn’s <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id285" title="Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake VanderPlas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, and Edouard Duchesnay. Scikit-learn: machine learning in Python. Journal of Machine Learning Research, 12:2825–2830, 2011. URL: https://jmlr.org/papers/v12/pedregosa11a.html.">Pedregosa <em>et al.</em>, 2011</a>]</span>
-<code class="docutils literal notranslate"><span class="pre">HistGradientBoostingClassifier</span></code>, inspired by LightGBM <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../community/references.html#id286" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>.</p>
-<hr class="docutils" />
-<section id="how-it-works">
-<h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">#</a></h2>
-<p>For each frame, the model sees a <strong>window</strong> of your chosen features centred on
-that frame and answers one question: <em>is the event here?</em> Frames within
-<code class="docutils literal notranslate"><span class="pre">tolerance_s</span></code> of a labelled event count as positive, weighted so the exact
-frame counts most. At inference the per-frame probability is smoothed with the
-same tolerance and the label goes on the tallest peak. Each class gets its own
-binary classifier over the same inputs.</p>
-</section>
-<hr class="docutils" />
-<section id="training">
-<h2>Training<a class="headerlink" href="#training" title="Link to this heading">#</a></h2>
-<ol class="arabic simple">
-<li><p><strong>Name the model</strong> — leave the combo on <em>New model…</em> and type a name, or
-pick an existing model to add more training data to it.</p></li>
-<li><p><strong>Tick the point events to predict.</strong> Only classes marked as point events
-in <a class="reference internal" href="../getting_started/labels/mapping.html"><span class="doc">mapping.txt</span></a> are listed.</p></li>
-<li><p><strong>Tick the features.</strong> Ticking <code class="docutils literal notranslate"><span class="pre">speed</span> <span class="pre">▸</span> <span class="pre">keypoints</span> <span class="pre">▸</span> <span class="pre">beak,</span> <span class="pre">head</span></code> gives two
-input columns. Every dim has to be pinned to explicit values — that frozen
-list <em>is</em> the model’s input layout, which is what lets it run on another
-session. A feature’s <strong>d/dt</strong> box adds its rate of change as an extra
-column, worth ticking when the event is a change of speed or direction
-rather than a level.</p></li>
-<li><p><strong>Tick the existing labels to read as inputs</strong> (optional) — see
-<a class="reference internal" href="#target-onset-model-label-inputs"><span class="std std-ref">below</span></a>.</p></li>
-<li><p><strong>Set the parameters.</strong> <code class="docutils literal notranslate"><span class="pre">Window</span> <span class="pre">size</span></code> is how much context the classifier
-sees around each frame; <code class="docutils literal notranslate"><span class="pre">Tolerance</span></code> is how precisely you believe your own
-labels.</p></li>
-<li><p><strong>Add current session’s events</strong>, then <strong>Train</strong>.</p></li>
-</ol>
-<p>Only trials <strong>visible in the trials table</strong> contribute, so the table’s filters
-double as a training-set selector. A trial carrying none of the ticked events
-is skipped; one carrying only some contributes only to those, and is never
-used as a negative example for the classes it lacks.</p>
-<p>Once a model exists its targets, features, label inputs, window and tolerance
-are <strong>read-only</strong>, because they define the input columns of every training
-trial already stored. To change them, make a new model. To add more sessions,
-open the dialog there, pick the model, and press <strong>Add current session’s
-events</strong>.</p>
-<section id="existing-labels-as-inputs">
-<span id="target-onset-model-label-inputs"></span><h3>Existing labels as inputs<a class="headerlink" href="#existing-labels-as-inputs" title="Link to this heading">#</a></h3>
-<p>Labels of another class can be inputs too:</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="refinement">
+<span id="target-refinement"></span><h1>Refinement<a class="headerlink" href="#refinement" title="Link to this heading">#</a></h1>
+<p>You end up here in one of two situations: you want a <strong>better DeepLabCut or
+LightningPose model</strong>, or you have a pose file and want to <strong>edit it</strong>. The
+first is what Ethograph’s pose-project mode is for, below. For the second,
+Ethograph does not carry an editor of its own — use the movement GUI, which
+does it well:</p>
 <ul class="simple">
-<li><p>a <strong>state</strong> class becomes its on/off indicator — <code class="docutils literal notranslate"><span class="pre">1</span></code> inside every interval,
-<code class="docutils literal notranslate"><span class="pre">0</span></code> outside;</p></li>
-<li><p>a <strong>point</strong> class becomes a Laplacian bump centred on the event, at two
-widths (0.1 s and 1 s) — the same kernel Ethograph puts on
-<a class="reference internal" href="../advanced/changepoints/index.html"><span class="doc">changepoints</span></a>, so one column says both
-<em>it is here</em> and <em>it was a while ago</em>.</p></li>
+<li><p>the <a class="reference external" href="https://movement.neuroinformatics.dev/latest/user_guide/gui.html">movement napari GUI</a>
+— load a pose file, inspect and move points on the video;</p></li>
+<li><p>the <a class="reference external" href="https://neuroinformatics.dev/blog/gsoc_2026_movement_edit_widget.html">edit widget</a>
+built for it, with drag-to-correct and per-keypoint editing;</p></li>
+<li><p><a class="reference external" href="https://github.com/Akseli-Ilmanen/movement/tree/napari-interpolate-edit">this fork</a>
+adds interpolation and bulk editing across a stretch of frames.</p></li>
 </ul>
+<section id="refining-a-deeplabcut-lightningpose-project">
+<h2>Refining a DeepLabCut / LightningPose project<a class="headerlink" href="#refining-a-deeplabcut-lightningpose-project" title="Link to this heading">#</a></h2>
+<p><strong>Start page ▸ More tools ▸ Refine DLC / LightningPose training data…</strong> opens a pose
+project <em>folder</em> — the one with <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code> — and turns it
+into two views of the same training set: pick frames worth labelling off the
+model’s own prediction curves, then review the poses on those frames. It works
+on the project the way the pose tool itself lays it out, and writes back only
+what the tool reads: PNGs under <code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code> and the labels table
+beside them.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The mode is not tied to a model you trained with DeepLabCut: any project
+folder in this layout works. A custom model with no labelling GUI of its own
+can be trained from a DeepLabCut <code class="docutils literal notranslate"><span class="pre">CollectedData</span></code> table you review here — the
+<code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code> folder is the training set, whatever consumes it.</p>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/
+├── config.yaml                  DeepLabCut: scorer, bodyparts, individuals
+├── CollectedData.csv            LightningPose: one labels table for every video
+├── labeled-data/
+│   └── &lt;video&gt;/                 the training frames of one video
+│       ├── img00012.png
+│       └── CollectedData_&lt;scorer&gt;.csv / .h5      DeepLabCut: one table per video
+└── videos/
+    ├── &lt;video&gt;.mp4
+    └── &lt;video&gt;DLC_&lt;model&gt;.h5    the model's predictions on the whole video
+</pre></div>
+</div>
+<p>The folder must hold both <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>; anything else is
+refused with the missing name. A DeepLabCut config fixes the <strong>scorer</strong> (the
+table has to be <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;</span></code> for <code class="docutils literal notranslate"><span class="pre">create_training_dataset</span></code> to
+find it); a project without one — LightningPose — asks who is labelling, and
+remembers the name.</p>
+<p>The top bar is reduced to the two stages, <strong>Docs</strong> and <strong>Help</strong>. Everything
+about sessions and models is gone because there is no session here: each
+stage is its own folder under <code class="docutils literal notranslate"><span class="pre">&lt;project&gt;/.ethograph/</span></code>, with its own
+alignment, labels and layout, so navigation, the trials table and the
+green/red curated colouring work exactly as in any session.</p>
+<section id="extract-frames">
+<h3>Extract Frames<a class="headerlink" href="#extract-frames" title="Link to this heading">#</a></h3>
+<p>One trial per video in <code class="docutils literal notranslate"><span class="pre">videos/</span></code>, named after the file. A video with
+predictions beside it (<code class="docutils literal notranslate"><span class="pre">&lt;video&gt;DLC_*.h5</span></code>, or <code class="docutils literal notranslate"><span class="pre">video_preds/&lt;video&gt;.csv</span></code>)
+brings them in as features — <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity</span></code>, <code class="docutils literal notranslate"><span class="pre">speed</span></code> —
+and opens with one keypoint’s position (x and y) and speed as line plots
+and every keypoint’s confidence as a heatmap. A video without predictions is still a trial —
+its panels are simply empty.</p>
+<p>The point is to choose frames off those curves rather than by scrubbing.
+The Labels section holds two classes:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Class</p></th>
+<th class="head"><p>What it marks</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><strong>ExtractSegment</strong> (state)</p></td>
+<td><p>a stretch worth sampling from: two clicks on a plot</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
+<td><p><strong>ExtractFrame</strong> (point)</p></td>
+<td><p>the frame on screen, taken as it is</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Below them, how a segment is sampled — <strong>Uniform</strong> (evenly spaced) or
+<strong>Diverse</strong> (one frame per k-means cluster of thumbnails, DeepLabCut’s
+method) — and the <strong>coverage</strong>, the share of a segment’s frames to take.
+Point events are always taken.</p>
+<p><strong>Extract frames from this video</strong> writes them as <code class="docutils literal notranslate"><span class="pre">img&lt;frame&gt;.png</span></code> into
+<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code>, numbered by their index on the video so a second
+extraction from the same video adds to the folder, and adds a row per frame
+to the labels table <strong>prefilled with the model’s prediction</strong> — the frame is
+reviewed, not labelled from nothing. Rows already in the table are kept.</p>
+</section>
+<section id="refine-pose">
+<h3>Refine Pose<a class="headerlink" href="#refine-pose" title="Link to this heading">#</a></h3>
+<p>One trial per folder in <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>, the folder standing in for a video:
+its images in natural order, one frame per image, on an image-sequence clock
+(one image per second, so the time axis reads as the image index). No
+features are shown — the selection was made in the other stage, and every
+frame here is to be reviewed.</p>
+<p>The Labels section is the <a class="reference internal" href="classroom_pose_estimation/labelling.html"><span class="doc">Label &amp; Edit tab</span></a> of the
+pose estimation dialog with Sequential already armed: every row of the
+table is a solid, draggable label; <code class="docutils literal notranslate"><span class="pre">Tab</span></code> cycles keypoints, <code class="docutils literal notranslate"><span class="pre">1</span></code>–<code class="docutils literal notranslate"><span class="pre">9</span></code> pick the
+individual, <code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes, <code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> undoes. There is no fill, no
+detect and no export tab — the table <em>is</em> the export.</p>
+<p><strong>Static keypoints</strong> sit in the panel between the mode buttons and the
+table. Tick a
+landmark that never moves (a table corner, a fixed marker); it turns bold
+and pinned in the list. Label every static keypoint once on any frame, then
+<strong>Propagate static landmarks from this frame to all frames</strong> copies their
+positions on the frame on screen to every frame of the folder, so only the
+moving keypoints are left to place elsewhere. Static keypoints are
+remembered per project: the next folder starts with them in place.</p>
+<section id="saving">
+<h4>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h4>
+<p>Edits go back to <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;.csv</span></code> and its <code class="docutils literal notranslate"><span class="pre">.h5</span></code> twin (or the
+root <code class="docutils literal notranslate"><span class="pre">CollectedData.csv</span></code> of a LightningPose project) a few seconds after the
+last change, when you move to another folder, on <strong>Save labels now</strong>, when
+you switch stage and when the window closes — never per drag, since the
+<code class="docutils literal notranslate"><span class="pre">.h5</span></code> rewrite is not free and a half-written table is worse than a stale one.
+The line under the button says whether the table holds unsaved edits.</p>
+</section>
+<section id="checking-a-folder">
+<h4>Checking a folder<a class="headerlink" href="#checking-a-folder" title="Link to this heading">#</a></h4>
+<p><strong>Check labels</strong> writes every frame of the folder with its labels drawn on
+— one colour per keypoint, the config’s skeleton and dot size — into
+<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;_labeled/</span></code>, the folder DeepLabCut’s own <code class="docutils literal notranslate"><span class="pre">check_labels</span></code>
+produces, so the reviewed poses can be looked over in any image viewer. A
+<code class="docutils literal notranslate"><span class="pre">_labeled</span></code> folder is never a trial.</p>
+</section>
+<section id="curation">
+<h4>Curation<a class="headerlink" href="#curation" title="Link to this heading">#</a></h4>
+<p>A folder is a trial, and a trial is curated when every frame of it has been
+reviewed. <strong>Going to the next folder marks this one curated</strong> is on by
+default; <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> curates by hand. The verdict lives in the stage’s
+<code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> <code class="docutils literal notranslate"><span class="pre">curated</span></code> column and colours the trial green in the
+navigation, exactly like a curated session trial.</p>
 </section>
 </section>
-<hr class="docutils" />
-<section id="predicting">
-<h2>Predicting<a class="headerlink" href="#predicting" title="Link to this heading">#</a></h2>
-<p>Pick a trained model, choose the <strong>individual</strong> — whose data is read <em>and</em>
-whose labels these are — and press <strong>Predict missing onsets</strong>. Two things are
-never touched:</p>
-<ul class="simple">
-<li><p><strong>Trials that already carry a class</strong> keep what they have — the model fills
-gaps, it never overrides. A trial with <em>one</em> class can still receive the
-others.</p></li>
-<li><p><strong>Trials the trials table hides.</strong> Training and prediction both run over
-exactly the trials the <a class="reference internal" href="../advanced/metadata.html"><span class="doc">trials table</span></a> shows; the
-dialog has no filters of its own and says how many trials it will run over.</p></li>
-</ul>
-<p>Predictions land in memory like any other label, stamped
-<code class="docutils literal notranslate"><span class="pre">labeling_method</span> <span class="pre">=</span> <span class="pre">automated</span></code>: dotted on the plots until you
-<a class="reference internal" href="curation/modes.html"><span class="doc">curate</span></a> them, red in the trial list. <strong>Review predictions…</strong>
-at the bottom of the dialog opens the label grid view on exactly what the run
-just wrote, so you can check the video frame at each one and fix it or mark it
-curated. Each prediction also carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, explained on
-<a class="reference internal" href="curation/confidence.html"><span class="doc">the confidence page</span></a>. The model places one event
-per class in every trial it runs over; <strong>Min confidence</strong> in the dialog is
-where a class is instead left absent, and it is near zero by default because
-a wrong label costs one keypress to delete while a missing one cannot be
-reviewed (<a class="reference internal" href="spot/peaks.html#target-spot-peaks"><span class="std std-ref">From probabilities to events</span></a> has the reasoning).</p>
 </section>
 </section>
 
@@ -572,20 +612,20 @@ reviewed (<a class="reference internal" href="spot/peaks.html#target-spot-peaks"
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="trial_windows.html"
+       href="classroom_pose_estimation/export.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Trial windows</p>
+        <p class="prev-next-title">7. Visualizing &amp; exporting</p>
       </div>
     </a>
     <a class="right-next"
-       href="segment/index.html"
+       href="metadata.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Action segmentation</p>
+        <p class="prev-next-title">Trial metadata</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -608,12 +648,16 @@ reviewed (<a class="reference internal" href="spot/peaks.html#target-spot-peaks"
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-it-works">How it works</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#training">Training</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-labels-as-inputs">Existing labels as inputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#refining-a-deeplabcut-lightningpose-project">Refining a DeepLabCut / LightningPose project</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#extract-frames">Extract Frames</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#refine-pose">Refine Pose</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#saving">Saving</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-a-folder">Checking a folder</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#curation">Curation</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#predicting">Predicting</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
@@ -621,7 +665,7 @@ reviewed (<a class="reference internal" href="spot/peaks.html#target-spot-peaks"
 
   
   <div class="tocsection sourcelink">
-    <a href="../_sources/models/onset_model.md">
+    <a href="../_sources/advanced/refinement.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

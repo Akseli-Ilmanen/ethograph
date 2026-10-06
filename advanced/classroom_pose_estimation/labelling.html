@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>3. Detect — optional, if your animals wear tags &#8212; ethograph</title>
+    <title>1-2. Define keypoints and label frames &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/keypoint_labelling/detect';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/labelling';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/detect.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/labelling.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="5. Fill" href="fill.html" />
-    <link rel="prev" title="1-2. Define keypoints and label frames" href="labelling.html" />
+    <link rel="next" title="3. Detect — optional, if your animals wear tags" href="detect.html" />
+    <link rel="prev" title="Classroom pose estimation" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -387,16 +387,15 @@
 <li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">3. Detect — optional, if your animals wear tags</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">1-2. Define keypoints and label frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
 <li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_imported.html">Refining imported poses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_project.html">Refining a DeepLabCut / LightningPose project</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
@@ -445,9 +444,9 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Keypoint labelling</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Classroom pose estimation</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">3. Detect — optional, if your animals wear tags</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">1-2. Define keypoints and label frames</span></li>
   </ul>
 </nav>
 </div>
@@ -464,167 +463,58 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="detect-optional-if-your-animals-wear-tags">
-<span id="target-detect"></span><h1>3. Detect — optional, if your animals wear tags<a class="headerlink" href="#detect-optional-if-your-animals-wear-tags" title="Link to this heading">#</a></h1>
-<p>A click and a tag detector produce the same kind of thing: a position read off
-the pixels of one specific frame. Ethograph calls both <strong>observations</strong>, and the
-fill interpolates between them — so <strong>any detector composes with any fill
-backend</strong>. Five clicked frames becoming several hundred detected ones is what
-stops optical flow drifting and gives PosePAL far more to fit to.</p>
-<p>Through trial and error I settled on <strong>AprilTag <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code></strong>, which works very
-well on moving 5mm and 10mm wide tags.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> Two smaller families are
-offered alongside it, and Ethograph <strong>prints exactly what it can read</strong> — a
-sheet of tags the detector cannot decode would be a trap.</p>
-<figure class="align-default" id="id3">
-<a class="reference internal image-reference" href="../../_images/apriltags.png"><img alt="Two example tags each from the tag16h5, tag25h9 and tag36h11 AprilTag families" src="../../_images/apriltags.png" style="width: 100%;" />
-</a>
-<figcaption>
-<p><span class="caption-text">Three AprilTag families. The first number is how many data bits a tag carries
-(a 4×4, 5×5 or 6×6 grid of modules); the number after the <code class="docutils literal notranslate"><span class="pre">h</span></code> is the smallest
-Hamming distance between any two valid codes — how many bits have to be misread
-before one ID turns into another <em>valid</em> ID.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
-</figcaption>
-</figure>
+  <section class="tex2jax_ignore mathjax_ignore" id="define-keypoints-and-label-frames">
+<h1>1-2. Define keypoints and label frames<a class="headerlink" href="#define-keypoints-and-label-frames" title="Link to this heading">#</a></h1>
+<section id="define-keypoints">
+<h2>1. Define keypoints<a class="headerlink" href="#define-keypoints" title="Link to this heading">#</a></h2>
+<p>Name the body parts you want to track (beak, left leg, …) and, if there is
+more than one animal, the individuals. Tick <strong>Static</strong> beside a landmark that
+never moves, such as an arena corner: label it once and it is on every frame.</p>
+</section>
+<section id="label-edit">
+<h2>2. Label &amp; Edit<a class="headerlink" href="#label-edit" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>Arm <strong>Sequential</strong> and click the video once per keypoint. Each click places
+the active keypoint and moves on to the next one. <code class="docutils literal notranslate"><span class="pre">Tab</span></code> skips a keypoint
+you cannot see, <code class="docutils literal notranslate"><span class="pre">1</span></code>–<code class="docutils literal notranslate"><span class="pre">9</span></code> switch individual, <code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes,
+<code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> undoes.</p></li>
+<li><p>Press <code class="docutils literal notranslate"><span class="pre">N</span></code> to jump to the next suggested frame and repeat. Labelling every
+frame is wasted effort — neighbouring frames look the same — so aim for
+the default <strong>10 % of frames, roughly every 10th</strong>.</p></li>
+<li><p><strong>Loop</strong> is the other way round: one keypoint, swept across frames. Use it
+to fix a single body part the fill keeps losing.</p></li>
+</ol>
+<p>A <strong>solid</strong> marker is your label; a <strong>hollow</strong> one is a prediction. Click a
+hollow marker to accept it, drag it to correct it.</p>
+<p>Tick <strong>Lock</strong> to pan and zoom without placing points. Switching to another
+tab locks the pointer for you.</p>
+<section id="which-frames-to-label">
+<h3>Which frames to label<a class="headerlink" href="#which-frames-to-label" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
-<tr class="row-odd"><th class="head"><p>Family</p></th>
-<th class="head"><p>Hamming</p></th>
-<th class="head"><p>Grid</p></th>
-<th class="head"><p>Data bits</p></th>
-<th class="head"><p>Unique tags</p></th>
-<th class="head"><p>Modules of paper</p></th>
+<tr class="row-odd"><th class="head"><p>Method</p></th>
+<th class="head"><p>Use it</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong><code class="docutils literal notranslate"><span class="pre">tag36h11</span></code></strong> (default)</p></td>
-<td><p>11</p></td>
-<td><p>6×6</p></td>
-<td><p>36</p></td>
-<td><p>587</p></td>
-<td><p>8</p></td>
+<tr class="row-even"><td><p><strong>Evenly spaced</strong></p></td>
+<td><p>first pass on any clip</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tag25h9</span></code></p></td>
-<td><p>9</p></td>
-<td><p>5×5</p></td>
-<td><p>25</p></td>
-<td><p>35</p></td>
-<td><p>7</p></td>
+<tr class="row-odd"><td><p><strong>Biggest pixel change</strong></p></td>
+<td><p>the animal moves fast and the fill cuts corners</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tag16h5</span></code></p></td>
-<td><p>5</p></td>
-<td><p>4×4</p></td>
-<td><p>16</p></td>
-<td><p>30</p></td>
-<td><p>6</p></td>
+<tr class="row-even"><td><p><strong>Most different frames</strong></p></td>
+<td><p>long clips where the scene changes</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Lowest fill confidence</strong></p></td>
+<td><p>after a fill — see <a class="reference internal" href="correction.html#target-correction-loop"><span class="std std-ref">6. The correction loop</span></a></p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>If your animal is very small and your pixel resolution limited, it may be helpful to take a family with a smaller grid <code class="docutils literal notranslate"><span class="pre">tag16h5</span></code>.
-On the other hand, if those are not limiting factor, then <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code> will give you an orders of magnitude lower false-positive rate and
-a few more distinguishable IDs.</p>
-<section id="print-the-tags-first">
-<h2>Print the tags first<a class="headerlink" href="#print-the-tags-first" title="Link to this heading">#</a></h2>
-<p>The sheet is made on the <strong>start page</strong>, under <strong>🛠 More tools ▸ Print tag
-sheet…</strong> — by the time you are tuning a detector the tags are already on
-the animals. It produces a print-ready vector PDF at a size given in millimetres.</p>
-<p>A sheet is a table of <strong>rows</strong>, so one page can mix sizes and families — a
-handful of big tags and many small ones is the usual rig.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Family</p></th>
-<th class="head"><p>First ID</p></th>
-<th class="head"><p>Count</p></th>
-<th class="head"><p>Tag mm</p></th>
-<th class="head"><p>Min mm</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tag36h11</span></code></p></td>
-<td><p>0</p></td>
-<td><p>24</p></td>
-<td><p>4.0</p></td>
-<td><p>4.2</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tag16h5</span></code></p></td>
-<td><p>0</p></td>
-<td><p>6</p></td>
-<td><p>4.0</p></td>
-<td><p>3.1</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<ul class="simple">
-<li><p><strong>Tag mm</strong> is the printed tag itself, black border included — <em>not</em> the white
-margin around it, which is set for you.</p></li>
-<li><p><strong>Min mm</strong> is a readout, not something you fill in. Give it your <strong>Camera</strong>
-resolution (seeded from the loaded video, and editable — the sheet is often for
-a rig that has not recorded yet) and the <strong>Scene width in view</strong>: how wide the
-frame is in millimetres at the animal’s distance. A tag under its minimum is flagged in red.</p></li>
-</ul>
-<div class="important admonition">
-<p class="admonition-title">Printing — all four of these decide whether it works</p>
-<ul class="simple">
-<li><p><strong>IMPORTANT: Do not crop the white border.</strong> It is not decoration. The detector finds a
-tag by its black border against a <em>lighter surround</em>, so the printed white
-margin is what lets the same tag work on dark fur or paint as well as on pale
-skin. <strong>Cut in the white, never on the black edge.</strong></p></li>
-<li><p><strong>Print at Actual size / 100%</strong> — never “fit to printable area” or “shrink
-oversized pages”. Every sheet carries a 50 mm rule: measure it with calipers,
-and if it does not read 50 mm, reprint rather than adjusting the size to
-compensate.</p></li>
-<li><p><strong>Matte paper, laser, black cartridge only</strong>, toner-save and edge smoothing
-off. Gloss reflects the light source across the border, inkjet wicks, and
-composite black fringes every module edge.</p></li>
-<li><p><strong>Glue to card</strong> so the tag stays flat. A curled tag is not a quad, and the
-detector has nothing to unwarp.</p></li>
-</ul>
-</div>
-<p>If a small size is important for your rig, measure it rather than trusting the readout:
-print one ID at 2.0, 2.5, 3.0, 4.0 and 5.0 mm, photograph the sheet under the
-rig’s own lighting, and adopt the smallest size that detects on every frame plus
-one step of margin.</p>
-</section>
-<section id="tuning">
-<h2>Tuning<a class="headerlink" href="#tuning" title="Link to this heading">#</a></h2>
-<p><strong>Family</strong> must match what you printed — e.g. a <code class="docutils literal notranslate"><span class="pre">tag16h5</span></code> tag will never decode as
-<code class="docutils literal notranslate"><span class="pre">tag36h11</span></code>.</p>
-<p><strong>Downscale</strong> (<code class="docutils literal notranslate"><span class="pre">quad_decimate</span></code>) is how far the frame is shrunk before tags are
-looked for — the real speed-against-size trade. <code class="docutils literal notranslate"><span class="pre">2.0</span></code> runs several times faster
-and needs tags <strong>twice as big</strong>, which is why Ethograph defaults it to <code class="docutils literal notranslate"><span class="pre">1.0</span></code>
-while the underlying library ships <code class="docutils literal notranslate"><span class="pre">2.0</span></code>.</p>
-<p><strong>Sharpening</strong> (<code class="docutils literal notranslate"><span class="pre">decode_sharpening</span></code>, default <code class="docutils literal notranslate"><span class="pre">0.25</span></code>) is applied to the sampled
-bit pattern before it is read. Raise it for motion-blurred or slightly
-out-of-focus tags.</p>
-<p><strong>Detect the four corners too</strong> emits each corner as its own keypoint, on top of
-the tag’s centre. It is for when you want the corner <em>positions</em> themselves —
-you do <strong>not</strong> need it for head direction. Orientation comes free with every
-decode, because a tag is a square: see
-<a class="reference internal" href="export.html"><span class="doc">head direction</span></a>.</p>
-<p><strong>Quality threshold</strong>, on the Run panel, is the decode margin as a fraction of a
-good read. A real tag scores about <code class="docutils literal notranslate"><span class="pre">1.0</span></code> and spurious reads on noise score under
-<code class="docutils literal notranslate"><span class="pre">0.15</span></code>, so the default of <code class="docutils literal notranslate"><span class="pre">0.3</span></code> sits in the gap between them. It is applied as
-results are stored, so retuning it costs nothing within a session.</p>
-</section>
-<section id="running-it">
-<h2>Running it<a class="headerlink" href="#running-it" title="Link to this heading">#</a></h2>
-<p>Choose a range and press <strong>Run detector</strong>. The result joins your labels as
-observations; a detection never overwrites a label, and correcting one is just
-clicking it. Runs are cached next to the video as <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.detections.npz</span></code>, which
-is safe to delete.</p>
-</section>
-<section id="notes">
-<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading">#</a></h2>
 </section>
 </section>
-<hr class="footnotes docutils" />
-<aside class="footnote-list brackets">
-<aside class="footnote brackets" id="apriltag" role="doc-footnote">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
-<p>Detection runs through <a class="reference external" href="https://github.com/pupil-labs/apriltags">pupil-apriltags</a>, a maintained binding to the reference AprilTag 3 C library <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id220" title="Maximilian Krogius, Acshi Haggenmiller, and Edwin Olson. Flexible layouts for fiducial tags. In IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 1898–1903. 2019. doi:10.1109/IROS40897.2019.8967787.">Krogius <em>et al.</em>, 2019</a>]</span>. OpenCV renders the printed tags, since <code class="docutils literal notranslate"><span class="pre">pupil-apriltags</span></code> has no generator.</p>
-</aside>
-</aside>
+</section>
 
 
                 </article>
@@ -637,20 +527,20 @@ is safe to delete.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="labelling.html"
+       href="index.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">1-2. Define keypoints and label frames</p>
+        <p class="prev-next-title">Classroom pose estimation</p>
       </div>
     </a>
     <a class="right-next"
-       href="fill.html"
+       href="detect.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">5. Fill</p>
+        <p class="prev-next-title">3. Detect — optional, if your animals wear tags</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -673,10 +563,11 @@ is safe to delete.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#print-the-tags-first">Print the tags first</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning">Tuning</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#running-it">Running it</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes">Notes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#define-keypoints">1. Define keypoints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#label-edit">2. Label &amp; Edit</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-frames-to-label">Which frames to label</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
@@ -684,7 +575,7 @@ is safe to delete.</p>
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/keypoint_labelling/detect.md">
+    <a href="../../_sources/advanced/classroom_pose_estimation/labelling.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

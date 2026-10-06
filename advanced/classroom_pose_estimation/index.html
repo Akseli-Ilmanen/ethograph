@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>6. The correction loop &#8212; ethograph</title>
+    <title>Classroom pose estimation &#8212; ethograph</title>
   
   
   
@@ -44,16 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/keypoint_labelling/correction';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/index';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/correction.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/index.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="7. Visualizing &amp; exporting" href="export.html" />
-    <link rel="prev" title="5. Fill" href="fill.html" />
+    <link rel="next" title="1-2. Define keypoints and label frames" href="labelling.html" />
+    <link rel="prev" title="Changepoint correction" href="../changepoints/correction.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -389,16 +387,15 @@
 <li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 current active has-children"><a aria-current="page" class="current reference internal" href="#">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
 <li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">6. The correction loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_imported.html">Refining imported poses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_project.html">Refining a DeepLabCut / LightningPose project</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
@@ -446,10 +443,7 @@
     
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
     
-    
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Keypoint labelling</a></li>
-    
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">6. The correction loop</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Classroom pose estimation</span></li>
   </ul>
 </nav>
 </div>
@@ -466,61 +460,31 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="the-correction-loop">
-<span id="target-correction-loop"></span><h1>6. The correction loop<a class="headerlink" href="#the-correction-loop" title="Link to this heading">#</a></h1>
-<p>The fill is a first draft. The loop that makes it accurate:</p>
-<ol class="arabic simple">
-<li><p><strong>Fill.</strong></p></li>
-<li><p>Set the suggestion method to <strong>Lowest fill confidence</strong> and press <strong>Suggest
-frames</strong>. It ranks each frame by its <em>worst</em> keypoint, so one point the
-tracker lost is enough to bring the frame forward — which is what the points
-table’s per-keypoint <strong>conf</strong> columns then show you when you get there.</p></li>
-<li><p>Correct the worst frames. Clicking a filled point pins it where it is (that
-is how you <em>accept</em> a prediction); dragging it corrects it.</p></li>
-<li><p>Approve the rest. Reviewing a fill is mostly <em>agreeing</em> with it, so agreeing
-is one key: <strong>Approve frame</strong> (<code class="docutils literal notranslate"><span class="pre">Shift+H</span></code>) keeps every predicted point on the
-current frame as your own label.</p></li>
-<li><p><strong>Fill again.</strong> Re-filling is a pure function of your labels, so nothing you
-have not touched drifts further — and everything you approved is now ground
-truth the next fill tracks from rather than re-derives. With PosePAL this
-round of corrections is also more training data, so the fill refits on it
-first: your corrections improve the tracker, not only the frames you fixed.</p></li>
-</ol>
-<p>Confidence is scored <strong>per keypoint</strong>, and the points table shows it that way —
-a <code class="docutils literal notranslate"><span class="pre">conf</span></code> column beside each keypoint’s <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>, rather than one figure for
-the whole row. A row-level average is exactly what hides the problem: nine
-well-tracked points pull a frame with one lost point back into the middle of the
-ranking, when that one point is the only reason to go back at all.</p>
-<p>Confidence means different things per backend, which each <code class="docutils literal notranslate"><span class="pre">conf</span></code> header tooltip
-also spells out. A labelled point always scores 1, and both backends decay from
-there.</p>
-<p><strong>Spline</strong> never reads the pixels, so all it can report is how far it had to
-reach — <span class="math notranslate nohighlight">\(d\)</span> frames to your nearest label of that keypoint:</p>
-<div class="math notranslate nohighlight">
-\[c = e^{-d/10}\]</div>
-<p><strong>Optical flow and PosePAL</strong> track each gap twice, forwards from the label on its
-left and backwards from the one on its right, and score by how far apart the two
-answers land — <span class="math notranslate nohighlight">\(\Delta\)</span> pixels:</p>
-<div class="math notranslate nohighlight">
-\[c = e^{-\Delta/D}\]</div>
-<p>Two independent passes agreeing is the evidence that the point is right; an
-occlusion sends them to different places. A point either pass reports as lost
-scores 0. <span class="math notranslate nohighlight">\(D\)</span> is the <strong>Disagreement tolerance</strong> spin box, in source-video pixels:
-how far the two may drift before the point counts as unreliable. Raise it for
-large or fast animals, lower it to be strict. It changes only the scores, never
-the positions.</p>
-<p>With markers, the same loop starts one step earlier: <strong>Detect</strong>, then set the
-suggestion method to <strong>Where the detector saw nothing</strong> and label those frames by
-hand — the detector is not <em>unsure</em> there, it is <em>absent</em>, so its failures are a
-set of frames rather than a low score.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Your labels are project data, saved to <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.keypoints.json</span></code> next to the
-video — not to app settings, and neither is what each detector label means,
-which is saved in the same file. A cached PosePAL fit sits beside it as
-<code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.posepal.pt</span></code> and a cached detector run as <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.detections.npz</span></code>;
-both are derived data you can delete at the cost of recomputing them.</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="classroom-pose-estimation">
+<h1>Classroom pose estimation<a class="headerlink" href="#classroom-pose-estimation" title="Link to this heading">#</a></h1>
+<p><strong>Tools ▸ Pose tracking (from scratch)…</strong> (or <strong>Label keypoints…</strong> in the Pose
+sidebar) opens a dialog where you label a few frames by clicking the video and
+let a point tracker fill in the rest. No training, no annotated dataset and
+<strong>no GPU</strong>: it runs on the laptops students already have. Film a short clip of
+an animal on your phone, drop it into Ethograph, and you get from a handful of
+clicks to a pose trace within an hour.</p>
+<p>Once the frames are filled, load the result into the GUI and velocity, speed
+and acceleration sit on the same time axis as the video and the sound, so you
+can check the trace against what the animal actually did.
+<a class="reference internal" href="../../examples/create_dataset_cricket.html"><span class="doc">Sound production in philodoptera</span></a> does exactly this with cricket
+leg kinematics and the chirp they produce.</p>
+<section id="the-steps">
+<h2>The steps<a class="headerlink" href="#the-steps" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
+<li class="toctree-l1"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fill.html">5. Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
+</ul>
 </div>
+</section>
 </section>
 
 
@@ -534,20 +498,20 @@ both are derived data you can delete at the cost of recomputing them.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="fill.html"
+       href="../changepoints/correction.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">5. Fill</p>
+        <p class="prev-next-title">Changepoint correction</p>
       </div>
     </a>
     <a class="right-next"
-       href="export.html"
+       href="labelling.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">7. Visualizing &amp; exporting</p>
+        <p class="prev-next-title">1-2. Define keypoints and label frames</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -563,10 +527,22 @@ both are derived data you can delete at the cost of recomputing them.</p>
 
 
   <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-steps">The steps</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/keypoint_labelling/correction.md">
+    <a href="../../_sources/advanced/classroom_pose_estimation/index.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

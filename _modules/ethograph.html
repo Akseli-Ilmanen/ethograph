@@ -816,7 +816,7 @@ window.runMermaid = runMermaid;</script>
 
 
 <span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Expose the model pipelines lazily — they import torch, which the base install lacks."""</span>
+<span class="w">    </span><span class="sd">"""Expose the optional pipelines lazily — they import torch or aniposelib, which the base install lacks."""</span>
     <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"segment"</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">ethograph.segment</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">segment</span>
 
@@ -825,6 +825,10 @@ window.runMermaid = runMermaid;</script>
         <span class="kn">import</span><span class="w"> </span><span class="nn">ethograph.spot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">spot</span>
 
         <span class="k">return</span> <span class="n">spot</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"triangulate"</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">ethograph.triangulate</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">triangulate</span>
+
+        <span class="k">return</span> <span class="n">triangulate</span>
     <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"module </span><span class="si">{</span><span class="vm">__name__</span><span class="si">!r}</span><span class="s2"> has no attribute </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
 
 

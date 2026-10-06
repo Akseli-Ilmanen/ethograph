@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Refining imported poses &#8212; ethograph</title>
+    <title>3. Detect — optional, if your animals wear tags &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/keypoint_labelling/refine_imported';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/detect';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/refine_imported.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/detect.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Refining a DeepLabCut / LightningPose project" href="refine_project.html" />
-    <link rel="prev" title="7. Visualizing &amp; exporting" href="export.html" />
+    <link rel="next" title="5. Fill" href="fill.html" />
+    <link rel="prev" title="1-2. Define keypoints and label frames" href="labelling.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -387,16 +387,15 @@
 <li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
-<li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">3. Detect — optional, if your animals wear tags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
 <li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Refining imported poses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_project.html">Refining a DeepLabCut / LightningPose project</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
@@ -445,9 +444,9 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Keypoint labelling</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Classroom pose estimation</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Refining imported poses</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">3. Detect — optional, if your animals wear tags</span></li>
   </ul>
 </nav>
 </div>
@@ -464,107 +463,52 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="refining-imported-poses">
-<span id="target-refine-imported"></span><h1>Refining imported poses<a class="headerlink" href="#refining-imported-poses" title="Link to this heading">#</a></h1>
-<p><strong>Tools ▸ Pose refinement (DLC, SLEAP, …)…</strong> corrects a pose file another tool produced —
-DeepLabCut, SLEAP, LightningPose — on the video, and writes the result back
-<strong>in the source format</strong> as <code class="docutils literal notranslate"><span class="pre">{stem}_refined{ext}</span></code> beside the original
-(overwritten on every save — a refined file only gets more refined). Where the
-keypoint labelling dialog starts from nothing on a single video, this one
-starts from your files and follows the loaded session: <strong>multi-trial</strong>, with
-each trial resolving its pose file through the alignment exactly as the pose
-overlay does.</p>
-<p>The dialog <strong>is</strong> the labelling dialog with the Define keypoints and Detect
-tabs removed: the whole <a class="reference internal" href="labelling.html"><span class="doc">Label &amp; Edit tab</span></a> — modes,
-the points table with its funnel filters, frame suggestions, <code class="docutils literal notranslate"><span class="pre">Shift+H</span></code>
-approval, <code class="docutils literal notranslate"><span class="pre">Tab</span></code>/<code class="docutils literal notranslate"><span class="pre">1</span></code>–<code class="docutils literal notranslate"><span class="pre">9</span></code>/<code class="docutils literal notranslate"><span class="pre">Backspace</span></code>/<code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> — works unchanged. The file’s
-keypoints and individuals <em>are</em> the schema; its points appear as machine
-observations (hollow with a pip, <code class="docutils literal notranslate"><span class="pre">Detected</span></code> in the table’s Source column),
-your clicks are labels (solid), and clicking a file point pins your correction
-over it exactly as in the correction loop.</p>
-<section id="cameras">
-<h2>Cameras<a class="headerlink" href="#cameras" title="Link to this heading">#</a></h2>
-<p>Every <strong>open camera view</strong> (primary or extra) is a live editing context with
-its own file, its own labels and its own <code class="docutils literal notranslate"><span class="pre">_refined</span></code> copy — all held in memory
-for the whole trial. The <strong>Camera</strong> combo at the top only picks which one the
-canvas edits: switching discards nothing, so labels can never be lost to a
-camera switch, and the context line names the camera being edited plus any
-others carrying unsaved edits. The points table shows the selected camera’s
-file; clicks land on that camera’s view. (While an <em>extra</em> view is being
-edited, its file points are drawn by both its pose overlay and the editing
-overlay — a known cosmetic double.)</p>
-</section>
-<section id="fill">
-<h2>Fill<a class="headerlink" href="#fill" title="Link to this heading">#</a></h2>
-<p><strong>Fill runs for every open camera</strong>, each from its own labels and its own
-file — the same stretch is usually wrong on both views. The scope choice:</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="detect-optional-if-your-animals-wear-tags">
+<span id="target-detect"></span><h1>3. Detect — optional, if your animals wear tags<a class="headerlink" href="#detect-optional-if-your-animals-wear-tags" title="Link to this heading">#</a></h1>
+<p>If your animals carry printed AprilTags, a detector can read the tag position
+off every frame on its own. A detection counts exactly like a click, so the
+fill interpolates between both. Skip this page if there are no tags.</p>
+<section id="print-the-tags">
+<h2>Print the tags<a class="headerlink" href="#print-the-tags" title="Link to this heading">#</a></h2>
+<p>On the start page, open <strong>🛠 More tools ▸ Print tag sheet…</strong>, keep the default
+family <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code>, set the tag size in millimetres and print the PDF.</p>
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../../_images/apriltags.png"><img alt="Two example tags each from the tag16h5, tag25h9 and tag36h11 AprilTag families" src="../../_images/apriltags.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">AprilTag families. <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code> is the default; <code class="docutils literal notranslate"><span class="pre">tag16h5</span></code> has a coarser grid for
+very small animals or low-resolution video.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<div class="important admonition">
+<p class="admonition-title">Printing — all four of these matter</p>
 <ul class="simple">
-<li><p><strong>my labels only</strong> — interpolate between <em>your</em> clicks alone; inside the
-filled span the file’s points are replaced by the fill (for stretches where
-the file is plain wrong), outside they are kept. A camera without clicks of
-yours is skipped — there is nothing to interpolate between.</p></li>
-<li><p><strong>my labels + the file’s points</strong> — the file’s points are trusted
-observations too; the fill only bridges the gaps between them and your
-clicks, and never replaces a file point.</p></li>
+<li><p><strong>Do not cut off the white border.</strong> Cut in the white, never on the black edge.</p></li>
+<li><p><strong>Print at 100 % / actual size.</strong> Each sheet has a 50 mm rule: measure it.</p></li>
+<li><p><strong>Matte paper on a laser printer</strong>, black cartridge only.</p></li>
+<li><p><strong>Glue the tag to card</strong> so it stays flat.</p></li>
 </ul>
+</div>
 </section>
-<section id="two-purposes">
-<h2>Two purposes<a class="headerlink" href="#two-purposes" title="Link to this heading">#</a></h2>
-<p>The <strong>Fill and save</strong> tab starts with a <strong>Purpose</strong> choice, and the section
-below the fill follows it:</p>
-<ul class="simple">
-<li><p><strong>Export for downstream analysis</strong> — the refined pose file, every frame,
-filled frames included. This is the default and what the rest of this page
-describes.</p></li>
-<li><p><strong>Export for pose-estimation training</strong> — only the frames you clicked on,
-written as training labels for the next model (below). Under this purpose
-the fill group reads <em>not recommended</em> and asks before running: a filled
-point is an interpolation, never exported as a label, and a detector
-trained on one learns the interpolation’s mistakes as ground truth. The
-refined copies are still saved as usual.</p></li>
-</ul>
-<section id="training-labels">
-<h3>Training labels<a class="headerlink" href="#training-labels" title="Link to this heading">#</a></h3>
-<p>Every open camera exports <strong>the frames carrying at least one click of
-yours</strong>; each frame’s pose is your points over the file’s own — the frame as
-you reviewed and corrected it — and never a filled point. Approve a frame
-(<code class="docutils literal notranslate"><span class="pre">Shift+H</span></code>) to make all of its file points yours. Two layouts, both
-<strong>additive</strong>: exporting into a folder that already holds labels keeps every
-existing frame and replaces only the frames exported again, so a project
-grows over sessions.</p>
-<ul class="simple">
-<li><p><strong>DeepLabCut CollectedData</strong> — pick the DeepLabCut <em>project</em> folder (the one
-with <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>): frames land under <code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code> as
-<code class="docutils literal notranslate"><span class="pre">img&lt;frame&gt;.png</span></code> plus <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;.csv</span></code> and <code class="docutils literal notranslate"><span class="pre">.h5</span></code>, the layout
-<code class="docutils literal notranslate"><span class="pre">label_frames</span></code> produces, so <code class="docutils literal notranslate"><span class="pre">create_training_dataset</span></code> picks them up with the
-labels already there. The project’s <code class="docutils literal notranslate"><span class="pre">scorer</span></code> and single/multi-animal setting
-are read from its config; a folder that already holds a <code class="docutils literal notranslate"><span class="pre">CollectedData</span></code>
-file dictates both. Any other folder gets <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;/</span></code> directly.</p></li>
-<li><p><strong>COCO</strong> — one <code class="docutils literal notranslate"><span class="pre">images/</span></code> folder and one <code class="docutils literal notranslate"><span class="pre">annotations.json</span></code> with a single
-category whose <code class="docutils literal notranslate"><span class="pre">keypoints</span></code> are the file’s, one annotation per (image,
-individual), visibility 2 for a labelled point and 0 for a missing one.</p></li>
-</ul>
-<p>Frame images are decoded from the video at full resolution, and the image
-index is the frame’s index on the <strong>video</strong>, so several trials cut from one
-recording share a folder without colliding.</p>
+<section id="run-the-detector">
+<h2>Run the detector<a class="headerlink" href="#run-the-detector" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Family</strong> must match what you printed.</p></li>
+<li><p>Leave <strong>Downscale</strong> at <code class="docutils literal notranslate"><span class="pre">1.0</span></code>; raise <strong>Sharpening</strong> if the video is blurry.</p></li>
+<li><p>Choose a frame range and press <strong>Run detector</strong>.</p></li>
+</ol>
+<p>Detections appear as hollow markers with a dot. The first time, Ethograph asks
+which tag ID is which keypoint and individual; correct any wrong guess in the
+table. A detection never overwrites your own label.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
 </section>
 </section>
-<section id="saving">
-<h2>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h2>
-<p>There is no export step under the analysis purpose — <strong>Save always means every edited camera</strong>. A
-camera’s <code class="docutils literal notranslate"><span class="pre">_refined</span></code> copy is created the moment it is first edited, and
-rewritten on every trial switch, on <strong>Save refined now</strong>, and on close — an
-untouched camera writes nothing, so the output folder records exactly what
-was reviewed. A <code class="docutils literal notranslate"><span class="pre">.slp</span></code> source refines to an analysis <code class="docutils literal notranslate"><span class="pre">.h5</span></code> (movement has no
-SLEAP project writer). Editing one trial of a session-wide pose file rewrites
-only that trial’s window; the rest of the file round-trips verbatim.</p>
-<p>Your own clicks are additionally kept in <code class="docutils literal notranslate"><span class="pre">{pose</span> <span class="pre">file}.refine.json</span></code> beside the
-source — written <strong>before</strong> every refined-file write, so a failed write can
-never take the labels with it. Reopening loads the <code class="docutils literal notranslate"><span class="pre">_refined</span></code> copy when one
-exists plus the sidecar, so the work resumes with your points still marked as
-yours.</p>
-</section>
-</section>
+<hr class="footnotes docutils" />
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="apriltag" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Detection runs through <a class="reference external" href="https://github.com/pupil-labs/apriltags">pupil-apriltags</a>, a binding to the AprilTag 3 library <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../../community/references.html#id217" title="Maximilian Krogius, Acshi Haggenmiller, and Edwin Olson. Flexible layouts for fiducial tags. In IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 1898–1903. 2019. doi:10.1109/IROS40897.2019.8967787.">Krogius <em>et al.</em>, 2019</a>]</span>.</p>
+</aside>
+</aside>
 
 
                 </article>
@@ -577,20 +521,20 @@ yours.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="export.html"
+       href="labelling.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">7. Visualizing &amp; exporting</p>
+        <p class="prev-next-title">1-2. Define keypoints and label frames</p>
       </div>
     </a>
     <a class="right-next"
-       href="refine_project.html"
+       href="fill.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Refining a DeepLabCut / LightningPose project</p>
+        <p class="prev-next-title">5. Fill</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -613,13 +557,8 @@ yours.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cameras">Cameras</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fill">Fill</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-purposes">Two purposes</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#training-labels">Training labels</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#saving">Saving</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#print-the-tags">Print the tags</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-the-detector">Run the detector</a></li>
 </ul>
   </nav></div>
 
@@ -627,7 +566,7 @@ yours.</p>
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/keypoint_labelling/refine_imported.md">
+    <a href="../../_sources/advanced/classroom_pose_estimation/detect.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

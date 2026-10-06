@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Refining a DeepLabCut / LightningPose project &#8212; ethograph</title>
+    <title>5. Fill &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/keypoint_labelling/refine_project';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/fill';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/refine_project.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/fill.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Trial metadata" href="../metadata.html" />
-    <link rel="prev" title="Refining imported poses" href="refine_imported.html" />
+    <link rel="next" title="6. The correction loop" href="correction.html" />
+    <link rel="prev" title="3. Detect — optional, if your animals wear tags" href="detect.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -387,16 +387,15 @@
 <li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
 <li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
-<li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">5. Fill</a></li>
 <li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_imported.html">Refining imported poses</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">Refining a DeepLabCut / LightningPose project</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
@@ -445,9 +444,9 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Keypoint labelling</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Classroom pose estimation</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Refining a DeepLabCut / LightningPose project</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">5. Fill</span></li>
   </ul>
 </nav>
 </div>
@@ -464,122 +463,40 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="refining-a-deeplabcut-lightningpose-project">
-<span id="target-refine-project"></span><h1>Refining a DeepLabCut / LightningPose project<a class="headerlink" href="#refining-a-deeplabcut-lightningpose-project" title="Link to this heading">#</a></h1>
-<p><strong>Start page ▸ More tools ▸ Refine DLC / LightningPose training data…</strong> opens a pose
-project <em>folder</em> — the one with <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code> — and turns it
-into two views of the same training set. Where <a class="reference internal" href="refine_imported.html"><span class="doc">Refining imported poses</span></a>
-corrects a pose file inside a session, this works on the project the way the
-pose tool itself lays it out, and writes back only what the tool reads:
-PNGs under <code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code> and the labels table beside them.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/
-├── config.yaml                  DeepLabCut: scorer, bodyparts, individuals
-├── CollectedData.csv            LightningPose: one labels table for every video
-├── labeled-data/
-│   └── &lt;video&gt;/                 the training frames of one video
-│       ├── img00012.png
-│       └── CollectedData_&lt;scorer&gt;.csv / .h5      DeepLabCut: one table per video
-└── videos/
-    ├── &lt;video&gt;.mp4
-    └── &lt;video&gt;DLC_&lt;model&gt;.h5    the model's predictions on the whole video
-</pre></div>
-</div>
-<p>The folder must hold both <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>; anything else is
-refused with the missing name. A DeepLabCut config fixes the <strong>scorer</strong> (the
-table has to be <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;</span></code> for <code class="docutils literal notranslate"><span class="pre">create_training_dataset</span></code> to
-find it); a project without one — LightningPose — asks who is labelling, and
-remembers the name.</p>
-<p>The top bar is reduced to the two stages, <strong>Docs</strong> and <strong>Help</strong>. Everything
-about sessions and models is gone because there is no session here: each
-stage is its own folder under <code class="docutils literal notranslate"><span class="pre">&lt;project&gt;/.ethograph/</span></code>, with its own
-alignment, labels and layout, so navigation, the trials table and the
-green/red curated colouring work exactly as in any session.</p>
-<section id="extract-frames">
-<h2>Extract Frames<a class="headerlink" href="#extract-frames" title="Link to this heading">#</a></h2>
-<p>One trial per video in <code class="docutils literal notranslate"><span class="pre">videos/</span></code>, named after the file. A video with
-predictions beside it (<code class="docutils literal notranslate"><span class="pre">&lt;video&gt;DLC_*.h5</span></code>, or <code class="docutils literal notranslate"><span class="pre">video_preds/&lt;video&gt;.csv</span></code>)
-brings them in as features — <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity</span></code>, <code class="docutils literal notranslate"><span class="pre">speed</span></code> —
-and opens with one keypoint’s position (x and y) and speed as line plots
-and every keypoint’s confidence as a heatmap. A video without predictions is still a trial —
-its panels are simply empty.</p>
-<p>The point is to choose frames off those curves rather than by scrubbing.
-The Labels section holds two classes:</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="fill">
+<h1>5. Fill<a class="headerlink" href="#fill" title="Link to this heading">#</a></h1>
+<p>Press <strong>Fill frames between labels</strong>. Every frame between your first and last
+label gets a position; your own labels are never changed, and frames outside
+that span stay empty.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
-<tr class="row-odd"><th class="head"><p>Key</p></th>
-<th class="head"><p>Class</p></th>
-<th class="head"><p>What it marks</p></th>
+<tr class="row-odd"><th class="head"><p>Backend</p></th>
+<th class="head"><p>When</p></th>
+<th class="head"><p>Cost</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
-<td><p><strong>ExtractSegment</strong> (state)</p></td>
-<td><p>a stretch worth sampling from: two clicks on a plot</p></td>
+<tr class="row-even"><td><p><strong>Spline</strong> (default)</p></td>
+<td><p>smooth motion, labels close together</p></td>
+<td><p>instant</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
-<td><p><strong>ExtractFrame</strong> (point)</p></td>
-<td><p>the frame on screen, taken as it is</p></td>
+<tr class="row-odd"><td><p><strong>Optical flow</strong></p></td>
+<td><p>fast turns, wingbeats — anything that is not a smooth curve between two labels</p></td>
+<td><p>about video speed</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Below them, how a segment is sampled — <strong>Uniform</strong> (evenly spaced) or
-<strong>Diverse</strong> (one frame per k-means cluster of thumbnails, DeepLabCut’s
-method) — and the <strong>coverage</strong>, the share of a segment’s frames to take.
-Point events are always taken.</p>
-<p><strong>Extract frames from this video</strong> writes them as <code class="docutils literal notranslate"><span class="pre">img&lt;frame&gt;.png</span></code> into
-<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code>, numbered by their index on the video so a second
-extraction from the same video adds to the folder, and adds a row per frame
-to the labels table <strong>prefilled with the model’s prediction</strong> — the frame is
-reviewed, not labelled from nothing. Rows already in the table are kept.</p>
+<p>Neither needs a GPU. Start with the spline and switch to optical flow if the
+filled points cut corners.<a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
 </section>
-<section id="refine-pose">
-<h2>Refine Pose<a class="headerlink" href="#refine-pose" title="Link to this heading">#</a></h2>
-<p>One trial per folder in <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>, the folder standing in for a video:
-its images in natural order, one frame per image, on an image-sequence clock
-(one image per second, so the time axis reads as the image index). No
-features are shown — the selection was made in the other stage, and every
-frame here is to be reviewed.</p>
-<p>The Labels section is the <a class="reference internal" href="labelling.html"><span class="doc">Label &amp; Edit tab</span></a> of the
-keypoint labelling dialog with Sequential already armed: every row of the
-table is a solid, draggable label; <code class="docutils literal notranslate"><span class="pre">Tab</span></code> cycles keypoints, <code class="docutils literal notranslate"><span class="pre">1</span></code>–<code class="docutils literal notranslate"><span class="pre">9</span></code> pick the
-individual, <code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes, <code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> undoes. There is no fill, no
-detect and no export tab — the table <em>is</em> the export.</p>
-<p><strong>Static keypoints</strong> sit in the panel between the mode buttons and the
-table. Tick a
-landmark that never moves (a table corner, a fixed marker); it turns bold
-and pinned in the list. Label every static keypoint once on any frame, then
-<strong>Propagate static landmarks from this frame to all frames</strong> copies their
-positions on the frame on screen to every frame of the folder, so only the
-moving keypoints are left to place elsewhere. Static keypoints are
-remembered per project: the next folder starts with them in place.</p>
-<section id="saving">
-<h3>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h3>
-<p>Edits go back to <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;.csv</span></code> and its <code class="docutils literal notranslate"><span class="pre">.h5</span></code> twin (or the
-root <code class="docutils literal notranslate"><span class="pre">CollectedData.csv</span></code> of a LightningPose project) a few seconds after the
-last change, when you move to another folder, on <strong>Save labels now</strong>, when
-you switch stage and when the window closes — never per drag, since the
-<code class="docutils literal notranslate"><span class="pre">.h5</span></code> rewrite is not free and a half-written table is worse than a stale one.
-The line under the button says whether the table holds unsaved edits.</p>
-</section>
-<section id="checking-a-folder">
-<h3>Checking a folder<a class="headerlink" href="#checking-a-folder" title="Link to this heading">#</a></h3>
-<p><strong>Check labels</strong> writes every frame of the folder with its labels drawn on
-— one colour per keypoint, the config’s skeleton and dot size — into
-<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;_labeled/</span></code>, the folder DeepLabCut’s own <code class="docutils literal notranslate"><span class="pre">check_labels</span></code>
-produces, so the reviewed poses can be looked over in any image viewer. A
-<code class="docutils literal notranslate"><span class="pre">_labeled</span></code> folder is never a trial.</p>
-</section>
-<section id="curation">
-<h3>Curation<a class="headerlink" href="#curation" title="Link to this heading">#</a></h3>
-<p>A folder is a trial, and a trial is curated when every frame of it has been
-reviewed. <strong>Going to the next folder marks this one curated</strong> is on by
-default; <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> curates by hand. The verdict lives in the stage’s
-<code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> <code class="docutils literal notranslate"><span class="pre">curated</span></code> column and colours the trial green in the
-navigation, exactly like a curated session trial.</p>
-</section>
-</section>
-</section>
+<hr class="footnotes docutils" />
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Spline: monotone cubic interpolation <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../../community/references.html#id218" title="F. N. Fritsch and R. E. Carlson. Monotone piecewise cubic interpolation. SIAM Journal on Numerical Analysis, 17(2):238–246, 1980. doi:10.1137/0717021.">Fritsch and Carlson, 1980</a>]</span>. Optical flow: pyramidal Lucas–Kanade <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../../community/references.html#id220" title="Jean-Yves Bouguet. Pyramidal implementation of the lucas kanade feature tracker. 2001. URL: https://robots.stanford.edu/cs223b04/algo_tracking.pdf.">Bouguet, 2001</a>, <a class="reference internal" href="../../community/references.html#id219" title="Bruce D. Lucas and Takeo Kanade. An iterative image registration technique with an application to stereo vision. In Proceedings of the 7th International Joint Conference on Artificial Intelligence (IJCAI), 674–679. 1981. URL: https://www.ri.cmu.edu/pub_files/pub3/lucas_bruce_d_1981_1/lucas_bruce_d_1981_1.pdf.">Lucas and Kanade, 1981</a>]</span>, tracked forwards and backwards across each gap.</p>
+</aside>
+</aside>
 
 
                 </article>
@@ -592,20 +509,20 @@ navigation, exactly like a curated session trial.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="refine_imported.html"
+       href="detect.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Refining imported poses</p>
+        <p class="prev-next-title">3. Detect — optional, if your animals wear tags</p>
       </div>
     </a>
     <a class="right-next"
-       href="../metadata.html"
+       href="correction.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Trial metadata</p>
+        <p class="prev-next-title">6. The correction loop</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -621,28 +538,10 @@ navigation, exactly like a curated session trial.</p>
 
 
   <div class="sidebar-secondary-item">
-<div
-    id="pst-page-navigation-heading-2"
-    class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> On this page
-  </div>
-  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extract-frames">Extract Frames</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#refine-pose">Refine Pose</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#saving">Saving</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-a-folder">Checking a folder</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#curation">Curation</a></li>
-</ul>
-</li>
-</ul>
-  </nav></div>
-
-  <div class="sidebar-secondary-item">
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/keypoint_labelling/refine_project.md">
+    <a href="../../_sources/advanced/classroom_pose_estimation/fill.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

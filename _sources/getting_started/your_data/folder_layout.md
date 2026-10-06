@@ -17,6 +17,7 @@ my_project/                            # chosen on the start page
     │
     ├── skeleton/                      # one YAML per skeleton (crow.yaml, mouse.yaml, …)
     ├── space/                         # reference geometries for the Space plot, one YAML each
+    ├── calibration/                   # camera calibrations for 3D, one aniposelib .toml per rig
     ├── workflows/                     # curation workflows
     ├── wizard/                        # Data wizard notebooks, one per rig
     ├── segment/

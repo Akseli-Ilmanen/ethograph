@@ -44,13 +44,13 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/keypoint_labelling/export';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/export';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/keypoint_labelling/export.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/export.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Refining imported poses" href="refine_imported.html" />
+    <link rel="next" title="Refinement" href="../refinement.html" />
     <link rel="prev" title="6. The correction loop" href="correction.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -387,16 +387,15 @@
 <li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Keypoint labelling</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
 <li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
 <li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">7. Visualizing &amp; exporting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_imported.html">Refining imported poses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refine_project.html">Refining a DeepLabCut / LightningPose project</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
@@ -445,7 +444,7 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
     
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Keypoint labelling</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Classroom pose estimation</a></li>
     
     <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">7. Visualizing &amp; exporting</span></li>
   </ul>
@@ -466,33 +465,22 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="visualizing-exporting">
 <h1>7. Visualizing &amp; exporting<a class="headerlink" href="#visualizing-exporting" title="Link to this heading">#</a></h1>
-<ul>
-<li><p><strong>Load into the GUI</strong> — the keypoints become the session’s features, and a
-copy is saved beside your video as <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.keypoints.nc</span></code>.</p>
-<p>Nothing is grafted onto the dataset you had open: the keypoints <em>are</em> a
-dataset, so they replace what serves features, and <code class="docutils literal notranslate"><span class="pre">keypoint</span></code> and <code class="docutils literal notranslate"><span class="pre">individual</span></code>
-arrive as ordinary dimensions you pick in the right sidebar next to <code class="docutils literal notranslate"><span class="pre">space</span></code>
-(x/y). Your video, audio, panels and layout are untouched — only the data
-under them changes.</p>
-<p>A feature plot draws one line per value of <em>one</em> dimension, so picking a
-keypoint feature pins the rest automatically; the <strong>Space / Keypoint /
-Individual</strong> dropdowns change which one is free. If a panel looks empty, that
-is the first thing to check.</p>
-</li>
-<li><p><strong>Head direction (from marker orientation)</strong> — TODO replace with visual example.</p></li>
+<ul class="simple">
+<li><p><strong>Load into the GUI</strong> — the keypoints become the session’s features, saved
+beside your video as <code class="docutils literal notranslate"><span class="pre">&lt;video&gt;.keypoints.nc</span></code>. Pick <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity</span></code>,
+<code class="docutils literal notranslate"><span class="pre">speed</span></code> or <code class="docutils literal notranslate"><span class="pre">acceleration</span></code> in the right sidebar; the <strong>Keypoint</strong> and
+<strong>Individual</strong> dropdowns choose which one the plot shows. If a panel looks
+empty, check those dropdowns first.</p></li>
+<li><p><strong>Head direction (from marker orientation)</strong> — with tags, tick this to get
+each animal’s heading as a feature too.</p></li>
 <li><p><strong>Export poses (NetCDF)…</strong> — a <a class="reference external" href="https://movement.neuroinformatics.dev">movement</a>-compatible
-poses dataset covering every frame of the video; frames outside the filled
-span carry <code class="docutils literal notranslate"><span class="pre">NaN</span></code> position and <code class="docutils literal notranslate"><span class="pre">NaN</span></code> confidence, which is how movement
-represents a missing point (see <a class="reference internal" href="fill.html#target-labelled-span"><span class="std std-ref">Everything happens between your labels</span></a>). Head direction,
-if ticked, is written alongside <code class="docutils literal notranslate"><span class="pre">position</span></code> as <code class="docutils literal notranslate"><span class="pre">head_direction</span></code> and <code class="docutils literal notranslate"><span class="pre">heading</span></code>.</p></li>
+file covering every frame of the video; frames outside the filled span are
+<code class="docutils literal notranslate"><span class="pre">NaN</span></code>.</p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Velocity, speed and acceleration are measured between the frames a point was
-actually <em>seen</em> on — labelled or filled. With a handful of labels and no fill
-that means one value per labelled frame (the average velocity across each gap)
-and <code class="docutils literal notranslate"><span class="pre">NaN</span></code> in between, rather than nothing at all. Run <strong>Fill</strong> first if you want
-them frame by frame.</p>
+<p>Velocity, speed and acceleration are computed between the frames a point was
+seen on. Run <strong>Fill</strong> first if you want them frame by frame.</p>
 </div>
 </section>
 
@@ -516,11 +504,11 @@ them frame by frame.</p>
       </div>
     </a>
     <a class="right-next"
-       href="refine_imported.html"
+       href="../refinement.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Refining imported poses</p>
+        <p class="prev-next-title">Refinement</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -539,7 +527,7 @@ them frame by frame.</p>
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/keypoint_labelling/export.md">
+    <a href="../../_sources/advanced/classroom_pose_estimation/export.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

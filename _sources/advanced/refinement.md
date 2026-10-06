@@ -1,12 +1,35 @@
-(target-refine-project)=
-# Refining a DeepLabCut / LightningPose project
+(target-refinement)=
+# Refinement
+
+You end up here in one of two situations: you want a **better DeepLabCut or
+LightningPose model**, or you have a pose file and want to **edit it**. The
+first is what Ethograph's pose-project mode is for, below. For the second,
+Ethograph does not carry an editor of its own — use the movement GUI, which
+does it well:
+
+- the [movement napari GUI](https://movement.neuroinformatics.dev/latest/user_guide/gui.html)
+  — load a pose file, inspect and move points on the video;
+- the [edit widget](https://neuroinformatics.dev/blog/gsoc_2026_movement_edit_widget.html)
+  built for it, with drag-to-correct and per-keypoint editing;
+- [this fork](https://github.com/Akseli-Ilmanen/movement/tree/napari-interpolate-edit)
+  adds interpolation and bulk editing across a stretch of frames.
+
+## Refining a DeepLabCut / LightningPose project
 
 **Start page ▸ More tools ▸ Refine DLC / LightningPose training data…** opens a pose
 project *folder* — the one with `videos/` and `labeled-data/` — and turns it
-into two views of the same training set. Where {doc}`refine_imported`
-corrects a pose file inside a session, this works on the project the way the
-pose tool itself lays it out, and writes back only what the tool reads:
-PNGs under `labeled-data/<video>/` and the labels table beside them.
+into two views of the same training set: pick frames worth labelling off the
+model's own prediction curves, then review the poses on those frames. It works
+on the project the way the pose tool itself lays it out, and writes back only
+what the tool reads: PNGs under `labeled-data/<video>/` and the labels table
+beside them.
+
+```{tip}
+The mode is not tied to a model you trained with DeepLabCut: any project
+folder in this layout works. A custom model with no labelling GUI of its own
+can be trained from a DeepLabCut `CollectedData` table you review here — the
+`labeled-data/` folder is the training set, whatever consumes it.
+```
 
 ```
 my_project/
@@ -33,7 +56,7 @@ stage is its own folder under `<project>/.ethograph/`, with its own
 alignment, labels and layout, so navigation, the trials table and the
 green/red curated colouring work exactly as in any session.
 
-## Extract Frames
+### Extract Frames
 
 One trial per video in `videos/`, named after the file. A video with
 predictions beside it (`<video>DLC_*.h5`, or `video_preds/<video>.csv`)
@@ -61,7 +84,7 @@ extraction from the same video adds to the folder, and adds a row per frame
 to the labels table **prefilled with the model's prediction** — the frame is
 reviewed, not labelled from nothing. Rows already in the table are kept.
 
-## Refine Pose
+### Refine Pose
 
 One trial per folder in `labeled-data/`, the folder standing in for a video:
 its images in natural order, one frame per image, on an image-sequence clock
@@ -69,8 +92,8 @@ its images in natural order, one frame per image, on an image-sequence clock
 features are shown — the selection was made in the other stage, and every
 frame here is to be reviewed.
 
-The Labels section is the {doc}`Label & Edit tab <labelling>` of the
-keypoint labelling dialog with Sequential already armed: every row of the
+The Labels section is the {doc}`Label & Edit tab <classroom_pose_estimation/labelling>` of the
+pose estimation dialog with Sequential already armed: every row of the
 table is a solid, draggable label; `Tab` cycles keypoints, `1`–`9` pick the
 individual, `Backspace` deletes, `Ctrl+Z` undoes. There is no fill, no
 detect and no export tab — the table *is* the export.
@@ -84,7 +107,7 @@ positions on the frame on screen to every frame of the folder, so only the
 moving keypoints are left to place elsewhere. Static keypoints are
 remembered per project: the next folder starts with them in place.
 
-### Saving
+#### Saving
 
 Edits go back to `CollectedData_<scorer>.csv` and its `.h5` twin (or the
 root `CollectedData.csv` of a LightningPose project) a few seconds after the
@@ -93,7 +116,7 @@ you switch stage and when the window closes — never per drag, since the
 `.h5` rewrite is not free and a half-written table is worse than a stale one.
 The line under the button says whether the table holds unsaved edits.
 
-### Checking a folder
+#### Checking a folder
 
 **Check labels** writes every frame of the folder with its labels drawn on
 — one colour per keypoint, the config's skeleton and dot size — into
@@ -101,7 +124,7 @@ The line under the button says whether the table holds unsaved edits.
 produces, so the reviewed poses can be looked over in any image viewer. A
 `_labeled` folder is never a trial.
 
-### Curation
+#### Curation
 
 A folder is a trial, and a trial is curated when every frame of it has been
 reviewed. **Going to the next folder marks this one curated** is on by
