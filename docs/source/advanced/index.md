@@ -20,12 +20,19 @@ Per-trial conditions (metadata table) and the trials table filter UI.
 Detection methods (kinematic, audio, ruptures) and label-boundary correction.
 :::
 
-:::{grid-item-card} {fas}`crosshairs` Keypoint labelling
-:link: keypoint_labelling/index
+:::{grid-item-card} {fas}`crosshairs` Classroom pose estimation
+:link: classroom_pose_estimation/index
 :link-type: doc
 
-Labelling keypoints by clicking the video, the fill backends (spline, optical
-flow, PosePAL), and when to train a detector instead.
+Pose estimation without a GPU: click a few frames, let a tracker fill the
+rest, correct, export.
+:::
+
+:::{grid-item-card} {fas}`pen-to-square` Refinement
+:link: refinement
+:link-type: doc
+
+Reviewing a DeepLabCut / LightningPose training set, or editing a pose file.
 :::
 
 :::{grid-item-card} {fas}`play` Video & Audio playback
@@ -56,7 +63,8 @@ Common issues and fixes.
 :hidden:
 
 changepoints/index
-keypoint_labelling/index
+classroom_pose_estimation/index
+refinement
 metadata
 playback
 shortcuts

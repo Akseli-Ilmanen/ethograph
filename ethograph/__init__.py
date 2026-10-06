@@ -40,7 +40,7 @@ from ethograph.utils.xr_utils import get_ds_duration, get_time_coord, sel_valid
 
 
 def __getattr__(name: str):
-    """Expose the model pipelines lazily — they import torch, which the base install lacks."""
+    """Expose the optional pipelines lazily — they import torch or aniposelib, which the base install lacks."""
     if name == "segment":
         import ethograph.segment as segment
 
@@ -49,6 +49,10 @@ def __getattr__(name: str):
         import ethograph.spot as spot
 
         return spot
+    if name == "triangulate":
+        import ethograph.triangulate as triangulate
+
+        return triangulate
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

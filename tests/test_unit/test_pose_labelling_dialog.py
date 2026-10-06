@@ -964,7 +964,6 @@ def test_the_methods_are_ordered_by_when_they_apply(dialog):
         "uniform",
         "motion",
         "diverse",
-        "detection_gaps",
         "uncertain",
     ]
 
@@ -1450,30 +1449,6 @@ def test_the_disagreement_tolerance_is_remembered(dialog):
     assert dialog.app_state.labelling_disagreement_px == 25.0
 
 
-def test_custom_weights_belong_to_posepal(dialog):
-    """Only PosePAL loads a state dict — the others have nothing to point at."""
-    combo = dialog.backend_combo
-    combo.setCurrentIndex(combo.findData("flow"))
-    assert dialog.checkpoint_row.isHidden() is True
-
-    combo.setCurrentIndex(combo.findData(dialog_module.POSEPAL_BACKEND))
-    assert dialog.checkpoint_row.isHidden() is False
-
-
-def test_custom_weights_are_remembered(dialog, tmp_path):
-    """The stock checkpoint is a default: fine-tuned weights must not mean editing pose_fill."""
-    weights = tmp_path / "animals.pth"
-    dialog.checkpoint_edit.setText(str(weights))
-    dialog.checkpoint_edit.editingFinished.emit()
-    assert dialog.app_state.labelling_cotracker_checkpoint == str(weights)
-
-
-def test_no_custom_weights_means_the_stock_checkpoint(dialog):
-    """Empty is the default, not a path — build_backend must see None, not ''."""
-    assert dialog.app_state.labelling_cotracker_checkpoint == ""
-    assert (dialog.app_state.labelling_cotracker_checkpoint or None) is None
-
-
 def test_the_confidence_columns_are_empty_before_a_fill(dialog):
     """There is nothing to be confident about until a backend has run."""
     dialog.store.set_point(3, "beak", (1.0, 2.0))
@@ -1610,147 +1585,6 @@ def test_a_schema_change_drops_the_filters(dialog):
 
     assert dialog.point_proxy.active_filters() == set()
     assert _frames_shown(dialog) == ["4"]
-
-
-# ----------------------------------------------------------------------
-# Test-time refinement
-# ----------------------------------------------------------------------
-
-
-def _select_backend(dialog, key: str) -> bool:
-    index = dialog.backend_combo.findData(key)
-    if index < 0:
-        return False
-    dialog.backend_combo.setCurrentIndex(index)
-    return True
-
-
-def test_the_refinement_row_belongs_to_posepal_alone(dialog):
-    """Fit state is the one thing no other backend has — and it shows nowhere else."""
-    # isHidden(), not isVisibleTo(): the tab holding the Fill group is itself
-    # hidden while another tab is current, which says nothing about this row.
-    _select_backend(dialog, "spline")
-    dialog._refresh_backend_rows()
-    assert dialog.refinement_row.isHidden()
-
-    if not _select_backend(dialog, dialog_module.POSEPAL_BACKEND):
-        pytest.skip("PosePAL not offered on this machine")
-    dialog._refresh_backend_rows()
-    assert not dialog.refinement_row.isHidden()
-
-
-def test_an_unfitted_refinement_says_the_fill_will_fit(dialog):
-    dialog.store.set_point(0, "beak", (1.0, 2.0))
-    assert "Not fitted" in dialog._refinement_status_text()
-
-
-def test_labelling_another_frame_changes_the_refinement_signature(dialog):
-    """A new label must mark a fit stale — it was made from fewer frames."""
-    dialog.store.set_point(0, "beak", (1.0, 2.0))
-    before = dialog._refinement_signature()
-
-    dialog.store.set_point(5, "beak", (3.0, 4.0))
-    assert dialog._refinement_signature() != before
-
-    # ...and moving a point counts just as much as adding one.
-    moved = dialog._refinement_signature()
-    dialog.store.set_point(5, "beak", (9.0, 9.0))
-    assert dialog._refinement_signature() != moved
-
-
-# ----------------------------------------------------------------------
-# The refinement subclass: the labelling dialog minus schema/Detect
-# ----------------------------------------------------------------------
-
-
-def test_refinement_dialog_keeps_label_and_fill_only(qapp, tmp_path):
-    from ethograph.gui.dialog_pose_refinement import SCOPE_MY_LABELS, PoseRefinementDialog
-
-    state = ObservableAppState()
-    state._yaml_path = str(tmp_path / "gui_settings.yaml")
-    dlg = PoseRefinementDialog(_FakeDataWidget(state))
-    try:
-        assert [dlg.tabs.tabText(i) for i in range(dlg.tabs.count())] == [
-            "Label && Edit",
-            "Fill and save",
-        ]
-        # No resolvable pose file in the fake session: an empty store, and the
-        # context label says why — the dialog must still construct and close.
-        assert dlg.store.keypoint_names == []
-        assert "No pose file resolves" in dlg.context_label.text()
-        # The export group retires whole; the fill gains the scope choice.
-        assert dlg.invert_y_check.parentWidget().isHidden()
-        assert dlg.fill_scope_combo.currentData() == SCOPE_MY_LABELS
-        # The Keypoints tree survives tab removal — key handling reads it.
-        assert dlg.tree is not None
-    finally:
-        dlg.close()
-
-
-def test_refinement_purpose_switches_save_for_training_export(qapp, tmp_path, monkeypatch):
-    """One tab, two purposes: the refined file, or the clicked frames as labels.
-
-    Under the training purpose the fill is marked not recommended and asks
-    first — a filled point is never a training label — and declining leaves
-    the store untouched.
-    """
-    from qtpy.QtWidgets import QMessageBox
-
-    from ethograph.gui.dialog_pose_refinement import (
-        FILL_TITLE,
-        FILL_TITLE_TRAINING,
-        PURPOSE_ANALYSIS,
-        PURPOSE_TRAINING,
-        PoseRefinementDialog,
-    )
-
-    state = ObservableAppState()
-    state._yaml_path = str(tmp_path / "gui_settings.yaml")
-    dlg = PoseRefinementDialog(_FakeDataWidget(state))
-    try:
-        fill_group = dlg.backend_combo.parentWidget()
-        assert dlg.purpose_combo.currentData() == PURPOSE_ANALYSIS
-        assert fill_group.title() == FILL_TITLE
-        assert not dlg.save_group.isHidden() and dlg.training_group.isHidden()
-
-        dlg.purpose_combo.setCurrentIndex(dlg.purpose_combo.findData(PURPOSE_TRAINING))
-        assert state.pose_refine_purpose == PURPOSE_TRAINING
-        assert fill_group.title() == FILL_TITLE_TRAINING
-        assert dlg.save_group.isHidden() and not dlg.training_group.isHidden()
-
-        asked = []
-        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: asked.append(a) or QMessageBox.No)
-        filled = []
-        monkeypatch.setattr(dlg, "_ensure_open_contexts", lambda: filled.append(1) or [])
-        dlg._on_fill()
-        assert len(asked) == 1 and not filled
-
-        # A DeepLabCut project folder dictates the scorer.
-        (tmp_path / "config.yaml").write_text("scorer: alice\n")
-        dlg.training_dir_edit.setText(str(tmp_path))
-        dlg._on_training_dir_edited()
-        assert dlg.scorer_edit.text() == "alice"
-        assert state.pose_training_scorer == "alice"
-        assert state.pose_training_export_dir == str(tmp_path)
-    finally:
-        dlg.close()
-
-
-def test_a_schema_change_changes_the_refinement_signature(dialog):
-    """The delta is indexed by point row, so a renamed keypoint invalidates it."""
-    dialog.store.set_point(0, "beak", (1.0, 2.0))
-    before = dialog._refinement_signature()
-    dialog._apply_schema(individuals=["a", "b"])
-    assert dialog._refinement_signature() != before
-
-
-def test_filling_is_the_only_fit_button(dialog):
-    """Fill fits by itself when the labels have changed, so nothing else may.
-
-    A second button for a step the first one already takes reads as a choice
-    about the result, and there has never been one: a refit is a fresh fit.
-    """
-    assert not hasattr(dialog, "refit_btn")
 
 
 class _CancellingBusy:
@@ -2174,29 +2008,6 @@ def test_a_different_threshold_is_a_cache_miss(dialog, tmp_path, monkeypatch):
     dialog._load_detections()
 
     assert dialog.store.detection_frames() == []
-
-
-def test_detection_gaps_needs_a_run(dialog, monkeypatch):
-    warned = []
-    monkeypatch.setattr(dialog_module, "notify", lambda message, level="info": warned.append((level, message)))
-    dialog.suggest_method_combo.setCurrentIndex(dialog.suggest_method_combo.findData("detection_gaps"))
-
-    dialog._on_suggest()
-
-    assert warned and "detector" in warned[0][1]
-
-
-def test_detection_gaps_suggests_the_blind_frames(dialog, monkeypatch):
-    landed = []
-    monkeypatch.setattr(dialog, "_seek", lambda frame: landed.append(int(frame)))
-    for frame in (0, 1, 8, 9):
-        _detections(dialog.store, frame, "beak")
-    dialog.suggest_method_combo.setCurrentIndex(dialog.suggest_method_combo.findData("detection_gaps"))
-    dialog.suggest_percent_spin.setValue(10.0)
-
-    dialog._on_suggest()
-
-    assert landed and 2 <= landed[0] <= 7
 
 
 def test_the_legend_names_the_detected_style_only_after_a_run(dialog):

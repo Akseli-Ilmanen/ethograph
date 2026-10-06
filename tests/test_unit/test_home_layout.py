@@ -35,14 +35,12 @@ class TestAccessors:
 
     def test_every_module_reads_the_accessors(self, home: Path):
         from ethograph.datasets import DOWNLOAD_BASE  # module constant: bound at import, so checked by name
-        from ethograph.gui.pose_fill import cotracker_checkpoint_dir
         from ethograph.io.audio_extract import audio_cache_dir
         from ethograph.labels.onset_model import models_root
         from ethograph.labels.workflow import workflows_root
 
         assert DOWNLOAD_BASE.parts[-2:] == ("cache", "example_data")
         assert audio_cache_dir() == cache_dir("audio_tracks")
-        assert cotracker_checkpoint_dir() == cache_dir("weights") / "cotracker"
         assert models_root() == defaults_dir("runs") / "lightgbm"
         assert workflows_root() == defaults_dir("workflows")
 

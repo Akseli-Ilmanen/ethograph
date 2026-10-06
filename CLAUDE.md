@@ -61,9 +61,10 @@ ethograph/gui/
     plots_{audiotrace,spectrogram,ephystrace,lineplot,heatmap,raster,space,radial,console}.py
     video_sync.py, video_manager.py, audio_clock.py, label_drawing_mixin.py
     pose_render.py            # Pose loading (NWB + movement), PoseDisplayManager
-    pose_{annotate,fill,refine,detect,detect_preview,tagsheet,edit_mixin}.py   # keypoint labelling + fill
+    pose_{annotate,fill,detect,detect_preview,tagsheet,edit_mixin}.py   # keypoint labelling + fill
+    pose_two_view.py, pose_second_view.py, triangulation.py                    # a second camera view → 3D
     box_annotate.py, box_overlay.py, dialog_box_labelling.py                    # box labelling (OCTRON)
-    dialog_{pose_labelling,skeleton_editor,pose_refinement,tag_sheet}.py
+    dialog_{pose_labelling,skeleton_editor,tag_sheet}.py
     pose_project_mode.py, widgets_frame_extract.py, dialog_collected_data.py, pose_static_group.py   # pose-project mode
     dialog_{label_gridview,video_grid,label_table,onset_model,curation_workflow}.py
     right_context.py, main_window.py, top_bar.py, cover_page.py, table_filter.py, file_dialogs.py
@@ -109,6 +110,12 @@ ethograph/spot/               # Pixel point-event spotting (docs: docs/source/mo
     vendored.py               # Driving the vendored E2E-Spot (python -m subprocesses, retries, logs)
     e2espot/                  # Vendored E2E-Spot in upstream's layout — see its NOTICE.md; excluded from ruff/mypy
     msagsm.py                 # MultiScaleGatedShift, written from the paper
+
+ethograph/triangulate/        # 2D points from calibrated cameras → 3D, through aniposelib
+    calibration.py            # {project}/calibration/{name}.toml (aniposelib's own file) + the DeepLabCut 3D import
+    points.py                 # triangulate_points — the one place aniposelib's triangulation is called
+    session.py                # A session's per-camera 2D points → position_3d in its .nc
+    frame.py, geometry.py     # The world frame beside a calibration; static landmarks as a space/ geometry
 
 ethograph/utils/              # io.py, xr_utils.py, sequences.py, device.py, system_check.py
     configkit.py              # Chained YAML + dotted overrides ↔ dataclass tree; segment and spot each pass a Schema
@@ -162,7 +169,7 @@ THIRD_PARTY_NOTICES.md        # Index of every vendored tree and adapted file
 
 `PoseRenderData` unifies file (movement) and NWB (lazy HDF5) poses; filtering acts on masks, never recreates layers. **The video overlays any catalog feature in the camera's pixels** (`io/overlay_source.py`): a time dim, a `space` dim with x/y, at most keypoint/individual dims; `position` is the default; companions by name (`confidence` filters, `shape` means boxes); a pose file is read only when the dataset has nothing in that camera's pixels. **Colour encodes one axis, chosen by the user** (`app_state.pose_color_by`); text labels carry the other.
 
-**Keypoint labelling's binding design rules live in `docs/source/advanced/keypoint_labelling/`. Read them before editing `gui/pose_*.py`, `dialog_pose_labelling.py`, `dialog_tag_sheet.py` or `table_filter.py`.** Scope: one camera, one trial.
+**Keypoint labelling's binding design rules live in `docs/source/advanced/classroom_pose_estimation/`. Read them before editing `gui/pose_*.py`, `dialog_pose_labelling.py`, `dialog_tag_sheet.py` or `table_filter.py`.** Scope: one camera, one trial per store; a second camera view is a second store beside the first, never a camera axis (`gui/pose_second_view.py`).
 
 Skeleton precedence: `skeleton_config_override` (user-drawn) > the project's `config/skeleton/*.yaml` > NWB config; each recoloured with `skeleton_base_color`. **There is no `project.yaml`**: the project folder holds files (vocabulary, configs, skeletons, runs), the user's additions (`extra_individuals`, `ignore_files`) are global settings, and a legacy `project.yaml` is folded into them once (`gui/project.py`). Anchored shapes (`skeleton/shapes.py`) are templates bound to ≥2 control points.
 
@@ -226,6 +233,14 @@ Point events learned from video with the vendored E2E-Spot, scripted like `segme
 - **A prediction's `confidence` is its curve's shape, not its peak height** (`confidence.py`: `focus × ratio`); a curve with no interior peak reads 0 — found nothing, flagged. Curves are written through `labels/onset_curves.py` unchanged.
 - **The pose side is a flat `features:` list, nothing else** (ADR 0008): session variables in segment's `features.columns` spelling, written per trial to `features/{video_id}.npz` and, z-scored on the training split, fed to the model as a second GRU input (run named `{clip}_features`). `graph:`, `fuse:` and a `columns:` key are refused by name. `evaluate(zero_features=True)` measures what the features contribute; `train.features_dropout` is off by default.
 - **Inference always decodes the video straight into the model** (`stream.py`), mirroring `test_e2e.py`'s windows, padding, transform and score accumulation; the frame folder is training's alone. Worker counts are a machine property, never in the YAML. `check_vram` raises before any run the card cannot hold. `inference()` flags an out-of-order trial, never reorders.
+
+### Triangulation (`ethograph/triangulate/`)
+
+Qt-free and scripted like `segment` (`eto.triangulate`). **aniposelib does every piece of multi-view geometry; Ethograph only reads 2D points and writes the result.** The world frame is the one exception, because aniposelib has none.
+
+- **A calibration is a rig's, so it lives in the project**: `{project}/calibration/{name}.toml`, aniposelib's file untouched; one needs no choosing, several are named (`app_state.calibration_name`, per dataset). Its camera names are the alignment's.
+- **2D points are read as the overlay reads them** — a variable with a `camera` dim, else a pose file per camera — and paired on the trial clock, never by frame index.
+- **The result is an ordinary feature**: `position_3d` + `reprojection_error` in the session's `.nc`; the labelling dialog's live 3D points are never stored.
 
 ### Widget orchestration
 

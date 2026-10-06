@@ -94,9 +94,6 @@ import xarray as xr
 #: Sidecar suffix appended to the video path to persist anchors.
 SIDECAR_SUFFIX = ".keypoints.json"
 
-#: Sidecar suffix for a cached test-time refinement (see :mod:`pose_refine`).
-REFINEMENT_SUFFIX = ".posepal.pt"
-
 #: Sidecar suffix for cached detections (see :mod:`pose_detect`).
 DETECTIONS_SUFFIX = ".detections.npz"
 
@@ -109,8 +106,8 @@ KEYPOINTS_DATASET_SUFFIX = ".keypoints.nc"
 #: A *spacing* rather than a count, because what the fill backends care about is
 #: the gap they have to bridge, and a gap is measured in frames. Twenty labels
 #: is dense on a 200-frame clip and nothing on an hour of footage. The figure
-#: follows the ratio CoTracker3 is evaluated at for this task — Pan et al. 2025
-#: report 6 annotated frames for a video of 60 (arXiv:2506.03868).
+#: follows the ratio point trackers are evaluated at for this task — Pan et al.
+#: 2025 report 6 annotated frames for a video of 60 (arXiv:2506.03868).
 RECOMMENDED_LABEL_SHARE = 10.0
 
 #: Name given to the first individual when the user has not named any.
@@ -1630,23 +1627,11 @@ def sidecar_path(video_path: str | Path) -> Path:
     return video.with_name(video.name + SIDECAR_SUFFIX)
 
 
-def refinement_path(video_path: str | Path) -> Path:
-    """Where a test-time refinement for *video_path* is cached.
-
-    Project data like the anchors, and next to them for the same reason: the fit
-    is minutes of GPU time that belongs to this video, so reopening tomorrow must
-    not re-pay it. Lives here rather than in :mod:`pose_refine` so the dialog can
-    find it without importing torch.
-    """
-    video = Path(video_path)
-    return video.with_name(video.name + REFINEMENT_SUFFIX)
-
-
 def detections_path(video_path: str | Path) -> Path:
     """Where a detector run for *video_path* is cached (``<video>.detections.npz``).
 
-    Beside the refinement cache and for the same reason: derived from the video
-    plus a set of parameters, but minutes of work to reproduce. Unlike the
+    Beside the anchors, since it is derived from the video plus a set of
+    parameters, but minutes of work to reproduce. Unlike the
     anchors it is never the document of record — deleting it costs a re-run.
     """
     video = Path(video_path)

@@ -1,7 +1,7 @@
 """Fill backend protocol conformance and the anchor-preservation invariant.
 
-Backend tests use a fake predictor returning known tracks, so no torch is
-needed in CI. The assertion that matters for every backend is the same:
+Backend tests use a stand-in gap tracker, so nothing heavy is needed in CI.
+The assertion that matters for every backend is the same:
 **anchor frames come back exactly as they were labelled.**
 """
 
@@ -12,15 +12,12 @@ import pytest
 
 from ethograph.gui import pose_fill
 from ethograph.gui.pose_fill import (
-    POSEPAL_BACKEND,
     FillBackend,
     OpticalFlowBackend,
     SplineBackend,
-    _CoTrackerTracking,
     _GapBackend,
     available_backends,
     build_backend,
-    resolve_device,
     video_size,
 )
 
@@ -72,19 +69,6 @@ class _ScaledFrames:
         return self._data[key]
 
 
-class _FakePredictor:
-    """Stands in for CoTrackerPredictor: holds every query point still."""
-
-    def __call__(self, video, queries=None, backward_tracking=False):
-        import torch
-
-        n_frames = video.shape[1]
-        points = queries[0, :, 1:]
-        tracks = points[None, None].repeat(1, n_frames, 1, 1)
-        visibility = torch.ones((1, n_frames, points.shape[0]))
-        return tracks, visibility
-
-
 def _frames(n: int = N_FRAMES, size: int = 64) -> np.ndarray:
     rng = np.random.default_rng(0)
     return rng.integers(0, 255, size=(n, size, size, 3), dtype=np.uint8)
@@ -96,7 +80,7 @@ def _frames(n: int = N_FRAMES, size: int = 64) -> np.ndarray:
 
 
 def test_backends_satisfy_the_protocol():
-    for backend in (SplineBackend(), OpticalFlowBackend(), _CoTrackerTracking(object())):
+    for backend in (SplineBackend(), OpticalFlowBackend()):
         assert isinstance(backend, FillBackend)
         assert isinstance(backend.name, str)
         assert isinstance(backend.requires_video, bool)
@@ -110,8 +94,7 @@ def test_spline_needs_no_video():
 def test_available_backends_always_offers_spline():
     infos = {info.key: info for info in available_backends()}
     assert infos["spline"].available is True
-    for key in ("flow", POSEPAL_BACKEND):
-        assert infos[key].available or infos[key].hint
+    assert infos["flow"].available or infos["flow"].hint
 
 
 def test_build_backend_rejects_unknown_key():
@@ -132,23 +115,15 @@ def _gap_backend():
     return _HoldBackend(), _frames()
 
 
-def _cotracker_backend():
-    pytest.importorskip("torch")
-    return _CoTrackerTracking(_FakePredictor(), device="cpu"), _frames()
-
-
 def _optical_flow_backend():
     pytest.importorskip("cv2")
     return OpticalFlowBackend(), _frames()
 
 
 #: Every backend, built the cheapest way that still runs its real fill path.
-#: The trackers get a stand-in predictor rather than weights, so this needs no
-#: GPU and no download.
 BACKENDS = [
     pytest.param(_spline_backend, id="spline"),
     pytest.param(_gap_backend, id="gap"),
-    pytest.param(_cotracker_backend, id="cotracker"),
     pytest.param(_optical_flow_backend, id="optical-flow"),
 ]
 
@@ -170,90 +145,6 @@ def test_every_backend_returns_anchor_frames_exactly_as_labelled(make_backend):
     for frame, points in anchors.items():
         np.testing.assert_allclose(filled[frame], points)
         np.testing.assert_allclose(confidence[frame], 1.0)
-
-
-# ----------------------------------------------------------------------
-# CoTracker checkpoint resolution
-# ----------------------------------------------------------------------
-
-
-def test_explicit_missing_checkpoint_raises_instead_of_downloading(tmp_path):
-    """A path the user named must never be silently replaced by a download."""
-    # torch too: cotracker.predictor imports it, and a half-installed env
-    # (cotracker present, torch absent) is a real state to skip cleanly on.
-    pytest.importorskip("cotracker")
-    pytest.importorskip("torch")
-    with pytest.raises(FileNotFoundError):
-        pose_fill.load_cotracker_predictor(checkpoint=tmp_path / "nope.pth")
-
-
-def test_absent_checkpoint_triggers_a_download(tmp_path, monkeypatch):
-    """Regression: passing checkpoint=None through builds an *unloaded* network
-    that returns confident nonsense — the weights must be fetched instead."""
-    pytest.importorskip("cotracker")
-    pytest.importorskip("torch")
-    monkeypatch.setattr(pose_fill, "cotracker_checkpoint_dir", lambda: tmp_path / "absent")
-    calls = []
-    monkeypatch.setattr(pose_fill, "download_cotracker_checkpoint", lambda progress=None: calls.append(1))
-    with pytest.raises(Exception):  # noqa: B017 - the stub returns no usable path
-        pose_fill.load_cotracker_predictor()
-    assert calls == [1]
-
-
-def test_find_checkpoint_returns_none_when_absent(tmp_path, monkeypatch):
-    monkeypatch.setattr(pose_fill, "cotracker_checkpoint_dir", lambda: tmp_path / "absent")
-    assert pose_fill.find_cotracker_checkpoint() is None
-
-
-def test_find_checkpoint_prefers_the_offline_model(tmp_path, monkeypatch):
-    (tmp_path / "scaled_online.pth").touch()
-    (tmp_path / "scaled_offline.pth").touch()
-    monkeypatch.setattr(pose_fill, "cotracker_checkpoint_dir", lambda: tmp_path)
-    assert pose_fill.find_cotracker_checkpoint().name == "scaled_offline.pth"
-
-
-def test_find_checkpoint_honours_an_explicit_path(tmp_path):
-    weights = tmp_path / "custom.pth"
-    weights.touch()
-    assert pose_fill.find_cotracker_checkpoint(weights) == weights
-    assert pose_fill.find_cotracker_checkpoint(tmp_path / "nope.pth") is None
-
-
-def test_missing_weights_do_not_block_the_backend(tmp_path, monkeypatch):
-    """Weights download on first use, so absent weights are a note, not a block."""
-    monkeypatch.setattr(pose_fill, "_module_available", lambda name: True)
-    monkeypatch.setattr(pose_fill, "resolve_device", lambda preferred=None: "cuda")
-    monkeypatch.setattr(pose_fill, "cotracker_checkpoint_dir", lambda: tmp_path / "absent")
-    info = {i.key: i for i in available_backends()}[POSEPAL_BACKEND]
-    assert info.available is True
-    assert "download" in info.hint
-
-
-def test_install_hint_pins_a_commit():
-    """An unpinned branch is the moving target we avoid torch.hub for."""
-    assert pose_fill.COTRACKER_COMMIT in pose_fill.COTRACKER_INSTALL_HINT
-    assert len(pose_fill.COTRACKER_COMMIT) == 40
-
-
-def test_uninstalled_cotracker_reports_the_single_install_command(monkeypatch):
-    monkeypatch.setattr(pose_fill, "_module_available", lambda name: name not in {"torch", "cotracker"})
-    info = {i.key: i for i in available_backends()}[POSEPAL_BACKEND]
-    assert info.available is False
-    assert info.hint == pose_fill.COTRACKER_INSTALL_HINT
-
-
-def test_resolve_device_returns_a_usable_device():
-    device = resolve_device()
-    assert device in {"cpu", "cuda", "mps"}
-
-
-def test_resolve_device_falls_back_when_preference_is_unavailable():
-    pytest.importorskip("torch")
-    import torch
-
-    if torch.cuda.is_available():
-        pytest.skip("CUDA present — nothing to fall back from")
-    assert resolve_device("cuda") == resolve_device()
 
 
 # ----------------------------------------------------------------------
@@ -409,10 +300,10 @@ def test_gap_backend_leaves_frames_outside_the_anchored_span_empty():
 
 
 class _NaNIntolerantBackend(_GapBackend):
-    """A tracker that, like CoTracker3, cannot be handed a NaN query.
+    """A tracker that cannot be handed a NaN query.
 
-    CoTracker attends jointly across points, so one NaN query row returns NaN
-    for *every* point. Reproduced here as an assertion rather than by spreading
+    A transformer tracker attends jointly across points, so one NaN query row
+    returns NaN for *every* point. Reproduced here as an assertion rather than by spreading
     NaN, so the test names the contract it is protecting.
     """
 
@@ -444,28 +335,6 @@ def test_a_point_labelled_nowhere_never_reaches_the_tracker():
     # ...and the one labelled nowhere stays empty rather than inventing a track.
     assert np.all(np.isnan(filled[:, 1]))
     np.testing.assert_allclose(confidence[:11, 1], 0.0)
-
-
-def test_a_backend_is_told_which_rows_it_is_tracking():
-    """Dropped rows compress the query list, so query ``i`` is not point ``i``.
-
-    PosePAL holds one learned feature per point row; without the mapping every
-    point after a dropped one would be tracked by another keypoint's feature.
-    """
-    rows: list[list[int]] = []
-
-    class _RecordingBackend(_HoldBackend):
-        def _on_rows(self, announced):
-            rows.append(announced.tolist())
-
-    anchors = {
-        0: np.array([[0.0, 0.0], [np.nan, np.nan], [10.0, 10.0]]),
-        10: np.array([[10.0, 5.0], [np.nan, np.nan], [20.0, 15.0]]),
-    }
-
-    _RecordingBackend().fill(anchors, N_FRAMES, _frames())
-
-    assert rows == [[0, 2]]
 
 
 def test_a_gap_with_nothing_trackable_keeps_the_seed():
@@ -517,33 +386,6 @@ def test_gap_backend_cancellation_stops_early():
     # Anchors still hold even when the user cancels mid-fill.
     for frame, points in anchors.items():
         np.testing.assert_allclose(filled[frame], points)
-
-
-def test_cotracker_handles_partial_anchors():
-    pytest.importorskip("torch")
-    anchors = _partial_anchors()
-    backend = _CoTrackerTracking(_FakePredictor(), device="cpu")
-    filled, confidence = backend.fill(anchors, N_FRAMES, _frames())
-
-    for frame, points in anchors.items():
-        labelled = ~np.isnan(points[:, 0])
-        np.testing.assert_allclose(filled[frame][labelled], points[labelled])
-        np.testing.assert_allclose(confidence[frame][labelled], 1.0)
-    assert not np.any(np.isnan(filled))
-
-
-def test_cotracker_blends_a_held_track_across_the_gap():
-    """A predictor that never moves gives the plain left/right crossfade."""
-    pytest.importorskip("torch")
-    anchors = {0: np.array([[0.0, 0.0]]), 10: np.array([[10.0, 0.0]])}
-    backend = _CoTrackerTracking(_FakePredictor(), device="cpu")
-    filled, _ = backend.fill(anchors, 11, _frames(11))
-    np.testing.assert_allclose(filled[5, 0], [5.0, 0.0])
-
-
-def test_cotracker_uses_the_resolved_device_by_default():
-    pytest.importorskip("torch")
-    assert _CoTrackerTracking(_FakePredictor())._device == resolve_device()
 
 
 def test_video_size_reads_the_files_own_pixels(tmp_path):

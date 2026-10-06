@@ -10,16 +10,12 @@ detector compose with any fill backend, and it is why nothing in
 
     Observations (frame-local evidence)      Inference (between observations)
       ├── manual    — the user clicks          ├── spline
-      └── detected  — this module             ├── optical flow
-                                              └── PosePAL
+      └── detected  — this module             └── optical flow
             └────────────── feeds ───────────────┘
 
-Two consequences are the point of the exercise. **PosePAL improves**: its
-refinement fits query embeddings against the labelled frames, and five
-hand-labelled frames becoming several hundred detected ones is a far
-better-posed optimisation. **Optical flow stops drifting**: every detected frame
-is a fresh anchor, so Lucas-Kanade never integrates error across more than one
-gap.
+The consequence is the point of the exercise: **optical flow stops drifting**,
+since every detected frame is a fresh anchor, so Lucas-Kanade never integrates
+error across more than one gap.
 
 What a detector does *not* know
 -------------------------------

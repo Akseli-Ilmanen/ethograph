@@ -106,6 +106,7 @@ HOME_LAYOUT_MOVES: dict[str, str] = {
     "audio_tracks": f"{CACHE_DIRNAME}/audio_tracks",
     "example_data": f"{CACHE_DIRNAME}/example_data",
     "dandi": f"{CACHE_DIRNAME}/dandi",
+    # Weights of a retired fill backend: kept out of the LightGBM runs below.
     "models/cotracker": f"{CACHE_DIRNAME}/weights/cotracker",
     "models": f"{DEFAULTS_DIRNAME}/runs/lightgbm",
     "workflows": f"{DEFAULTS_DIRNAME}/workflows",

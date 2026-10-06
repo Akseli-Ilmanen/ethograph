@@ -50,6 +50,8 @@ from ethograph.gui.dialog_space_geometry import SpaceGeometryDialog
 from ethograph.gui.notify import notify
 from ethograph.gui.plots_skeleton import POSE_FEATURE, SKELETON_3D, skeleton_plot_types
 from ethograph.gui.project import project_dir_of
+from ethograph.gui.triangulation import import_dlc_calibration_into_project, triangulate_loaded_session
+from ethograph.io.session_layout import session_dir_of
 from ethograph.utils.paths import ethograph_home
 
 logger = logging.getLogger(__name__)
@@ -225,13 +227,20 @@ class TopBarBuilder:
 
         menu.addSeparator()
         menu.addAction("Pose tracking (from scratch)…", self._open_keypoint_labelling)
-        # Correcting an imported pose file (DLC/SLEAP/…) rather than labelling
-        # from scratch — writes {stem}_refined copies beside the sources.
-        menu.addAction("Pose refinement (DLC, SLEAP, …)…", self._open_pose_refinement)
         # Bounding boxes + tracking through the OCTRON fork, one time index
         # across every open camera — see dialog_box_labelling.py.
         box_action = menu.addAction("Box labelling (OCTRON) — paused", self._open_box_labelling)
         box_action.setEnabled(False)
+
+        menu.addSeparator()
+        # 2D points from two or more calibrated cameras → position_3d, through
+        # aniposelib. The calibration is the project's (calibration/*.toml);
+        # see gui/triangulation.py.
+        for label, slot in (
+            ("3D: Import DeepLabCut calibration — paused", self._import_dlc_calibration),
+            ("3D: Triangulate poses — paused", self._triangulate_poses),
+        ):
+            menu.addAction(label, slot).setEnabled(False)
 
         menu.addSeparator()
         ephys = getattr(self.meta, "ephys_widget", None)
@@ -335,6 +344,16 @@ class TopBarBuilder:
         self._bulk_labels_dialog.raise_()
         self._bulk_labels_dialog.activateWindow()
 
+    def _import_dlc_calibration(self):
+        import_dlc_calibration_into_project(self.app_state, parent=self.shell)
+
+    def _triangulate_poses(self):
+        data_widget = getattr(self.meta, "data_widget", None)
+        if data_widget is None:
+            notify("Load a session first.", severity="warning")
+            return
+        triangulate_loaded_session(data_widget, parent=self.shell)
+
     def _open_feature_labels(self):
         """Threshold a feature into a read-only label source (Tools)."""
         from .dialog_feature_labels import FeatureLabelsDialog
@@ -389,12 +408,6 @@ class TopBarBuilder:
     def _open_box_labelling(self):
         """Open the box labelling dialog (owned by the DataWidget)."""
         open_dialog = self._first_method(getattr(self.meta, "data_widget", None), "open_box_labelling")
-        if open_dialog is not None:
-            open_dialog()
-
-    def _open_pose_refinement(self):
-        """Open the pose refinement dialog (owned by the DataWidget)."""
-        open_dialog = self._first_method(getattr(self.meta, "data_widget", None), "open_pose_refinement")
         if open_dialog is not None:
             open_dialog()
 
@@ -518,7 +531,7 @@ class TopBarBuilder:
     # ------------------------------------------------------------------
 
     def _build_settings_menu(self, menu_bar):
-        """Settings menu — the study's own decisions, plus the two settings folders.
+        """Settings menu — the study's own decisions, plus the home, project and session folders.
 
         None of these belong to one session: each opens a dialog that writes
         ``mapping.txt``, the skeleton library or the global settings, and then
@@ -532,9 +545,13 @@ class TopBarBuilder:
         menu.addSeparator()
         menu.addAction("Open GUI settings folder (.ethograph)…", self._open_ethograph_home)
         self.open_project_action = menu.addAction("Open project settings folder…", self._open_project_folder)
+        self.open_session_action = menu.addAction("Open session folder…", self._open_session_folder)
         self._sync_open_project_action()
+        self._sync_open_session_action()
         if self.app_state is not None:
             self.app_state.project_path_changed.connect(lambda _value: self._sync_open_project_action())
+            self.app_state.nc_file_path_changed.connect(lambda _value: self._sync_open_session_action())
+            self.app_state.nwb_file_path_changed.connect(lambda _value: self._sync_open_session_action())
 
     def _open_label_mapping(self):
         from .dialog_settings import LabelMappingDialog
@@ -640,6 +657,25 @@ class TopBarBuilder:
             self._sync_open_project_action()
             return
         self._open_folder(project)
+
+    def _session_dir(self):
+        """The loaded session's folder, or ``None`` before a session is open."""
+        source = getattr(self.app_state, "nc_file_path", None) or getattr(self.app_state, "nwb_file_path", None)
+        return session_dir_of(source) if source else None
+
+    def _sync_open_session_action(self):
+        """The session entry is live only while a session is loaded."""
+        session = self._session_dir()
+        self.open_session_action.setEnabled(session is not None)
+        self.open_session_action.setToolTip(str(session) if session is not None else "No session loaded")
+
+    def _open_session_folder(self):
+        """Open the loaded session's folder in the OS file browser."""
+        session = self._session_dir()
+        if session is None:
+            self._sync_open_session_action()
+            return
+        self._open_folder(session)
 
     @staticmethod
     def _open_folder(folder):

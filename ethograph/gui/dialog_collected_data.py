@@ -55,6 +55,8 @@ def static_template_path(project: PoseProject) -> Path:
 class CollectedDataDialog(PoseLabellingDialog):
     """Label & Edit over one ``labeled-data/<video>/`` folder's labels table."""
 
+    SECOND_VIEW = False
+
     def __init__(self, data_widget, project: PoseProject, parent=None):
         self.project = project
         self._sequence: ImageSequence | None = None

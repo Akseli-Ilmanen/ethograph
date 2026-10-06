@@ -443,16 +443,6 @@ class AppStateSpec:
         # costs a fill point a factor 1/e of confidence. Tighter on a small
         # frame than on a 4K one, so it is a setting rather than a constant.
         "labelling_disagreement_px": (float, 10.0, True),
-        # Custom CoTracker3 weights, empty for the stock checkpoint. A model
-        # fine-tuned on animal footage is a drop-in state dict, so which weights
-        # to load is a user choice rather than a constant in pose_fill. Global:
-        # it is a property of the machine's models, not of one dataset.
-        "labelling_cotracker_checkpoint": (str, "", True),
-        # Pose refinement's Fill and save tab: the refined file ("analysis")
-        # or the reviewed frames as training labels ("training"); see
-        # dialog_pose_refinement. The training folder is a project's, so
-        # it is per dataset; the scorer name follows the user.
-        "pose_refine_purpose": (str, "analysis", True),
         # The DeepLabCut / LightningPose project being refined (labels/pose_project.py)
         # and which of its two stages is open. Session-only: the mode is
         # entered from the cover page, never restored.
@@ -466,9 +456,6 @@ class AppStateSpec:
         "pose_refine_next_curates": (bool, True, True),
         # Who labels, for a project whose config names no scorer (LightningPose).
         "pose_project_scorer": (str, "", True),
-        "pose_training_export_format": (str, "dlc", True, SCOPE_LOCAL),
-        "pose_training_export_dir": (str | None, None, True, SCOPE_LOCAL),
-        "pose_training_scorer": (str, "", True),
         # Point detection (Detect tab): which detector and how it is tuned. The
         # detections themselves are derived data cached next to the video, and
         # what each detector label *means* is project data in the anchor
@@ -538,6 +525,9 @@ class AppStateSpec:
         "space_hide_zeros": (bool, False, True),
         "space_show_references": (bool, True, True),
         "space_library_geometry": (str | None, None, True, SCOPE_LOCAL),
+        # Which of the project's calibration/*.toml this dataset was filmed with;
+        # only consulted when the project holds several.
+        "calibration_name": (str | None, None, True, SCOPE_LOCAL),
         # The Edit space geometry dialog's unsaved geometry, {"name": stem, "config": yaml dict}:
         # drawn instead of that file while the dialog is open. Never saved.
         "space_geometry_preview": (dict | None, None, False),
@@ -653,8 +643,6 @@ class AppStateSpec:
         "last_browse_dir": "dir",
         "project_path": "dir",
         "remote_backup_path": "dir",
-        "labelling_cotracker_checkpoint": "file",
-        "pose_training_export_dir": "dir",
     }
 
     @classmethod

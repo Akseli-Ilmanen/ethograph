@@ -82,13 +82,19 @@ gui = [
     "joblib",
     # Keypoint labelling: the optical-flow fill backend, and rendering the tag
     # sheet. Headless because plain opencv-python ships Qt plugins that conflict
-    # with PyQt6; contrib because cv2.aruco is not in the base wheel.
-    "opencv-contrib-python-headless",
+    # with PyQt6. cv2.aruco (incl. ChArUco) is in the base wheel since 4.7;
+    # <5 because aniposelib's ChArUco drawing fails on 5.0 and boxmot pins <5.
+    # This is the only cv2 provider: [tool.uv] drops every other opencv wheel.
+    "opencv-python-headless>=4.7,<5",
     # Reading tag36h11 markers on the Detect tab (AprilTag 3).
     "pupil-apriltags",
     # Row order by similarity for the spike raster and the heatmap
     # (gui/heatmap_sort.py). Its own dependencies are all listed above already.
     "rastermap",
+    # Multi-camera calibration and triangulation to 3D poses. jax is imported
+    # lazily by aniposelib but needed by CameraGroup.triangulate.
+    "aniposelib>=0.8",
+    "jax",
 ]
 
 # Audio: waveform display, spectrogram, vocalisation analysis
@@ -143,17 +149,6 @@ timm = [
     "timm>=1.0",
 ]
 
-# PosePAL fill backend for pose keypoints (CoTracker3 + query-feature
-# refinement, see ethograph/gui/pose_refine.py).
-#
-#   uv pip install --torch-backend=auto torch \
-#     "cotracker @ git+https://github.com/facebookresearch/co-tracker.git@82e02e8029753ad4ef13cf06be7f4fc5facdda4d"
-#
-# --torch-backend=auto matters: PyPI's Windows torch wheels are CPU-only, so a
-# GPU is otherwise silently ignored. The ~97 MB CoTracker weights then download
-# on first use (see pose_fill.download_cotracker_checkpoint).
-#
-
 # Development
 dev = [
     "pytest",
@@ -181,6 +176,18 @@ docs = [
     "myst-nb",
     "linkify-it-py",
     "setuptools-scm",
+]
+
+
+[tool.uv]
+# All four opencv wheels install the same cv2 package and overwrite each other.
+# Dependencies ask for different ones (aniposelib: contrib, octron/ultralytics:
+# opencv-python, pyvideoreader: headless); the gui extra's opencv-python-headless
+# serves them all, so the other three are never installed.
+override-dependencies = [
+    "opencv-python; sys_platform == 'never'",
+    "opencv-contrib-python; sys_platform == 'never'",
+    "opencv-contrib-python-headless; sys_platform == 'never'",
 ]
 
 

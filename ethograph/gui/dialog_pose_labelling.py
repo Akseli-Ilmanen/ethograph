@@ -7,15 +7,16 @@ One column holding every
 group at once grew taller than a screen; the split is by stage, so nothing a
 stage needs sits on another tab.
 
-Scope: **one video at a time** — a single camera and a single trial, which is
+Scope: **one video per store** — a single camera and a single trial, which is
 what a drag & drop of a video gives you. The store is keyed by frame index on
 that video's own frame grid, the sidecar sits next to that video, and the fill
 backends see one continuous clip; there is no trial or camera axis anywhere in
-the model, so a multi-trial ``TrialTree`` (or a second camera view) is *not*
-supported — the dialog always follows ``app_state.video_path``, the primary
-camera's current video, and labels made against another trial are simply
-another sidecar. The full design rules live in
-``docs/source/advanced/keypoint_labelling/``.
+the model, so a multi-trial ``TrialTree`` is *not* supported — the dialog
+always follows ``app_state.video_path``, the primary camera's current video,
+and labels made against another trial are simply another sidecar. A second
+camera view is a second store beside this one, never an axis of it (see
+:mod:`~ethograph.gui.pose_second_view`). The full design rules live in
+``docs/source/advanced/classroom_pose_estimation/``.
 
 Non-modal, because the whole point is to keep navigating frames with the normal
 playhead while labelling. It owns a :class:`~ethograph.gui.pose_annotate.KeypointStore`,
@@ -147,7 +148,6 @@ from ethograph.gui.pose_annotate import (
     KeypointStoreError,
     detections_path,
     keypoints_dataset_path,
-    refinement_path,
     sidecar_path,
     store_to_dataset,
     store_to_movement_ds,
@@ -176,15 +176,14 @@ from ethograph.gui.pose_edit_mixin import (
     keypoint_colors_for,
 )
 from ethograph.gui.pose_fill import (
-    COTRACKER_CHECKPOINT_NAME,
-    POSEPAL_BACKEND,
     VideoFrameSource,
     available_backends,
     build_backend,
-    cotracker_checkpoint_dir,
 )
 from ethograph.gui.pose_render import movement_ds_to_pose_render
+from ethograph.gui.pose_second_view import SecondView
 from ethograph.gui.pose_suggest import suggest_frames
+from ethograph.gui.pose_two_view import restore_fill, stash_fill
 from ethograph.gui.table_filter import (
     SORT_ROLE,
     CategoryFilterDialog,
@@ -265,7 +264,7 @@ FILL_SOURCE = "Fill"
 
 #: Backends that score confidence by forward/backward tracking agreement, and
 #: so take a disagreement tolerance. The spline scores by distance instead.
-_TRACKING_BACKENDS = ("flow", POSEPAL_BACKEND)
+_TRACKING_BACKENDS = ("flow",)
 
 _FIXED_COLUMN_TOOLTIPS = (
     "Video frame. Click a cell to jump the playhead there.",
@@ -286,7 +285,7 @@ _CONFIDENCE_TOOLTIP = (
     "How much the fill trusts this one point.\n"
     "1.00 means you labelled it by hand; low means the fill was lost.\n\n"
     "Spline: decays with distance from the nearest labelled frame.\n"
-    "Optical flow and PosePAL: each gap is tracked twice, forwards from\n"
+    "Optical flow: each gap is tracked twice, forwards from\n"
     "the label on its left and backwards from the one on its right — the\n"
     "score falls as the two tracks disagree, and drops to zero where either\n"
     "tracker reports the point as lost.\n\n"
@@ -330,15 +329,6 @@ _SUGGEST_METHODS = (
         "Groups the frames by how they look and takes one per group\n"
         "(DeepLabCut's k-means), so the picks are as unlike each\n"
         "other as possible.",
-    ),
-    (
-        "detection_gaps",
-        "Where the detector saw nothing  (after detect)",
-        "Frames furthest from any detection — occlusion, blur, the animal\n"
-        "facing away. A marker detector is not uncertain, it is absent, so\n"
-        "its failures are a set of frames rather than a low score, and the\n"
-        "middle of the longest blind stretch is where a fill has least to\n"
-        "go on.\n\nNeeds a detector run.",
     ),
     (
         "uncertain",
@@ -751,6 +741,10 @@ class PointTableModel(QAbstractTableModel):
 class PoseLabellingDialog(QDialog):
     """Individual/keypoint tree, canvas labelling, backend choice, fill and export."""
 
+    #: Whether the Label tab offers a second camera view (see pose_second_view).
+    #: Off in the subclasses that manage their cameras themselves.
+    SECOND_VIEW = True
+
     def __init__(self, data_widget, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Keypoint labelling")
@@ -770,12 +764,6 @@ class PoseLabellingDialog(QDialog):
         #: What the table's rows and columns were built from — recomputing the
         #: layout on every drag is what this avoids.
         self._table_signature: tuple | None = None
-        #: The refined backend, kept between fills so its fit — minutes of GPU —
-        #: is paid once, together with what it was built for.
-        self._refined_backend = None
-        self._refined_built_for: tuple | None = None
-        #: The video the kept fit belongs to — a fit is never valid for another.
-        self._refined_video: str | None = None
         #: Tab / Shift+Tab / Shift+H / N, which have to be shortcuts — the tree and
         #: the table swallow them otherwise. See :meth:`_bind_shortcuts`.
         self._shortcuts: list[QShortcut] = []
@@ -799,6 +787,11 @@ class PoseLabellingDialog(QDialog):
         #: markers is helpful; re-ticking it on every later refresh would keep
         #: overruling someone who deliberately turned it off.
         self._head_direction_offered = False
+        #: The second camera of a two-view session; built with the Label tab.
+        self._second: SecondView | None = None
+        #: Fills by video path. A fill is never written to a sidecar, so this is
+        #: what lets one survive the clip (or camera) being swapped out and back.
+        self._fill_stash: dict[str, tuple] = {}
 
         self.store = self._load_store()
         #: The video the current store was loaded for; a change means a new clip.
@@ -906,6 +899,8 @@ class PoseLabellingDialog(QDialog):
             self._write_template(video)
             if hasattr(self, "clips_label"):
                 self._refresh_clip_counter()
+        if self._second is not None:
+            self._second.save()
 
     # ------------------------------------------------------------------
     # UI
@@ -959,6 +954,9 @@ class PoseLabellingDialog(QDialog):
         box = QVBoxLayout(page)
         box.addWidget(self._build_mode_controls())
         box.addLayout(self._build_clips_row())
+        if self.SECOND_VIEW:
+            self._second = SecondView(self)
+            box.addWidget(self._second)
         box.addWidget(self._build_table_group(), stretch=1)
 
         # Approve beside Clear, because they are the two bulk verdicts on a run:
@@ -1337,12 +1335,16 @@ class PoseLabellingDialog(QDialog):
         wanted = self._lock_wanted()
         if self._mode is not None and self._mode.locked != wanted:
             self._mode.set_locked(wanted)
+        if self._second is not None:
+            self._second.set_locked(wanted)
         self._refresh_active_label()
 
     def _on_point_size_changed(self, value: int) -> None:
         self.app_state.labelling_point_size = float(value)
         if self._mode is not None:
             self._mode.set_point_size(float(value))
+        if self._second is not None:
+            self._second.set_point_size(float(value))
 
     # ------------------------------------------------------------------
     # Target pickers
@@ -1413,6 +1415,8 @@ class PoseLabellingDialog(QDialog):
 
     def _refresh_active_label(self) -> None:
         """Show the marker the next click will drop, or hide the line when idle."""
+        if self._second is not None:
+            self._second.mirror_active()
         self._refresh_target_combos()
         self._refresh_legend()
         self._refresh_approve_button()
@@ -1812,68 +1816,6 @@ class PoseLabellingDialog(QDialog):
         self.disagreement_spin.valueChanged.connect(self._on_disagreement_changed)
         disagreement.addWidget(self.disagreement_spin, stretch=1)
         box.addWidget(self.disagreement_row)
-
-        # The stock checkpoint is a default, not a constant: a CoTracker3
-        # fine-tuned on animal footage is a drop-in state dict, and picking one
-        # must not mean editing pose_fill.
-        self.checkpoint_row = QWidget()
-        checkpoint = QHBoxLayout(self.checkpoint_row)
-        checkpoint.setContentsMargins(0, 0, 0, 0)
-        checkpoint.addWidget(QLabel("Model weights:"))
-        self.checkpoint_edit = QLineEdit(self.app_state.labelling_cotracker_checkpoint)
-        self.checkpoint_edit.setPlaceholderText(f"Stock CoTracker3 ({COTRACKER_CHECKPOINT_NAME})")
-        self.checkpoint_edit.setToolTip(
-            "A CoTracker3 checkpoint to track with. Leave empty for the stock\n"
-            "weights, downloaded on first use.\n\n"
-            "Point this at weights fine-tuned for your footage — anything sharing\n"
-            "the CoTracker3 architecture loads here. A different architecture\n"
-            "will not: that needs a new backend."
-        )
-        self.checkpoint_edit.editingFinished.connect(self._on_checkpoint_edited)
-        checkpoint.addWidget(self.checkpoint_edit, stretch=1)
-        browse_btn = QPushButton("Browse…")
-        browse_btn.clicked.connect(self._on_browse_checkpoint)
-        checkpoint.addWidget(browse_btn)
-        box.addWidget(self.checkpoint_row)
-
-        # Refinement is the one backend carrying state between fills: the fit is
-        # minutes of GPU, so a fill reuses it whenever the labels it was made
-        # from still stand. Fill decides that by itself, so there is no fit
-        # BUTTON — a second verb for a step the first one already takes reads as
-        # a choice about the result, which it never was. What the user cannot
-        # infer is which phases the next fill will pay for, and that is text.
-        self.refinement_row = QWidget()
-        refinement = QVBoxLayout(self.refinement_row)
-        refinement.setContentsMargins(0, 0, 0, 0)
-
-        self.refinement_method = QLabel(
-            "Filling runs two phases: <b>fit</b> — learn what your keypoints look like "
-            "in this video (minutes on a GPU) — then <b>track</b> — follow them across "
-            "every gap (fast). Fill does both and skips the fit while it still matches "
-            "your labels."
-        )
-        self.refinement_method.setWordWrap(True)
-        self.refinement_method.setToolTip(
-            "The fit optimises CoTracker3's per-keypoint appearance features against\n"
-            "the frames you labelled, so it tracks YOUR keypoints on THIS animal\n"
-            "rather than whatever the query patch happened to look like.\n\n"
-            "It depends only on your labels and the video, so it is cached in memory\n"
-            "and saved next to the video, and every fill that follows is just the\n"
-            "tracking pass. Correct a point and the fit is out of date: the next fill\n"
-            "redoes it by itself, from scratch — there is no incremental fitting, so a\n"
-            "refit and a first fit are the same work."
-        )
-        refinement.addWidget(self.refinement_method)
-
-        self.refinement_status = QLabel()
-        self.refinement_status.setWordWrap(True)
-        self.refinement_status.setToolTip(
-            "What the next fill will have to do: fit and track, or track alone.\n"
-            "Cancelling it leaves your labels, your fill and the current fit as\n"
-            "they are."
-        )
-        refinement.addWidget(self.refinement_status)
-        box.addWidget(self.refinement_row)
 
         self._refresh_backend_rows()
 
@@ -3134,6 +3076,8 @@ class PoseLabellingDialog(QDialog):
             self.color_by_combo.setCurrentIndex(index if index >= 0 else 0)
         if self._mode is not None:
             self._mode.set_color_by(self.color_by)
+        if self._second is not None:
+            self._second.recolor(self.color_by)
         self._repaint_colors()
 
     def _apply_keypoint_colors(self) -> None:
@@ -3146,6 +3090,8 @@ class PoseLabellingDialog(QDialog):
         """
         if self._mode is not None:
             self._mode.refresh_colors()
+        if self._second is not None:
+            self._second.recolor()
         self._repaint_colors()
         self._save_store()
 
@@ -3227,6 +3173,8 @@ class PoseLabellingDialog(QDialog):
             self._attach_mode(mode)
         else:
             self._mode.set_mode(mode)
+            if self._second is not None:
+                self._second.set_mode(mode)
         if mode is not None:
             # Arming from the Keypoints tab would otherwise hide the line that
             # says what the next click places.
@@ -3289,7 +3237,7 @@ class PoseLabellingDialog(QDialog):
             self.store,
             on_changed=self._on_store_changed,
             mode=mode,
-            on_advance_frame=self._advance_frame,
+            on_advance_frame=self._advance_after_click,
             point_size=float(self.app_state.labelling_point_size),
             on_released=self._on_store_changed,
             locked=self._lock_wanted(),
@@ -3300,12 +3248,16 @@ class PoseLabellingDialog(QDialog):
         # The anchor overlay now draws the fill too, so the pose overlay must
         # stop drawing it or every point gets two markers.
         self._push_pose_override()
+        if self._second is not None:
+            self._second.attach(mode)
         self._sync_tree_selection()
         self._refresh_active_label()
 
     def _detach_mode(self) -> None:
         if self._mode is None:
             return
+        if self._second is not None:
+            self._second.detach()
         # The key filter stays: Backspace and Ctrl+Z go on working on whatever
         # the Keypoints tree has selected once labelling is disarmed.
         self._mode.detach()
@@ -3330,6 +3282,10 @@ class PoseLabellingDialog(QDialog):
             self._mode.set_active(keypoint, individual)
 
     def _on_store_changed(self, full: bool = False, frame: int | None = None) -> None:
+        # First, so the pair both views are asked for is settled before
+        # anything below reads which keypoint is active.
+        if self._second is not None:
+            self._second.after_primary_changed()
         self._refresh_tree_marks()
         self._sync_tree_selection()
         self._refresh_active_label()
@@ -3347,6 +3303,8 @@ class PoseLabellingDialog(QDialog):
     def _on_frame_changed(self, frame: int) -> None:
         if self._mode is not None:
             self._mode.set_frame(int(frame))
+        if self._second is not None:
+            self._second.on_frame_changed(int(frame))
         self._refresh_tree_marks()
         self._select_table_row_for_frame()
         self._schedule_preview()
@@ -3356,6 +3314,9 @@ class PoseLabellingDialog(QDialog):
         # is repainted where the change actually happened. Through the common
         # path, so an undone correction also reaches the pose overlay rather
         # than leaving the point it replaced on screen.
+        if self._second is not None and self._second.pointer_mode() is not None:
+            self._second.undo()
+            return
         frame = self.store.undo()
         if self._mode is not None:
             self._mode.refresh()
@@ -3536,7 +3497,13 @@ class PoseLabellingDialog(QDialog):
         """
         # The held-open preview source belongs to the video that is going away.
         self._close_preview_frames()
+        if self._second is not None:
+            # Before the first view loads a sidecar: it may be the one the
+            # second view has been writing to (the cameras were swapped).
+            self._second.save()
         self._switch_clip()
+        if self._second is not None:
+            self._second.on_video_changed()
         QTimer.singleShot(0, self._reinstall_key_filter)
         self._schedule_preview()
 
@@ -3556,7 +3523,9 @@ class PoseLabellingDialog(QDialog):
             self.store.save(path)
             _LAST_SAVED_SIDECAR["path"] = str(path)
             self._write_template(self._store_video)
+            stash_fill(self._fill_stash, self._store_video, self.store)
         self.store = self._load_store()
+        restore_fill(self._fill_stash, video, self.store)
         self._store_video = video
         if self._mode is not None:
             self._mode.store = self.store
@@ -3750,7 +3719,8 @@ class PoseLabellingDialog(QDialog):
         again, unconstrained by the label you removed.
         """
         if self._mode is not None:
-            deleted = self._mode.delete_selected()
+            pointer = self._second.pointer_mode() if self._second is not None else None
+            deleted = (pointer or self._mode).delete_selected()
         else:
             frame = self._current_frame()
             individual, keypoint = self._selected_individual(), self._selected_keypoint()
@@ -3773,112 +3743,10 @@ class PoseLabellingDialog(QDialog):
     def _on_disagreement_changed(self, value: float) -> None:
         self.app_state.labelling_disagreement_px = float(value)
 
-    def _on_checkpoint_edited(self) -> None:
-        self.app_state.labelling_cotracker_checkpoint = self.checkpoint_edit.text().strip()
-
-    def _on_browse_checkpoint(self) -> None:
-        start = self.app_state.labelling_cotracker_checkpoint or str(cotracker_checkpoint_dir())
-        path, _ = QFileDialog.getOpenFileName(self, "CoTracker3 weights", start, "Checkpoint (*.pth *.pt)")
-        if not path:
-            return
-        self.checkpoint_edit.setText(path)
-        self._on_checkpoint_edited()
-
     def _refresh_backend_rows(self) -> None:
         """Show each option only for the backends it actually applies to."""
         key = self.backend_combo.currentData()
         self.disagreement_row.setVisible(key in _TRACKING_BACKENDS)
-        # Custom weights and the fit are both PosePAL's, since it is the only
-        # backend loading a CoTracker3 state dict at all.
-        self.checkpoint_row.setVisible(key == POSEPAL_BACKEND)
-        self.refinement_row.setVisible(key == POSEPAL_BACKEND)
-        if key == POSEPAL_BACKEND:
-            self._refresh_refinement_status()
-
-    # ------------------------------------------------------------------
-    # Test-time refinement
-    # ------------------------------------------------------------------
-
-    def _refinement_signature(self) -> str:
-        """Identifies the labels a fit was made from.
-
-        Every anchor goes in, so labelling one more frame marks the fit stale —
-        it stays perfectly usable, it is simply no longer the best fit available.
-        The schema goes in too: the delta is indexed by point row, so renaming or
-        adding a keypoint makes an old fit meaningless rather than merely dated.
-        """
-        payload = [self.store.keypoint_names, self.store.individual_names]
-        for frame in sorted(self.store.anchors):
-            payload.append([frame, np.round(self.store.anchors[frame], 3).tolist()])
-        return hashlib.sha1(json.dumps(payload).encode()).hexdigest()
-
-    def _refinement_status_text(self) -> str:
-        """What the next fill will spend its time on — never merely that a fit exists.
-
-        The wait is what the user is deciding about, and it is the fit: whether
-        the next fill costs minutes or seconds is exactly whether this fit still
-        matches the labels.
-        """
-        backend = self._refined_backend
-        refinement = getattr(backend, "refinement", None)
-        if refinement is None or not refinement.fitted:
-            return "Not fitted — the next fill fits first (a few minutes), then tracks."
-        frames = refinement.n_anchor_frames
-        if refinement.matches(self._refinement_signature()):
-            return f"Fitted on {frames} labelled frames — the next fill only tracks."
-        return (
-            f"Fitted on {frames} labelled frames, but your labels changed since — "
-            "the next fill fits again first (a few minutes)."
-        )
-
-    def _refresh_refinement_status(self) -> None:
-        self.refinement_status.setText(self._refinement_status_text())
-
-    def _refined_backend_for(self, progress):
-        """Build the refined backend, or hand back the one already loaded.
-
-        Rebuilt only when something it was constructed around changed — the
-        weights or the point-row count — since rebuilding drops the fit.
-        """
-        checkpoint = self.app_state.labelling_cotracker_checkpoint or None
-        built_for = (checkpoint, self.store.n_points)
-        if self._refined_backend is None or self._refined_built_for != built_for:
-            self._refined_backend = build_backend(
-                POSEPAL_BACKEND,
-                checkpoint=checkpoint,
-                progress=progress,
-                disagreement_px=float(self.app_state.labelling_disagreement_px),
-                n_points=self.store.n_points,
-            )
-            self._refined_built_for = built_for
-            self._refined_video = None
-        if self._refined_video != self._video_path():
-            # A fit describes one video's pixels; carrying it to the next one
-            # would be worse than not fitting. The signature cannot catch this —
-            # it is made of labels, which a copied sidecar can match exactly.
-            self._refined_backend.refinement.clear()
-            self._refined_video = self._video_path()
-            self._load_refinement(self._refined_backend)
-        self._refined_backend.disagreement_px = float(self.app_state.labelling_disagreement_px)
-        return self._refined_backend
-
-    def _load_refinement(self, backend) -> None:
-        """Restore a saved fit for this video, if one still applies."""
-        video = self._video_path()
-        if not video:
-            return
-        path = refinement_path(video)
-        if not path.is_file():
-            return
-        try:
-            backend.refinement.load(path, self._refinement_signature())
-        except Exception:  # noqa: BLE001 - a cache that cannot be read is a cache miss
-            logger.warning("Ignoring unreadable refinement at %s", path, exc_info=True)
-
-    def _save_refinement(self, backend) -> None:
-        video = self._video_path()
-        if video and backend.refinement.fitted:
-            backend.refinement.save(refinement_path(video))
 
     def _ready_to_fill(self) -> bool:
         if not self.store.anchor_frames() and not self.store.detection_frames():
@@ -3897,36 +3765,23 @@ class PoseLabellingDialog(QDialog):
         key = self.backend_combo.currentData()
         label = self.backend_combo.currentText()
         busy = BusyProgressDialog(f"Filling frames with {label}…", parent=self)
-        # A refined fill is two phases and spends most of its wait in the first,
-        # so the backend renames the stage as it goes rather than claiming to be
-        # filling throughout.
-        stage: str | None = None
-
-        def set_stage(text: str) -> None:
-            nonlocal stage
-            stage = text
-
         # A cancelled fill must leave the previous one alone. Backends answer a
         # cancel with the spline seed they started from — they have arrays to
         # return — so applying that result would trade a fill the user liked for
-        # a plain interpolation they never asked for, and with PosePAL the wait
-        # they are cancelling out of is usually the fit.
+        # a plain interpolation they never asked for.
         cancelled = False
 
         def report(default: str):
             def progress(fraction: float) -> bool:
                 nonlocal cancelled
-                busy.setLabelText(f"{stage or default} {fraction:.0%}")
+                busy.setLabelText(f"{default} {fraction:.0%}")
                 busy.pump_events()
                 cancelled = cancelled or busy.wasCanceled()
                 return not cancelled
 
             return progress
 
-        # The backend is built INSIDE the dialog: CoTracker downloads ~97 MB of
-        # weights on first use, and that must be visible and cancellable rather
-        # than freezing the UI before any progress bar exists.
-        result, error = busy.execute(self._build_and_fill, key, label, report, set_stage)
+        result, error = busy.execute(self._build_and_fill, key, label, report)
         self._refresh_backend_rows()
         if cancelled:
             notify("Fill cancelled — nothing was changed.", "info")
@@ -3963,21 +3818,9 @@ class PoseLabellingDialog(QDialog):
             "info",
         )
 
-    def _build_and_fill(self, key: str, label: str, report, set_stage):
+    def _build_and_fill(self, key: str, label: str, report):
         """Backends track flat points — the individual/keypoint split is restored after."""
-        download = report("Downloading CoTracker3 weights…")
-        if key == POSEPAL_BACKEND:
-            backend = self._refined_backend_for(download)
-            backend.on_stage = set_stage
-            backend.signature = self._refinement_signature()
-        else:
-            backend = build_backend(
-                key,
-                checkpoint=self.app_state.labelling_cotracker_checkpoint or None,
-                progress=download,
-                disagreement_px=float(self.app_state.labelling_disagreement_px),
-                n_points=self.store.n_points,
-            )
+        backend = build_backend(key, disagreement_px=float(self.app_state.labelling_disagreement_px))
         frames = None
         if backend.requires_video:
             frames = self._open_frames()
@@ -3995,8 +3838,6 @@ class PoseLabellingDialog(QDialog):
         finally:
             if frames is not None:
                 frames.close()
-        if key == POSEPAL_BACKEND:
-            self._save_refinement(backend)
         if self.store.static_keypoints:
             filled = self.store.pin_static(*filled)
         return filled
@@ -4037,19 +3878,15 @@ class PoseLabellingDialog(QDialog):
         if method == "uncertain" and self.store.confidence is None:
             notify("Run Fill first — this suggests the frames the fill was least sure about.", "warning")
             return
-        if method == "detection_gaps" and not self.store.detections:
-            notify("Run a detector first — this suggests the frames it found nothing on.", "warning")
-            return
 
         # Only the pixel methods decode video; the others are instant.
-        if method in ("uniform", "uncertain", "detection_gaps"):
+        if method in ("uniform", "uncertain"):
             picks = suggest_frames(
                 method,
                 count,
                 n_frames,
                 exclude=exclude,
                 confidence=self.store.confidence,
-                detected=self.store.detection_frames(),
             )
             error = None
         else:
@@ -4129,6 +3966,11 @@ class PoseLabellingDialog(QDialog):
             self._step_frames(1)
         elif behaviour == AFTER_CLICK_SUGGESTION:
             self._next_suggestion()
+
+    def _advance_after_click(self) -> None:
+        """A Loop-mode click moves on — with a second view, only once both views have the point."""
+        if self._second is None or self._second.pair_complete():
+            self._advance_frame()
 
     def _step_frames(self, direction: int) -> None:
         """Seek one frame, clamped to the clip."""
@@ -4228,6 +4070,8 @@ class PoseLabellingDialog(QDialog):
 
     def closeEvent(self, event):
         self._detach_mode()
+        if self._second is not None:
+            self._second.close_view()
         self._save_detections()
         self._preview_timer.stop()
         self._close_preview_frames()

@@ -57,8 +57,6 @@ def fill_and_export_video(
     video: Path,
     backend: str = "spline",
     *,
-    checkpoint: str | Path | None = None,
-    device: str | None = None,
     overwrite: bool = False,
 ) -> Path | None:
     """Fill one clip's sidecar and write ``<video>.keypoints.nc``.
@@ -80,7 +78,7 @@ def fill_and_export_video(
     if not store.observations():
         logger.warning("%s: sidecar has no labelled frames — skipped", video.name)
         return None
-    engine = build_backend(backend, checkpoint=checkpoint, device=device, n_points=store.n_points)
+    engine = build_backend(backend)
     frames = VideoFrameSource(video, fps, store.n_frames, max_side=MAX_SIDE) if engine.requires_video else None
     try:
         filled, confidence = engine.fill(store.flat_observations(), store.n_frames, frames, no_progress)

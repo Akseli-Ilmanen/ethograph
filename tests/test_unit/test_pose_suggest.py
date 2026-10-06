@@ -14,7 +14,6 @@ from ethograph.gui.pose_suggest import (
     METHODS,
     default_min_gap,
     enforce_min_gap,
-    suggest_detection_gaps,
     suggest_frames,
     suggest_uniform,
 )
@@ -266,8 +265,6 @@ def _kwargs_for(method):
     """Whatever that method needs: pixels, a fill's confidence, or nothing."""
     if method == "uncertain":
         return {"confidence": _confidence(range(60, 70))}
-    if method == "detection_gaps":
-        return {"detected": list(range(0, N_FRAMES, 3))}
     if method == "uniform":
         return {}
     return {"frames": _burst_video()}
@@ -334,40 +331,3 @@ def test_progress_cancellation_stops_decoding():
     assert len(calls) == 1
 
 
-# ----------------------------------------------------------------------
-# detection_gaps — the frames a marker detector went blind on
-# ----------------------------------------------------------------------
-
-
-def test_detection_gaps_prefers_the_middle_of_the_longest_blind_stretch():
-    detected = list(range(0, 41)) + list(range(160, N_FRAMES))
-    picks = suggest_detection_gaps(detected, 1, N_FRAMES)
-    assert picks == [100]
-
-
-def test_detection_gaps_never_suggests_a_detected_frame():
-    detected = list(range(0, N_FRAMES, 2))
-    picks = suggest_detection_gaps(detected, 10, N_FRAMES)
-    assert picks and all(frame % 2 for frame in picks)
-
-
-def test_detection_gaps_spreads_across_several_holes():
-    detected = [f for f in range(N_FRAMES) if not (20 <= f < 60 or 120 <= f < 160)]
-    picks = suggest_detection_gaps(detected, 2, N_FRAMES, min_gap=50)
-    assert len(picks) == 2
-    assert 20 <= picks[0] < 60 and 120 <= picks[1] < 160
-
-
-def test_detection_gaps_with_no_detections_falls_back_to_even_spacing():
-    assert suggest_detection_gaps([], 4, N_FRAMES) == suggest_uniform(4, N_FRAMES)
-
-
-def test_detection_gaps_needs_a_detector_run():
-    with pytest.raises(ValueError, match="needs a detector"):
-        suggest_frames("detection_gaps", 3, N_FRAMES)
-
-
-def test_detection_gaps_is_reachable_through_suggest_frames():
-    detected = list(range(0, 41)) + list(range(160, N_FRAMES))
-    assert suggest_frames("detection_gaps", 1, N_FRAMES, detected=detected) == [100]
-    assert "detection_gaps" in METHODS

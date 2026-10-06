@@ -1,21 +1,14 @@
 """Fill backends: turn a handful of labelled frames into every frame.
 
-One protocol, three implementations, chosen in the labelling dialog:
+One protocol, two implementations, chosen in the labelling dialog:
 
 - :class:`SplineBackend` — monotone cubic interpolation, no new dependencies.
-  Ignores pixels entirely and is the yardstick the others must beat.
+  Ignores pixels entirely and is the yardstick the other must beat.
 - :class:`OpticalFlowBackend` — Lucas-Kanade forward/backward (``opencv-contrib-python-headless``).
-- ``PosePALBackend`` (:mod:`ethograph.gui.pose_refine`) — CoTracker3 point
-  tracking with its query features fitted to the user's labels. GPU only, and
-  imported lazily so nothing here depends on torch.
 
-:class:`_CoTrackerTracking` holds the plain CoTracker3 gap tracking that PosePAL
-builds on. It is **not** offered as a backend of its own: unrefined tracking
-follows the appearance a point had on one frame and drifts onto the wrong leg or
-the other animal, which the refinement exists to fix, so choosing between them
-was a choice between a method and a worse version of the same method.
+Neither needs a GPU, which is what makes the dialog usable on a laptop.
 
-All of them share the same invariant, asserted by the tests: **anchor frames come
+Both share the same invariant, asserted by the tests: **anchor frames come
 back exactly as they were labelled.** Pixel-based backends seed missing points
 from a spline pre-pass, so partially labelled anchors (beak on some frames, tail
 on others) work without a shared frame list.
@@ -36,8 +29,6 @@ from typing import Callable, Protocol, runtime_checkable
 import numpy as np
 from scipy.interpolate import PchipInterpolator
 
-from ethograph.utils.device import resolve_device as _resolve_device
-
 #: ``progress(fraction) -> keep_going``; backends bail out when it returns False.
 Progress = Callable[[float], bool]
 
@@ -46,12 +37,6 @@ CONFIDENCE_DECAY_FRAMES = 10.0
 
 #: Pixels of forward/backward disagreement that costs a factor 1/e of confidence.
 DISAGREEMENT_SCALE = 10.0
-
-#: The learned backend: CoTracker3 plus the query-feature refinement of Pan et
-#: al. 2025 (:mod:`ethograph.gui.pose_refine`). Named after the paper's reference
-#: implementation, since the tracker alone is not something the user can pick.
-POSEPAL_BACKEND = "posepal"
-POSEPAL_LABEL = "PosePAL (CoTracker3 + refinement)"
 
 
 @runtime_checkable
@@ -254,15 +239,14 @@ class _GapBackend:
             right = _seeded_endpoints(anchors, seed, end) / scale
             # A point labelled nowhere in the video has no spline seed either, so
             # its endpoints stay NaN. Such a row must never reach the tracker:
-            # CoTracker attends jointly across points, so ONE NaN query comes
-            # back as NaN for every point in the gap — blanking the whole span
+            # a tracker that attends jointly across points answers ONE NaN query
+            # with NaN for every point in the gap — blanking the whole span
             # while the untracked head and tail keep their seed. Track what is
             # seeded and leave the rest at the seed.
             trackable = np.isfinite(left).all(axis=1) & np.isfinite(right).all(axis=1)
             if not trackable.any():
                 continue
 
-            self._on_rows(np.flatnonzero(trackable))
             forward, visible_forward = self._track(clip, left[trackable], 0)
             backward, visible_backward = self._track(clip, right[trackable], end - start)
             forward, backward = forward * scale, backward * scale
@@ -275,16 +259,6 @@ class _GapBackend:
 
         _apply_anchors(filled, confidence, anchors)
         return filled, confidence
-
-    def _on_rows(self, rows: np.ndarray) -> None:
-        """Which flat point rows the next :meth:`_track` calls are about.
-
-        Rows with no seed are dropped above, so the query list a tracker sees is
-        *compressed* — query ``i`` is point ``rows[i]``, not point ``i``. Only
-        matters to a backend holding per-row state (PosePAL's learned query
-        features, one per point); tracking a point is otherwise independent of
-        which point it is, so the default ignores it.
-        """
 
     def _track(self, clip: np.ndarray, points: np.ndarray, query_frame: int) -> tuple[np.ndarray, np.ndarray]:
         """Track *points* (given at *query_frame*) across every frame of *clip*.
@@ -347,164 +321,6 @@ class OpticalFlowBackend(_GapBackend):
 
 
 # ----------------------------------------------------------------------
-# CoTracker3
-# ----------------------------------------------------------------------
-
-
-class _CoTrackerTracking(_GapBackend):
-    """CoTracker3 point tracking, forward from the left anchor and backward
-    from the right, blended linearly across the gap.
-
-    The tracking half of ``PosePALBackend``, which is the only thing that
-    instantiates it — see this module's docstring for why plain CoTracker3 is
-    not a backend the user picks. Cost is dominated by frame feature extraction
-    rather than point count, so tracking 20 keypoints costs about what 3 do.
-    """
-
-    name = "CoTracker3"
-    requires_video = True
-
-    def __init__(self, predictor, device: str | None = None, disagreement_px: float = DISAGREEMENT_SCALE):
-        super().__init__(disagreement_px)
-        self._predictor = predictor
-        self._device = device or resolve_device()
-
-    def _track(self, clip, points, query_frame):
-        import torch
-
-        video = torch.from_numpy(np.ascontiguousarray(clip)).permute(0, 3, 1, 2).float()[None]
-        video = video.to(self._device)
-        queries = np.column_stack([np.full(len(points), query_frame, dtype=np.float32), points.astype(np.float32)])
-        queries = torch.from_numpy(queries)[None].to(self._device)
-
-        with torch.no_grad():
-            tracks, visibility = self._predictor(
-                video,
-                queries=queries,
-                backward_tracking=query_frame > 0,
-            )
-        return (
-            tracks[0].cpu().numpy().astype(np.float64),
-            visibility[0].cpu().numpy().astype(np.float64),
-        )
-
-
-def resolve_device(preferred: str | None = None) -> str:
-    """Best available torch device (CUDA → MPS → CPU); see :mod:`ethograph.utils.device`."""
-    return _resolve_device(preferred)
-
-
-#: The *default* CoTracker3 offline weights (~97 MB). Fetched once into the
-#: checkpoint dir so installing the backend stays a single pip command — the
-#: model itself has no PyPI release and cannot ship weights through the
-#: dependency resolver.
-#:
-#: Pinned rather than "latest" on purpose: a state dict only loads into the
-#: architecture it was trained against, so the weights and :data:`COTRACKER_COMMIT`
-#: move together. Better weights — a variant fine-tuned on animal footage, say —
-#: are a drop-in state dict for the *same* architecture, and are selected by
-#: passing ``checkpoint=`` to :func:`build_backend` (the dialog's "Model weights"
-#: row, ``app_state.labelling_cotracker_checkpoint``), never by editing this URL.
-#: A genuinely different architecture would be a new backend, not a new URL.
-COTRACKER_CHECKPOINT_URL = "https://huggingface.co/facebook/cotracker3/resolve/main/scaled_offline.pth"
-COTRACKER_CHECKPOINT_NAME = "scaled_offline.pth"
-
-#: Pinned so the install is reproducible — the repo has no PyPI release, and an
-#: unpinned branch is exactly the moving target we avoid ``torch.hub`` for.
-COTRACKER_COMMIT = "82e02e8029753ad4ef13cf06be7f4fc5facdda4d"
-
-#: The single install command. Kept here so the GUI hint, the docs and the error
-#: messages cannot drift apart.
-#: One explicit command — there is no ``[co-tracker]`` extra. cotracker has no
-#: PyPI release and declares no dependencies (not even torch), so both halves
-#: have to be named anyway; ``--torch-backend=auto`` picks up a GPU, which the
-#: CPU-only Windows wheels on PyPI would otherwise silently ignore.
-COTRACKER_INSTALL_HINT = (
-    "uv pip install --torch-backend=auto torch "
-    f'"cotracker @ git+https://github.com/facebookresearch/co-tracker.git@{COTRACKER_COMMIT}"'
-)
-
-
-def cotracker_checkpoint_dir() -> Path:
-    """Where CoTracker3 weights are expected: ``~/.ethograph/cache/weights/cotracker``."""
-    from ethograph.utils.paths import cache_dir
-
-    return cache_dir("weights") / "cotracker"
-
-
-def download_cotracker_checkpoint(progress: Progress | None = None) -> Path:
-    """Fetch the CoTracker3 weights into the checkpoint dir.
-
-    A plain HTTPS download — deliberately *not* ``torch.hub.load``, which needs
-    GitHub reachable, can prompt interactively (hanging the Qt event loop) and
-    tracks a moving branch. Downloads to a ``.part`` file and renames only on
-    success, so an interrupted fetch never leaves weights that load as garbage.
-    """
-    import urllib.request
-
-    directory = cotracker_checkpoint_dir()
-    directory.mkdir(parents=True, exist_ok=True)
-    target = directory / COTRACKER_CHECKPOINT_NAME
-    partial = target.with_suffix(target.suffix + ".part")
-
-    with urllib.request.urlopen(COTRACKER_CHECKPOINT_URL) as response:  # noqa: S310 - fixed https URL
-        total = int(response.headers.get("content-length") or 0)
-        done = 0
-        with open(partial, "wb") as handle:
-            while chunk := response.read(1 << 20):
-                handle.write(chunk)
-                done += len(chunk)
-                if progress is not None and not progress(done / total if total else 0.0):
-                    partial.unlink(missing_ok=True)
-                    raise RuntimeError("Checkpoint download cancelled.")
-    partial.replace(target)
-    return target
-
-
-def find_cotracker_checkpoint(explicit: str | Path | None = None) -> Path | None:
-    """Locate CoTracker3 weights, or ``None`` if they are not downloaded."""
-    if explicit:
-        path = Path(explicit)
-        return path if path.is_file() else None
-    directory = cotracker_checkpoint_dir()
-    if not directory.is_dir():
-        return None
-    # Prefer the offline (whole-clip) model — gaps here are short clips.
-    for pattern in ("scaled_offline.pth", "*offline*.pth", "*.pth"):
-        matches = sorted(directory.glob(pattern))
-        if matches:
-            return matches[0]
-    return None
-
-
-def load_cotracker_predictor(
-    checkpoint: str | Path | None = None,
-    device: str | None = None,
-    progress: Progress | None = None,
-) -> object:
-    """Construct a ``CoTrackerPredictor`` on the best available device.
-
-    Weights are downloaded on first use if absent, so installing the backend
-    stays one pip command. Never ``torch.hub.load``: hub needs GitHub reachable,
-    can prompt interactively (hanging the Qt event loop) and tracks a moving
-    branch.
-
-    Never passes ``checkpoint=None`` through to ``CoTrackerPredictor`` — that
-    builds an *unloaded* network which returns confident nonsense with no error.
-    """
-    from cotracker.predictor import CoTrackerPredictor
-
-    resolved = find_cotracker_checkpoint(checkpoint)
-    if resolved is None:
-        if checkpoint is not None:
-            raise FileNotFoundError(f"No CoTracker3 checkpoint at {checkpoint}")
-        resolved = download_cotracker_checkpoint(progress)
-
-    predictor = CoTrackerPredictor(checkpoint=str(resolved))
-    return predictor.to(resolve_device(device))
-
-
-# ----------------------------------------------------------------------
 # Availability
 # ----------------------------------------------------------------------
 
@@ -528,25 +344,6 @@ def _module_available(module: str) -> bool:
 
 def available_backends() -> list[BackendInfo]:
     """Describe every backend so the dialog can grey out the missing ones."""
-    # torch and cotracker install together but resolve separately (cotracker has
-    # no PyPI release), so a missing either way reports the same one command.
-    # Weights are NOT a precondition — they download on first use.
-    installed = _module_available("torch") and _module_available("cotracker")
-    # PosePAL is 500 optimisation steps, not a forward pass: on CPU it is not
-    # slow but unusable, so it is offered only with a GPU.
-    device = resolve_device() if installed else "cpu"
-    on_gpu = installed and device != "cpu"
-    label = POSEPAL_LABEL
-    if on_gpu:
-        # Naming the resolved device confirms the GPU was picked up — PyPI's
-        # Windows torch wheels are CPU-only unless --torch-backend=auto was used.
-        label = f"{POSEPAL_LABEL} ({device})"
-        hint = "" if find_cotracker_checkpoint() else "~97 MB of weights will download on first use"
-    elif installed:
-        hint = "Needs a CUDA or Apple Silicon GPU — it fits a model to your labels."
-    else:
-        hint = COTRACKER_INSTALL_HINT
-
     return [
         BackendInfo("spline", "Spline (no extra dependencies)", True),
         BackendInfo(
@@ -555,48 +352,19 @@ def available_backends() -> list[BackendInfo]:
             _module_available("cv2"),
             "pip install opencv-contrib-python-headless",
         ),
-        BackendInfo(POSEPAL_BACKEND, label, on_gpu, hint),
     ]
 
 
-def build_backend(
-    key: str,
-    checkpoint: str | Path | None = None,
-    device: str | None = None,
-    progress: Progress | None = None,
-    disagreement_px: float = DISAGREEMENT_SCALE,
-    n_points: int | None = None,
-) -> FillBackend:
+def build_backend(key: str, disagreement_px: float = DISAGREEMENT_SCALE) -> FillBackend:
     """Instantiate a backend by key, importing heavy dependencies only now.
 
-    ``device=None`` auto-detects (CUDA → MPS → CPU) via :func:`resolve_device`.
-    ``progress`` reports the one-time CoTracker weight download; call this from
-    inside the progress dialog so a ~97 MB fetch is visible and cancellable.
-    ``disagreement_px`` tunes the confidence of the tracking backends only —
-    the spline scores by distance from the nearest anchor instead. ``n_points``
-    is the flat ``(individual, keypoint)`` row count, needed only by PosePAL,
-    which learns one feature per row.
+    ``disagreement_px`` tunes the confidence of the tracking backend only —
+    the spline scores by distance from the nearest anchor instead.
     """
     if key == "spline":
         return SplineBackend()
     if key == "flow":
         return OpticalFlowBackend(disagreement_px=disagreement_px)
-    if key == POSEPAL_BACKEND:
-        if not n_points:
-            raise ValueError("PosePAL fits one feature per point — pass n_points.")
-        # Imported here and nowhere else: this module must stay importable
-        # without torch, and pose_refine imports both torch and cotracker.
-        from ethograph.gui.pose_refine import PosePALBackend, QueryFeatureRefinement
-
-        resolved = resolve_device(device)
-        predictor = load_cotracker_predictor(checkpoint, resolved, progress)
-        refinement = QueryFeatureRefinement(predictor, n_points, device=resolved)
-        return PosePALBackend(
-            predictor,
-            refinement,
-            device=resolved,
-            disagreement_px=disagreement_px,
-        )
     raise ValueError(f"Unknown fill backend {key!r}")
 
 

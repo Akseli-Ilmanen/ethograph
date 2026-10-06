@@ -14,7 +14,12 @@ from scipy.spatial.distance import cdist
 
 
 class Position3DCalibration:
-    """Convert 3D positions from DLC to real-world coordinates."""
+    """Convert 3D positions from DLC to real-world coordinates.
+
+    Hand-tuned for the Moll et al., 2025 rig and kept for that dataset's
+    example. A new rig gets a world frame beside its calibration instead
+    (``ethograph.triangulate.frame``).
+    """
 
     def __init__(
         self,

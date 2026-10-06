@@ -44,6 +44,9 @@ SEPARATOR = " · "
 #: Dim name that gets priority as the default axis dimension.
 SPACE_DIM_NAME = "space"
 
+#: The names a ``space`` dim gives its three axes, in column order of an ``(N, 3)`` point array.
+SPACE_AXES = ("x", "y", "z")
+
 #: Default color-combo entry — trajectory colored by label highlight.
 LABELS_COLOR_MODE = "Labels"
 
@@ -632,6 +635,8 @@ class SpacePlot(IndividualPinMixin, QWidget):
         # Trajectory state for highlight / time marker
         self._trajectory_pos: tuple | None = None
         self._trajectory_times: np.ndarray | None = None
+        self._live_points: np.ndarray | None = None
+        self._live_colors: list[str] = []
         self._time_marker_item = None
         self._locked_ranges: dict | None = None  # saved axis ranges when lock is on
         # Sliding time window: last marker time + the range last fetched, so
@@ -1240,6 +1245,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
             self._apply_percentile_limits(data_x, data_y, data_z)
 
         self._draw_references()
+        self._draw_live_points()
 
         self._trajectory_pos = (data_x, data_y, data_z)
         self._trajectory_times = times
@@ -1365,6 +1371,59 @@ class SpacePlot(IndividualPinMixin, QWidget):
     def _draw_references(self, *_args):
         """(Re)draw all reference geometry items — see :func:`draw_reference_geometry`."""
         draw_reference_geometry(self.space_widget, self.app_state)
+
+    def set_live_points(self, points: np.ndarray | None, colors: list[str] | None = None) -> None:
+        """Draw transient points ``(N, 3)`` in x/y/z over the plot; ``None`` removes them.
+
+        They belong to whoever set them (the labelling dialog's triangulated
+        keypoints), not to the dataset: they survive a re-render and a 2D/3D
+        switch, and are never part of the trajectory.
+        """
+        self._live_points = None if points is None or len(points) == 0 else np.asarray(points, dtype=np.float64)
+        self._live_colors = list(colors or [])
+        self._draw_live_points()
+
+    def _draw_live_points(self) -> None:
+        if self.space_widget is None:
+            if self._live_points is None:
+                return
+            self._ensure_plot_widget(self.cb_3d.isChecked())
+        is_gl = isinstance(self.space_widget, gl.GLViewWidget)
+        holder = self.space_widget if is_gl else self.space_widget.getPlotItem()
+        for item in list(holder.items):
+            if getattr(item, "_is_live", False):
+                holder.removeItem(item)
+        points = self._live_points
+        if points is None:
+            return
+        colors = self._live_colors if len(self._live_colors) == len(points) else ["#ff00ff"] * len(points)
+        if is_gl:
+            item = gl.GLScatterPlotItem(
+                pos=points.astype(np.float32),
+                color=np.array([_color_to_rgba(c) for c in colors], dtype=np.float32),
+                size=16,
+                pxMode=True,
+                glOptions="translucent",
+            )
+        else:
+            # A 2D view shows the two of x/y/z its axis combos name; any other choice has no plane to put a point on.
+            axes = [
+                SPACE_AXES.index(c.currentText()) if c.currentText() in SPACE_AXES else None
+                for c in (self.x_combo, self.y_combo)
+            ]
+            if None in axes:
+                return
+            item = pg.ScatterPlotItem(
+                points[:, axes[0]],
+                points[:, axes[1]],
+                pen=pg.mkPen("k"),
+                brush=[pg.mkBrush(c) for c in colors],
+                size=14,
+                symbol="d",
+            )
+            item.setZValue(900)
+        item._is_live = True
+        holder.addItem(item)
 
     # --- Percentile axis limits (zoom constraints) --------------------------
 

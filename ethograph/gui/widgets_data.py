@@ -35,7 +35,7 @@ import ethograph as eto
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.notify import notify, notify_dialog
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, individual_color_map
-from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec
+from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec, XarrayLoader, catalog_from_xarray
 from ethograph.io.data_loader import AmbiguousSessionError, load_features_dataset
 from ethograph.io.derived import DerivedLoader
 from ethograph.io.image_sequence import media_exists
@@ -1114,27 +1114,6 @@ class DataWidget(QWidget):
         dialog = BoxLabellingDialog(self, parent=self.shell)
         dialog.finished.connect(lambda _=0: setattr(self, "_box_labelling_dialog", None))
         self._box_labelling_dialog = dialog
-        dialog.show()
-        return dialog
-
-    def open_pose_refinement(self):
-        """Open (or raise) the pose refinement dialog.
-
-        Non-modal single instance, like the labelling dialog: the user corrects
-        an imported pose file while navigating trials, and each trial's
-        ``_refined`` copy is flushed as they move on.
-        """
-        from .dialog_pose_refinement import PoseRefinementDialog
-
-        existing = getattr(self, "_pose_refinement_dialog", None)
-        if existing is not None and existing.isVisible():
-            existing.raise_()
-            existing.activateWindow()
-            return existing
-
-        dialog = PoseRefinementDialog(self, parent=self.shell)
-        dialog.finished.connect(lambda _=0: setattr(self, "_pose_refinement_dialog", None))
-        self._pose_refinement_dialog = dialog
         dialog.show()
         return dialog
 
@@ -2256,7 +2235,6 @@ class DataWidget(QWidget):
         panels and layout are all left exactly as they are, so nothing here can
         reach them.
         """
-        from ethograph.io.catalog import XarrayLoader, catalog_from_xarray
         from ethograph.io.trialtree import TrialTree
 
         app_state = self.app_state
@@ -2270,11 +2248,22 @@ class DataWidget(QWidget):
             return False
 
         app_state.dt = dt
-        app_state.ds = dt.trial(trial_id)
         if not app_state.trials:
             app_state.trials = [trial_id]
         app_state.trials_sel = trial_id
-        self.catalog = catalog_from_xarray(app_state.ds, dt)
+        self.serve_current_tree()
+        return True
+
+    def serve_current_tree(self) -> None:
+        """Rebuild the data layer over ``app_state.dt`` after its variables or dims changed.
+
+        The catalog, the loader, the coord combos and every panel's selections
+        are derived from the dataset; a variable added in place (a
+        triangulation, a keypoint dataset) reaches none of them by itself.
+        """
+        app_state = self.app_state
+        app_state.ds = app_state.dt.trial(app_state.trials_sel)
+        self.catalog = catalog_from_xarray(app_state.ds, app_state.dt)
         app_state.data_loader = DerivedLoader(XarrayLoader(app_state.ds, self.catalog))
         self._install_display_offset_provider()
 
@@ -2286,8 +2275,11 @@ class DataWidget(QWidget):
             plot.resync_selections()
         if "keypoint" in app_state.ds.coords:
             self.populate_keypoints([str(k) for k in app_state.ds.coords["keypoint"].values])
+        store = self._space_store()
+        for sp in self.space_plots:
+            sp.set_store(store)
+            sp.refresh()
         self.plot_container.schedule_labels_redraw()
-        return True
 
     def _rebuild_coord_controls(self) -> None:
         """Point the "Xarray coords" combos at the catalog now serving features.
