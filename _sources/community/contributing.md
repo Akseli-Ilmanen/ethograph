@@ -25,7 +25,7 @@ cd ethograph
 conda create -y -n ethograph -c conda-forge python=3.12
 conda activate ethograph
 uv pip install --torch-backend=auto torch torchvision
-uv pip install -e ".[gui,audio,model,dandi,dev,docs]"
+uv pip install -e ".[gui,audio,triangulate,model,dandi,dev,docs]"
 ethograph shortcut
 pre-commit install
 ```

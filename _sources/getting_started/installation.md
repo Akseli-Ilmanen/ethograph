@@ -150,6 +150,7 @@ extraction and label I/O.
 |---------|---------------------------------------------------------------------|
 | `gui`   | Graphical interface (PyQtGraph, pygfx/pynaviz, neural tools)        |
 | `audio` | Waveform, spectrogram, playback (`sounddevice` etc.)                |
+| `triangulate` | Multi-camera calibration and 3D triangulation via aniposelib (pulls in jax) |
 | `model` | Segmentation and spotting pipelines — **install PyTorch first** (see *Train models*) |
 | `dandi` | Download client for the [DANDI archive](https://dandiarchive.org/)  |
 | `proxy` | Bundled ffmpeg for smoother scrubbing in long videos                |
