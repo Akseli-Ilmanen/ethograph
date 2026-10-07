@@ -646,7 +646,7 @@ class TestFrameReview:
         _set_mode(panel, "frame")
         panel.start_review(idx=0)  # trial 0, label 4, point at 1.0 (automated)
         target = panel.targets[panel.current_index]
-        panel.curate_labels([target.inst])  # what GridModeBar.apply_done does
+        panel.curate_labels([target.inst])  # what GridVerdictBar.apply_done does
         panel.restart_review()
         assert panel.session_active
         assert panel.targets[panel.current_index].inst["labels"] == 6

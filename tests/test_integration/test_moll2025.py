@@ -7,6 +7,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication
 
 from ethograph.datasets import dataset_dir
+from ethograph.gui.plots_space import load_reference_geometries
 from ethograph.labels.intervals import find_interval_at
 
 # ---------------------------------------------------------------------------
@@ -442,7 +443,7 @@ class TestMollSpacePlot:
             for item in sp.space_widget.items
             if isinstance(item, gl.GLLinePlotItem) and not getattr(item, "_is_trajectory", False)
         ]
-        refs = sp._load_references()
+        refs = load_reference_geometries(meta.app_state)
         if refs:
             assert len(non_trajectory) > 0, (
                 f"library geometry has {len(refs)} references but none rendered. "

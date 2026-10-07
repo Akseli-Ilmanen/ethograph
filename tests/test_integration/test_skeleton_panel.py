@@ -51,10 +51,15 @@ def test_the_pose_follows_the_time_marker(skeleton_panel):
 def test_hiding_a_keypoint_removes_its_point(skeleton_panel):
     meta, kp = skeleton_panel
     bounds = meta.app_state.window_bounds
+    n_keypoints = kp.keypoint_list.count()
+    # A time where every keypoint is drawn (the confidence threshold hides
+    # some), so hiding any one of them must take a point away.
     t = next(
         t
-        for t in np.linspace(bounds.start_s, bounds.end_s, 20)
-        if (kp.set_time(float(t)) or True) and kp.current_frame() is not None and len(kp.current_frame().points)
+        for t in np.linspace(bounds.start_s, bounds.end_s, 200)
+        if (kp.set_time(float(t)) or True)
+        and kp.current_frame() is not None
+        and len(kp.current_frame().points) == n_keypoints
     )
     kp.set_time(float(t))
     before = len(kp.current_frame().points)

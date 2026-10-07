@@ -245,6 +245,11 @@ def gui(request, qtbot, tmp_path, monkeypatch):
         "default_config_dir",
         lambda data_dir=None: test_config_dir,
     )
+    # Hermetic home: configs fall back to ``~/.ethograph/defaults`` (mapping.txt,
+    # space geometry, ...), so a user's edited copy would otherwise reach a test.
+    # Read the bundled defaults, never the real home.
+    monkeypatch.setenv(paths_module.ETHOGRAPH_HOME_ENV, str(test_config_dir))
+    paths_module.seed_defaults(test_config_dir / paths_module.DEFAULTS_DIRNAME)
 
     from ethograph.gui.app_state import ObservableAppState
 

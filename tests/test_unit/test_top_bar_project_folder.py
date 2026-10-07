@@ -16,10 +16,14 @@ from ethograph.gui.top_bar import build_menu_bar  # noqa: E402
 
 class _State(QObject):
     project_path_changed = Signal(object)
+    nc_file_path_changed = Signal(object)
+    nwb_file_path_changed = Signal(object)
 
     def __init__(self, project_path):
         super().__init__()
         self.project_path = project_path
+        self.nc_file_path = None
+        self.nwb_file_path = None
 
     def save_to_yaml(self, *_args, **_kwargs):
         pass

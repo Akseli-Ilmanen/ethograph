@@ -1666,8 +1666,6 @@ class GridVerdictBar(QWidget):
     nothing else.
     """
 
-    mode_changed = Signal(str)
-
     def __init__(self, meta, entries_fn, restyle_fn, flagged_fn=None, parent=None, *, read_only: bool = False):
         super().__init__(parent)
         self.meta = meta
@@ -1738,7 +1736,7 @@ class GridVerdictBar(QWidget):
         self._sync_count()
 
     def apply_done(self) -> int:
-        """Curate what the mode selects; the entries are restamped to match."""
+        """Curate every untagged automated label on screen; the entries are restamped to match."""
         if self._read_only:
             raise RuntimeError("Cannot curate the labels of a read-only label source")
         panel = curation_panel_of(self.meta)
@@ -1891,9 +1889,9 @@ class LabelGridView(QWidget):
             flagged_fn=self._flagged_entries,
             read_only=read_only,
         )
-        layout.addWidget(self.mode_bar)
+        layout.addWidget(self.verdict_bar)
         if read_only:
-            self.mode_bar.hide()
+            self.verdict_bar.hide()
 
         self.hint = QLabel("")
         self.hint.setStyleSheet("color: grey; font-size: 10px;")
@@ -1961,10 +1959,7 @@ class LabelGridView(QWidget):
                 f"A read-only label source: click a frame to jump the GUI to that trial and time.{self._filter_note()}"
             )
             return
-        if self.mode_bar.mode() == "curate":
-            click = "Click the frames that are right, then Done curates those labels."
-        else:
-            click = "Click the frames that are wrong, then Done curates every other label."
+        click = "Click the frames that are wrong, then Done curates every other label."
         panel = curation_panel_of(self.meta)
         if panel is not None and panel.reviews_on_jump():
             jump = "Double-click a frame to review that label in the main GUI."
@@ -2152,22 +2147,22 @@ class LabelGridView(QWidget):
             cell.setVisible(True)
 
     def _on_tile_clicked(self, entry: FrameEntry):
-        """A single click is the verdict the mode names — a jump where there
+        """A single click tags the label for review — a jump where there
         are no verdicts to give (a read-only label source)."""
         if self._read_only:
             self._jump(entry)
             return
-        self.mode_bar.click(entry)
+        self.verdict_bar.click(entry)
 
     def _on_tile_double_clicked(self, entry: FrameEntry, field_name: str = TILE_POINT):
-        """A double click navigates, in every mode. Qt delivers a plain press
+        """A double click navigates, tagged or not. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
         navigating leaves the verdicts exactly as they were."""
         if not self._read_only:
-            self.mode_bar.click(entry)
-        self._jump(entry)
+            self.verdict_bar.click(entry)
+        self._jump(entry, field_name)
 
-    def _jump(self, entry: FrameEntry):
+    def _jump(self, entry: FrameEntry, field_name: str = TILE_POINT):
         """Go there — into the frame-by-frame review when the curation panel
         is in that mode, else a plain jump. The review edits the working
         labels, so a read-only source only ever jumps."""

@@ -67,10 +67,8 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.dialog_label_gridview import (
-    FIELD_START,
     LOW_CONFIDENCE_COLOR,
     TAGGED_COLOR,
-    TILE_POINT,
     VIDEO_GRID_SORT_ORDERS,
     ConfidenceEdit,
     ConfidenceHistogramsDialog,
@@ -572,7 +570,7 @@ class VideoGridPlayer(QWidget):
         )
         top.addWidget(self.verdict_bar, stretch=1)
         if read_only:
-            self.mode_bar.hide()
+            self.verdict_bar.hide()
             top.addStretch(1)
         top.addWidget(QLabel("Sort:"))
         self.sort_combo = QComboBox()
@@ -794,10 +792,7 @@ class VideoGridPlayer(QWidget):
         self.next_clips_btn.setEnabled(self._page_idx < len(self.pages) - 1)
 
     def _sync_hint(self, *_args) -> None:
-        if self.mode_bar.mode() == "curate":
-            click = "Click the clips that are right, then Done curates those labels."
-        else:
-            click = "Click the clips that are wrong, then Done curates every other label."
+        click = "Click the clips that are wrong, then Done curates every other label."
         self.hint.setText(
             f"Clips of one label class, shortest first · ←/→ step a frame · {click}"
             " Double-click a clip to jump the GUI there."
@@ -1006,14 +1001,14 @@ class VideoGridPlayer(QWidget):
         self._hist_dialog = None
 
     def _on_tile_clicked(self, entry: ClipEntry) -> None:
-        """A single click is the verdict the mode names."""
-        self.mode_bar.click(entry)
+        """A single click tags the clip's label for review."""
+        self.verdict_bar.click(entry)
 
     def _on_tile_double_clicked(self, entry: ClipEntry) -> None:
-        """A double click navigates, in every mode. Qt delivers a plain press
+        """A double click navigates, tagged or not. Qt delivers a plain press
         first, which already toggled the tile — toggling again undoes it, so
         navigating leaves the verdicts exactly as they were."""
-        self.mode_bar.click(entry)
+        self.verdict_bar.click(entry)
         self._jump(entry)
 
     def _jump(self, entry: ClipEntry) -> None:

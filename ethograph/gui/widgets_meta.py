@@ -309,6 +309,7 @@ class MetaWidget(GridSectionContainer):
             "lineplot": getattr(ps, "lineplot_panel", None),
             "spaceplot": getattr(ps, "spaceplot_panel", None),
             "radialplot": getattr(ps, "radialplot_panel", None),
+            "skeletonplot": getattr(ps, "skeletonplot_panel", None),
             "spectrogram": getattr(ps, "spectrogram_panel", None),
             "rasterdisplay": getattr(self.ephys_widget, "raster_panel", None),
             "heatmapsort": getattr(ps, "heatmap_sort_group", None),
@@ -417,7 +418,7 @@ class MetaWidget(GridSectionContainer):
                 video_area.camera_view_removed.connect(self.active_panels.unregister)
 
     _CONTEXT_KINDS = frozenset(
-        {"audiotrace", "spectrogram", "lineplot", "heatmap", "space", "radial", "ephys", "raster", "neo"}
+        {"audiotrace", "spectrogram", "lineplot", "heatmap", "space", "radial", "skeleton", "ephys", "raster", "neo"}
     )
 
     def _track_subject_panel(self, widget) -> None:
@@ -446,6 +447,8 @@ class MetaWidget(GridSectionContainer):
             self.data_widget.set_active_space_plot(reg.widget)
         if kind == PanelKind.RADIAL:
             self.data_widget.set_active_radial_plot(reg.widget)
+        if kind == PanelKind.SKELETON:
+            self.data_widget.set_active_skeleton_plot(reg.widget)
         if kind in (PanelKind.AUDIOTRACE, PanelKind.SPECTROGRAM):
             self.plot_settings_widget.set_active_audio_plot(reg.widget)
             # Playback follows the last-clicked audio panel (its pin, else global).
@@ -567,6 +570,9 @@ class MetaWidget(GridSectionContainer):
                 # replace each other.
                 self.app_state.space_plot_type = "Space Plot"
                 self.data_widget.add_space_plot(feature=name, view_3d=plot_type == "Space (3D)")
+                notify(f"{plot_type}: {name}")
+            elif plot_type.startswith("Skeleton"):
+                self.data_widget.add_skeleton_plot(view_3d=plot_type == "Skeleton (3D)")
                 notify(f"{plot_type}: {name}")
         elif kind == "audio":
             # The popup only lists mics that exist in the alignment.
@@ -1178,6 +1184,7 @@ class MetaWidget(GridSectionContainer):
             layout = self.plot_container.layout_state()
             layout["space_plots"] = self.data_widget.space_layout_state()
             layout["radial_plots"] = self.data_widget.radial_layout_state()
+            layout["skeleton_plots"] = self.data_widget.skeleton_layout_state()
             # Shell dock arrangement (space plots, cameras) is per-dataset
             # state and travels with the dataset's local_settings.yaml.
             layout["shell_dock_state_b64"] = self.shell.capture_dock_state_b64()
@@ -1208,6 +1215,7 @@ class MetaWidget(GridSectionContainer):
             self.plot_container.apply_layout_state(layout)
             self.data_widget.apply_space_layout_state(layout.get("space_plots"))
             self.data_widget.apply_radial_layout_state(layout.get("radial_plots"))
+            self.data_widget.apply_skeleton_layout_state(layout.get("skeleton_plots"))
             blob = layout.get("shell_dock_state_b64")
             if blob:
                 self.shell.apply_dock_state_b64(blob)
@@ -1249,13 +1257,14 @@ class MetaWidget(GridSectionContainer):
         notify("Panels reset.")
 
     def rebuild_default_panels(self):
-        """Drop every dynamic panel, space and radial plot and recreate the
+        """Drop every dynamic panel, space, radial and skeleton plot and recreate the
         data-availability defaults (the same set ``_setup_panel_controls``
         builds on a fresh load). Used when a saved layout fails mid-apply and
         when the user resets local settings: the auto-save snapshots the live
         panels, so the layout must be rebuilt, not only forgotten."""
         self.data_widget.apply_space_layout_state([])
         self.data_widget.apply_radial_layout_state([])
+        self.data_widget.apply_skeleton_layout_state([])
         pc = self.plot_container
         for plot in list(pc._dyn_panels):
             pc.remove_panel(plot)

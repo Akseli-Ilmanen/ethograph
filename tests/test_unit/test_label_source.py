@@ -16,7 +16,7 @@ from qtpy.QtWidgets import QWidget  # noqa: E402
 
 from ethograph.gui.app_state import ObservableAppState  # noqa: E402
 from ethograph.gui.dialog_label_gridview import (  # noqa: E402
-    GridModeBar,
+    GridVerdictBar,
     LabelGridView,
     LabelSetupPage,
     build_frame_entries,
@@ -122,12 +122,12 @@ def test_a_read_only_grid_navigates_and_never_curates(state, qtbot):
     grid = LabelGridView(_Meta(state, nav), entries, read_only=True)
     qtbot.addWidget(grid)
 
-    assert grid.mode_bar.isHidden()
+    assert grid.verdict_bar.isHidden()
     grid._on_tile_clicked(entries[0])
     assert [j["onset_s"] for j in nav.jumps] == [0.1]
-    assert not grid.mode_bar.verdicts.clicked, "a click on a read-only grid left a verdict"
+    assert not grid.verdict_bar.verdicts.clicked, "a click on a read-only grid left a verdict"
 
-    bar = GridModeBar(_Meta(state), entries_fn=lambda: entries, restyle_fn=lambda: None, read_only=True)
+    bar = GridVerdictBar(_Meta(state), entries_fn=lambda: entries, restyle_fn=lambda: None, read_only=True)
     qtbot.addWidget(bar)
     with pytest.raises(RuntimeError, match="read-only"):
         bar.apply_done()
