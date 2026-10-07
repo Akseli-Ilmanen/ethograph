@@ -131,7 +131,6 @@ def test_catalog_basic(simple_nap_data):
     assert "speed" in cat.features
     assert "velocity" in cat.features
     assert "individual" in cat.combos  # dim-named, movement-style singular
-    assert cat.trial_conditions == []
 
 
 def test_catalog_detects_tsdframe_columns(simple_nap_data):

@@ -122,7 +122,6 @@ class DataCatalog:
     changepoints: list[str] = field(default_factory=list)
     cameras: list[str] = field(default_factory=list)
     mics: list[str] = field(default_factory=list)
-    trial_conditions: list[str] = field(default_factory=list)
 
     def combo_values(self, name: str) -> tuple[str, ...]:
         spec = self.combos.get(name)
@@ -156,7 +155,6 @@ class DataCatalog:
             tvd["cameras"] = np.array(self.cameras)
         if self.mics:
             tvd["mics"] = np.array(self.mics)
-        tvd["trial_conditions"] = self.trial_conditions
         return tvd
 
 
@@ -995,10 +993,7 @@ def _auto_catalog_xarray(ds: xr.Dataset) -> DataCatalog:
 
 def catalog_from_xarray(ds: xr.Dataset, dt: TrialTree, nwb_alignment=None) -> DataCatalog:
     """Build a DataCatalog from an xarray Dataset + TrialTree."""
-    from ethograph.io.validation import (
-        _possible_trial_conditions,
-        find_temporal_dims,
-    )
+    from ethograph.io.validation import find_temporal_dims
 
     combos: dict[str, ComboSpec] = {}
 
@@ -1032,7 +1027,6 @@ def catalog_from_xarray(ds: xr.Dataset, dt: TrialTree, nwb_alignment=None) -> Da
     sio = nwb_alignment or getattr(dt, "nwb_alignment", None)
     cameras = list(sio.cameras) if sio and sio.cameras else []
     mics = list(sio.mics) if sio and sio.mics else []
-    trial_conditions = _possible_trial_conditions(ds, dt)
 
     return DataCatalog(
         combos=combos,
@@ -1040,7 +1034,6 @@ def catalog_from_xarray(ds: xr.Dataset, dt: TrialTree, nwb_alignment=None) -> Da
         changepoints=changepoints_list,
         cameras=cameras,
         mics=mics,
-        trial_conditions=trial_conditions,
     )
 
 
@@ -1157,5 +1150,4 @@ def catalog_from_pynapple(
         combos=combos,
         features=features,
         changepoints=changepoints,
-        trial_conditions=[],
     )

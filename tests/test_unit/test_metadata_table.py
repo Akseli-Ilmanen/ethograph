@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from ethograph.io.metadata_table import (
+    MISSING_GROUP,
     attach_media_columns,
     condition_columns,
     empty_metadata_df,
@@ -17,7 +18,16 @@ from ethograph.io.metadata_table import (
     metadata_tsv_path,
     order_metadata_columns,
     save_metadata_tsv,
+    trial_groups,
 )
+
+
+def test_trial_groups_puts_missing_values_in_their_own_group():
+    df = pd.DataFrame({"trial": [1, 2, 3, 4], "genotype": ["WT", "KO", None, "WT"]})
+    # Trial 5 is absent from the table; ids match across int/str spellings.
+    groups, labels = trial_groups(df, "genotype", ["4", 3, 1, 5, 2])
+    assert labels == ["KO", "WT", MISSING_GROUP]
+    assert groups == [1, 2, 1, 2, 0]
 
 
 def test_condition_columns():

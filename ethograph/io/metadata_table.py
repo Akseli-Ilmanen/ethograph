@@ -158,6 +158,26 @@ def condition_columns(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c != "trial" and not _is_nwb_infrastructure_col(c)]
 
 
+#: The group of a trial with no value in the grouping column.
+MISSING_GROUP = "n/a"
+
+
+def trial_groups(df: pd.DataFrame, column: str, trials: list) -> tuple[list[int], list[str]]:
+    """Group *trials* by their value in *column* of the metadata table.
+
+    Returns one group index per trial (in *trials*' order) and the group
+    labels, sorted. A trial missing from the table or with an empty cell
+    falls into a trailing :data:`MISSING_GROUP` group, never into a real one.
+    """
+    values = dict(zip(df["trial"].astype(str), df[column]))
+    per_trial = [values.get(str(t)) for t in trials]
+    present = sorted({str(v) for v in per_trial if not pd.isna(v)})
+    labels = present + [MISSING_GROUP] if any(pd.isna(v) for v in per_trial) else present
+    index = {label: i for i, label in enumerate(labels)}
+    groups = [index[MISSING_GROUP if pd.isna(v) else str(v)] for v in per_trial]
+    return groups, labels
+
+
 def stored_columns(df: pd.DataFrame) -> pd.DataFrame:
     """*df* without its media filename columns — what a metadata file holds.
 

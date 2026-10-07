@@ -291,33 +291,6 @@ def _extract_trial_datasets(dt: "TrialTree") -> list[xr.Dataset]:
     return [ds for _, ds in dt.trial_items()]
 
 
-def _possible_trial_conditions(ds: xr.Dataset, dt: "TrialTree") -> list[str]:
-    """Identify possible trial condition attributes."""
-    common_extensions = (
-        VIDEO_EXTENSIONS
-        | AUDIO_EXTENSIONS
-        | POSE_EXTENSIONS
-        | EPHYS_EXTENSIONS
-        | EPHYS_EXTENSIONS_RAW
-        | {".csv", ".h5", ".hdf5", ".npy"}
-    )
-
-    common_attrs = dt.get_common_attrs().keys()
-
-    cond_attrs = []
-    for key, value in ds.attrs.items():
-        if key in ["trial"] or key in common_attrs:
-            continue
-
-        if isinstance(value, str):
-            if Path(value).suffix.lower() in common_extensions:
-                continue
-
-        cond_attrs.append(key)
-
-    return cond_attrs
-
-
 def validate_datatree(
     dt: "TrialTree",
 ) -> list[str]:

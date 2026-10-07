@@ -241,7 +241,6 @@ class AppStateSpec:
         # the last times the user chose; most recent first. Read by the drop
         # popup and the wizard to preselect a session folder (gui/session_folder).
         "session_folder_kinds": (list[str], [], True),
-        "trial_conditions": (list | None, None, False),
         "keypoints": (list[str], [], False),
         # Global preference: the "Import labels" checkbox is remembered across
         # datasets (gui_settings.yaml). Safe as a sticky global because the

@@ -14,8 +14,8 @@ For each trial the dialog:
 3. Converts to session-absolute: ``ref_abs = trial_start_abs + local_t``.
 4. Calls ``nap.compute_perievent`` on the EphysWidget's ``_tsgroup``.
 
-Trial condition filtering reuses ``dt.filter_by_attr`` (same method that
-NavigationWidget uses) — no logic is duplicated.
+Trials are grouped by a condition column of the trials table
+(``app_state.metadata_df``) — the one source of trial metadata.
 """
 
 from __future__ import annotations
@@ -45,6 +45,7 @@ from qtpy.QtWidgets import (  # noqa: E402
 )
 
 from ethograph.gui.notify import notify_dialog  # noqa: E402
+from ethograph.io.metadata_table import condition_columns, trial_groups  # noqa: E402
 from ethograph.utils.qt import add_combo_separator, color_icon, gray_icon  # noqa: E402
 
 from .plots_psth import PSTHPlot, sort_trials  # noqa: E402
@@ -98,7 +99,7 @@ class PSTHDialog(QDialog):
     app_state : ObservableAppState
     ephys_widget : EphysWidget — provides _tsgroup + cluster_selected signal
     labels_widget : LabelsWidget — provides _mappings for label colors
-    navigation_widget : NavigationWidget — provides type_vars_dict for conditions
+    navigation_widget : NavigationWidget
     """
 
     trial_jump_requested = Signal(str)  # trial_id → main GUI should navigate
@@ -125,6 +126,7 @@ class PSTHDialog(QDialog):
         self._populate_condition_combo()
         self._populate_cluster_combo()
         self.ephys_widget.unit_filter_changed.connect(self._populate_cluster_combo)
+        self.app_state.metadata_df_changed.connect(self._on_metadata_changed)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -427,45 +429,33 @@ class PSTHDialog(QDialog):
         self._align_combo.blockSignals(False)
 
     def _populate_condition_combo(self):
+        previous = self._cond_key_combo.currentData()
         self._cond_key_combo.blockSignals(True)
         self._cond_key_combo.clear()
         self._cond_key_combo.addItem("None", None)
 
-        catalog = getattr(self.navigation_widget, "catalog", None)
-        for condition in catalog.trial_conditions if catalog else []:
-            self._cond_key_combo.addItem(str(condition), condition)
+        df = self.app_state.metadata_df
+        for column in condition_columns(df) if df is not None else []:
+            self._cond_key_combo.addItem(str(column), column)
 
+        index = self._cond_key_combo.findData(previous)
+        self._cond_key_combo.setCurrentIndex(max(index, 0))
         self._cond_key_combo.blockSignals(False)
+
+    def _on_metadata_changed(self, _df=None):
+        self._populate_condition_combo()
+        self._replot()
 
     def _on_condition_key_changed(self):
         self._replot()
 
     def _get_condition_groups(self) -> tuple[dict[int, int] | None, list[str] | None]:
-        key = self._cond_key_combo.currentData()
-        if not key or not hasattr(self.app_state, "dt") or self.app_state.dt is None:
+        column = self._cond_key_combo.currentData()
+        df = self.app_state.metadata_df
+        if column is None or df is None or column not in df.columns:
             return None, None
-
-        dt = self.app_state.dt
-        if dt is None:
-            return None, None
-        all_vals: list = sorted(
-            {ds.attrs[key] for _, ds in dt.trial_items() if key in ds.attrs},
-            key=str,
-        )
-        if not all_vals:
-            return None, None
-
-        val_to_idx = {v: i for i, v in enumerate(all_vals)}
-        group: dict[int, int] = {}
-        for trial_i, trial_id in enumerate(self._current_trials):
-            try:
-                ds = dt.trial(trial_id)
-                val = ds.attrs.get(key)
-                group[trial_i] = val_to_idx.get(val, 0)
-            except (KeyError, AttributeError):
-                group[trial_i] = 0
-
-        return group, [str(v) for v in all_vals]
+        groups, labels = trial_groups(df, column, self._current_trials)
+        return dict(enumerate(groups)), labels
 
     def _on_align_changed(self):
         is_label = isinstance(self._align_combo.currentData(), int)

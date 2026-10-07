@@ -88,7 +88,6 @@ class NavigationWidget(QWidget):
         super().__init__(parent=parent)
         self.shell = shell
         self.app_state = app_state
-        self.catalog = None
         self.plot_container = None
         self.data_widget = None
         self._mappings: dict[int, dict[str, Any]] = {}
@@ -1162,10 +1161,6 @@ class NavigationWidget(QWidget):
         video = getattr(self.app_state, "video", None)
         if video is not None:
             video.seek_to_frame(video.time_to_frame(time_s))
-
-    def setup_trial_conditions(self, catalog):
-        """No-op — trial condition filtering moved to TrialsWidget."""
-        self.catalog = catalog
 
     # ==================================================================
     # Playback

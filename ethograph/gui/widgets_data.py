@@ -1339,7 +1339,6 @@ class DataWidget(QWidget):
         if ctx.video_folder_override:
             self.app_state.video_folder = ctx.video_folder_override
 
-        self.app_state.trial_conditions = ctx.catalog.trial_conditions
         self.app_state.source_collection = result.source_collection
 
         self.app_state.has_audio = ctx.has_audio
@@ -1500,7 +1499,6 @@ class DataWidget(QWidget):
 
     def _create_trial_controls(self):
         self.io_widget.create_device_controls(self.catalog)
-        self.navigation_widget.setup_trial_conditions(self.catalog)
         self.navigation_widget.set_data_widget(self)
 
         if getattr(self, "trials_widget", None) is not None:
