@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pickle
+import re
+import sys
 from pathlib import Path
 
 import cv2
@@ -10,7 +12,10 @@ import numpy as np
 import pytest
 import xarray as xr
 import yaml
-from aniposelib.cameras import Camera, CameraGroup
+
+pytest.importorskip("aniposelib")
+
+from aniposelib.cameras import Camera, CameraGroup  # noqa: E402
 
 import ethograph as eto
 from ethograph.gui.plots_space import parse_geometry
@@ -258,3 +263,12 @@ def test_exported_geometry_is_one_the_space_plot_reads(tmp_path):
     (geometry,) = parse_geometry(yaml.safe_load(path.read_text(encoding="utf-8")))
     np.testing.assert_allclose(geometry.vertices[1], [1.5, 0.0, 20.5], atol=1e-3)
     assert geometry.edges == [(0, 1)]
+
+
+def test_missing_aniposelib_names_the_extra(monkeypatch, tmp_path: Path) -> None:
+    """Without aniposelib, loading a calibration fails as a CalibrationError that says how to install it."""
+    from ethograph.triangulate.calibration import INSTALL_HINT, TriangulationUnavailableError, load_calibration
+
+    monkeypatch.setitem(sys.modules, "aniposelib.cameras", None)
+    with pytest.raises(TriangulationUnavailableError, match=re.escape(INSTALL_HINT)):
+        load_calibration(tmp_path / "rig.toml")

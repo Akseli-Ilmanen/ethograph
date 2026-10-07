@@ -326,6 +326,9 @@ class EthographMainWindow(QMainWindow):
 
     def clear_shortcuts(self):
         for shortcut in self._shortcuts:
+            # Still in Qt's shortcut map until the deferred delete runs, so a
+            # rebinding would fire the old binding too — disable it now.
+            shortcut.setEnabled(False)
             shortcut.setParent(None)
             shortcut.deleteLater()
         self._shortcuts = []

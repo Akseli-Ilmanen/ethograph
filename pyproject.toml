@@ -63,6 +63,7 @@ gui = [
     "pyqtgraph",
     "PyOpenGL",
     "pygfx>=0.15.3",
+    "uharfbuzz<0.56", # pygfx's text shaper
     "pynaviz>=0.1",
     "rendercanvas",
     "wgpu",
@@ -91,10 +92,6 @@ gui = [
     # Row order by similarity for the spike raster and the heatmap
     # (gui/heatmap_sort.py). Its own dependencies are all listed above already.
     "rastermap",
-    # Multi-camera calibration and triangulation to 3D poses. jax is imported
-    # lazily by aniposelib but needed by CameraGroup.triangulate.
-    "aniposelib>=0.8",
-    "jax",
 ]
 
 # Audio: waveform display, spectrogram, vocalisation analysis
@@ -125,6 +122,13 @@ proxy = [
 # (ethograph.video_features). torch/torchvision are deliberately excluded —
 # install a CUDA-matched build first (see docs), otherwise pip may replace it
 # with a CPU-only wheel.
+# Multi-camera calibration and triangulation to 3D poses (ethograph/triangulate,
+# the labelling dialog's second view). Separate because aniposelib brings jax
+# and numba, a few hundred MB most GUI users never need.
+triangulate = [
+    "aniposelib>=0.8",
+]
+
 model = [
     "tqdm",
     "movement>=0.14",

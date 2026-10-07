@@ -278,6 +278,8 @@ class MultiColoredLineItem(pg.GraphicsObject):
             return
 
         rgb = self._segment_colors(n_seg)
+        finite_pt = np.isfinite(x) & np.isfinite(y)
+        drawable = finite_pt[:-1] & finite_pt[1:]  # a segment touching a NaN sample is a gap
         unique, inverse = np.unique(rgb, axis=0, return_inverse=True)
         if len(unique) > self._MAX_UNIQUE_COLORS:
             rgb = (rgb >> 3) << 3
@@ -286,7 +288,9 @@ class MultiColoredLineItem(pg.GraphicsObject):
         # Each segment becomes an independent point pair; connect mask
         # [T, F, T, F, ...] joins only within pairs.
         for k, color in enumerate(unique):
-            idx = np.flatnonzero(inverse == k)
+            idx = np.flatnonzero((inverse.ravel() == k) & drawable)
+            if len(idx) == 0:
+                continue
             xk = np.empty(2 * len(idx))
             yk = np.empty(2 * len(idx))
             xk[0::2], xk[1::2] = x[idx], x[idx + 1]

@@ -12,15 +12,18 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
-from aniposelib.cameras import CameraGroup
 
 from ethograph.gui.pose_annotate import KeypointStore, store_to_movement_ds
 from ethograph.triangulate.frame import WorldTransform
 from ethograph.triangulate.points import triangulate_points
 from ethograph.triangulate.session import CALIBRATION_UNITS, REPROJECTION_ERROR, SPACE_3D
+
+if TYPE_CHECKING:
+    from aniposelib.cameras import CameraGroup
 
 #: Every camera's 2D keypoints of one clip, beside the first camera's video.
 VIEWS_DATASET_SUFFIX = ".keypoints_views.nc"

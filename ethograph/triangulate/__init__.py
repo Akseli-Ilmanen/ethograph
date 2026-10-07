@@ -11,6 +11,7 @@ aniposelib does every piece of multi-view geometry; Ethograph only reads the
 
 from ethograph.triangulate.calibration import (
     CalibrationError,
+    TriangulationUnavailableError,
     calibration_names,
     import_dlc_calibration,
     load_calibration,

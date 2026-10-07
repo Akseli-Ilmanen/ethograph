@@ -11,13 +11,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QLineEdit
+from qtpy.QtWidgets import QApplication, QLineEdit
 
 pytest.importorskip("qtpy")
 
 from ethograph.gui.main_window import EthographMainWindow  # noqa: E402
 from ethograph.gui.shortcuts import bind_global_shortcuts  # noqa: E402
-from ethograph.gui.source_popup import SourcePopup  # noqa: E402
+from ethograph.gui.source_popup import PlotTypePicker, SourcePopup  # noqa: E402
 
 
 class _StubState:
@@ -127,3 +127,31 @@ def test_text_editing_shortcuts_are_guarded(qtbot):
     guarded = {s.key().toString() for s in shell._guarded_shortcuts}
     assert {"Ctrl+C", "Ctrl+A", "Ctrl+Z", "Ctrl+Left", "Ctrl+Right"} <= guarded
     assert "Ctrl+S" not in guarded  # saving stays available while typing
+    shell.clear_shortcuts()  # application-context shortcuts outlive the hidden shell
+
+
+def test_plot_type_picker_arrows_move_its_selection_not_the_trial(qtbot):
+    """The picker is a modal list with focus; the global ``Up``/``Down``
+    (prev/next trial) shortcuts must be released while it is open, or they
+    swallow the arrows and the highlighted plot type never moves."""
+    shell = EthographMainWindow()
+    qtbot.addWidget(shell)
+    shell.show()
+    qtbot.waitExposed(shell)
+    fired = []
+    shell.bind_shortcut("Down", lambda: fired.append("next_trial"), guarded=True)
+
+    picker = PlotTypePicker(["Lineplot", "Heatmap", "Space (2D)"], parent=shell)
+    qtbot.addWidget(picker)
+    picker.show()  # non-blocking; still registers as the active modal
+    qtbot.waitExposed(picker)
+    picker._list.setFocus()
+    qtbot.waitUntil(lambda: QApplication.activeModalWidget() is picker)
+    shell._sync_guarded_shortcuts()
+
+    qtbot.keyClick(picker._list, Qt.Key_Down)
+    assert picker._list.currentItem().text() == "Heatmap"
+    assert fired == []
+
+    qtbot.keyClick(picker._list, Qt.Key_Return)
+    assert picker.choice == "Heatmap"

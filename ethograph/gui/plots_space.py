@@ -27,7 +27,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ethograph.features.preprocessing import interpolate_nans
 from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_lineplot import MultiColoredLineItem
@@ -393,14 +392,38 @@ def draw_reference(widget, ref: ReferenceGeometry) -> None:
 
 
 def _render_2d(plot_widget, X, Y, color_data=None):
-    """Plot 2D trajectory on a PlotWidget. Returns the line item."""
+    """Plot 2D trajectory on a PlotWidget. Returns the line item.
+
+    A NaN sample is a gap: nothing is drawn into or out of it.
+    """
     if color_data is not None and color_data.ndim == 2 and color_data.shape[1] >= 3:
         line = MultiColoredLineItem(x=X, y=Y, colors=color_data, width=3)
     else:
-        line = pg.PlotCurveItem(x=X, y=Y, pen=pg.mkPen(color="b", width=3))
+        line = pg.PlotCurveItem(x=X, y=Y, pen=pg.mkPen(color="b", width=3), connect="finite")
     line._is_trajectory = True
     plot_widget.addItem(line)
     return line
+
+
+def gl_line_segments(xyz: np.ndarray, color_data: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
+    """``(pos, color)`` for a ``GLLinePlotItem`` in ``mode="lines"`` that skips NaN samples.
+
+    GL draws a line strip through whatever it is given, so a NaN sample would
+    either vanish or pull a line to the origin. Each consecutive pair of finite
+    samples becomes one independent segment (two vertices); a pair with a NaN
+    is a gap. *color_data* is per sample ``(N, 4)``; the segment takes its
+    first sample's colour at both ends.
+    """
+    xyz = np.asarray(xyz, dtype=np.float32)
+    finite = np.isfinite(xyz).all(axis=1)
+    ok = np.flatnonzero(finite[:-1] & finite[1:]) if len(xyz) > 1 else np.empty(0, dtype=int)
+    pos = np.empty((2 * len(ok), 3), dtype=np.float32)
+    pos[0::2], pos[1::2] = xyz[ok], xyz[ok + 1]
+    if color_data is None:
+        return pos, None
+    color = np.empty((2 * len(ok), 4), dtype=np.float32)
+    color[0::2] = color[1::2] = color_data[ok]
+    return pos, color
 
 
 def _render_3d(gl_widget, X, Y, Z, color_data=None):
@@ -412,9 +435,11 @@ def _render_3d(gl_widget, X, Y, Z, color_data=None):
             color_data = np.concatenate([color_data, alpha], axis=1)
         if color_data.max() > 1.0:
             color_data = color_data / 255.0
-        line = gl.GLLinePlotItem(pos=xyz, color=color_data, width=3, antialias=True)
+        pos, color = gl_line_segments(xyz, np.asarray(color_data, dtype=np.float32)[: len(xyz)])
+        line = gl.GLLinePlotItem(pos=pos, color=color, width=3, antialias=True, mode="lines")
     else:
-        line = gl.GLLinePlotItem(pos=xyz, color=(0, 0, 1, 1), width=3, antialias=True)
+        pos, _ = gl_line_segments(xyz)
+        line = gl.GLLinePlotItem(pos=pos, color=(0, 0, 1, 1), width=3, antialias=True, mode="lines")
     line._is_trajectory = True
     gl_widget.addItem(line)
     return line
@@ -1208,12 +1233,6 @@ class SpacePlot(IndividualPinMixin, QWidget):
         use_3d = view_3d and data_z is not None
         locked = getattr(self.app_state, "space_lock_axes", False)
 
-        # GL cannot render NaN positions — interpolate before 3D rendering
-        if use_3d:
-            data_x = interpolate_nans(data_x)
-            data_y = interpolate_nans(data_y)
-            data_z = interpolate_nans(data_z)
-
         # Save current ranges before touching the widget
         saved_ranges = self._capture_ranges() if locked else None
 
@@ -1547,13 +1566,14 @@ class SpacePlot(IndividualPinMixin, QWidget):
 
             z_arr = Z if Z is not None else np.zeros_like(X)
             xyz = np.column_stack([X, Y, z_arr]).astype(np.float32)
-            bg = gl.GLLinePlotItem(pos=xyz, color=(0.7, 0.7, 0.7, 0.5), width=2, antialias=True)
+            bg_pos, _ = gl_line_segments(xyz)
+            bg = gl.GLLinePlotItem(pos=bg_pos, color=(0.7, 0.7, 0.7, 0.5), width=2, antialias=True, mode="lines")
             bg._is_trajectory = True
             self.space_widget.addItem(bg)
 
-            seg = xyz[i0 : i1 + 1]
+            seg, _ = gl_line_segments(xyz[i0 : i1 + 1])
             if len(seg) > 1:
-                hl = gl.GLLinePlotItem(pos=seg, color=(rf, gf, bf, 1), width=5, antialias=True)
+                hl = gl.GLLinePlotItem(pos=seg, color=(rf, gf, bf, 1), width=5, antialias=True, mode="lines")
                 hl._is_highlight = True
                 self.space_widget.addItem(hl)
         else:
@@ -1562,7 +1582,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
                 if getattr(item, "_is_trajectory", False) or getattr(item, "_is_highlight", False):
                     plot_item.removeItem(item)
 
-            bg = pg.PlotCurveItem(x=X, y=Y, pen=pg.mkPen(color=(180, 180, 180, 128), width=2))
+            bg = pg.PlotCurveItem(x=X, y=Y, pen=pg.mkPen(color=(180, 180, 180, 128), width=2), connect="finite")
             bg._is_trajectory = True
             plot_item.addItem(bg)
 
@@ -1572,6 +1592,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
                     x=x_seg,
                     y=y_seg,
                     pen=pg.mkPen(color=(r8, g8, b8), width=4),
+                    connect="finite",
                 )
                 hl._is_highlight = True
                 plot_item.addItem(hl)
@@ -1616,11 +1637,15 @@ class SpacePlot(IndividualPinMixin, QWidget):
         idx = int(np.clip(idx, 0, len(X) - 1))
 
         x, y = float(X[idx]), float(Y[idx])
+        z = float(Z[idx]) if Z is not None else 0.0
+        if not (np.isfinite(x) and np.isfinite(y) and np.isfinite(z)):
+            # No position at this time: no marker, rather than one at the origin.
+            self._remove_time_marker()
+            return
 
         is_gl = isinstance(self.space_widget, gl.GLViewWidget)
 
         if is_gl:
-            z = float(Z[idx]) if Z is not None else 0.0
             pos_arr = np.array([[x, y, z]], dtype=np.float32)
             color_arr = np.array([[1.0, 0.0, 0.0, 1.0]], dtype=np.float32)
             if self._time_marker_item is not None:

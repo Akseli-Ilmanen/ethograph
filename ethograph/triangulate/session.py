@@ -11,10 +11,10 @@ import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
-from aniposelib.cameras import CameraGroup
 from movement.io import load_dataset
 
 from ethograph.io import schema
@@ -27,6 +27,9 @@ from ethograph.triangulate.calibration import load_calibration, resolve_calibrat
 from ethograph.triangulate.frame import WorldFrame, WorldTransform, load_frame, save_frame
 from ethograph.triangulate.points import Method, triangulate_points
 from ethograph.utils.paths import global_setting
+
+if TYPE_CHECKING:
+    from aniposelib.cameras import CameraGroup
 
 logger = logging.getLogger(__name__)
 

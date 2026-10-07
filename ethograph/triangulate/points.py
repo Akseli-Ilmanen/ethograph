@@ -8,10 +8,12 @@ in Ethograph does multi-view geometry.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
-from aniposelib.cameras import CameraGroup
+
+if TYPE_CHECKING:
+    from aniposelib.cameras import CameraGroup
 
 Method = Literal["triangulate", "ransac", "optim"]
 METHODS: tuple[str, ...] = get_args(Method)

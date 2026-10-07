@@ -6,11 +6,12 @@ import cv2
 import numpy as np
 import pytest
 import xarray as xr
-from aniposelib.cameras import Camera, CameraGroup
 
 pytest.importorskip("pygfx")
+pytest.importorskip("aniposelib")
 
 import pygfx as gfx  # noqa: E402
+from aniposelib.cameras import Camera, CameraGroup  # noqa: E402
 from qtpy.QtWidgets import QApplication, QWidget  # noqa: E402
 
 import ethograph as eto  # noqa: E402

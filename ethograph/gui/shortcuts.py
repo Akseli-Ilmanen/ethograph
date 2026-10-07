@@ -51,7 +51,14 @@ _TEXT_EDITING_KEYS = frozenset(
 
 
 def typing_in_text_field() -> bool:
-    """True when keystrokes belong to a text entry rather than a shortcut."""
+    """True when keystrokes belong to the focus widget rather than a shortcut.
+
+    That is a text entry, or anything inside a modal dialog: application-context
+    shortcuts stay live while a modal is open, so without this ↑/↓ moved the
+    trial behind the plot-type picker instead of its selection.
+    """
+    if QApplication.activeModalWidget() is not None:
+        return True
     widget = QApplication.focusWidget()
     if widget is None:
         return False

@@ -8,18 +8,37 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 import yaml
-from aniposelib.cameras import Camera, CameraGroup
+
+if TYPE_CHECKING:
+    from aniposelib.cameras import Camera, CameraGroup
 
 #: The folder's name inside a project folder.
 CALIBRATION_DIRNAME = "calibration"
 
+#: How to get aniposelib: it is the ``triangulate`` extra, not part of ``gui``.
+INSTALL_HINT = 'uv pip install "ethograph[triangulate]"'
+
 
 class CalibrationError(ValueError):
     """A calibration that is missing, ambiguous, or does not fit the cameras asked for."""
+
+
+class TriangulationUnavailableError(CalibrationError):
+    """aniposelib is not installed, so nothing can be calibrated or triangulated."""
+
+
+def aniposelib_cameras() -> tuple[type[Camera], type[CameraGroup]]:
+    """``(Camera, CameraGroup)``: the one import of aniposelib, deferred because it is an optional extra."""
+    try:
+        from aniposelib.cameras import Camera, CameraGroup
+    except ImportError as err:
+        raise TriangulationUnavailableError(f"Triangulation needs aniposelib: {INSTALL_HINT}") from err
+    return Camera, CameraGroup
 
 
 def calibration_dir(project: Path | str) -> Path:
@@ -51,6 +70,7 @@ def resolve_calibration(project: Path | str, name: str | None = None) -> Path:
 
 def load_calibration(path: Path | str, cameras: list[str] | None = None) -> CameraGroup:
     """The camera group in *path*, restricted to and ordered as *cameras* when given."""
+    _, CameraGroup = aniposelib_cameras()
     cgroup = CameraGroup.load(str(path))
     if cameras is None:
         return cgroup
@@ -88,6 +108,7 @@ def import_dlc_calibration(dlc_folder: Path | str, project: Path | str, name: st
         raise CalibrationError(f"{stereo_path} has no pair {pair!r}; it holds {sorted(stereo)}.")
     params = stereo[pair]
 
+    Camera, CameraGroup = aniposelib_cameras()
     # DeepLabCut triangulates in camera 1's rectified frame: X_world = R1 @ X_cam1.
     to_cam1 = np.asarray(params["R1"], dtype=np.float64).T
     to_cam2 = np.asarray(params["R"], dtype=np.float64) @ to_cam1
