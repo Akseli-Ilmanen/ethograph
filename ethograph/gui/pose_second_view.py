@@ -651,8 +651,8 @@ class SecondView(QGroupBox):
 
     def _on_export_geometry(self) -> None:
         project = project_dir_of(self.app_state)
-        statics = list(self._dialog.store.static_keypoints)
-        if project is None or not statics:
+        statistics = list(self._dialog.store.static_keypoints)
+        if project is None or not statistics:
             notify("Tick Static on the keypoints that make up the room, and label them in both views.", "warning")
             return
         points = frame_points(self._views(), self._dialog._current_frame())
@@ -661,12 +661,12 @@ class SecondView(QGroupBox):
             p3d = self._transform.apply(p3d)
         names = self._dialog.store.keypoint_names
         found = {}
-        for name in statics:
+        for name in statistics:
             seen = p3d[:, names.index(name)]
             seen = seen[np.isfinite(seen).all(axis=1)]
             if len(seen):
                 found[name] = np.median(seen, axis=0)
-        missing = [name for name in statics if name not in found]
+        missing = [name for name in statistics if name not in found]
         if not found:
             notify("No static keypoint is labelled in both views yet.", "warning")
             return

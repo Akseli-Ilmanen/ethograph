@@ -2,6 +2,7 @@
 projects/
 !projects/defaults/*
 spot_frames/
+*pynapple_burst_r_to_python.html
 result/
 data/
 weights/

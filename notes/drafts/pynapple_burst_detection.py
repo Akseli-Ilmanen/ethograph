@@ -6,7 +6,6 @@ https://github.com/pynapple-org/pynapple/issues/668
 import numbers
 
 import numpy as np
-
 import pynapple as nap
 
 
@@ -74,8 +73,7 @@ def _drop_small_runs(times, runs, min_burst_duration, min_spikes_in_burst):
     return [
         (first, last)
         for first, last in runs
-        if times[last] - times[first] >= min_burst_duration
-        and last - first + 1 >= min_spikes_in_burst
+        if times[last] - times[first] >= min_burst_duration and last - first + 1 >= min_spikes_in_burst
     ]
 
 
@@ -415,10 +413,7 @@ def detect_bursts_log_isi(spikes, max_cutoff=0.1, min_spikes_in_burst=3, fallbac
         raise TypeError(f"`fallback` must be a bool, got {type(fallback)}")
 
     if isinstance(spikes, nap.TsGroup):
-        return {
-            k: detect_bursts_log_isi(spikes[k], max_cutoff, min_spikes_in_burst, fallback)
-            for k in spikes
-        }
+        return {k: detect_bursts_log_isi(spikes[k], max_cutoff, min_spikes_in_burst, fallback) for k in spikes}
 
     has_peak, threshold = _log_isi_valley(_interspike_intervals(spikes), max_cutoff)
     no_valley = threshold is None or threshold >= 1.0

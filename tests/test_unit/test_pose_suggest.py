@@ -329,5 +329,3 @@ def test_progress_cancellation_stops_decoding():
 
     suggest_frames("motion", 3, N_FRAMES, _burst_video(), progress=progress)
     assert len(calls) == 1
-
-

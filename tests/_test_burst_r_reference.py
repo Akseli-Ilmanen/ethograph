@@ -217,9 +217,8 @@ def compare(draft, trains, r_results):
         has_peak, _ = draft._log_isi_valley(np.diff(times), LOG_ISI_CUTOFF)
         r_no_valley = r_thr is None or r_thr >= 1.0
         r_no_peak = r_thr is not None and r_thr < 0
-        thr_match = (
-            (py_thr is None and (r_thr is None or r_no_peak))
-            or (py_thr is not None and r_thr is not None and abs(py_thr - r_thr) < 1e-9)
+        thr_match = (py_thr is None and (r_thr is None or r_no_peak)) or (
+            py_thr is not None and r_thr is not None and abs(py_thr - r_thr) < 1e-9
         )
         counts["threshold_exact" if thr_match else "threshold_mismatch"] += 1
         if not has_peak:

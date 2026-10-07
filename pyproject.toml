@@ -319,6 +319,6 @@ commands =
 """
 
 [tool.codespell]
-skip = '.git,*.ipynb,docs/build/*,docs/jupyter_execute/*'
+skip = '.git,*.ipynb,docs/build/*,docs/jupyter_execute/*,notes/drafts/*.html'
 check-hidden = true
-ignore-words-list = "eto,ND,buildd"
+ignore-words-list = "eto,ND,buildd,commun,abd"

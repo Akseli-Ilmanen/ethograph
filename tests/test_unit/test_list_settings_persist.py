@@ -46,11 +46,7 @@ def test_clearing_the_list_is_remembered_too(app_state, qtbot):
 
 def test_every_saved_list_setting_reaches_the_file(app_state):
     """The spec says ``save``; the writer must agree for every list, not one by name."""
-    list_settings = [
-        key
-        for key in AppStateSpec.saveable_attributes()
-        if "list" in str(AppStateSpec.get_type(key))
-    ]
+    list_settings = [key for key in AppStateSpec.saveable_attributes() if "list" in str(AppStateSpec.get_type(key))]
     assert list_settings
     for key in list_settings:
         setattr(app_state, key, ["a", "b"])

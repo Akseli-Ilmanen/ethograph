@@ -2102,9 +2102,7 @@ class EphysWidget(QWidget):
             return
         self._selecting_from_plot = True
         try:
-            self.cluster_table.selectionModel().select(
-                selection, QItemSelectionModel.Toggle | QItemSelectionModel.Rows
-            )
+            self.cluster_table.selectionModel().select(selection, QItemSelectionModel.Toggle | QItemSelectionModel.Rows)
         finally:
             self._selecting_from_plot = False
         self.cluster_table.scrollTo(selection.indexes()[0])
