@@ -1319,14 +1319,26 @@ class ObservableAppState(QObject):
         return names or ["default"]
 
     def declared_individuals(self) -> list[str]:
-        """Only the names the loaded data itself declares — what the dialog greys out."""
-        declared = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
+        """Only the names the loaded data itself declares — what the dialog greys out.
+
+        The dataset's own individual dim comes first, then the session record
+        adds anyone it names that the dataset does not track; neither hides the
+        other. A placeholder the catalog invented (``individual_0``) stands in
+        only when nothing declares a name at all.
+        """
+        catalog = getattr(getattr(self, "data_loader", None), "catalog", None)
+        spec = None
+        if catalog is not None and catalog.individual_combo:
+            spec = catalog.combos.get(catalog.individual_combo)
+        from_data = [] if spec is None or spec.placeholder else [str(v) for v in spec.values]
+        from_record = [str(v) for v in getattr(getattr(self, "nwb_alignment", None), "individuals", [])]
+        declared = list(from_data)
+        for name in from_record:
+            if name not in declared:
+                declared.append(name)
         if declared:
             return declared
-        catalog = getattr(getattr(self, "data_loader", None), "catalog", None)
-        if catalog is not None and catalog.individual_combo:
-            return [str(v) for v in catalog.combo_values(catalog.individual_combo)]
-        return []
+        return [str(v) for v in spec.values] if spec is not None else []
 
     def ignored_files(self) -> tuple[str, ...]:
         """File-name globs never read from a session folder's root.

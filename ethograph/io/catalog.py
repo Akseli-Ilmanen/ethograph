@@ -102,10 +102,16 @@ class ColumnAxis:
 
 @dataclass(frozen=True, slots=True)
 class ComboSpec:
-    """A selectable dimension: name + allowed values."""
+    """A selectable dimension: name + allowed values.
+
+    ``placeholder`` marks values the catalog invented because the data names
+    none (a pynapple folder's ``individual_0``): they fill the combo, but they
+    are never what the data *declares*.
+    """
 
     name: str
     values: tuple[str, ...]
+    placeholder: bool = False
 
 
 @dataclass
@@ -1103,7 +1109,7 @@ def catalog_from_pynapple(
     axes = _column_axes(feature_objs)
 
     combos: dict[str, ComboSpec] = {}
-    combos["individual"] = ComboSpec("individual", ("individual_0",))
+    combos["individual"] = ComboSpec("individual", ("individual_0",), placeholder=True)
 
     def _add_column_combo(key: str) -> None:
         """Register the combo for *key*'s column axis, named as the loader
