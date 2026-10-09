@@ -18,7 +18,7 @@ exist before the Labels tab wakes up:
    editable below.
 
 (target-individual-names)=
-### Where the names come from
+### How to define individual name
 
 The individual selector is built from three sources, in this order, and no
 source hides another:
@@ -32,12 +32,6 @@ source hides another:
    afterwards with `ethograph.io.nwb_alignment.set_individuals(path, ["crow1"])`.
 3. **`extra_individuals`** from `gui_settings.yaml`, your own additions.
 
-Only when none of these names anyone does a pynapple session fall back to the
-placeholder `individual_0`. Label with that placeholder and the labels file ends
-up naming two different actors for one animal, so the trial appears to lose its
-other labels — they are still there, just filtered by the selected individual.
-Declare the name in the session record before labelling, and keep the actor in
-`labels.tsv` spelled the way the data spells it.
 
 Until both are there, the Labels tab is greyed out and the label keys refuse to
 place anything. The tab says which half is missing and offers the button that

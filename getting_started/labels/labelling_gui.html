@@ -479,8 +479,8 @@ pose file, or the session record — or you name them yourself in
 data declares; the dialog shows the data’s names greyed out on top and yours
 editable below.</p></li>
 </ol>
-<section id="where-the-names-come-from">
-<span id="target-individual-names"></span><h3>Where the names come from<a class="headerlink" href="#where-the-names-come-from" title="Link to this heading">#</a></h3>
+<section id="how-to-define-individual-name">
+<span id="target-individual-names"></span><h3>How to define individual name<a class="headerlink" href="#how-to-define-individual-name" title="Link to this heading">#</a></h3>
 <p>The individual selector is built from three sources, in this order, and no
 source hides another:</p>
 <ol class="arabic simple">
@@ -493,12 +493,6 @@ The record is filled when the media are paired with an individuals list, or
 afterwards with <code class="docutils literal notranslate"><span class="pre">ethograph.io.nwb_alignment.set_individuals(path,</span> <span class="pre">[&quot;crow1&quot;])</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">extra_individuals</span></code></strong> from <code class="docutils literal notranslate"><span class="pre">gui_settings.yaml</span></code>, your own additions.</p></li>
 </ol>
-<p>Only when none of these names anyone does a pynapple session fall back to the
-placeholder <code class="docutils literal notranslate"><span class="pre">individual_0</span></code>. Label with that placeholder and the labels file ends
-up naming two different actors for one animal, so the trial appears to lose its
-other labels — they are still there, just filtered by the selected individual.
-Declare the name in the session record before labelling, and keep the actor in
-<code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code> spelled the way the data spells it.</p>
 <p>Until both are there, the Labels tab is greyed out and the label keys refuse to
 place anything. The tab says which half is missing and offers the button that
 fixes it — <strong>Define individuals…</strong> or <strong>Define labels…</strong> (the <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>
@@ -653,7 +647,7 @@ own panel. See <a class="reference internal" href="importing.html"><span class="
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#before-you-can-label">Before you can label</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-names-come-from">Where the names come from</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-define-individual-name">How to define individual name</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-labels">Creating labels</a><ul class="nav section-nav flex-column">
