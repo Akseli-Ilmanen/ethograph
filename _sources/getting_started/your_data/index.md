@@ -126,8 +126,9 @@ eto.pair_media(
 )
 ```
 
-Then launch Ethograph, select `session.nc` in the **Custom set-up** card, and
-point the media folders at your video and pose directories.
+Then launch Ethograph, choose the folder holding `session.nc` as the
+**Session folder** in the **Custom set-up** card, and point the media folders
+at your video and pose directories.
 :::
 
 :::{tab-item} NWB

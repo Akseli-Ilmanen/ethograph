@@ -682,7 +682,7 @@ selection is not available when loading a single NWB file.</p>
 <h2>Optional: custom dimensions<a class="headerlink" href="#optional-custom-dimensions" title="Link to this heading">#</a></h2>
 <p>Any dimension that co-occurs with a time dimension in at least one feature
 variable is automatically discovered and gets a selection
-<a class="reference external" href="https://www.pythonguis.com/docs/qcombobox/">combo box</a> in the GUI.</p>
+<a class="reference external" href="https://www.pythonguis.com/docs/qcombobox/">dropdown</a> in the GUI.</p>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-12" name="sd-tab-set-4" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-12">
@@ -696,7 +696,7 @@ Xarray</label><div class="sd-tab-content docutils">
 </div>
 <p>Dimensions <strong>do not need to match across features</strong>. For example, <code class="docutils literal notranslate"><span class="pre">position</span></code>
 may have <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">keypoint,</span> <span class="pre">space,</span> <span class="pre">individual)</span></code> while <code class="docutils literal notranslate"><span class="pre">speed</span></code> only has
-<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">keypoint,</span> <span class="pre">individual)</span></code>. The GUI creates combo boxes for the union of
+<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">keypoint,</span> <span class="pre">individual)</span></code>. The GUI creates dropdowns for the union of
 all discovered dimensions. When a feature doesn’t have a selected dimension,
 that selection is silently ignored via
 <a class="reference internal" href="../../api/xr_utils.html#ethograph.utils.xr_utils.sel_valid" title="ethograph.utils.xr_utils.sel_valid"><code class="xref py py-func docutils literal notranslate"><span class="pre">sel_valid()</span></code></a>:</p>
@@ -714,7 +714,7 @@ that selection is silently ignored via
 <label class="sd-tab-label" for="sd-tab-item-13">
 Pynapple</label><div class="sd-tab-content docutils">
 <p>Column names in a <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a> become a selectable dimension.
-Objects with identical column names share a single combo in the GUI.</p>
+Objects with identical column names share a single dropdown in the GUI.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">position</span> <span class="o">=</span> <span class="n">nap</span><span class="o">.</span><span class="n">TsdFrame</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="n">time_s</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">])</span>
 <span class="n">velocity</span> <span class="o">=</span> <span class="n">nap</span><span class="o">.</span><span class="n">TsdFrame</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="n">time_s</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="n">vel</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">])</span>
 </pre></div>
@@ -725,7 +725,7 @@ Objects with identical column names share a single combo in the GUI.</p>
 <section id="optional-color-variables">
 <h2>Optional: color variables<a class="headerlink" href="#optional-color-variables" title="Link to this heading">#</a></h2>
 <p>Color variables are identified by <strong>name</strong>: any feature with <code class="docutils literal notranslate"><span class="pre">&quot;rgb&quot;</span></code> in its
-name (case-insensitive) is automatically offered in the GUI’s <strong>Colors</strong> combo.
+name (case-insensitive) is automatically offered in the GUI’s <strong>Colors</strong> dropdown.
 Values should lie in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code> (float) or <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">255]</span></code> (int).</p>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-14" name="sd-tab-set-5" type="radio">

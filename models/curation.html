@@ -450,7 +450,7 @@
 label makes it manual, re-running a model over a trial can add new automated
 labels, and nothing else changes a method.</p>
 <p>A <strong>trial is curated</strong> when none of its labels is still automated. That
-verdict is everywhere you navigate — the trial combo in the Navigation section
+verdict is everywhere you navigate — the trial number in the trials table
 and the <code class="docutils literal notranslate"><span class="pre">Trial</span> <span class="pre">12</span> <span class="pre">(12/173)</span></code> counter in the bottom bar are green for a curated
 trial and red for one with automated labels left — and it is written to the
 metadata table’s <code class="docutils literal notranslate"><span class="pre">curated</span></code> column (<code class="docutils literal notranslate"><span class="pre">yes</span></code> / <code class="docutils literal notranslate"><span class="pre">no</span></code>), refreshed every few seconds
@@ -504,7 +504,7 @@ walked one at a time, each centred in a small <strong>View window</strong>
 reviewed is named in large coloured text; the keys are drawn in the section,
 and <strong>Shortcuts…</strong> spells them out. By default the queue holds only automated
 boundaries — a human already vouched for manual and curated ones — untick
-<strong>Show automated only</strong> to walk those too. The <strong>Order</strong> combo walks the queue
+<strong>Show automated only</strong> to walk those too. The <strong>Order</strong> dropdown walks the queue
 <em>Trial-by-trial</em> (every boundary of a trial, then the next trial) or
 <em>Label-by-label</em> (one class across every trial, then the next class), and with
 <strong>Jump to next after Enter/Backspace</strong> ticked (the default) confirming or
@@ -537,7 +537,7 @@ deleting moves straight on to the next boundary:</p>
 </tbody>
 </table>
 </div>
-<p>Navigating trials the normal way (trial combo, <code class="docutils literal notranslate"><span class="pre">Up</span></code>/<code class="docutils literal notranslate"><span class="pre">Down</span></code>) pulls the review
+<p>Navigating trials the normal way (trials table, <code class="docutils literal notranslate"><span class="pre">Up</span></code>/<code class="docutils literal notranslate"><span class="pre">Down</span></code>) pulls the review
 along to that trial’s first boundary. Nothing reaches disk until you save with
 <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code>.</p>
 <p>Reviewing what an lightgbm model (LightGBM <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../community/references.html#id286" title="Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu. LightGBM: a highly efficient gradient boosting decision tree. In Advances in Neural Information Processing Systems (NeurIPS). 2017. URL: https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.">Ke <em>et al.</em>, 2017</a>]</span>) predicted, you also get the
@@ -558,10 +558,10 @@ than either alone.</p>
 <section id="the-grids">
 <span id="target-curation-grids"></span><h2>The grids<a class="headerlink" href="#the-grids" title="Link to this heading">#</a></h2>
 <p>Two buttons in the section open review grids on the scope; both come with the
-same <strong>mode</strong> combo and a <strong>Done</strong> button. Their <em>Setup</em> tab lists the labels
+same <strong>mode</strong> dropdown and a <strong>Done</strong> button. Their <em>Setup</em> tab lists the labels
 in scope for clarity but cannot change them — the scope area is the one place
 labels are chosen, so close the grid, drag other rows in, and open it again.</p>
-<p>Setup’s <strong>Labeling method</strong> combo picks which labels of those classes the grid
+<p>Setup’s <strong>Labeling method</strong> dropdown picks which labels of those classes the grid
 is about: <em>All labels</em>, <em>Manual only</em>, <em>Curated only</em>, <em>Manual or curated</em>, or
 <em>Automated only</em> — a model’s output that nobody has looked at, which is what a
 prediction review is for. <em>Manual or curated</em> is there for checking your own
@@ -599,7 +599,7 @@ score is a reason to doubt a label, never to approve it), and <strong>Done</stro
 curates every other label.</p></li>
 </ul>
 <p>When the scope holds more than one label class the grid gets a <strong>Label</strong>
-combo, which narrows it to one class at a time (each choice says how many
+dropdown, which narrows it to one class at a time (each choice says how many
 tiles it has). It narrows the <em>operations</em> too, which is the point of it:
 <strong>Mark low-confidence as uncurated</strong>, <strong>Done</strong> and the PDF apply to the class
 on screen and to no other — so “rest = curated” means the rest of <em>that</em>
@@ -635,7 +635,7 @@ is quick. Clicks mean the same as in the label grid.</p>
 instead of your own labels. Once a set is loaded, the section shows <strong>Grids
 and label navigation read</strong> — pick the set there and all three read its rows.
 The set is <strong>read-only</strong>: a tile click jumps the GUI to that trial and time,
-the mode combo and <strong>Done</strong> are gone, and nothing you do there reaches
+the mode dropdown and <strong>Done</strong> are gone, and nothing you do there reaches
 <code class="docutils literal notranslate"><span class="pre">labels.tsv</span></code>. Setup lists the set’s classes with a tick each, so a grid can
 be built from some of them.</p>
 <p>A set does not have to come from a model. Two entries of the Tools menu make

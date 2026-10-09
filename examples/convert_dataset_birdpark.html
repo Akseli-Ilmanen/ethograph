@@ -572,34 +572,6 @@
 </pre></div>
 </div>
 </div>
-<div class="cell_output docutils container">
-<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span><span class="gt">---------------------------------------------------------------------------</span>
-<span class="ne">ValueError</span><span class="g g-Whitespace">                                </span>Traceback (most recent call last)
-<span class="n">Cell</span> <span class="n">In</span><span class="p">[</span><span class="mi">13</span><span class="p">],</span> <span class="n">line</span> <span class="mi">33</span>
-<span class="g g-Whitespace">     </span><span class="mi">29</span>     <span class="p">}</span>
-<span class="g g-Whitespace">     </span><span class="mi">30</span> <span class="p">)</span>
-<span class="g g-Whitespace">     </span><span class="mi">31</span> 
-<span class="g g-Whitespace">     </span><span class="mi">32</span> <span class="n">nwb_path</span> <span class="o">=</span> <span class="n">recording_folder</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"alignment.nwb"</span>
-<span class="ne">---&gt; </span><span class="mi">33</span> <span class="n">pair_media</span><span class="p">(</span>
-<span class="g g-Whitespace">     </span><span class="mi">34</span>     <span class="n">trial_table</span><span class="o">=</span><span class="n">session_table</span><span class="p">,</span>
-<span class="g g-Whitespace">     </span><span class="mi">35</span>     <span class="n">stream_rates</span><span class="o">=</span><span class="p">{</span><span class="s2">"video"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fps</span><span class="p">),</span> <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">audio_sr</span><span class="p">)},</span>
-<span class="g g-Whitespace">     </span><span class="mi">36</span>     <span class="n">output_path</span><span class="o">=</span><span class="n">nwb_path</span><span class="p">,</span>
-
-<span class="nn">File ~\Documents\Code\ethograph\ethograph\io\pairing.py:412,</span> in <span class="ni">pair_media</span><span class="nt">(trial_table, stream_rates, session_wide, output_path, pose_fps, individuals, on_existing)</span>
-<span class="g g-Whitespace">    </span><span class="mi">360</span><span class="w"> </span><span class="sd">"""Write ``.ethograph/alignment.nwb`` from a pairing table.</span>
-<span class="g g-Whitespace">    </span><span class="mi">361</span><span class="sd"> </span>
-<span class="g g-Whitespace">    </span><span class="mi">362</span><span class="sd">     Each per-trial ``{stream}_{device}`` column becomes a trials-table column plus one</span>
-<span class="sd">   (...)    409     The in-memory :class:`~pynwb.NWBFile`.</span>
-<span class="g g-Whitespace">    </span><span class="mi">410</span><span class="sd"> """</span>
-<span class="g g-Whitespace">    </span><span class="mi">411</span> <span class="k">if</span> <span class="n">on_existing</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"extend"</span><span class="p">,</span> <span class="s2">"replace"</span><span class="p">):</span>
-<span class="ne">--&gt; </span><span class="mi">412</span>     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"on_existing must be 'extend' or 'replace', got </span><span class="si">{</span><span class="n">on_existing</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-<span class="g g-Whitespace">    </span><span class="mi">413</span> <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
-<span class="g g-Whitespace">    </span><span class="mi">414</span> <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">out</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">on_existing</span> <span class="o">==</span> <span class="s2">"replace"</span><span class="p">:</span>
-
-<span class="ne">ValueError</span>: on_existing must be 'extend' or 'replace', got 'overwrite'
-</pre></div>
-</div>
-</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">

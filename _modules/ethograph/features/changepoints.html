@@ -853,18 +853,60 @@ window.runMermaid = runMermaid;</script>
 
 <div class="viewcode-block" id="find_peaks_binary">
 <a class="viewcode-back" href="../../../api/ethograph.features.changepoints.find_peaks_binary.html#ethograph.features.changepoints.find_peaks_binary">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">find_peaks_binary</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""scipy.signal.find_peaks + NaN boundaries -&gt; binary mask."""</span>
-    <span class="n">peaks</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_peaks_binary</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">,</span>
+    <span class="n">prominence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">distance</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Local maxima + NaN boundaries -&gt; binary mask.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x: Input 1-D signal.</span>
+<span class="sd">        prominence: Minimum peak prominence (how far a peak stands out from its</span>
+<span class="sd">            surroundings). Raise it to keep only the clearest peaks.</span>
+<span class="sd">        distance: Minimum number of samples between neighbouring peaks.</span>
+<span class="sd">        height: Minimum absolute value of a peak.</span>
+<span class="sd">        width: Minimum peak width in samples.</span>
+<span class="sd">        **kwargs: Any further ``scipy.signal.find_peaks`` keyword.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Binary array of the same length as x, 1 at peaks and NaN boundaries.</span>
+<span class="sd">    """</span>
+    <span class="n">peaks</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">prominence</span><span class="o">=</span><span class="n">prominence</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="n">distance</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">add_NaN_boundaries</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">peaks</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="find_troughs_binary">
 <a class="viewcode-back" href="../../../api/ethograph.features.changepoints.find_troughs_binary.html#ethograph.features.changepoints.find_troughs_binary">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">find_troughs_binary</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Find troughs (local minima) + NaN boundaries -&gt; binary mask."""</span>
-    <span class="n">troughs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_troughs_binary</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">,</span>
+    <span class="n">prominence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">distance</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Local minima + NaN boundaries -&gt; binary mask.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x: Input 1-D signal.</span>
+<span class="sd">        prominence: Minimum trough prominence (how far a trough dips below its</span>
+<span class="sd">            surroundings). Raise it to keep only the clearest troughs.</span>
+<span class="sd">        distance: Minimum number of samples between neighbouring troughs.</span>
+<span class="sd">        height: Minimum depth of a trough, measured on the negated signal.</span>
+<span class="sd">        width: Minimum trough width in samples.</span>
+<span class="sd">        **kwargs: Any further ``scipy.signal.find_peaks`` keyword.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Binary array of the same length as x, 1 at troughs and NaN boundaries.</span>
+<span class="sd">    """</span>
+    <span class="n">troughs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span>
+        <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">prominence</span><span class="o">=</span><span class="n">prominence</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="n">distance</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span>
     <span class="k">return</span> <span class="n">add_NaN_boundaries</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">troughs</span><span class="p">)</span></div>
 
 

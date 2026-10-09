@@ -527,15 +527,27 @@ between valid data and NaN gaps are automatically added as changepoints.</p>
 <hr class="docutils" />
 <section id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">#</a></h2>
+<p>Detection lives in the top bar: <strong>Changepoints ▸ Detect changepoints…</strong>.
+Correction is the next entry, <strong>Run changepoint correction…</strong>, and opens a
+pop-up of its own, so the two steps never share a window.</p>
 <ol class="arabic simple">
-<li><p>Select a feature in the Data Controls (e.g. <code class="docutils literal notranslate"><span class="pre">speed</span></code>).</p></li>
-<li><p>Open the <strong>Kinematic CPs</strong> panel.</p></li>
+<li><p>Click a line plot and pick the feature in the sidebar’s <strong>Data</strong> section (e.g. <code class="docutils literal notranslate"><span class="pre">speed</span></code>).</p></li>
+<li><p>Open <strong>Changepoints ▸ Detect changepoints…</strong> in the top bar; the <strong>Kinematic CPs</strong> panel is in front.</p></li>
 <li><p>Choose a method (<code class="docutils literal notranslate"><span class="pre">troughs</span></code> or <code class="docutils literal notranslate"><span class="pre">turning_points</span></code>).</p></li>
 <li><p>Click <strong>Configure…</strong> to adjust parameters.</p></li>
 <li><p>Click <strong>Detect</strong>.</p></li>
 </ol>
 <p>The changepoints are stored in the dataset as <code class="docutils literal notranslate"><span class="pre">{feature}_{method}</span></code> (e.g.
 <code class="docutils literal notranslate"><span class="pre">speed_troughs</span></code>) and persist when you save.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><strong>Play in the GUI, then script it.</strong> The pop-up is for finding a threshold
+interactively: change a parameter, click <strong>Detect</strong>, look at the marks on the
+plot. Once they look right, click <strong>Copy code to clipboard</strong> in the
+<strong>Configure…</strong> dialog: it copies the Python call with the parameters you
+chose. Put that call in the script that builds your dataset, so every session
+is detected the same way and nobody has to redo the clicks.</p>
+</div>
 </section>
 <hr class="docutils" />
 <section id="data-format">
@@ -544,26 +556,12 @@ between valid data and NaN gaps are automatically added as changepoints.</p>
 <input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-0">
 Xarray</label><div class="sd-tab-content docutils">
-<p>Changepoint arrays are binary (<code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>) integer arrays that share the
-same time dimension as their target feature. They require:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">attrs[&quot;kind&quot;]</span> <span class="pre">=</span> <span class="pre">&quot;changepoint_feature&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">attrs[&quot;changepoint_mask&quot;]</span> <span class="pre">=</span> <span class="pre">1</span></code> —
-the label and the marker, both written by
-<code class="xref py py-func docutils literal notranslate"><span class="pre">changepoint_attrs()</span></code>.
-A file predating this needs <code class="xref py py-func docutils literal notranslate"><span class="pre">migrate_legacy_attrs()</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">attrs[&quot;target_feature&quot;]</span></code> — name of the feature variable they annotate</p></li>
-</ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">schema</span>
-
-<span class="n">ds</span><span class="p">[</span><span class="s2">"speed_troughs"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-    <span class="n">cp_binary</span><span class="p">,</span>  <span class="c1"># shape: (time, keypoint, individual), values 0 or 1</span>
-    <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"keypoint"</span><span class="p">,</span> <span class="s2">"individual"</span><span class="p">],</span>
-    <span class="n">attrs</span><span class="o">=</span><span class="n">schema</span><span class="o">.</span><span class="n">changepoint_attrs</span><span class="p">(</span><span class="n">target_feature</span><span class="o">=</span><span class="s2">"speed"</span><span class="p">),</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<p>To compute changepoints programmatically, use
-<a class="reference internal" href="../../api/ethograph.io.dataset.add_changepoints_to_ds.html#ethograph.io.dataset.add_changepoints_to_ds" title="ethograph.io.dataset.add_changepoints_to_ds"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_changepoints_to_ds()</span></code></a>:</p>
+<p>Compute changepoints with
+<a class="reference internal" href="../../api/ethograph.io.dataset.add_changepoints_to_ds.html#ethograph.io.dataset.add_changepoints_to_ds" title="ethograph.io.dataset.add_changepoints_to_ds"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_changepoints_to_ds()</span></code></a>. It runs the detector
+over every non-time dimension through <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html#xarray.apply_ufunc" title="(in xarray v2026.9.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.apply_ufunc()</span></code></a> with
+<code class="docutils literal notranslate"><span class="pre">vectorize=True</span></code>, so the detector only has to handle a 1-D signal, and it
+stores the result as <code class="docutils literal notranslate"><span class="pre">ds[&quot;{target_feature}_{changepoint_name}&quot;]</span></code> with the
+right attrs:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.features.changepoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_troughs_binary</span>
 
@@ -572,12 +570,17 @@ A file predating this needs <code class="xref py py-func docutils literal notran
     <span class="n">target_feature</span><span class="o">=</span><span class="s2">"speed"</span><span class="p">,</span>
     <span class="n">changepoint_name</span><span class="o">=</span><span class="s2">"troughs"</span><span class="p">,</span>
     <span class="n">changepoint_func</span><span class="o">=</span><span class="n">find_troughs_binary</span><span class="p">,</span>
+    <span class="n">prominence</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>  <span class="c1"># ignore dips shallower than 0.5 (feature units)</span>
+    <span class="n">distance</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>  <span class="c1"># at most one trough per 10 samples</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p><a class="reference internal" href="../../api/ethograph.io.dataset.add_changepoints_to_ds.html#ethograph.io.dataset.add_changepoints_to_ds" title="ethograph.io.dataset.add_changepoints_to_ds"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_changepoints_to_ds()</span></code></a> uses
-<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html#xarray.apply_ufunc" title="(in xarray v2026.9.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.apply_ufunc()</span></code></a> with <code class="docutils literal notranslate"><span class="pre">vectorize=True</span></code>, so your detection function
-only needs to handle a 1-D signal.</p>
+<p>The stored variable is a binary (<code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>) integer array on the same time
+dimension as its target feature, carrying <code class="docutils literal notranslate"><span class="pre">attrs[&quot;target_feature&quot;]</span></code> (the
+feature it annotates) plus the schema stamp written by
+<code class="xref py py-func docutils literal notranslate"><span class="pre">changepoint_attrs()</span></code> (<code class="docutils literal notranslate"><span class="pre">kind=&quot;changepoint_feature&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">changepoint_mask=1</span></code>). A mask you computed elsewhere only needs those attrs
+to be recognised.</p>
 </div>
 <input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-1">
@@ -614,7 +617,6 @@ channel, neuron, …) with metadata columns marking it as a changepoint set.</p>
 through when the input is a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code>.</p>
 </div>
 </div>
-<hr class="docutils" />
 </section>
 </section>
 

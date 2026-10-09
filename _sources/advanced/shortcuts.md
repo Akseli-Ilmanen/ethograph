@@ -2,7 +2,7 @@
 # Keyboard Shortcuts
 
 Plain-letter shortcuts (`Space`, `V`, label keys, arrow keys) are suppressed
-while you are typing in a text field, spin box or editable combo box.
+while you are typing in a text field, spin box or editable dropdown.
 
 There's a rough convention to the modifier: labelling actions are usually a
 single key (e.g. `E` to activate label 5), opening/switching/hiding panels is

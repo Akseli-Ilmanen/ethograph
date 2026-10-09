@@ -499,19 +499,6 @@ treated as state events, so existing mapping files keep working unchanged.</p></
 <p>To declare a <em>point</em> class without a custom branch you must still write the
 default branch explicitly, because the columns are positional:
 <code class="docutils literal notranslate"><span class="pre">11</span> <span class="pre">peck</span> <span class="pre">0</span> <span class="pre">point</span></code> — not <code class="docutils literal notranslate"><span class="pre">11</span> <span class="pre">peck</span> <span class="pre">point</span></code>.</p>
-<p>Read / write programmatically:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_mapping</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.converters</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_mapping_file</span>
-
-<span class="n">class_to_idx</span><span class="p">,</span> <span class="n">idx_to_class</span> <span class="o">=</span> <span class="n">load_mapping</span><span class="p">(</span><span class="s2">"mapping.txt"</span><span class="p">)</span>
-<span class="n">class_to_idx</span><span class="p">[</span><span class="s2">"pullOutStick"</span><span class="p">]</span>  <span class="c1"># 1</span>
-<span class="n">idx_to_class</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># "pullOutStick"</span>
-
-<span class="n">write_mapping_file</span><span class="p">(</span><span class="s2">"mapping.txt"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"background"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"walk"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
-</pre></div>
-</div>
-<p>See <a class="reference internal" href="../../api/labels.html#ethograph.labels.intervals.load_mapping" title="ethograph.labels.intervals.load_mapping"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_mapping()</span></code></a> and
-<a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.write_mapping_file" title="ethograph.labels.converters.write_mapping_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">write_mapping_file()</span></code></a>.</p>
 </section>
 <hr class="docutils" />
 <section id="where-mapping-txt-lives">
@@ -587,6 +574,59 @@ changepoint correction) untouched — they have no duration, so concepts like
 “too short” or “stitch the gap” don’t apply to them.</p>
 <hr class="docutils" />
 </section>
+<hr class="docutils" />
+<section id="reading-it-programmatically">
+<h2>Reading it programmatically<a class="headerlink" href="#reading-it-programmatically" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../api/labels.html#ethograph.labels.intervals.load_mapping" title="ethograph.labels.intervals.load_mapping"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_mapping()</span></code></a> gives the two lookups:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_mapping</span>
+
+<span class="n">class_to_idx</span><span class="p">,</span> <span class="n">idx_to_class</span> <span class="o">=</span> <span class="n">load_mapping</span><span class="p">(</span><span class="s2">"mapping.txt"</span><span class="p">)</span>
+<span class="n">class_to_idx</span><span class="p">[</span><span class="s2">"pullOutStick"</span><span class="p">]</span>  <span class="c1"># 1</span>
+<span class="n">idx_to_class</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># "pullOutStick"</span>
+</pre></div>
+</div>
+<p>For plotting, <a class="reference internal" href="../../api/labels.html#ethograph.labels.intervals.load_label_mapping" title="ethograph.labels.intervals.load_label_mapping"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_label_mapping()</span></code></a> returns
+one dict per label with a colour assigned, and
+<a class="reference internal" href="../../api/labels.html#ethograph.labels.plots.plot_label_segments" title="ethograph.labels.plots.plot_label_segments"><code class="xref py py-func docutils literal notranslate"><span class="pre">plot_label_segments()</span></code></a> shades every interval of a
+labels DataFrame with that colour. The example below opens one trial of the
+Moll2025 example session and draws its labels over the beak-tip speed:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.patches</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpatches</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataset_dir</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.session_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">labels_path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.intervals</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_label_mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_label_segments</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.labels.tsv_store</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_labels_tsv</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">dataset_dir</span><span class="p">(</span><span class="s2">"moll2025"</span><span class="p">)</span>  <span class="c1"># the downloaded example session folder</span>
+<span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">session</span> <span class="o">/</span> <span class="s2">"Trial_data.nc"</span><span class="p">)</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">trial</span><span class="p">(</span><span class="mi">41</span><span class="p">)</span>
+
+<span class="n">mappings</span> <span class="o">=</span> <span class="n">load_label_mapping</span><span class="p">(</span><span class="n">session</span> <span class="o">/</span> <span class="s2">".ethograph"</span> <span class="o">/</span> <span class="s2">"mapping.txt"</span><span class="p">)</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">load_labels_tsv</span><span class="p">(</span><span class="n">labels_path</span><span class="p">(</span><span class="n">session</span><span class="p">))</span>  <span class="c1"># the session's labels.tsv</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="n">labels</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">41</span><span class="p">]</span>
+
+<span class="n">speed</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">keypoint</span><span class="o">=</span><span class="s2">"beakTip"</span><span class="p">,</span> <span class="n">individual</span><span class="o">=</span><span class="s2">"Crow1"</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">3.6</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">speed</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">speed</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"black"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">plot_label_segments</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">mappings</span><span class="p">,</span> <span class="n">individual</span><span class="o">=</span><span class="s2">"Crow1"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+<span class="n">used</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+    <span class="n">handles</span><span class="o">=</span><span class="p">[</span><span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">mappings</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"color"</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">mappings</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"name"</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">used</span><span class="p">],</span>
+    <span class="n">loc</span><span class="o">=</span><span class="s2">"upper center"</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.28</span><span class="p">),</span> <span class="n">ncol</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time (s)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"beakTip speed"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><img alt="Labelled intervals over a speed trace" src="../../_images/mapping_plot_labels.png" /></p>
+<p><code class="docutils literal notranslate"><span class="pre">labels</span></code> is the TSV as a DataFrame with <code class="docutils literal notranslate"><span class="pre">onset_s</span></code>, <code class="docutils literal notranslate"><span class="pre">offset_s</span></code>, <code class="docutils literal notranslate"><span class="pre">labels</span></code>,
+<code class="docutils literal notranslate"><span class="pre">individual</span></code> and <code class="docutils literal notranslate"><span class="pre">trial</span></code> columns, so filtering it by trial or individual is
+ordinary pandas.</p>
+</section>
 </section>
 
 
@@ -641,6 +681,7 @@ changepoint correction) untouched — they have no duration, so concepts like
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#editing-it-from-the-gui">Editing it from the GUI</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#importing-labels-from-other-formats">Importing labels from other formats</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-vs-point-events">State vs point events</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-it-programmatically">Reading it programmatically</a></li>
 </ul>
   </nav></div>
 

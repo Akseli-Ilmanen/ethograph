@@ -317,8 +317,8 @@ eto.pair_media(
 
 #### 7. Open it
 
-On the start page, select `session.nwb` in the **Custom set-up** card and click
-**Load**. The ephys trace, the video and the pose overlay all read the same
+On the start page, choose the folder holding `session.nwb` as the **Session
+folder** in the **Custom set-up** card and click **Load**. The ephys trace, the video and the pose overlay all read the same
 clock.
 
 

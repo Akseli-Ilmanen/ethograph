@@ -44,21 +44,6 @@ To declare a *point* class without a custom branch you must still write the
 default branch explicitly, because the columns are positional:
 `11 peck 0 point` — not `11 peck point`.
 
-Read / write programmatically:
-
-```python
-from ethograph.labels.intervals import load_mapping
-from ethograph.labels.converters import write_mapping_file
-
-class_to_idx, idx_to_class = load_mapping("mapping.txt")
-class_to_idx["pullOutStick"]  # 1
-idx_to_class[1]  # "pullOutStick"
-
-write_mapping_file("mapping.txt", {"background": 0, "walk": 1, "run": 2})
-```
-
-See {func}`~ethograph.labels.intervals.load_mapping` and
-{func}`~ethograph.labels.converters.write_mapping_file`.
 
 ---
 
@@ -130,3 +115,62 @@ changepoint correction) untouched — they have no duration, so concepts like
 "too short" or "stitch the gap" don't apply to them.
 
 ---
+
+---
+
+## Reading it programmatically
+
+{func}`~ethograph.labels.intervals.load_mapping` gives the two lookups:
+
+```python
+from ethograph.labels.intervals import load_mapping
+
+class_to_idx, idx_to_class = load_mapping("mapping.txt")
+class_to_idx["pullOutStick"]  # 1
+idx_to_class[1]  # "pullOutStick"
+```
+
+For plotting, {func}`~ethograph.labels.intervals.load_label_mapping` returns
+one dict per label with a colour assigned, and
+{func}`~ethograph.labels.plots.plot_label_segments` shades every interval of a
+labels DataFrame with that colour. The example below opens one trial of the
+Moll2025 example session and draws its labels over the beak-tip speed:
+
+```python
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+
+import ethograph as eto
+from ethograph.datasets import dataset_dir
+from ethograph.io.session_layout import labels_path
+from ethograph.labels.intervals import load_label_mapping
+from ethograph.labels.plots import plot_label_segments
+from ethograph.labels.tsv_store import load_labels_tsv
+
+session = dataset_dir("moll2025")  # the downloaded example session folder
+dt = eto.open(session / "Trial_data.nc")
+ds = dt.trial(41)
+
+mappings = load_label_mapping(session / ".ethograph" / "mapping.txt")
+labels = load_labels_tsv(labels_path(session))  # the session's labels.tsv
+labels = labels[labels["trial"] == 41]
+
+speed = ds["speed"].sel(keypoint="beakTip", individual="Crow1")
+fig, ax = plt.subplots(figsize=(9, 3.6))
+ax.plot(speed["time"], speed, color="black", lw=0.8)
+plot_label_segments(ax, labels, mappings, individual="Crow1", alpha=0.4)
+
+used = sorted(labels["labels"].unique())
+ax.legend(
+    handles=[mpatches.Patch(color=mappings[i]["color"], label=mappings[i]["name"]) for i in used],
+    loc="upper center", bbox_to_anchor=(0.5, -0.28), ncol=7, fontsize=7, frameon=False,
+)
+ax.set_xlabel("time (s)")
+ax.set_ylabel("beakTip speed")
+```
+
+![Labelled intervals over a speed trace](../../_static/media/mapping_plot_labels.png)
+
+`labels` is the TSV as a DataFrame with `onset_s`, `offset_s`, `labels`,
+`individual` and `trial` columns, so filtering it by trial or individual is
+ordinary pandas.

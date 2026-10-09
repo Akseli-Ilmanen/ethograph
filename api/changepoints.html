@@ -466,14 +466,46 @@ length. NaN boundaries in the input are always added as changepoints so that
 valid/invalid transitions are not lost.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.features.changepoints.find_peaks_binary">
-<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">find_peaks_binary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#find_peaks_binary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.find_peaks_binary" title="Link to this definition">#</a></dt>
-<dd><p>scipy.signal.find_peaks + NaN boundaries -&gt; binary mask.</p>
+<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">find_peaks_binary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prominence</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#find_peaks_binary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.find_peaks_binary" title="Link to this definition">#</a></dt>
+<dd><p>Local maxima + NaN boundaries -&gt; binary mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Input 1-D signal.</p></li>
+<li><p><strong>prominence</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum peak prominence (how far a peak stands out from its
+surroundings). Raise it to keep only the clearest peaks.</p></li>
+<li><p><strong>distance</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum number of samples between neighbouring peaks.</p></li>
+<li><p><strong>height</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum absolute value of a peak.</p></li>
+<li><p><strong>width</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum peak width in samples.</p></li>
+<li><p><strong>**kwargs</strong> – Any further <code class="docutils literal notranslate"><span class="pre">scipy.signal.find_peaks</span></code> keyword.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Binary array of the same length as x, 1 at peaks and NaN boundaries.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ethograph.features.changepoints.find_troughs_binary">
-<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">find_troughs_binary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#find_troughs_binary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.find_troughs_binary" title="Link to this definition">#</a></dt>
-<dd><p>Find troughs (local minima) + NaN boundaries -&gt; binary mask.</p>
+<span class="sig-prename descclassname"><span class="pre">ethograph.features.changepoints.</span></span><span class="sig-name descname"><span class="pre">find_troughs_binary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prominence</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/features/changepoints.html#find_troughs_binary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.features.changepoints.find_troughs_binary" title="Link to this definition">#</a></dt>
+<dd><p>Local minima + NaN boundaries -&gt; binary mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Input 1-D signal.</p></li>
+<li><p><strong>prominence</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum trough prominence (how far a trough dips below its
+surroundings). Raise it to keep only the clearest troughs.</p></li>
+<li><p><strong>distance</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum number of samples between neighbouring troughs.</p></li>
+<li><p><strong>height</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum depth of a trough, measured on the negated signal.</p></li>
+<li><p><strong>width</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Minimum trough width in samples.</p></li>
+<li><p><strong>**kwargs</strong> – Any further <code class="docutils literal notranslate"><span class="pre">scipy.signal.find_peaks</span></code> keyword.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Binary array of the same length as x, 1 at troughs and NaN boundaries.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -533,8 +565,8 @@ dimension (e.g. per keypoint, per individual) using
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ds</strong> (<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><em>xarray.Dataset</em></a>) – Trial dataset containing <em>target_feature</em>.</p></li>
-<li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the variable to run detection on (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;speed&quot;</span></code>).</p></li>
-<li><p><strong>changepoint_name</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Suffix for the output variable name.  The stored variable will be
+<li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – Name of the variable to run detection on (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;speed&quot;</span></code>).</p></li>
+<li><p><strong>changepoint_name</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – Suffix for the output variable name.  The stored variable will be
 called <code class="docutils literal notranslate"><span class="pre">&quot;{target_feature}_{changepoint_name}&quot;</span></code> (e.g.
 <code class="docutils literal notranslate"><span class="pre">&quot;speed_troughs&quot;</span></code>).</p></li>
 <li><p><strong>changepoint_func</strong> (<em>callable</em>) – A function <code class="docutils literal notranslate"><span class="pre">f(x,</span> <span class="pre">**kwargs)</span> <span class="pre">-&gt;</span> <span class="pre">array[int8]</span></code> that takes a 1-D
@@ -582,7 +614,7 @@ type) is stored as group metadata columns; if <em>data</em> is itself a
 <li><p><strong>data</strong> (<em>nap.Tsd</em><em> | </em><em>nap.TsdFrame</em><em> | </em><em>nap.TsGroup</em>) – Input time series.  For a <code class="docutils literal notranslate"><span class="pre">Tsd</span></code> a single unit is produced; for a
 <code class="docutils literal notranslate"><span class="pre">TsdFrame</span></code> one unit per column; for a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code> one unit per
 neuron/unit.</p></li>
-<li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Human-readable label recorded in the output metadata
+<li><p><strong>target_feature</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – Human-readable label recorded in the output metadata
 (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;speed&quot;</span></code>).</p></li>
 <li><p><strong>changepoint_func</strong> (<em>callable</em>) – A function <code class="docutils literal notranslate"><span class="pre">f(x,</span> <span class="pre">**kwargs)</span> <span class="pre">-&gt;</span> <span class="pre">array</span></code> that accepts a 1-D numpy
 array of values and returns an array of changepoint times (or a
@@ -632,10 +664,10 @@ features and are not merged. All masks must share the same
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ds</strong> (<em>xr.Dataset</em>) – Dataset containing one or more changepoint variables.</p></li>
-<li><p><strong>vars</strong> (<em>sequence</em><em> of </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Which changepoint masks to merge; default merges every one
+<li><p><strong>vars</strong> (<em>sequence</em><em> of </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>optional</em>) – Which changepoint masks to merge; default merges every one
 <code class="xref py py-func docutils literal notranslate"><span class="pre">changepoint_vars()</span></code> finds. Naming a
 variable that is not a changepoint mask is an error.</p></li>
-<li><p><strong>keep_dims</strong> (<em>sequence</em><em> of </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Dims to leave standing instead of ORing across — typically the
+<li><p><strong>keep_dims</strong> (<em>sequence</em><em> of </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>optional</em>) – Dims to leave standing instead of ORing across — typically the
 individual dim, so one animal’s changepoints do not leak into
 another’s. Default collapses every non-time dim.</p></li>
 </ul>
@@ -649,7 +681,7 @@ another’s. Default collapses every non-time dim.</p></li>
 </p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If changepoint variables reference different target features.</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If changepoint variables reference different target features.</p>
 </dd>
 </dl>
 </dd></dl>
