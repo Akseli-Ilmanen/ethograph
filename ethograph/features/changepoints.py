@@ -106,11 +106,11 @@ def find_troughs_binary(
 
     Args:
         x: Input 1-D signal.
-        prominence: Minimum trough prominence (how far a trough dips below its
+        prominence: Minimum through prominence (how far a through dips below its
             surroundings). Raise it to keep only the clearest troughs.
         distance: Minimum number of samples between neighbouring troughs.
-        height: Minimum depth of a trough, measured on the negated signal.
-        width: Minimum trough width in samples.
+        height: Minimum depth of a through, measured on the negated signal.
+        width: Minimum through width in samples.
         **kwargs: Any further ``scipy.signal.find_peaks`` keyword.
 
     Returns:

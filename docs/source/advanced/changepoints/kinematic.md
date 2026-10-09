@@ -103,7 +103,7 @@ ds = eto.add_changepoints_to_ds(
     changepoint_name="troughs",
     changepoint_func=find_troughs_binary,
     prominence=0.5,  # ignore dips shallower than 0.5 (feature units)
-    distance=10,  # at most one trough per 10 samples
+    distance=10,  # at most one through per 10 samples
 )
 ```
 
