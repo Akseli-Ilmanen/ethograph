@@ -56,7 +56,7 @@ silently into another one.
 ### Segment review
 
 For state events. The labels in scope become a queue of whole labels, walked
-one at a time in the **Order** the combo says; each stop jumps to the label,
+one at a time in the **Order** the dropdown says; each stop jumps to the label,
 shows it with the Navigation section's before/after padding around it, plays
 it, and arms it for editing exactly as selecting it and pressing `Ctrl+E`
 would. The label being reviewed is named in large coloured text, and
@@ -91,7 +91,7 @@ reviewed is named in its class colour, with its labeling method and
 confidence beneath (and *start* or *end* for a state event); the keys are drawn
 in the section, and **Shortcuts…** spells them out. By default the queue holds only automated
 boundaries — a human already vouched for manual and curated ones — untick
-**Show automated only** to walk those too. The **Order** combo walks the queue
+**Show automated only** to walk those too. The **Order** dropdown walks the queue
 *Trial-by-trial* (every boundary of a trial, then the next trial) or
 *Label-by-label* (one class across every trial, then the next class), and with
 **Jump to next after Enter/Backspace** ticked (the default) confirming or
@@ -106,7 +106,7 @@ deleting moves straight on to the next boundary:
 | `B` | Back to the previous boundary |
 | `Space` | Play / pause |
 
-Navigating trials the normal way (trial combo, `Up`/`Down`) pulls the review
+Navigating trials the normal way (trials table, `Up`/`Down`) pulls the review
 along to that trial's first boundary. Nothing reaches disk until you save with
 `Ctrl+S`.
 

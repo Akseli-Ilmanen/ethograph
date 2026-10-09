@@ -124,25 +124,37 @@ class ChangepointsWidget(QWidget):
         main_layout.setContentsMargins(2, 2, 2, 2)
         self.setLayout(main_layout)
 
+        self._main_layout = main_layout
         self._create_shared_controls(main_layout)
-        self._create_toggle_buttons(main_layout)
+
+        # Detection and correction are two steps, so they live in two hosts the
+        # top bar pops up separately (``detection_host`` / ``correction_host``);
+        # ``restore_host`` puts a borrowed host back where it was.
+        self.detection_host = QWidget()
+        detection_layout = QVBoxLayout(self.detection_host)
+        detection_layout.setContentsMargins(0, 0, 0, 0)
+        detection_layout.setSpacing(2)
+        self._create_toggle_buttons(detection_layout)
         self._create_changepoints_panel()
         self._create_ruptures_panel()
         self._create_audio_cp_panel()
+        detection_layout.addWidget(self.changepoints_panel)
+        detection_layout.addWidget(self.ruptures_panel)
+        detection_layout.addWidget(self.audio_cp_panel)
+
+        self.correction_host = QWidget()
+        correction_layout = QVBoxLayout(self.correction_host)
+        correction_layout.setContentsMargins(0, 0, 0, 0)
+        correction_layout.setSpacing(2)
         self._create_correction_params_panel()
+        correction_layout.addWidget(self.correction_params_panel)
 
-        main_layout.addWidget(self.changepoints_panel)
-        main_layout.addWidget(self.ruptures_panel)
-        main_layout.addWidget(self.audio_cp_panel)
-        main_layout.addWidget(self.correction_params_panel)
-
-        self.changepoints_panel.hide()
-        self.ruptures_panel.hide()
-        self.audio_cp_panel.hide()
-        self.correction_params_panel.show()
-        self.correction_toggle.setText("CP Correction")
-
+        self._hosts = (self.detection_host, self.correction_host)
+        for host in self._hosts:
+            main_layout.addWidget(host)
         main_layout.addStretch()
+
+        self._show_panel("kinematic")
 
         self._restore_or_set_defaults()
         self.setEnabled(False)
@@ -227,13 +239,7 @@ class ChangepointsWidget(QWidget):
         self.toggle_widget.setLayout(toggle_layout)
 
         toggle_defs = [
-            (
-                "correction_toggle",
-                "CP Correction",
-                True,
-                self._toggle_correction_params,
-            ),
-            ("cp_toggle", "Kinematic CPs", False, self._toggle_changepoints),
+            ("cp_toggle", "Kinematic CPs", True, self._toggle_changepoints),
             ("ruptures_toggle", "Ruptures", False, self._toggle_ruptures),
             ("audio_cp_toggle", "Audio CPs", False, self._toggle_audio_cps),
         ]
@@ -247,13 +253,18 @@ class ChangepointsWidget(QWidget):
 
         main_layout.addWidget(self.toggle_widget)
 
+    def restore_host(self, host: QWidget) -> None:
+        """Put a host a pop-up borrowed back in its slot below the shared controls."""
+        index = 1 + self._hosts.index(host)
+        self._main_layout.insertWidget(index, host)
+        host.setVisible(True)
+
+    def show_panel(self, panel_name: str) -> None:
+        """Bring one detection panel to the front: ``kinematic``, ``ruptures`` or ``audio_cps``."""
+        self._show_panel(panel_name)
+
     def _show_panel(self, panel_name: str):
         panels = {
-            "correction": (
-                self.correction_params_panel,
-                self.correction_toggle,
-                "CP Correction",
-            ),
             "kinematic": (self.changepoints_panel, self.cp_toggle, "Kinematic CPs"),
             "ruptures": (self.ruptures_panel, self.ruptures_toggle, "Ruptures"),
             "audio_cps": (self.audio_cp_panel, self.audio_cp_toggle, "Audio CPs"),
@@ -268,17 +279,16 @@ class ChangepointsWidget(QWidget):
 
         self._refresh_layout()
 
+    # The toggle row is radio-like: the clicked panel comes to the front and
+    # clicking the front one again keeps it (there is no "nothing" state).
     def _toggle_changepoints(self):
-        self._show_panel("kinematic" if self.cp_toggle.isChecked() else "correction")
+        self._show_panel("kinematic")
 
     def _toggle_ruptures(self):
-        self._show_panel("ruptures" if self.ruptures_toggle.isChecked() else "correction")
+        self._show_panel("ruptures")
 
     def _toggle_audio_cps(self):
-        self._show_panel("audio_cps" if self.audio_cp_toggle.isChecked() else "correction")
-
-    def _toggle_correction_params(self):
-        self._show_panel("correction" if self.correction_toggle.isChecked() else "audio_cps")
+        self._show_panel("audio_cps")
 
     def _refresh_layout(self):
         if self.meta_widget:

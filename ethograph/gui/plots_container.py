@@ -731,6 +731,12 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         self._dyn_panels.append(plot)
 
         plot.vb.sigRangeChanged.connect(self._on_plot_zoom)
+        # Full and bottom-strip labels are sized from the y viewRange at draw
+        # time, and a new panel's data lands after the deferred redraw that
+        # follows creation (its render goes through a throttle timer), so the
+        # labels must be laid out again whenever the y-range moves. Coalesced
+        # by schedule_labels_redraw; label items ignore bounds, so no loop.
+        plot.vb.sigYRangeChanged.connect(lambda *_: self.schedule_labels_redraw())
         if spec["overlay_rescale"]:
             plot.vb.sigYRangeChanged.connect(lambda *_, p=plot: self.overlay_manager.rescale_for_plot(p))
         if panel_type == "spectrogram":

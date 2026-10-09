@@ -443,8 +443,12 @@ class TopBarBuilder:
     # Pop-up helper
     # ------------------------------------------------------------------
 
-    def _popup_section(self, key: str, title: str, widget: QWidget | None):
-        """Open (or raise) a dialog hosting a borrowed section/detached widget."""
+    def _popup_section(self, key: str, title: str, widget: QWidget | None, on_restore=None):
+        """Open (or raise) a dialog hosting a borrowed section/detached widget.
+
+        *on_restore* (``callable(widget)``) returns the widget home on close;
+        when omitted it is derived from where the widget lives now.
+        """
         if widget is None:
             return
         existing = self._open_popups.get(key)
@@ -452,7 +456,8 @@ class TopBarBuilder:
             existing.raise_()
             existing.activateWindow()
             return
-        on_restore = self._restore_cb_for(widget)
+        if on_restore is None:
+            on_restore = self._restore_cb_for(widget)
         dlg = SectionPopup(title, widget, on_restore, parent=self.shell)
         dlg.finished.connect(lambda _=0, k=key: self._open_popups.pop(k, None))
         self._open_popups[key] = dlg
@@ -705,10 +710,22 @@ class TopBarBuilder:
             getattr(cp, "changepoint_correction_checkbox", None),
         )
         menu.addSeparator()
-        menu.addAction(
-            "Run changepoint correction…",
-            lambda: self._popup_section("cp", "Changepoint correction", cp),
-        )
+        menu.addAction("Detect changepoints…", self._open_changepoint_detection)
+        menu.addAction("Run changepoint correction…", self._open_changepoint_correction)
+
+    def _open_changepoint_detection(self) -> None:
+        """Detection (kinematic / ruptures / audio) in a pop-up of its own."""
+        cp = getattr(self.meta, "changepoints_widget", None)
+        if cp is None:
+            return
+        self._popup_section("cp_detect", "Changepoint detection", cp.detection_host, on_restore=cp.restore_host)
+
+    def _open_changepoint_correction(self) -> None:
+        """Correction parameters in a pop-up of its own, separate from detection."""
+        cp = getattr(self.meta, "changepoints_widget", None)
+        if cp is None:
+            return
+        self._popup_section("cp_correct", "Changepoint correction", cp.correction_host, on_restore=cp.restore_host)
 
     def _gather_windows(self):
         """Move every open dialog onto the main window's screen and raise it."""

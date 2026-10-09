@@ -64,7 +64,7 @@ class TestLockbox:
         meta.navigation_widget.scope_combo.setCurrentText("Trial start → Trial end")
         QApplication.processEvents()
         trials = meta.app_state.trials
-        meta.navigation_widget.trials_combo.setCurrentText(str(trials[0]))
+        meta.navigation_widget.navigate_to_trial(str(trials[0]))
         QApplication.processEvents()
         first = meta.app_state.trials_sel
         meta.navigation_widget.next_trial()

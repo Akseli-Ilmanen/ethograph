@@ -274,7 +274,7 @@ class LabelDrawingMixin:
         """
         line = pg.InfiniteLine(pos=time_s, angle=90, pen=_point_pen(color_rgb, automated), movable=False)
         line.setZValue(_POINT_EVENT_Z_INDEX)
-        plot.plot_item.addItem(line)
+        plot.plot_item.addItem(line, ignoreBounds=True)
         plot.label_items.append(line)
         return [(line, color_rgb, _POINT_EVENT_LINE_WIDTH)]
 
@@ -362,6 +362,9 @@ class LabelDrawingMixin:
 
         return self._draw_label_region(plot, start_time, end_time, color_rgb, y0, y1, z, alpha, automated=automated)
 
+    # Every label item is added with ignoreBounds: labels are drawn *from* the
+    # y-range, so letting them feed autoscale would move the range they were
+    # sized for, and the redraw that follows a y-range change would loop.
     def _draw_standard_label(self, plot, start_time, end_time, color_rgb, automated=False) -> list:
         rect = pg.LinearRegionItem(
             values=(start_time, end_time),
@@ -374,7 +377,7 @@ class LabelDrawingMixin:
         for line in rect.lines:
             line.setPen(sep_pen)
         rect.setZValue(Z_INDEX_LABELS)
-        plot.plot_item.addItem(rect)
+        plot.plot_item.addItem(rect, ignoreBounds=True)
         plot.label_items.append(rect)
         return [(rect, color_rgb, 1)]
 
@@ -389,7 +392,7 @@ class LabelDrawingMixin:
             pen=_boundary_pen(automated, 0),
         )
         rect.setZValue(z_value)
-        plot.plot_item.addItem(rect)
+        plot.plot_item.addItem(rect, ignoreBounds=True)
         plot.label_items.append(rect)
         return [(rect, color_rgb, 0)]
 
@@ -552,7 +555,7 @@ class LabelDrawingMixin:
                     movable=False,
                 )
                 line.setZValue(Z_INDEX_CHANGEPOINTS)
-                plot.plot_item.addItem(line)
+                plot.plot_item.addItem(line, ignoreBounds=True)
                 self.audio_cp_items.append((plot, line, "onset"))
             for offset_t in offsets:
                 line = pg.InfiniteLine(
@@ -566,7 +569,7 @@ class LabelDrawingMixin:
                     movable=False,
                 )
                 line.setZValue(Z_INDEX_CHANGEPOINTS)
-                plot.plot_item.addItem(line)
+                plot.plot_item.addItem(line, ignoreBounds=True)
                 self.audio_cp_items.append((plot, line, "offset"))
 
     def _get_changepoint_line_style(self):

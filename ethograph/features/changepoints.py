@@ -68,15 +68,57 @@ def add_NaN_boundaries(arr, changepoints):
 # ---------------------------------------------------------------------------
 
 
-def find_peaks_binary(x, **kwargs):
-    """scipy.signal.find_peaks + NaN boundaries -> binary mask."""
-    peaks, _ = find_peaks(np.asarray(x), **kwargs)
+def find_peaks_binary(
+    x,
+    prominence: float | None = None,
+    distance: int | None = None,
+    height: float | None = None,
+    width: float | None = None,
+    **kwargs,
+):
+    """Local maxima + NaN boundaries -> binary mask.
+
+    Args:
+        x: Input 1-D signal.
+        prominence: Minimum peak prominence (how far a peak stands out from its
+            surroundings). Raise it to keep only the clearest peaks.
+        distance: Minimum number of samples between neighbouring peaks.
+        height: Minimum absolute value of a peak.
+        width: Minimum peak width in samples.
+        **kwargs: Any further ``scipy.signal.find_peaks`` keyword.
+
+    Returns:
+        Binary array of the same length as x, 1 at peaks and NaN boundaries.
+    """
+    peaks, _ = find_peaks(np.asarray(x), prominence=prominence, distance=distance, height=height, width=width, **kwargs)
     return add_NaN_boundaries(x, peaks)
 
 
-def find_troughs_binary(x, **kwargs):
-    """Find troughs (local minima) + NaN boundaries -> binary mask."""
-    troughs, _ = find_peaks(-np.asarray(x), **kwargs)
+def find_troughs_binary(
+    x,
+    prominence: float | None = None,
+    distance: int | None = None,
+    height: float | None = None,
+    width: float | None = None,
+    **kwargs,
+):
+    """Local minima + NaN boundaries -> binary mask.
+
+    Args:
+        x: Input 1-D signal.
+        prominence: Minimum trough prominence (how far a trough dips below its
+            surroundings). Raise it to keep only the clearest troughs.
+        distance: Minimum number of samples between neighbouring troughs.
+        height: Minimum depth of a trough, measured on the negated signal.
+        width: Minimum trough width in samples.
+        **kwargs: Any further ``scipy.signal.find_peaks`` keyword.
+
+    Returns:
+        Binary array of the same length as x, 1 at troughs and NaN boundaries.
+    """
+    troughs, _ = find_peaks(
+        -np.asarray(x), prominence=prominence, distance=distance, height=height, width=width, **kwargs
+    )
     return add_NaN_boundaries(x, troughs)
 
 

@@ -167,7 +167,7 @@ def test_editing_controls_stay_available_without_metadata(gui):
     assert not trials._edit_checkbox.isHidden()
     assert not trials._add_column_button.isHidden()
     assert not trials._empty_label.isHidden()
-    assert trials._table.isHidden()
+    assert not trials._table.isHidden(), "the trial column is still where a trial is clicked"
 
 
 # ---------------------------------------------------------------------------

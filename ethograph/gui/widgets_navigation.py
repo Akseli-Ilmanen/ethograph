@@ -137,16 +137,14 @@ class NavigationWidget(QWidget):
         # Stacked mode panels
         self._stack = QStackedWidget()
 
-        # -- Trial panel --
+        # -- Trial panel: the trials table above is where a trial is picked --
         trial_panel = QWidget()
         trial_lay = QVBoxLayout(trial_panel)
         trial_lay.setContentsMargins(0, 0, 0, 0)
-        self.trials_combo = QComboBox()
-        self.trials_combo.setEditable(True)
-        self.trials_combo.setObjectName("trials_combo")
-        self.trials_combo.currentTextChanged.connect(self._on_trial_combo_changed)
-        self.trials_combo.currentIndexChanged.connect(self._sync_trials_combo_color)
-        trial_lay.addWidget(self.trials_combo)
+        trial_hint = QLabel("Click a row in the trials table (above) to jump to a specific trial.")
+        trial_hint.setStyleSheet("color: grey; font-size: 10px;")
+        trial_hint.setWordWrap(True)
+        trial_lay.addWidget(trial_hint)
         self._stack.addWidget(trial_panel)
 
         # -- Label panel --
@@ -466,7 +464,19 @@ class NavigationWidget(QWidget):
         self._update_counter()
 
     def navigate_to_trial(self, trial_id):
-        self.trials_combo.setCurrentText(str(trial_id))
+        """Make *trial_id* current, centre on it and auto-play if asked."""
+        if not self.app_state.ready or not self.app_state.trials:
+            return
+        try:
+            self.app_state.set_key_sel("trials", trial_id)
+        except KeyError:
+            notify(f"Unknown trial: {trial_id!r}", severity="warning")
+            return
+        self.app_state.trial_changed.emit()
+        self._update_counter()
+        tb = self.app_state.trial_bounds
+        if tb:
+            self._center_and_maybe_play(tb.start_s, tb.end_s)
 
     def next_trial(self):
         self._navigate(1)
@@ -657,9 +667,6 @@ class NavigationWidget(QWidget):
         if new_trial is not None and new_trial in trials:
             if new_trial != self.app_state.trials_sel:
                 self.app_state.trials_sel = new_trial
-                self.trials_combo.blockSignals(True)
-                self.trials_combo.setCurrentText(str(new_trial))
-                self.trials_combo.blockSignals(False)
                 self.app_state.trial_changed.emit()
                 self._update_counter()
                 return
@@ -725,29 +732,6 @@ class NavigationWidget(QWidget):
     # Trial mode
     # ==================================================================
 
-    def _on_trial_combo_changed(self):
-        if not self.app_state.ready:
-            return
-        trials_sel = self.trials_combo.currentText()
-        if not trials_sel or trials_sel.strip() == "":
-            return
-        trials = getattr(self.app_state, "trials", None)
-        if not trials:
-            return
-        if trials_sel not in trials and str(trials_sel) not in [str(t) for t in trials]:
-            notify(f"Unknown trial: {trials_sel!r}", severity="warning")
-            return
-        try:
-            self.app_state.set_key_sel("trials", trials_sel)
-        except KeyError:
-            notify(f"Unknown trial: {trials_sel!r}", severity="warning")
-            return
-        self.app_state.trial_changed.emit()
-        self._update_counter()
-        tb = self.app_state.trial_bounds
-        if tb:
-            self._center_and_maybe_play(tb.start_s, tb.end_s)
-
     def _navigate_trial(self, direction: int):
         if not self.app_state.trials:
             return
@@ -760,9 +744,6 @@ class NavigationWidget(QWidget):
         if 0 <= new_idx < len(self.app_state.trials):
             new_trial = self.app_state.trials[new_idx]
             self.app_state.trials_sel = new_trial
-            self.trials_combo.blockSignals(True)
-            self.trials_combo.setCurrentText(str(new_trial))
-            self.trials_combo.blockSignals(False)
             self.app_state.trial_changed.emit()
             self._update_counter()
             tb = self.app_state.trial_bounds
@@ -881,9 +862,6 @@ class NavigationWidget(QWidget):
 
         if getattr(self.app_state, "trials_sel", None) != trial_id:
             self.app_state.trials_sel = trial_id
-            self.trials_combo.blockSignals(True)
-            self.trials_combo.setCurrentText(str(trial_id))
-            self.trials_combo.blockSignals(False)
             self.app_state.trial_changed.emit()
 
         self._update_counter()
@@ -973,9 +951,6 @@ class NavigationWidget(QWidget):
 
         if getattr(self.app_state, "trials_sel", None) != trial_id:
             self.app_state.trials_sel = trial_id
-            self.trials_combo.blockSignals(True)
-            self.trials_combo.setCurrentText(str(trial_id))
-            self.trials_combo.blockSignals(False)
             self.app_state.trial_changed.emit()
 
         self._update_counter()
@@ -1137,9 +1112,6 @@ class NavigationWidget(QWidget):
 
         if trial_id != getattr(self.app_state, "trials_sel", None):
             self.app_state.trials_sel = trial_id
-            self.trials_combo.blockSignals(True)
-            self.trials_combo.setCurrentText(str(trial_id))
-            self.trials_combo.blockSignals(False)
             self.app_state.trial_changed.emit()
             self._update_counter()
 
@@ -1211,15 +1183,3 @@ class NavigationWidget(QWidget):
         if bounds is not None:
             target = max(bounds.start_s, min(target, bounds.end_s))
         self._seek_to_time(target)
-
-    def _sync_trials_combo_color(self):
-        idx = self.trials_combo.currentIndex()
-        le = self.trials_combo.lineEdit()
-        if le is None:
-            return
-        bg = self.trials_combo.itemData(idx, Qt.BackgroundRole)
-        fg = self.trials_combo.itemData(idx, Qt.ForegroundRole)
-        if bg and fg:
-            le.setStyleSheet(f"background-color: {bg.name()}; color: {fg.name()};")
-        else:
-            le.setStyleSheet("")

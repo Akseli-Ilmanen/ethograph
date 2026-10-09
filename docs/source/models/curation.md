@@ -16,7 +16,7 @@ label makes it manual, re-running a model over a trial can add new automated
 labels, and nothing else changes a method.
 
 A **trial is curated** when none of its labels is still automated. That
-verdict is everywhere you navigate — the trial combo in the Navigation section
+verdict is everywhere you navigate — the trial number in the trials table
 and the `Trial 12 (12/173)` counter in the bottom bar are green for a curated
 trial and red for one with automated labels left — and it is written to the
 metadata table's `curated` column (`yes` / `no`), refreshed every few seconds
@@ -77,7 +77,7 @@ walked one at a time, each centred in a small **View window**
 reviewed is named in large coloured text; the keys are drawn in the section,
 and **Shortcuts…** spells them out. By default the queue holds only automated
 boundaries — a human already vouched for manual and curated ones — untick
-**Show automated only** to walk those too. The **Order** combo walks the queue
+**Show automated only** to walk those too. The **Order** dropdown walks the queue
 *Trial-by-trial* (every boundary of a trial, then the next trial) or
 *Label-by-label* (one class across every trial, then the next class), and with
 **Jump to next after Enter/Backspace** ticked (the default) confirming or
@@ -92,7 +92,7 @@ deleting moves straight on to the next boundary:
 | `B` | Back to the previous boundary |
 | `Space` | Play / pause |
 
-Navigating trials the normal way (trial combo, `Up`/`Down`) pulls the review
+Navigating trials the normal way (trials table, `Up`/`Down`) pulls the review
 along to that trial's first boundary. Nothing reaches disk until you save with
 `Ctrl+S`.
 
@@ -117,11 +117,11 @@ than either alone.
 ## The grids
 
 Two buttons in the section open review grids on the scope; both come with the
-same **mode** combo and a **Done** button. Their *Setup* tab lists the labels
+same **mode** dropdown and a **Done** button. Their *Setup* tab lists the labels
 in scope for clarity but cannot change them — the scope area is the one place
 labels are chosen, so close the grid, drag other rows in, and open it again.
 
-Setup's **Labeling method** combo picks which labels of those classes the grid
+Setup's **Labeling method** dropdown picks which labels of those classes the grid
 is about: *All labels*, *Manual only*, *Curated only*, *Manual or curated*, or
 *Automated only* — a model's output that nobody has looked at, which is what a
 prediction review is for. *Manual or curated* is there for checking your own
@@ -163,7 +163,7 @@ A **single** click is a verdict, and the mode says which:
   curates every other label.
 
 When the scope holds more than one label class the grid gets a **Label**
-combo, which narrows it to one class at a time (each choice says how many
+dropdown, which narrows it to one class at a time (each choice says how many
 tiles it has). It narrows the *operations* too, which is the point of it:
 **Mark low-confidence as uncurated**, **Done** and the PDF apply to the class
 on screen and to no other — so "rest = curated" means the rest of *that*
@@ -201,7 +201,7 @@ The grids, and **Navigate by: Label**, can run over a loaded prediction set
 instead of your own labels. Once a set is loaded, the section shows **Grids
 and label navigation read** — pick the set there and all three read its rows.
 The set is **read-only**: a tile click jumps the GUI to that trial and time,
-the mode combo and **Done** are gone, and nothing you do there reaches
+the mode dropdown and **Done** are gone, and nothing you do there reaches
 `labels.tsv`. Setup lists the set's classes with a tick each, so a grid can
 be built from some of them.
 

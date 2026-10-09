@@ -326,6 +326,9 @@ class BottomPlaybackBar(QWidget):
         app_state.playback_speed_pct_changed.connect(self._update_speed_display)
         app_state.trial_changed.connect(self._update_trial_label)
         app_state.curation_changed.connect(self._update_trial_label)
+        # An edit restamps a label manual and a prediction import adds automated
+        # ones: both can flip the trial's verdict without a curation event.
+        app_state.label_intervals_changed.connect(self._update_trial_label)
         app_state.labelling_subject_changed.connect(self._update_subject_label)
         app_state.trial_changed.connect(self._update_audio_indicator)
         app_state.trial_changed.connect(self._update_playback_mode_combo)

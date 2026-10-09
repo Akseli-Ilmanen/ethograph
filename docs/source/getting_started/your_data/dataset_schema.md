@@ -213,7 +213,7 @@ selection is not available when loading a single NWB file.
 
 Any dimension that co-occurs with a time dimension in at least one feature
 variable is automatically discovered and gets a selection
-[combo box](https://www.pythonguis.com/docs/qcombobox/) in the GUI.
+[dropdown](https://www.pythonguis.com/docs/qcombobox/) in the GUI.
 
 ::::{tab-set}
 
@@ -229,7 +229,7 @@ ds["emg"] = xr.DataArray(
 
 Dimensions **do not need to match across features**. For example, `position`
 may have `(time, keypoint, space, individual)` while `speed` only has
-`(time, keypoint, individual)`. The GUI creates combo boxes for the union of
+`(time, keypoint, individual)`. The GUI creates dropdowns for the union of
 all discovered dimensions. When a feature doesn't have a selected dimension,
 that selection is silently ignored via
 {func}`~ethograph.utils.xr_utils.sel_valid`:
@@ -248,7 +248,7 @@ data, used_kwargs = eto.sel_valid(
 :::{tab-item} Pynapple
 
 Column names in a {class}`~pynapple.TsdFrame` become a selectable dimension.
-Objects with identical column names share a single combo in the GUI.
+Objects with identical column names share a single dropdown in the GUI.
 
 ```python
 position = nap.TsdFrame(t=time_s, d=pos, columns=["x", "y", "z"])
@@ -261,7 +261,7 @@ velocity = nap.TsdFrame(t=time_s, d=vel, columns=["x", "y", "z"])
 ## Optional: color variables
 
 Color variables are identified by **name**: any feature with `"rgb"` in its
-name (case-insensitive) is automatically offered in the GUI's **Colors** combo.
+name (case-insensitive) is automatically offered in the GUI's **Colors** dropdown.
 Values should lie in `[0, 1]` (float) or `[0, 255]` (int).
 
 ::::{tab-set}

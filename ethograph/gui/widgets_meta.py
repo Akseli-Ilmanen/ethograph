@@ -180,7 +180,7 @@ class MetaWidget(GridSectionContainer):
         self.plot_container.labels_redraw_needed.connect(self._on_labels_redraw_needed)
         # A label's labeling_method changed: the green/red trial colouring
         # re-reads the per-trial verdict (the bottom bar listens on its own).
-        self.app_state.curation_changed.connect(self.data_widget.update_trials_combo)
+        self.app_state.curation_changed.connect(self.data_widget.update_trial_curation)
         self.plot_container.panel_content_changed.connect(self._rebind_console)
         self.app_state.trial_changed.connect(self.data_widget.on_trial_changed)
         # After DataWidget.on_trial_changed: the catalog it rebuilds is what the
@@ -1066,7 +1066,7 @@ class MetaWidget(GridSectionContainer):
         if not self.app_state.ready:
             return
         self.data_widget.update_label_plot()
-        self.data_widget.update_trials_combo()
+        self.data_widget.update_trial_curation()
         # A panel opened after an import gets the curve too.
         self.data_widget._update_confidence_overlay()
 

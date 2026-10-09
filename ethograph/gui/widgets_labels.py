@@ -250,9 +250,9 @@ class LabelsWidget(QWidget):
         self._mapping_file_path = str(mapping_path) if mapping_path else None
         self._mappings = load_label_mapping(mapping_path) if mapping_path else {}
         self.app_state._label_mappings = self._mappings
-        self.app_state._active_branch = 0
         self.app_state._branch_shown = {0: True}
         self._populate_labels_table()
+        self.restore_active_branch()
         # Whose labels these are is answered outside this widget (the data, the
         # project, the sidebar), so the gate follows that answer rather than
         # being decided once at build time.
@@ -863,6 +863,16 @@ class LabelsWidget(QWidget):
             return
         self._previous_active_branch = current
         self.app_state._active_branch = branch_idx
+        self.app_state.active_branch = branch_idx
+        self._update_branch_header_styles()
+
+    def restore_active_branch(self):
+        """Activate the branch remembered in the global settings, else the first one present."""
+        remembered = self.app_state.active_branch
+        if remembered not in self._branch_sections:
+            remembered = min(self._branch_sections, default=0)
+        self.app_state._active_branch = remembered
+        self._previous_active_branch = None
         self._update_branch_header_styles()
 
     def _on_branch_shown_changed(self, branch_idx: int, qt_state):
@@ -900,7 +910,8 @@ class LabelsWidget(QWidget):
         section["widget"].deleteLater()
         self.app_state._branch_shown.pop(branch_idx, None)
         if self.app_state._active_branch == branch_idx:
-            self.app_state._active_branch = 0 if 0 in self._branch_sections else next(iter(self._branch_sections), 0)
+            self.app_state._active_branch = min(self._branch_sections, default=0)
+            self.app_state.active_branch = self.app_state._active_branch
         if self._previous_active_branch == branch_idx:
             self._previous_active_branch = None
         if self.labels_table is section["table"]:
@@ -1003,12 +1014,8 @@ class LabelsWidget(QWidget):
                 n_point,
             )
             self.app_state._label_mappings = self._mappings
-            # Reset branch state — active branch starts on the first branch present in the file.
             new_branches = {data.get("branch", 0) for data in self._mappings.values() if isinstance(data, dict)}
-            first_branch = min(new_branches) if new_branches else 0
-            self.app_state._active_branch = first_branch
             self.app_state._branch_shown = dict.fromkeys(new_branches, True) if new_branches else {0: True}
-            self._previous_active_branch = None
             # Remove stale branch UI sections
             for b in list(self._branch_sections):
                 section = self._branch_sections.pop(b)
@@ -1023,6 +1030,7 @@ class LabelsWidget(QWidget):
             if self._label_table_dialog is not None and self._label_table_dialog.isVisible():
                 self._label_table_dialog.set_mappings(self._mappings)
             self._populate_labels_table()
+            self.restore_active_branch()
             self._sync_active_label_ids()
             self.refresh_gate()
             self.refresh_labels_shapes_layer()
@@ -1597,12 +1605,6 @@ class LabelsWidget(QWidget):
         """
         state = self.app_state
         state.trials_sel = trial_id
-        nav = getattr(state, "navigation_widget", None)
-        combo = getattr(nav, "trials_combo", None)
-        if combo is not None:
-            combo.blockSignals(True)
-            combo.setCurrentText(str(trial_id))
-            combo.blockSignals(False)
         with state.switching_trial(preserve_x_range=True, keep_marker=True):
             state.trial_changed.emit()
 

@@ -18,7 +18,7 @@ from ethograph.labels.intervals import find_interval_at
 def _navigate_to_trial(meta, trial_id):
     meta.navigation_widget.scope_combo.setCurrentText("Trial start → Trial end")
     QApplication.processEvents()
-    meta.navigation_widget.trials_combo.setCurrentText(str(trial_id))
+    meta.navigation_widget.navigate_to_trial(str(trial_id))
     QApplication.processEvents()
     assert meta.app_state.trials_sel == trial_id, (
         f"Expected trial {trial_id}, got {meta.app_state.trials_sel}. Available: {meta.app_state.trials}"
@@ -139,10 +139,10 @@ class TestMoll2025Loading:
         trials = meta.app_state.trials
         if len(trials) < 2:
             pytest.skip("Need 2+ trials")
-        meta.navigation_widget.trials_combo.setCurrentText(str(trials[0]))
+        meta.navigation_widget.navigate_to_trial(str(trials[0]))
         QApplication.processEvents()
         first = meta.app_state.trials_sel
-        meta.navigation_widget.trials_combo.setCurrentText(str(trials[1]))
+        meta.navigation_widget.navigate_to_trial(str(trials[1]))
         QApplication.processEvents()
         second = meta.app_state.trials_sel
         assert second != first
@@ -172,6 +172,80 @@ class TestMoll2025Loading:
 
         df = meta.app_state.label_intervals
         assert df is not None and not df.empty
+
+    def test_bottom_bar_trial_colour_follows_label_edits(self, moll2025_gui):
+        """The trial label recolours on a label change, not only on a trial change.
+
+        An automated label makes the trial uncurated (red); curating it makes
+        it green again — both without navigating away.
+        """
+        shell, meta = moll2025_gui
+        state = meta.app_state
+        label = shell.bottom_bar.trial_label
+        df = state.label_intervals
+        assert df is not None and not df.empty  # the template imports labels
+        df = df.copy()
+        df.loc[df.index[0], "labeling_method"] = "automated"
+        # What every label edit does: commit the trial, then publish the view.
+        state.set_trial_intervals(state.trials_sel, df)
+        state.label_intervals = df
+        QApplication.processEvents()
+        assert not state.trial_is_curated(state.trials_sel)
+        assert "#ff7b72" in label.styleSheet()
+
+        meta.labels_widget.curation_panel.curate_current_trial()
+        QApplication.processEvents()
+        assert state.trial_is_curated(state.trials_sel)
+        assert "#7ee787" in label.styleSheet()
+
+    def test_added_lineplot_labels_fill_the_plot(self, moll2025_gui, qtbot):
+        """A line plot added from the Add-panel popup draws its labels at the
+        panel's final y-range, not the pre-autoscale one.
+
+        With a Top1 branch shown (this template has one), full-mode labels are
+        rectangles sized from the y viewRange at draw time; the panel's data
+        arrives after the first deferred redraw, so a y-range change must
+        trigger another.
+        """
+        import pyqtgraph as pg
+
+        from ethograph.gui.active_panel import PanelKind
+
+        shell, meta = moll2025_gui
+        # Shown: a visible panel renders through its throttle timer, after the
+        # deferred labels redraw; hidden it renders synchronously and hides the bug.
+        shell.show()
+        qtbot.wait(300)
+        # The user's sequence: close what is open, add a space plot, then a line plot.
+        pc = meta.plot_container
+        for ribbon in pc.label_ribbons():
+            pc.remove_panel(ribbon)
+        for sp in list(meta.data_widget.space_plots):
+            meta.data_widget.remove_space_plot(sp)
+        for reg in list(meta.active_panels._regs):
+            if reg.kind in PanelKind.FEATURE:
+                pc.remove_panel(reg.widget)
+        qtbot.wait(300)
+        meta._create_panel_for_source("feature", "position", "Space (3D)")
+        qtbot.wait(500)
+        meta._create_panel_for_source("feature", "speed", "Lineplot")
+        qtbot.wait(500)
+        plot = next(
+            reg.widget
+            for reg in meta.active_panels._regs
+            if reg.kind == PanelKind.LINEPLOT and reg.plot.panel_state.get("feature") == "speed"
+        )
+        # The panel's data arrives through a throttle timer, after the deferred
+        # redraw that followed creation, so the y-range moves under drawn labels.
+        # Re-create that order deterministically: change the y-range now.
+        plot.vb.setYRange(0.0, 50.0, padding=0)  # inside the panel's y limits
+        qtbot.wait(500)
+        y_lo, y_hi = plot.vb.viewRange()[1]
+        span = y_hi - y_lo
+        rects = [item for item in plot.label_items if isinstance(item, pg.PlotDataItem)]
+        assert rects, "expected y-sized label rectangles (a Top1 branch is shown)"
+        tallest = max(float(np.nanmax(r.yData) - np.nanmin(r.yData)) for r in rects)
+        assert 0.5 * span < tallest <= span * 1.01, (tallest, y_lo, y_hi)
 
     def test_save_labels_tsv(self, moll2025_gui, tmp_path):
         _, meta = moll2025_gui

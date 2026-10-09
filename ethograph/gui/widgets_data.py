@@ -1425,7 +1425,7 @@ class DataWidget(QWidget):
                 lambda: self.layout_mgr.set_sidebar_default_width(self.meta_widget, SIDEBAR_AFTER_LOAD_WIDTH_RATIO),
             )
 
-        self.update_trials_combo()
+        self.update_trial_curation()
         self._load_trial_with_fallback()
         self._disable_empty_panels()
         self._apply_video_dock_default()
@@ -1440,33 +1440,14 @@ class DataWidget(QWidget):
         self.view_mode_combo.show()
 
     # ------------------------------------------------------------------
-    # Trials combo
+    # Trial curation colouring
     # ------------------------------------------------------------------
 
-    def update_trials_combo(self) -> None:
-        if not self.app_state.ready:
+    def update_trial_curation(self) -> None:
+        """Repaint the trials table's verdict colours (labels/curation.py)."""
+        if not self.app_state.ready or self.trials_widget is None:
             return
-
-        combo = self.navigation_widget.trials_combo
-        combo.blockSignals(True)
-        combo.clear()
-
-        trial_status = self._collect_trial_status()
-
-        for trial in self.app_state.trials:
-            combo.addItem(str(trial))
-            index = combo.count() - 1
-            # Green: every label of the trial is manual or curated; red: some
-            # are still a model's unreviewed output (labels/curation.py).
-            is_curated = trial_status.get(str(trial), True)
-            bg_color = QColor(144, 238, 144) if is_curated else QColor(255, 182, 193)
-            combo.setItemData(index, bg_color, Qt.BackgroundRole)
-            text_color = QColor(0, 100, 0) if is_curated else QColor(139, 0, 0)
-            combo.setItemData(index, text_color, Qt.ForegroundRole)
-
-        combo.setCurrentText(str(self.app_state.trials_sel))
-        combo.blockSignals(False)
-        self.navigation_widget._sync_trials_combo_color()
+        self.trials_widget.set_curation_status(self._collect_trial_status())
 
     def _collect_trial_status(self) -> Dict[str, bool]:
         return self.app_state.trial_curation_status()
@@ -1475,7 +1456,7 @@ class DataWidget(QWidget):
         """Handle TrialsWidget filter changes."""
         if not self.app_state.ready:
             return
-        self.update_trials_combo()
+        self.update_trial_curation()
         if self.app_state.trials_sel not in filtered_trials and filtered_trials:
             self.app_state.set_key_sel("trials", filtered_trials[0])
             self.app_state.trial_changed.emit()
@@ -2967,9 +2948,7 @@ class DataWidget(QWidget):
         if self.app_state.key_sel_exists("trials"):
             saved_trial = self.app_state.get_key_sel("trials")
             self.app_state.set_key_sel("trials", saved_trial)
-            self.navigation_widget.trials_combo.setCurrentText(str(self.app_state.trials_sel))
         else:
-            self.navigation_widget.trials_combo.setCurrentText(str(self.app_state.trials[0]))
             self.app_state.trials_sel = self.app_state.trials[0]
 
         space_plot_type = getattr(self.app_state, "space_plot_type", "Layers")
@@ -3534,12 +3513,6 @@ class DataWidget(QWidget):
         old_video = getattr(state, "video", None)
         was_playing = bool(old_video is not None and old_video.is_playing)
         state.trials_sel = trial_id
-        nav = getattr(state, "navigation_widget", None)
-        combo = getattr(nav, "trials_combo", None)
-        if combo is not None:
-            combo.blockSignals(True)
-            combo.setCurrentText(str(trial_id))
-            combo.blockSignals(False)
         with state.switching_trial(preserve_x_range=True, keep_marker=True):
             state.trial_changed.emit()
         # Land the video (and marker) on the followed time, not the trial start.

@@ -149,7 +149,7 @@ def test_trial_change_centers_marker_on_session_start(session_gui):
     nav = meta.navigation_widget
 
     target = state.trials[3] if len(state.trials) > 3 else state.trials[-1]
-    nav.trials_combo.setCurrentText(str(target))
+    nav.navigate_to_trial(str(target))
     QApplication.processEvents()
 
     assert state.trials_sel == target

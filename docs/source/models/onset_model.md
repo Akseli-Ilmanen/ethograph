@@ -32,7 +32,7 @@ binary classifier over the same inputs.
 
 ## Training
 
-1. **Name the model** — leave the combo on *New model…* and type a name, or
+1. **Name the model** — leave the dropdown on *New model…* and type a name, or
    pick an existing model to add more training data to it.
 2. **Tick the point events to predict.** Only classes marked as point events
    in {doc}`mapping.txt <../getting_started/labels/mapping>` are listed.

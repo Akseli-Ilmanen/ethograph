@@ -51,6 +51,9 @@ class FunctionSpec:
     copy_preamble: str = ""
     import_path: str = ""
     copy_template: str = ""
+    # Set for detectors that add a mask to the dataset: the copied call is
+    # ``eto.add_changepoints_to_ds(...)`` under this changepoint name.
+    changepoint_name: str = ""
 
     def __post_init__(self):
         if self.fixed_params is None:
@@ -247,11 +250,11 @@ _ENERGY_VOCALPY_PREAMBLE = _audio_preamble(
 
 _RUPTURES_PREAMBLE = "import numpy as np\nimport ruptures as rpt\n\ndata = ...  # (N,) 1-D numpy array\n"
 
+# Kinematic detectors take one 1-D signal and no rate; the copied snippet is
+# the dataset-level call, so the user never handles the signal themselves.
+_KINEMATIC_AUTO_PARAMS = ("x",)
 _KINEMATIC_PREAMBLE = (
-    "from ethograph.features.changepoints import {func}\n"
-    "\n"
-    "# Select a 1-D feature from your xarray dataset\n"
-    'speed = ds["speed"].sel(keypoint="snout", individual="mouse1").values\n'
+    'import ethograph as eto\nfrom ethograph.features.changepoints import {func}\n\nds = eto.open("data.nc")\n'
 )
 
 _OSCILLATORY_PREAMBLE = (
@@ -386,14 +389,18 @@ def _build_registry() -> dict[str, FunctionSpec]:
         "find_troughs": FunctionSpec(
             func=find_troughs_binary,
             doc_url=DOC_URLS["find_troughs"],
+            auto_params=_KINEMATIC_AUTO_PARAMS,
             return_hint="binary_mask",
             copy_preamble=_KINEMATIC_PREAMBLE,
+            changepoint_name="troughs",
         ),
         "find_turning_points": FunctionSpec(
             func=find_nearest_turning_points_binary,
             doc_url=DOC_URLS["find_turning_points"],
+            auto_params=_KINEMATIC_AUTO_PARAMS,
             return_hint="binary_mask",
             copy_preamble=_KINEMATIC_PREAMBLE,
+            changepoint_name="turning_points",
         ),
         # --- Oscillatory event detection ---
         "oscillatory_events": FunctionSpec(
@@ -616,6 +623,20 @@ def _do_open_source(file_path: str, parent=None) -> None:
 
 def _display_name(spec: FunctionSpec) -> str:
     return spec.import_path or spec.func.__name__
+
+
+def _changepoint_ds_call(spec: FunctionSpec, params: dict[str, Any], target_feature: str = "speed") -> str:
+    """The ``eto.add_changepoints_to_ds`` call for a detector, listing only *params*."""
+    lines = [
+        "ds = eto.add_changepoints_to_ds(",
+        "    ds=ds,",
+        f"    target_feature={target_feature!r},",
+        f"    changepoint_name={spec.changepoint_name!r},",
+        f"    changepoint_func={_display_name(spec)},",
+    ]
+    lines.extend(f"    {k}={_format_default(v)}," for k, v in params.items())
+    lines.append(")")
+    return "\n".join(lines)
 
 
 def _get_param_infos(spec: FunctionSpec) -> list[ParamInfo]:
@@ -1027,7 +1048,9 @@ class FunctionParamsDialog(QDialog):
             changed.update(self._spec.fixed_params)
 
             auto_str = ", ".join(self._spec.auto_params)
-            if changed:
+            if self._spec.changepoint_name:
+                call = _changepoint_ds_call(self._spec, changed)
+            elif changed:
                 param_lines = [f"    {auto_str},"]
                 for k, v in changed.items():
                     param_lines.append(f"    {k}={_format_default(v)},")

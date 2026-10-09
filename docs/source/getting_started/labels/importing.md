@@ -2,7 +2,7 @@
 # Importing labels
 
 Open **File → Import labels…** to bring up the import panel. The **Labels
-format** combo offers:
+format** dropdown offers:
 
 | Option | Source | Converter |
 |--------|--------|-----------|

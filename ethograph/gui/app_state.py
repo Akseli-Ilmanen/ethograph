@@ -356,6 +356,10 @@ class AppStateSpec:
         # single-camera wizard "Pair" run). SCOPE_GLOBAL: a viewing habit, not
         # a per-dataset fact — the next drop is usually shaped like the last one.
         "drop_layout": (str, "same_trial", True),
+        # The label branch the user was editing last. SCOPE_GLOBAL: a working
+        # habit that follows the user; a branch the current mapping lacks falls
+        # back to its first branch (widgets_labels.restore_active_branch).
+        "active_branch": (int, 0, True),
         "_labels_file_path": (
             str | None,
             None,

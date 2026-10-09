@@ -44,6 +44,11 @@ _MAX_INT_CATEGORICAL_VALUES = 15
 
 #: The current trial's row, while editing is on — the row you can change.
 _CURRENT_ROW_COLOR = QColor(80, 140, 210, 60)
+#: The ``trial`` cell's colours by curation verdict: green when every label of
+#: the trial is manual or curated, red while some are still a model's
+#: unreviewed output (the bottom bar's counter speaks the same colours).
+_CURATED_CELL = (QColor(144, 238, 144), QColor(0, 100, 0))
+_UNCURATED_CELL = (QColor(255, 182, 193), QColor(139, 0, 0))
 
 #: Edits are written this long after the last one (an NWB trials table is
 #: expensive to rewrite, and editing comes in bursts).
@@ -283,6 +288,8 @@ class TrialsWidget(QWidget):
         self._label_note: str = ""
         self._editable_cols: set[int] = set()
         self._dirty_columns: set[str] = set()
+        #: ``{str(trial): curated?}`` painted onto the ``trial`` column.
+        self._curation_status: dict[str, bool] = {}
         self._building = False
         self._applying = False
 
@@ -308,7 +315,7 @@ class TrialsWidget(QWidget):
         edit_row.addWidget(self._add_column_button)
         layout.addLayout(edit_row)
 
-        self._empty_label = QLabel("No trial metadata yet — start one with “Add column…”.")
+        self._empty_label = QLabel("No trial metadata yet — add a column with “Add column…”.")
         self._empty_label.setWordWrap(True)
         self._empty_label.setStyleSheet("color: #aaa;")
         layout.addWidget(self._empty_label)
@@ -377,15 +384,10 @@ class TrialsWidget(QWidget):
         self._update_visibility()
 
     def _update_visibility(self) -> None:
-        """Show the table only when there is real metadata to filter on (i.e.
-        columns beyond the bare 'trial' number). The editing controls stay
-        visible either way — with no metadata yet is exactly when the first
-        column gets added."""
-        has_metadata = self._has_metadata()
-        self._table.setVisible(has_metadata)
-        self._status_label.setVisible(has_metadata)
-        self._note_label.setVisible(has_metadata)
-        self._empty_label.setVisible(not has_metadata)
+        """The table is always shown: even with no metadata its ``trial``
+        column is where a trial is clicked and where its curation colour
+        lives. The hint to add a column shows while there is nothing else."""
+        self._empty_label.setVisible(not self._has_metadata())
 
     def _has_metadata(self) -> bool:
         df = getattr(self, "_metadata_df", None)
@@ -434,6 +436,8 @@ class TrialsWidget(QWidget):
                 else:
                     item.setData(Qt.DisplayRole, "")
                 item.setData(Qt.UserRole, row.get("trial"))
+                if col == "trial":
+                    self._paint_curation(item)
                 self._table.setItem(r, c, item)
 
         self._table.setSortingEnabled(True)
@@ -720,6 +724,7 @@ class TrialsWidget(QWidget):
         """
         enabled = self._edit_checkbox.isChecked()
         current_row = self._current_trial_row() if enabled else None
+        trial_col = self._trial_column()
         self._applying = True
         try:
             for row in range(self._table.rowCount()):
@@ -731,9 +736,49 @@ class TrialsWidget(QWidget):
                     editable = row == current_row and col in self._editable_cols
                     flags = item.flags()
                     item.setFlags(flags | Qt.ItemIsEditable if editable else flags & ~Qt.ItemIsEditable)
-                    item.setData(Qt.BackgroundRole, background)
+                    # The trial cell keeps its curation colour.
+                    if col != trial_col:
+                        item.setData(Qt.BackgroundRole, background)
         finally:
             self._applying = False
+
+    # ------------------------------------------------------------------
+    # Curation colouring
+    # ------------------------------------------------------------------
+
+    def set_curation_status(self, status: dict[str, bool]) -> None:
+        """Paint ``{str(trial): curated?}`` onto the ``trial`` column."""
+        self._curation_status = dict(status)
+        trial_col = self._trial_column()
+        if trial_col is None:
+            return
+        self._applying = True
+        try:
+            for row in range(self._table.rowCount()):
+                item = self._table.item(row, trial_col)
+                if item is not None:
+                    self._paint_curation(item)
+        finally:
+            self._applying = False
+
+    def _trial_column(self) -> int | None:
+        cols = list(self._metadata_df.columns)
+        return cols.index("trial") if "trial" in cols else None
+
+    def _paint_curation(self, item: QTableWidgetItem) -> None:
+        curated = self._curation_status.get(str(item.data(Qt.UserRole)))
+        if curated is None:
+            item.setData(Qt.BackgroundRole, None)
+            item.setData(Qt.ForegroundRole, None)
+            return
+        bg, fg = _CURATED_CELL if curated else _UNCURATED_CELL
+        item.setData(Qt.BackgroundRole, bg)
+        item.setData(Qt.ForegroundRole, fg)
+        item.setToolTip(
+            "Every label of this trial is manual or curated"
+            if curated
+            else "Some labels of this trial are still automated (not yet curated)"
+        )
 
     def _current_trial_row(self) -> int | None:
         return self._row_of_trial(getattr(self.app_state, "trials_sel", None))

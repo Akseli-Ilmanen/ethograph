@@ -32,7 +32,7 @@ is curated once none of its labels is still automated, and the verdict is
 written to the `curated` column (`yes` / `no`) of the session's
 `metadata.tsv`, which appears the moment you start curating and is refreshed
 every few seconds while you work (see {doc}`../../advanced/metadata`). You see
-it wherever you navigate — the trial combo in the Navigation section and the
+it wherever you navigate — the trial number in the trials table and the
 `Trial 12 (12/173)` counter in the bottom bar are green for a curated trial and
 red for one with automated labels left, and predicting new labels into a
 curated trial turns it red again until those are curated too.

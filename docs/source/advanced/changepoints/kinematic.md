@@ -56,14 +56,27 @@ between valid data and NaN gaps are automatically added as changepoints.
 
 ## Usage
 
-1. Select a feature in the Data Controls (e.g. `speed`).
-2. Open the **Kinematic CPs** panel.
+Detection lives in the top bar: **Changepoints ▸ Detect changepoints…**.
+Correction is the next entry, **Run changepoint correction…**, and opens a
+pop-up of its own, so the two steps never share a window.
+
+1. Click a line plot and pick the feature in the sidebar's **Data** section (e.g. `speed`).
+2. Open **Changepoints ▸ Detect changepoints…** in the top bar; the **Kinematic CPs** panel is in front.
 3. Choose a method (`troughs` or `turning_points`).
 4. Click **Configure...** to adjust parameters.
 5. Click **Detect**.
 
 The changepoints are stored in the dataset as `{feature}_{method}` (e.g.
 `speed_troughs`) and persist when you save.
+
+```{tip}
+**Play in the GUI, then script it.** The pop-up is for finding a threshold
+interactively: change a parameter, click **Detect**, look at the marks on the
+plot. Once they look right, click **Copy code to clipboard** in the
+**Configure...** dialog: it copies the Python call with the parameters you
+chose. Put that call in the script that builds your dataset, so every session
+is detected the same way and nobody has to redo the clicks.
+```
 
 ---
 
@@ -73,27 +86,12 @@ The changepoints are stored in the dataset as `{feature}_{method}` (e.g.
 
 :::{tab-item} Xarray
 
-Changepoint arrays are binary (`0` or `1`) integer arrays that share the
-same time dimension as their target feature. They require:
-
-- `attrs["kind"] = "changepoint_feature"` and `attrs["changepoint_mask"] = 1` —
-  the label and the marker, both written by
-  {func}`~ethograph.io.schema.changepoint_attrs`.
-  A file predating this needs {func}`~ethograph.io.schema.migrate_legacy_attrs`.
-- `attrs["target_feature"]` — name of the feature variable they annotate
-
-```python
-from ethograph.io import schema
-
-ds["speed_troughs"] = xr.DataArray(
-    cp_binary,  # shape: (time, keypoint, individual), values 0 or 1
-    dims=["time", "keypoint", "individual"],
-    attrs=schema.changepoint_attrs(target_feature="speed"),
-)
-```
-
-To compute changepoints programmatically, use
-{func}`~ethograph.io.dataset.add_changepoints_to_ds`:
+Compute changepoints with
+{func}`~ethograph.io.dataset.add_changepoints_to_ds`. It runs the detector
+over every non-time dimension through {func}`xarray.apply_ufunc` with
+`vectorize=True`, so the detector only has to handle a 1-D signal, and it
+stores the result as `ds["{target_feature}_{changepoint_name}"]` with the
+right attrs:
 
 ```python
 import ethograph as eto
@@ -104,12 +102,17 @@ ds = eto.add_changepoints_to_ds(
     target_feature="speed",
     changepoint_name="troughs",
     changepoint_func=find_troughs_binary,
+    prominence=0.5,  # ignore dips shallower than 0.5 (feature units)
+    distance=10,  # at most one trough per 10 samples
 )
 ```
 
-{func}`~ethograph.io.dataset.add_changepoints_to_ds` uses
-{func}`xarray.apply_ufunc` with `vectorize=True`, so your detection function
-only needs to handle a 1-D signal.
+The stored variable is a binary (`0` or `1`) integer array on the same time
+dimension as its target feature, carrying `attrs["target_feature"]` (the
+feature it annotates) plus the schema stamp written by
+{func}`~ethograph.io.schema.changepoint_attrs` (`kind="changepoint_feature"`,
+`changepoint_mask=1`). A mask you computed elsewhere only needs those attrs
+to be recognised.
 :::
 
 :::{tab-item} Pynapple
@@ -150,5 +153,3 @@ through when the input is a `TsGroup`.
 :::
 
 ::::
-
----

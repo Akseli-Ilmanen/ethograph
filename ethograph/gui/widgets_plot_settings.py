@@ -163,6 +163,7 @@ class PlotSettingsWidget(QWidget):
         self.lineplot_panel.setLayout(layout)
 
         group_box = QGroupBox("Axes Controls")
+        self.axes_groupbox = group_box
         group_layout = QGridLayout()
         group_layout.setSpacing(2)
         group_layout.setContentsMargins(2, 2, 2, 2)

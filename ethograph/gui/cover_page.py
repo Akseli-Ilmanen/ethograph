@@ -536,11 +536,13 @@ class CoverPage(QDialog):
         outer.setContentsMargins(m, m, m, m)
         outer.setSpacing(self._px(16))
 
-        outer.addWidget(self._build_project_bar())
+        self._project_bar = self._build_project_bar()
+        outer.addWidget(self._project_bar)
 
         body = QHBoxLayout()
         body.setSpacing(self._px(16))
-        body.addWidget(self._build_template_card(), 2)
+        self._template_card = self._build_template_card()
+        body.addWidget(self._template_card, 2)
 
         # Cards 2 + 3 share a column with the load bar directly beneath them —
         # the bar belongs to those two paths only, not to templates.
@@ -563,7 +565,8 @@ class CoverPage(QDialog):
         body.addLayout(right, 7)
         outer.addLayout(body)
 
-        outer.addWidget(self._build_supported_types_strip())
+        self._types_strip = self._build_supported_types_strip()
+        outer.addWidget(self._types_strip)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)

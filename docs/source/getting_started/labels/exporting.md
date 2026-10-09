@@ -56,7 +56,7 @@ the GUI; computed columns are derived on each save from the data file.
 `individual` and `individual_rec` together are the **subject** of a label. The
 receiver is an attribute of each label, not a separate track: overlapping labels
 are resolved per actor, every label of the actor is drawn (tagged `→ receiver`
-when it has one), and the sidebar's Receiver combo only sets the receiver of the
+when it has one), and the sidebar's Receiver dropdown only sets the receiver of the
 next label you create. Files written before recipients existed have no
 `individual_rec` column and read back as solo behaviours.
 

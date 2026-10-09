@@ -102,7 +102,7 @@ data and **Settings ▸ Create / edit individuals…** (see
 
 ```{note}
 A new label is placed for the individual of the panel you last clicked —
-whether that panel follows the sidebar combo or is pinned to another animal
+whether that panel follows the sidebar dropdown or is pinned to another animal
 (📌). The bottom bar shows `labelling: <individual>` so you always know whom
 the next label belongs to.
 ```

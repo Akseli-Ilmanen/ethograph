@@ -20,7 +20,7 @@ def _extra_camera_views(vm):
 
 
 def _goto_trial(meta, trial):
-    meta.navigation_widget.trials_combo.setCurrentText(str(trial))
+    meta.navigation_widget.navigate_to_trial(str(trial))
     QApplication.processEvents()
 
 

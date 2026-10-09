@@ -33,9 +33,7 @@ needed.
 
 ## Usage
 
-1. Select a feature in Data Controls.
-2. Open the **Ruptures** panel.
+1. Click a line plot and pick the feature in the sidebar's **Data** section.
+2. Open **Changepoints ▸ Detect changepoints…** in the top bar and switch to the **Ruptures** panel.
 3. Choose a method and click **Configure...**.
 4. Click **Detect**.
-
----

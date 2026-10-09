@@ -139,6 +139,28 @@ def test_changepoints_popup_borrows_and_returns_detached_widget(gui):
     assert cp.parent() is holder  # returned to the holder
 
 
+def test_changepoint_detection_and_correction_are_separate_popups(gui):
+    """Detect and Correct open two pop-ups at once, each hosting only its own
+    half, and both halves return to the Changepoints widget on close."""
+    shell, meta = gui
+    cp = meta.changepoints_widget
+    builder = shell._top_bar
+
+    builder._open_changepoint_detection()
+    builder._open_changepoint_correction()
+    detect = builder._open_popups["cp_detect"]
+    correct = builder._open_popups["cp_correct"]
+    assert detect is not correct
+    assert detect.isAncestorOf(cp.changepoints_panel)
+    assert correct.isAncestorOf(cp.correction_params_panel)
+    assert not detect.isAncestorOf(cp.correction_params_panel)
+
+    detect.close()
+    correct.close()
+    assert cp.detection_host.parent() is cp
+    assert cp.correction_host.parent() is cp
+
+
 def test_io_subpanel_popups_are_separate(gui):
     """Import labels / Import predictions / Export labels each pop up alone.
 
@@ -213,19 +235,20 @@ def test_plot_click_shows_only_relevant_sections(birdpark_gui):
     assert not ps.spectrogram_panel.isVisibleTo(ctx)
 
 
-def test_trials_table_hidden_without_metadata(gui):
+def test_trials_table_shown_without_metadata(gui):
     import pandas as pd
 
     shell, meta = gui
     trials = meta.trials_widget
-    # Bare trial numbers → no metadata → table hidden. The editing controls
-    # stay, since that is how the first column gets added.
+    # Bare trial numbers → the table still shows (its trial column is the
+    # navigation surface), with the hint to add a column beside it.
     trials.setup(pd.DataFrame({"trial": [1, 2, 3]}))
-    assert trials._table.isHidden()
-    assert not trials._add_column_button.isHidden()
-    # Real metadata columns → table shown.
-    trials.setup(pd.DataFrame({"trial": [1, 2], "condition": ["a", "b"]}))
     assert not trials._table.isHidden()
+    assert not trials._empty_label.isHidden()
+    assert not trials._add_column_button.isHidden()
+    # Real metadata columns → hint gone.
+    trials.setup(pd.DataFrame({"trial": [1, 2], "condition": ["a", "b"]}))
+    assert trials._empty_label.isHidden()
 
 
 def test_video_context_shows_pose_only_when_pose_exists(birdpark_gui):

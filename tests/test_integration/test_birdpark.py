@@ -100,7 +100,7 @@ class TestBirdParkLoading:
             ind_combo = meta.io_widget.combos.get("individuals")
         assert ind_combo is not None
         assert ind_combo.count() > 0
-        assert meta.navigation_widget.trials_combo.count() > 0
+        assert len(meta.app_state.trials) > 0
 
     def test_audio_panels_visible(self, birdpark_gui):
         _, meta = birdpark_gui
@@ -147,7 +147,7 @@ class TestTrialNavigation:
         meta.navigation_widget.scope_combo.setCurrentText("Trial start → Trial end")
         QApplication.processEvents()
         first_trial = meta.app_state.trials[0]
-        meta.navigation_widget.trials_combo.setCurrentText(str(first_trial))
+        meta.navigation_widget.navigate_to_trial(str(first_trial))
         QApplication.processEvents()
         meta.navigation_widget.prev_trial()
         QApplication.processEvents()
@@ -315,7 +315,7 @@ class TestTrialSwitchUpdatesPlot:
         _, meta = moll2025_gui
         lp = meta.plot_container.line_plots[0]
         for trial in meta.app_state.trials:
-            meta.navigation_widget.trials_combo.setCurrentText(str(trial))
+            meta.navigation_widget.navigate_to_trial(str(trial))
             QApplication.processEvents()
             assert len(lp.plot_items) > 0, f"LinePlot empty on trial {trial}"
             x, y = _get_curve_data(lp.plot_items)

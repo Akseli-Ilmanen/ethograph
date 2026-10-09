@@ -72,7 +72,7 @@ section is in one. It leaves the tags as they were: click to tag,
 double-click to go and see. **Export PDF…** prints the grid as it stands, red
 outlines included.
 
-Setup's **Labeling method** combo picks which labels the grid is about:
+Setup's **Labeling method** dropdown picks which labels the grid is about:
 *Automated only* is what a prediction review wants, *Manual or curated*
 checks your own work. **GUI panels under each frame** ticks any open plot
 panel to capture around every label, as in the screenshot, so an outlier in
