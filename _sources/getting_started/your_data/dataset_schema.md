@@ -191,8 +191,10 @@ data = {
 }
 ```
 
-Each object appears as a separate feature in the GUI. Individual selection is
-not available for pynapple backends.
+Each object appears as a separate feature in the GUI. The individuals of a
+pynapple session are declared in its session record (`.ethograph/alignment.nwb`)
+or added as `extra_individuals`; without either, the GUI falls back to the
+placeholder `individual_0`. See {ref}`target-individual-names`.
 :::
 
 :::{tab-item} NWB

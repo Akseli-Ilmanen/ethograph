@@ -661,8 +661,10 @@ typically stored as separate objects:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Each object appears as a separate feature in the GUI. Individual selection is
-not available for pynapple backends.</p>
+<p>Each object appears as a separate feature in the GUI. The individuals of a
+pynapple session are declared in its session record (<code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code>)
+or added as <code class="docutils literal notranslate"><span class="pre">extra_individuals</span></code>; without either, the GUI falls back to the
+placeholder <code class="docutils literal notranslate"><span class="pre">individual_0</span></code>. See <a class="reference internal" href="../labels/labelling_gui.html#target-individual-names"><span class="std std-ref">Where the names come from</span></a>.</p>
 </div>
 <input id="sd-tab-item-11" name="sd-tab-set-3" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-11">

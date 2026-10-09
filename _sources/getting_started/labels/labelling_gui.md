@@ -17,6 +17,28 @@ exist before the Labels tab wakes up:
    data declares; the dialog shows the data's names greyed out on top and yours
    editable below.
 
+(target-individual-names)=
+### Where the names come from
+
+The individual selector is built from three sources, in this order, and no
+source hides another:
+
+1. **The dataset's own individual dimension**, in whatever spelling it uses.
+2. **The session record** (`.ethograph/alignment.nwb`, or the `.nwb` you opened):
+   any individual it declares that the dataset does not track is added. This is
+   how a session names an animal that was present but not tracked, and how a
+   pynapple folder — whose files carry no individual at all — gets a real name.
+   The record is filled when the media are paired with an individuals list, or
+   afterwards with `ethograph.io.nwb_alignment.set_individuals(path, ["crow1"])`.
+3. **`extra_individuals`** from `gui_settings.yaml`, your own additions.
+
+Only when none of these names anyone does a pynapple session fall back to the
+placeholder `individual_0`. Label with that placeholder and the labels file ends
+up naming two different actors for one animal, so the trial appears to lose its
+other labels — they are still there, just filtered by the selected individual.
+Declare the name in the session record before labelling, and keep the actor in
+`labels.tsv` spelled the way the data spells it.
+
 Until both are there, the Labels tab is greyed out and the label keys refuse to
 place anything. The tab says which half is missing and offers the button that
 fixes it — **Define individuals…** or **Define labels…** (the `mapping.txt`
