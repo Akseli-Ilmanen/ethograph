@@ -146,6 +146,7 @@ class TopBarBuilder:
         self._feature_labels_dialog = None
         self._neural_labels_dialog = None
         self._measure_dialog = None
+        self._smoothing_dialog = None
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -224,6 +225,9 @@ class TopBarBuilder:
         # Two clicks on any time panel -> duration and y-range between them,
         # in the clicked panel's own axis units -- see dialog_measure.py.
         menu.addAction("Data: Measure duration / y-range…", self._open_measure)
+        # Preview smoothing kernels on the active line plot and copy the call;
+        # nothing is written anywhere. See dialog_smoothing.py.
+        menu.addAction("Data: Find smoothing parameters…", self._open_smoothing)
 
         menu.addSeparator()
         # Drag a box on the video and read off the source pixels it covers,
@@ -415,6 +419,19 @@ class TopBarBuilder:
             self._measure_dialog.close()
         self._measure_dialog = open_measure_dialog(plot_container, self.app_state, parent=self.shell)
 
+    def _open_smoothing(self):
+        """Preview smoothing on the active line plot, copy the call (Tools)."""
+        from .dialog_smoothing import open_smoothing_dialog
+
+        plot_container = getattr(self.meta, "plot_container", None)
+        if plot_container is None or self.app_state is None:
+            return
+        if self._smoothing_dialog is not None and self._smoothing_dialog.isVisible():
+            self._smoothing_dialog.raise_()
+            self._smoothing_dialog.activateWindow()
+            return
+        self._smoothing_dialog = open_smoothing_dialog(plot_container, self.app_state, parent=self.shell)
+
     def _open_keypoint_labelling(self):
         """Open the keypoint labelling dialog (owned by the DataWidget, so the
         Tools entry and the Pose sidebar button raise the same instance)."""
@@ -536,6 +553,10 @@ class TopBarBuilder:
             "Export labels…",
             lambda: self._popup_section("export_labels", "Export labels", getattr(io, "export_panel", None)),
         )
+        menu.addSeparator()
+        reload_data = self._first_method(io, "reload_dataset")
+        if reload_data is not None:
+            menu.addAction("Reload data from disk", reload_data)
         menu.addSeparator()
         save_labels = self._first_method(io, "_save_labels")
         if save_labels is not None:

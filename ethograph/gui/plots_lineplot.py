@@ -1,7 +1,8 @@
 """Enhanced line plot inheriting from BasePlot."""
 
 import logging
-from typing import Optional
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 import matplotlib
 import numpy as np
@@ -25,6 +26,28 @@ from .app_constants import (  # noqa: E402
 from .make_pretty import clean_display_labels  # noqa: E402
 from .plots_base import BasePlot, PanelStateMixin, ThrottleDebounce  # noqa: E402
 
+PREVIEW_COLOR = (255, 170, 0)
+#: Intermediate stages of a preview, in order; the final stage is PREVIEW_COLOR.
+PREVIEW_STAGE_COLORS = ((80, 160, 255), (60, 200, 120), (200, 120, 255), (255, 110, 110))
+PREVIEW_RAW_OPACITY = 0.35
+
+
+@dataclass(frozen=True)
+class LinePreview:
+    """A transient transform drawn over a line plot's raw data.
+
+    ``apply(data, time)`` returns the stages to draw as ``(label, array)``
+    pairs, each ``(T,)``/``(T, D)``, or ``None`` when it cannot (the caller
+    reports why). Every stage but the last draws thin in its own colour; the
+    last draws thick in the preview colour. ``pad_s`` is how far beyond the
+    visible window the data is fetched, so a kernel's edge transient never
+    sits inside the view. Nothing about the preview is stored: it lives
+    exactly as long as the dialog that set it.
+    """
+
+    apply: Callable[[np.ndarray, np.ndarray], Optional[list[tuple[str, np.ndarray]]]]
+    pad_s: float = 0.0
+
 
 class LinePlot(PanelStateMixin, BasePlot):
     """Line plot with lazy loading and shared sync/marker functionality."""
@@ -41,6 +64,7 @@ class LinePlot(PanelStateMixin, BasePlot):
         self.hline_items: list[pg.InfiniteLine] = []
 
         self._buffer = WindowedBuffer(buffer_multiplier=DEFAULT_BUFFER_MULTIPLIER)
+        self._preview: Optional[LinePreview] = None
         self._current_feature = None
         self._current_trial = None
         self._current_ds_kwargs_hash = None
@@ -120,12 +144,23 @@ class LinePlot(PanelStateMixin, BasePlot):
 
         self._update_plot(t0, t1)
 
+    @property
+    def preview(self) -> Optional[LinePreview]:
+        return self._preview
+
+    def set_preview(self, preview: Optional[LinePreview]) -> None:
+        """Draw *preview* over the raw data, or go back to the raw data alone."""
+        self._preview = preview
+        self.update_plot_content()
+
     def _update_plot(self, t0: float, t1: float):
         clear_plot_items(self.plot_item, self.plot_items)
 
         self._ensure_panel_state()
         if self._effective_feature() is None:
             return
+        if self._preview is not None:
+            t0, t1 = t0 - self._preview.pad_s, t1 + self._preview.pad_s
 
         feature_sel = self._effective_feature()
         selections = self._effective_selections()
@@ -163,6 +198,31 @@ class LinePlot(PanelStateMixin, BasePlot):
                 # forward-filled data + a `connect` mask (_nan_safe_curve_args);
                 # raw NaNs would blank every bin containing one when zoomed out.
                 item.setDownsampling(auto=True, method="peak")
+
+        if self._preview is not None:
+            self._draw_preview(plot_data)
+
+    def _draw_preview(self, plot_data: PlotData) -> None:
+        """The raw curves fade; each stage draws on top, the last one thick in the preview colour."""
+        assert self._preview is not None
+        stages = self._preview.apply(np.asarray(plot_data.data), np.asarray(plot_data.time))
+        if not stages:
+            return
+        for item in self.plot_items:
+            item.setOpacity(PREVIEW_RAW_OPACITY)
+        if len(stages) > 1 and getattr(self.plot_item, "legend", None) is None:
+            add_legend(self.plot_item, self.legend_host())
+        for i, (label, stage) in enumerate(stages):
+            final = i == len(stages) - 1
+            color = PREVIEW_COLOR if final else PREVIEW_STAGE_COLORS[i % len(PREVIEW_STAGE_COLORS)]
+            pen = pg.mkPen(color=color, width=2 if final else 1)
+            columns = [stage] if stage.ndim == 1 else [stage[:, j] for j in range(stage.shape[1])]
+            for j, column in enumerate(columns):
+                y, connect = _nan_safe_curve_args(column)
+                opts = {"connect": connect} if connect is not None else {}
+                if j == 0 and len(stages) > 1:
+                    opts["name"] = label
+                self.plot_items.append(self.plot_item.plot(plot_data.time, y, pen=pen, **opts))
 
     def add_hline(self, value: float) -> pg.InfiniteLine:
         """Draw a horizontal reference line at *value* on this panel."""
@@ -465,7 +525,7 @@ def render_plot_data(plot_item, plot_data: PlotData, show_changepoints=True, leg
     """Render a PlotData to a pyqtgraph PlotItem. Source-agnostic."""
     drop_legend(plot_item)
 
-    items = []
+    items: list = []
     dim_labels = plot_data.dim_labels
     if dim_labels:
         dim_labels = clean_display_labels(dim_labels)

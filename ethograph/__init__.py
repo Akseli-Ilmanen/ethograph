@@ -8,6 +8,7 @@ except PackageNotFoundError:
 
 
 from ethograph.datasets import sample_data
+from ethograph.features.timeaxis import apply_along_time, sampling_rate
 from ethograph.io.catalog import (
     DataCatalog,
     DataLoader,

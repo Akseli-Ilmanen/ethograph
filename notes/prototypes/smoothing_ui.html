@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway. Three variants of a Smooth control for a feature panel,
+     switchable with ?variant=A|B|C|D or the bottom bar / arrow keys.
+     Question answered: where does smoothing live in the panel and how many knobs does it need? -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ethograph smoothing prototype</title>
+<style>
+  :root { --bg:#1e1f22; --panel:#2b2d31; --fg:#d7d9dd; --dim:#8b8f98; --accent:#5aa9ff; --raw:#8b8f98; --sm:#ffb454; --line:#3a3d44; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:13px system-ui, "Segoe UI", sans-serif; }
+  .app { display:grid; grid-template-columns:1fr 300px; height:100vh; }
+  .center { display:flex; flex-direction:column; padding:10px; gap:10px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:4px; position:relative; }
+  .panel header { padding:5px 10px; font-size:12px; color:var(--dim); display:flex; justify-content:space-between; border-bottom:1px solid var(--line); }
+  canvas { display:block; width:100%; height:260px; }
+  .sidebar { background:var(--panel); border-left:1px solid var(--line); padding:12px; overflow:auto; }
+  .sidebar h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); }
+  .form { display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center; }
+  .form label { color:var(--dim); white-space:nowrap; }
+  select,input[type=number],button { background:#1b1c1f; color:var(--fg); border:1px solid var(--line); border-radius:3px; padding:3px 6px; font:inherit; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  button { cursor:pointer; } button:hover { border-color:var(--accent); } button:disabled { opacity:.4; cursor:default; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .muted { color:var(--dim); font-size:12px; }
+  .warn { color:#ff7b72; font-size:12px; }
+  .chip { padding:2px 8px; border-radius:10px; border:1px solid var(--line); cursor:pointer; font-size:12px; }
+  .chip.on { border-color:var(--sm); color:var(--sm); }
+  hr { border:0; border-top:1px solid var(--line); margin:12px 0; }
+  details summary { cursor:pointer; color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+  .plottool { position:absolute; top:34px; right:8px; background:#1b1c1fdd; border:1px solid var(--line); border-radius:4px; padding:6px 8px; display:flex; gap:8px; align-items:center; backdrop-filter:blur(4px); }
+  .plottool input[type=range] { width:110px; }
+  .legend { position:absolute; left:10px; top:34px; font-size:11px; color:var(--dim); }
+  .legend i { display:inline-block; width:14px; height:2px; vertical-align:middle; margin-right:4px; }
+  .switcher { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#fff; color:#000; border-radius:20px; padding:6px 10px; display:flex; gap:10px; align-items:center; box-shadow:0 4px 14px #0008; font-weight:600; z-index:9; }
+  .switcher button { background:#eee; color:#000; border:0; border-radius:50%; width:26px; height:26px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="center">
+    <div class="panel" id="plotpanel">
+      <header><span>speed · individual: bird_1 · 30 Hz</span><span class="muted">Trial 12 · 4.0 to 12.0 s</span></header>
+      <div class="legend"><i style="background:var(--raw)"></i>raw &nbsp; <i style="background:var(--sm)"></i>smoothed</div>
+      <canvas id="c" width="1200" height="260"></canvas>
+      <div id="plotslot"></div>
+    </div>
+    <div class="muted" id="desc"></div>
+  </div>
+  <aside class="sidebar" id="side"></aside>
+</div>
+
+<div class="switcher">
+  <button id="prev">&lsaquo;</button><span id="vlabel"></span><button id="next">&rsaquo;</button>
+</div>
+
+<script>
+// ------------------------------------------------------------ fake data: 8 s of a 30 Hz speed trace
+const FS = 30, N = 240;
+const t = Array.from({length:N}, (_,i)=>4 + i/FS);
+let seed = 7; const rnd = ()=> (seed = (seed*16807)%2147483647)/2147483647 - .5;
+const raw = t.map((x,i)=>{
+  let v = 0.4 + 0.25*Math.sin(x*1.3) + rnd()*0.35;
+  if (x>6.8 && x<7.6) v += 1.6*Math.exp(-((x-7.2)**2)/0.02);     // a hop
+  if (x>9.5 && x<9.9) v += 2.2;                                     // a step edge
+  if (i>150 && i<158) v = NaN;                                      // a pose gap
+  return v;
+});
+
+// ------------------------------------------------------------ filters (zero-phase only)
+function interpNaN(a){ const o=a.slice(); let last=null; for(let i=0;i<o.length;i++){ if(isNaN(o[i])){ let j=i; while(j<o.length&&isNaN(o[j]))j++; const nx = j<o.length?o[j]:last; const pv = last??nx; for(let k=i;k<j;k++) o[k]= pv + (nx-pv)*(k-i+1)/(j-i+1); i=j; } last=o[i]; } return o; }
+function remask(a,src){ return a.map((v,i)=>isNaN(src[i])?NaN:v); }
+function conv(a,k){ const h=(k.length-1)/2, o=new Array(a.length); for(let i=0;i<a.length;i++){ let s=0,w=0; for(let j=-h;j<=h;j++){ const idx=Math.min(a.length-1,Math.max(0,i+j)); s+=a[idx]*k[j+h]; w+=k[j+h]; } o[i]=s/w; } return o; }
+function gaussian(a,sigma_s){ const s=sigma_s*FS; const h=Math.max(1,Math.ceil(3*s)); const k=[]; for(let j=-h;j<=h;j++)k.push(Math.exp(-j*j/(2*s*s))); return conv(a,k); }
+function boxcar(a,win_s){ let n=Math.max(1,Math.round(win_s*FS)); if(n%2==0)n++; return conv(a,new Array(n).fill(1)); }
+function median(a,win_s){ let n=Math.max(1,Math.round(win_s*FS)); if(n%2==0)n++; const h=(n-1)/2; return a.map((_,i)=>{ const w=[]; for(let j=-h;j<=h;j++) w.push(a[Math.min(a.length-1,Math.max(0,i+j))]); w.sort((x,y)=>x-y); return w[h]; }); }
+function invert(M){ const n=M.length; const A=M.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>i==j?1:0)]); for(let i=0;i<n;i++){ let p=A[i][i]; for(let j=0;j<2*n;j++)A[i][j]/=p; for(let r=0;r<n;r++) if(r!=i){ const f=A[r][i]; for(let j=0;j<2*n;j++)A[r][j]-=f*A[i][j]; } } return A.map(r=>r.slice(n)); }
+function savgol(a,win_s,order){ let n=Math.max(order+2,Math.round(win_s*FS)); if(n%2==0)n++; const h=(n-1)/2;
+  const X=[]; for(let j=-h;j<=h;j++){ const r=[]; for(let p=0;p<=order;p++) r.push(j**p); X.push(r);}
+  const m=order+1; const A=Array.from({length:m},()=>new Array(m).fill(0)); for(const r of X) for(let i=0;i<m;i++) for(let j=0;j<m;j++) A[i][j]+=r[i]*r[j];
+  const inv=invert(A); const k=X.map(r=>{ let s=0; for(let j=0;j<m;j++) s+=inv[0][j]*r[j]; return s; }); return conv(a,k); }
+function butter(a,cut_hz){ // 2nd order low-pass biquad, forward then backward = zero phase
+  const w=Math.tan(Math.PI*Math.min(cut_hz,FS/2-0.01)/FS), q=Math.SQRT1_2; const n=1/(1+w/q+w*w);
+  const b0=w*w*n,b1=2*b0,b2=b0,a1=2*(w*w-1)*n,a2=(1-w/q+w*w)*n;
+  const run=x=>{ const y=new Array(x.length); let x1=x[0],x2=x[0],y1=x[0],y2=x[0]; for(let i=0;i<x.length;i++){ y[i]=b0*x[i]+b1*x1+b2*x2-a1*y1-a2*y2; x2=x1;x1=x[i];y2=y1;y1=y[i]; } return y; };
+  return run(run(a).reverse()).reverse(); }
+
+const METHODS = {
+  none:     {label:'None',                 param:null},
+  gaussian: {label:'Gaussian',             param:{name:'sigma',  unit:'s',  min:0.01, max:0.5, step:0.01, def:0.05}},
+  savgol:   {label:'Savitzky-Golay',       param:{name:'window', unit:'s',  min:0.1,  max:1.0, step:0.05, def:0.3}, extra:true},
+  median:   {label:'Median',               param:{name:'window', unit:'s',  min:0.05, max:1.0, step:0.05, def:0.2}},
+  boxcar:   {label:'Moving average',       param:{name:'window', unit:'s',  min:0.05, max:1.0, step:0.05, def:0.2}},
+  butter:   {label:'Butterworth low-pass', param:{name:'cutoff', unit:'Hz', min:0.5,  max:14,  step:0.5,  def:3}},
+};
+const state = { method:'gaussian', p:0.05, order:3, showRaw:true, nanMode:'remask' };
+
+function smooth(){
+  if(state.method==='none') return null;
+  const a = interpNaN(raw); let o;
+  switch(state.method){
+    case 'gaussian': o=gaussian(a,state.p); break;
+    case 'savgol':   o=savgol(a,state.p,state.order); break;
+    case 'median':   o=median(a,state.p); break;
+    case 'boxcar':   o=boxcar(a,state.p); break;
+    case 'butter':   o=butter(a,state.p); break;
+  }
+  return state.nanMode==='remask' ? remask(o,raw) : o;
+}
+function kernelSamples(){ const m=METHODS[state.method]; if(!m.param) return 0; if(state.method==='butter') return Math.round(FS/state.p); if(state.method==='gaussian') return Math.round(6*state.p*FS)+1; let n=Math.round(state.p*FS); return n%2?n:n+1; }
+
+// ------------------------------------------------------------ drawing
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+function draw(){
+  const W=cv.width,H=cv.height, pad=28; ctx.clearRect(0,0,W,H);
+  const sm=smooth(); const all=raw.concat(sm||[]).filter(v=>!isNaN(v)); const lo=Math.min(...all)-.1, hi=Math.max(...all)+.1;
+  const X=i=>pad+(W-2*pad)*i/(N-1), Y=v=>H-pad-(H-2*pad)*(v-lo)/(hi-lo);
+  ctx.strokeStyle='#3a3d44'; ctx.lineWidth=1; for(let s=4;s<=12;s++){ const x=X((s-4)*FS); ctx.beginPath(); ctx.moveTo(x,H-pad); ctx.lineTo(x,H-pad+5); ctx.stroke(); ctx.fillStyle='#8b8f98'; ctx.font='11px system-ui'; ctx.fillText(s+' s',x-8,H-6); }
+  ctx.fillStyle='#5aa9ff22'; ctx.fillRect(X((6.9-4)*FS),pad,X((7.6-4)*FS)-X((6.9-4)*FS),H-2*pad);   // a manual label
+  ctx.fillStyle='#ff7b7233'; ctx.fillRect(X(150),pad,X(158)-X(150),H-2*pad);                          // the pose gap
+  const line=(arr,color,w,alpha)=>{ ctx.globalAlpha=alpha; ctx.strokeStyle=color; ctx.lineWidth=w; ctx.beginPath(); let up=true; arr.forEach((v,i)=>{ if(isNaN(v)){up=true;return;} if(up){ctx.moveTo(X(i),Y(v));up=false;} else ctx.lineTo(X(i),Y(v)); }); ctx.stroke(); ctx.globalAlpha=1; };
+  if(sm){ if(state.showRaw) line(raw,'#8b8f98',1,0.55); line(sm,'#ffb454',1.8,1); } else line(raw,'#d7d9dd',1.4,1);
+}
+
+// ------------------------------------------------------------ shared control builders
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
+function methodSelect(){ const s=el('select'); for(const [k,m] of Object.entries(METHODS)){ const o=el('option','',m.label); o.value=k; if(k===state.method)o.selected=true; s.appendChild(o);} s.onchange=()=>{ state.method=s.value; const m=METHODS[s.value]; if(m.param) state.p=m.param.def; rerender(); }; return s; }
+function paramSlider(){ const m=METHODS[state.method].param; const wrap=el('div','row'); if(!m) return wrap;
+  const r=el('input'); r.type='range'; r.min=m.min; r.max=m.max; r.step=m.step; r.value=state.p;
+  const num=el('input'); num.type='number'; num.min=m.min; num.max=m.max; num.step=m.step; num.value=state.p; num.style.width='64px';
+  const unit=el('span','muted',m.unit);
+  const sync=v=>{ state.p=+v; r.value=v; num.value=v; redrawLive(); }; r.oninput=()=>sync(r.value); r.onchange=()=>rerender(); num.onchange=()=>{sync(num.value); rerender();};
+  wrap.append(r,num,unit); return wrap; }
+function orderSelect(){ const s=el('select'); [2,3,4].forEach(o=>{const op=el('option','',String(o)); op.value=o; if(o==state.order)op.selected=true; s.appendChild(op);}); s.onchange=()=>{state.order=+s.value; rerender();}; return s; }
+function footnote(){ const n=kernelSamples(); const d=el('div','muted');
+  if(state.method==='none') d.textContent='Drawing the raw variable.';
+  else if(n<3) { d.className='warn'; d.textContent=`About ${n} sample${n==1?'':'s'} at 30 Hz: too short to do anything on this feature.`; }
+  else d.textContent=`About ${n} samples at 30 Hz. Zero-phase, onsets do not shift. Gaps ${state.nanMode==='remask'?'stay gaps':'are bridged'}.`;
+  return d; }
+function featureName(){ const m=METHODS[state.method].param; return `speed_${state.method}_${state.p}${m?m.unit:''}`; }
+function keepAction(){ alert(`Would register derived feature\n\n  ${featureName()}\n\nas a recipe (re-evaluated per window and per trial, source selections pinned), with method + parameters in attrs.\nOptional: write into the session .nc so the segment pipeline can select it.`); }
+function keepButton(){ const b=el('button','','Keep as feature...'); b.disabled=state.method==='none'; b.onclick=keepAction; return b; }
+function nanToggle(){ const s=el('select'); [['remask','keep gaps'],['bridge','bridge gaps']].forEach(([v,l])=>{ const o=el('option','',l); o.value=v; if(v===state.nanMode)o.selected=true; s.appendChild(o);}); s.onchange=()=>{state.nanMode=s.value; rerender();}; return s; }
+function rawToggle(){ const l=el('label','row'); const c=el('input'); c.type='checkbox'; c.checked=state.showRaw; c.onchange=()=>{state.showRaw=c.checked; draw();}; l.append(c,' show raw underneath'); return l; }
+function fakeRows(f){ f.innerHTML=`<label>Feature</label><select><option>speed</option></select><label>Individual</label><select><option>bird_1</option></select><label>Colour</label><select><option>default</option></select>`; }
+
+
+function pySnippet(){
+  const m=state.method, p=state.p; const smp=v=>+(v*FS).toFixed(2);
+  const head='import ethograph as eto\n';
+  if(m==='none') return head+'\nds = eto.open("data.nc")\n# pick a method to see the call';
+  let imp, call, note;
+  switch(m){
+    case 'gaussian': imp='from ethograph.features.preprocessing import gaussian_smoothing'; note=`# sigma = ${p} s at ${FS} Hz`; call=`gaussian_smoothing(ds["speed"], sigma=${smp(p)})`; break;
+    case 'savgol':   imp='from scipy.signal import savgol_filter'; note=`# window = ${p} s at ${FS} Hz`; call=`savgol_filter(ds["speed"], window_length=${kernelSamples()}, polyorder=${state.order}, axis=0)`; break;
+    case 'median':   imp='from scipy.ndimage import median_filter'; note=`# window = ${p} s at ${FS} Hz`; call=`median_filter(ds["speed"], size=(${kernelSamples()},) + (1,) * (ds["speed"].ndim - 1))`; break;
+    case 'boxcar':   imp='from scipy.ndimage import uniform_filter1d'; note=`# window = ${p} s at ${FS} Hz`; call=`uniform_filter1d(ds["speed"], size=${kernelSamples()}, axis=0)`; break;
+    case 'butter':   imp='from scipy.signal import butter, sosfiltfilt'; note=`# zero-phase low-pass, cutoff in Hz, rate from the variable`; call=`sosfiltfilt(butter(2, ${p}, fs=eto.sampling_rate(ds["speed"]), output="sos"), ds["speed"], axis=0)`; break;
+  }
+  return `${head}${imp}\n\nds = eto.open("data.nc")\n${note}\nds["speed_${m}"] = ${call}`;
+}
+
+// ------------------------------------------------------------ variants
+const side=document.getElementById('side'), slot=document.getElementById('plotslot'), desc=document.getElementById('desc');
+
+const VARIANTS = {
+  A: { name:'One form row',
+    desc:'Smoothing is just another row in the panel settings form, like colour or line width. Method plus one parameter. Least UI, looks like every other panel setting.',
+    render(){ side.innerHTML='<h3>Panel settings</h3>'; const f=el('div','form'); fakeRows(f);
+      f.append(el('label','','Smooth'), methodSelect());
+      const m=METHODS[state.method].param; if(m) f.append(el('label','',m.name), paramSlider());
+      if(METHODS[state.method].extra) f.append(el('label','','order'), orderSelect());
+      side.append(f, footnote()); const r=el('div','row'); r.style.marginTop='8px'; r.append(rawToggle()); side.append(r, el('hr'), keepButton()); } },
+
+  B: { name:'Collapsible section with presets',
+    desc:'A dedicated Smooth section under the panel settings: preset chips for the common cases, the full controls behind them, a gap-handling choice, and the Keep button beside the name it would save. More room, more explicit.',
+    render(){ side.innerHTML='<h3>Panel settings</h3>'; const f0=el('div','form'); fakeRows(f0); side.append(f0, el('hr'));
+      const det=el('details'); det.open=true; det.append(el('summary','','Smooth'));
+      const chips=el('div','row'); chips.style.flexWrap='wrap'; chips.style.marginBottom='10px';
+      [['none',null,'off'],['gaussian',0.03,'light'],['gaussian',0.08,'medium'],['savgol',0.3,'keep peaks'],['butter',3,'3 Hz']].forEach(([m,p,lbl])=>{ const c=el('span','chip'+(state.method===m&&(p===null||Math.abs(state.p-p)<1e-9)?' on':''),lbl); c.onclick=()=>{state.method=m; if(p!==null)state.p=p; rerender();}; chips.append(c); });
+      det.append(chips);
+      const f=el('div','form'); f.append(el('label','','Method'), methodSelect());
+      const m=METHODS[state.method].param; if(m) f.append(el('label','',`${m.name} (${m.unit})`), paramSlider());
+      if(METHODS[state.method].extra) f.append(el('label','','Poly order'), orderSelect());
+      f.append(el('label','','Gaps'), nanToggle());
+      det.append(f, footnote());
+      const r=el('div','row'); r.style.marginTop='8px'; r.append(rawToggle()); det.append(r, el('hr'));
+      const k=el('div','row'); k.append(keepButton(), el('span','muted', state.method==='none'?'':featureName())); det.append(k);
+      side.append(det); } },
+
+  C: { name:'Toolbar on the plot',
+    desc:'Nothing in the sidebar. A small toolbar floats on the panel with method plus one slider; raw is ghosted underneath while a method is active. Fast to try, the parameter lives with the trace it affects, but it steals plot space and hides the gap and order choices.',
+    render(){ side.innerHTML='<h3>Panel settings</h3>'; const f=el('div','form'); fakeRows(f); side.append(f, el('p','muted','(smoothing controls sit on the plot itself)'));
+      const tb=el('div','plottool'); tb.append(el('span','muted','Smooth'), methodSelect(), paramSlider());
+      const m=METHODS[state.method].param; if(m) tb.append(el('span','muted',`${state.p} ${m.unit} / ${kernelSamples()} smp`));
+      const pin=el('button','','Keep'); pin.disabled=state.method==='none'; pin.onclick=keepAction; tb.append(pin); slot.append(tb); state.showRaw=true; } },
+
+  D: { name:'Transient preview + copy code',
+    desc:'Nothing is written anywhere. A modeless dialog previews the smoothed trace over the ghosted raw one while it is open; closing it restores the plot. The code box rewrites itself on every slider move and Copy is the only output. Only the last parameters are remembered.',
+    render(){ side.innerHTML='<h3>Smoothing preview</h3>';
+      const f=el('div','form'); f.append(el('label','','Method'), methodSelect());
+      const m=METHODS[state.method].param; if(m) f.append(el('label','',`${m.name} (${m.unit})`), paramSlider());
+      if(METHODS[state.method].extra) f.append(el('label','','Poly order'), orderSelect());
+      f.append(el('label','','Gaps'), nanToggle());
+      side.append(f, footnote());
+      const code=el('pre'); code.style.cssText='background:#15161a;border:1px solid var(--line);border-radius:3px;padding:8px;font:12px Consolas,monospace;white-space:pre-wrap;color:#cdd3de;margin:10px 0 6px'; code.textContent=pySnippet(); side.append(code);
+      const r=el('div','row'); const cp=el('button','','Copy code'); cp.className='primary'; cp.onclick=()=>{ navigator.clipboard.writeText(pySnippet()); cp.textContent='Copied'; setTimeout(()=>cp.textContent='Copy code',900); };
+      const sc=el('button','','Send to console'); sc.title='Pastes the same expression as a console line; the console makes the derived feature'; sc.onclick=()=>alert('Would paste into the console panel:\n\n  speed_'+state.method+' = '+pySnippet().split('= ').pop());
+      const done=el('button','','Done'); done.onclick=()=>alert('Closes the dialog; the panel goes back to drawing the raw variable.'); r.append(cp, sc, done); side.append(r);
+      side.append(el('p','muted','Snapping and labels keep using the raw trace while previewing. Last parameters are kept in function_params_cache, nothing else is saved.')); state.showRaw=true; } },
+};
+
+function redrawLive(){ draw(); const pre=side.querySelector('pre'); if(pre) pre.textContent=pySnippet(); }
+function rerender(){ slot.innerHTML=''; VARIANTS[current].render(); desc.innerHTML=`<b>${current}. ${VARIANTS[current].name}.</b> ${VARIANTS[current].desc} <span style="float:right">Left/Right arrows switch. Blue band = a label, red band = a pose gap.</span>`; draw(); }
+
+// ------------------------------------------------------------ switcher
+const keys=Object.keys(VARIANTS); let current=new URLSearchParams(location.search).get('variant'); if(!keys.includes(current)) current='D';
+function go(k){ current=k; history.replaceState(null,'','?variant='+k); document.getElementById('vlabel').textContent=`${k} (${VARIANTS[k].name})`; rerender(); }
+document.getElementById('prev').onclick=()=>go(keys[(keys.indexOf(current)+keys.length-1)%keys.length]);
+document.getElementById('next').onclick=()=>go(keys[(keys.indexOf(current)+1)%keys.length]);
+addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowLeft')document.getElementById('prev').click(); if(e.key==='ArrowRight')document.getElementById('next').click(); });
+go(current);
+</script>
+</body>
+</html>

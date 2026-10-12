@@ -20,9 +20,6 @@ Finds local minima in the signal using `scipy.signal.find_peaks` applied to
 the negated signal. Troughs in speed often correspond to moments where an
 animal pauses or reverses direction.
 
-Parameters are passed directly to {func}`scipy.signal.find_peaks`: `height`,
-`distance`, `prominence`, `width`, etc.
-
 ---
 
 ## Turning points
@@ -39,15 +36,6 @@ The algorithm works in four steps:
 2. **Find peaks** in the original signal using `scipy.signal.find_peaks` with `prominence` and `width` parameters.
 3. **For each peak**, select the closest candidate turning point to its left and right. These define the boundaries of the peak region.
 4. **Filter by `max_value`**: any candidate turning point where the signal exceeds `max_value` is discarded. This prevents selecting turning points on high speed plateaus.
-
-**Parameters:**
-
-| Parameter | Description |
-|-----------|-------------|
-| `threshold` | Maximum absolute gradient to qualify as a turning point. Lower = only very flat regions. |
-| `max_value` | Discard turning points where signal exceeds this value. |
-| `prominence` | Minimum peak prominence (passed to `find_peaks`). |
-| `distance` | Minimum distance between peaks (passed to `find_peaks`). |
 
 All kinematic changepoints also include NaN-boundary markers — transitions
 between valid data and NaN gaps are automatically added as changepoints.
@@ -69,13 +57,50 @@ pop-up of its own, so the two steps never share a window.
 The changepoints are stored in the dataset as `{feature}_{method}` (e.g.
 `speed_troughs`) and persist when you save.
 
+---
+
+## Tuning the parameters
+
 ```{tip}
-**Play in the GUI, then script it.** The pop-up is for finding a threshold
-interactively: change a parameter, click **Detect**, look at the marks on the
-plot. Once they look right, click **Copy code to clipboard** in the
-**Configure...** dialog: it copies the Python call with the parameters you
-chose. Put that call in the script that builds your dataset, so every session
-is detected the same way and nobody has to redo the clicks.
+**Too many changepoints?** With every parameter left at `None`, both methods
+mark every local dip, including the noise between movements. Two parameters
+remove most of the irrelevant ones: `prominence` (how far a trough has to dip
+below its surroundings, in the feature's units — see
+{func}`scipy.signal.peak_prominences`) and `distance` (the minimum number of
+samples between two changepoints). Raise `prominence` until only the clear
+dips remain, then `distance` to merge the ones that sit right next to each
+other. The fastest way to find the values is in the GUI: change one, click
+**Apply**, then **Detect**, and look at the marks on the plot.
+```
+
+```{figure} ../../_static/media/changepoint_troughs_configure_annotated.png
+:alt: The Configure dialog for the troughs method: the function's docstring on the left, the call on the right with prominence and distance filled in and height and width still None, the Apply, Documentation and Copy code buttons boxed.
+:width: 100%
+
+**Changepoints ▸ Detect changepoints… ▸ Configure...** for `troughs`. Each
+parameter is a line of the call: replace its `None` with a value, **Apply**,
+and **Detect**. `prominence=0.5` and `distance=10` here; `height` and
+`width` are still off.
+```
+
+**Troughs** take {func}`scipy.signal.find_peaks`' own parameters:
+`prominence`, `distance`, `height`, `width`, etc.
+
+**Turning points:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `threshold` | Maximum absolute gradient to qualify as a turning point. Lower = only very flat regions. |
+| `max_value` | Discard turning points where signal exceeds this value. |
+| `prominence` | Minimum peak prominence (passed to `find_peaks`). |
+| `distance` | Minimum distance between peaks (passed to `find_peaks`). |
+
+```{tip}
+**Play in the GUI, then script it.** Once the marks look right, click
+**Copy code to clipboard** in the **Configure...** dialog: it copies the
+Python call with the parameters you chose. Put that call in the script that
+builds your dataset, so every session is detected the same way and nobody has
+to redo the clicks.
 ```
 
 ---

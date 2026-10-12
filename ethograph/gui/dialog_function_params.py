@@ -189,6 +189,8 @@ def _ruptures_dynp(
 # Doc URLs
 # ---------------------------------------------------------------------------
 
+_CP_DOCS = "https://Akseli-Ilmanen.github.io/ethograph/advanced/changepoints"
+
 DOC_URLS: dict[str, str] = {
     "meansquared_cp": "https://vocalpy.readthedocs.io/en/latest/api/generated/vocalpy.segment.html",
     "ava_cp": "https://vocalpy.readthedocs.io/en/latest/api/generated/vocalpy.segment.html",
@@ -201,10 +203,10 @@ DOC_URLS: dict[str, str] = {
     "energy_lowpass": "https://github.com/Akseli-Ilmanen/Ethograph/blob/main/ethograph/features/energy.py",
     "energy_highpass": "https://github.com/Akseli-Ilmanen/Ethograph/blob/main/ethograph/features/energy.py",
     "energy_band": "https://github.com/Akseli-Ilmanen/Ethograph/blob/main/ethograph/features/energy.py",
-    "energy_meansquared": "https://vocalpy.readthedocs.io/",
-    "energy_ava": "https://vocalpy.readthedocs.io/",
-    "find_troughs": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html",
-    "find_turning_points": "https://ethograph.readthedocs.io/en/latest/changepoints/#kinematic-changepoints",
+    "energy_meansquared": f"{_CP_DOCS}/audio.html#vocalpy-methods",
+    "energy_ava": f"{_CP_DOCS}/audio.html#vocalpy-methods",
+    "find_troughs": f"{_CP_DOCS}/kinematic.html#troughs-local-minima",
+    "find_turning_points": f"{_CP_DOCS}/kinematic.html#turning-points",
     "continuity_cp": "https://github.com/timsainb/vocalization-segmentation",
     "oscillatory_events": "https://pynapple.org/advanced/12_filtering.html#detecting-oscillatory-events",
 }

@@ -1156,6 +1156,13 @@ class IOWidget(QWidget):
         self.app_state._progress_callback = _update
         dialog.execute_blocking(self.data_widget.on_load_clicked)
 
+    def reload_dataset(self):
+        """Re-read the loaded dataset's file (File > Reload data from disk)."""
+        from .dialog_busy_progress import BusyProgressDialog
+
+        dialog = BusyProgressDialog("Reloading data...", parent=self)
+        dialog.execute_blocking(self.data_widget.reload_dataset)
+
     def _clear_all_line_edits(self):
         for attr in (
             "nc_file_path_edit",

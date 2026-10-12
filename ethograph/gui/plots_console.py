@@ -31,6 +31,8 @@ from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QFont, QTextCursor
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 
+from ethograph.features.preprocessing import SMOOTHERS, bridge_gaps, nan_aware
+from ethograph.features.timeaxis import apply_along_time, sampling_rate
 from ethograph.io.derived import DerivedLoader, Root, TracedArray, make_derived, stack
 
 logger = logging.getLogger(__name__)
@@ -142,6 +144,8 @@ class ConsolePanel(QWidget):
         "                                     (or stack(sin=np.sin(rad), cos=np.cos(rad)))\n"
         "  t                                  the panel's time vector\n"
         "                                     np.gradient(pos, t, axis=0) is per second\n"
+        "  apply_along_time(speed, nan_aware(gaussian), fs=sampling_rate(t), sigma_s=0.05)\n"
+        "                                     smooth (Tools ▸ Data: Find smoothing parameters… writes this)\n"
         "  features()                         what is bound, and what has been derived\n"
         "  forget('name')                     drop one derived feature\n"
         "  clear   (or Ctrl+L)                wipe this transcript\n"
@@ -201,6 +205,12 @@ class ConsolePanel(QWidget):
             "features": self._ns_features,
             "forget": self._ns_forget,
             "clear": _ClearCommand(self._ns_clear),
+            # Tools ▸ Data: Find smoothing parameters… sends its line here.
+            "apply_along_time": apply_along_time,
+            "sampling_rate": sampling_rate,
+            "nan_aware": nan_aware,
+            "bridge_gaps": bridge_gaps,
+            **SMOOTHERS,
         }
         self._interp = code.InteractiveInterpreter(self.ns)
         self._pending: list[str] = []

@@ -570,6 +570,20 @@ class TrialTree(xr.DataTree):
         for name, variables in detached.items():
             self[name] = xr.DataTree(self[name].ds.assign(variables))
 
+    def detach(self) -> None:
+        """Read every variable into memory and release the file.
+
+        A tree served by the GUI is detached, so the user can rewrite the
+        ``.nc`` from a notebook (Windows refuses to replace an open file) and
+        reload it. A continuous tree's shared dataset is loaded too.
+        """
+        self.load()
+        continuous = getattr(self, "_continuous_ds", None)
+        if continuous is not None:
+            self._continuous_ds = continuous.load()
+            continuous.close()
+        self._close_all()
+
     def _close_all(self) -> None:
         """Release every file handle this tree holds.
 

@@ -42,6 +42,7 @@ from ethograph.io.image_sequence import media_exists
 from ethograph.io.plot_sources import FileSource
 from ethograph.io.session_layout import session_dir_of
 from ethograph.io.time_model import compute_trial_video_bounds
+from ethograph.io.trialtree import TrialTree
 from ethograph.io.video_feature_files import VideoFeatureFiles, attach_video_features, feature_name_for
 from ethograph.labels.intervals import get_interval_bounds, select_subject
 from ethograph.utils.qt import (
@@ -149,7 +150,7 @@ class _LoadContext:
     nwb_ephys_entry: tuple | None = None
 
     # Dataset (possibly downsampled)
-    dt: object = None
+    dt: TrialTree | None = None
     ds: object = None
     trials: list = field(default_factory=list)
     all_labels_df: object = None
@@ -807,6 +808,7 @@ class DataWidget(QWidget):
         self._keypoint_labelling_dialog = None
         self.app_state.audio_video_sync = None
         self.catalog = None  # DataCatalog set after load
+        self._loaded_source_path: str | None = None  # what Load read; what Reload re-reads
 
     def set_data_panel(self, panel: DataPanel):
         self.data_panel = panel
@@ -1288,6 +1290,10 @@ class DataWidget(QWidget):
 
     def _phase_prepare_dataset(self, ctx: _LoadContext) -> None:
         """Phase 3: Downsample, resolve trials, build first ds + DataLoader."""
+        if ctx.dt is not None:
+            # The GUI never holds the dataset file open: the user may rewrite
+            # it from a notebook and File > Reload data from disk.
+            ctx.dt.detach()
         downsample_factor = self.io_widget.get_downsample_factor()
         if downsample_factor is not None and ctx.dt is not None:
             ctx.dt = eto.downsample_trialtree(ctx.dt, downsample_factor)
@@ -1339,6 +1345,7 @@ class DataWidget(QWidget):
         self.app_state.metadata_path = result.metadata_path
         self.app_state.metadata_df = result.metadata_df
         self.catalog = ctx.catalog
+        self._loaded_source_path = ctx.nc_file_path
 
         if ctx.video_folder_override:
             self.app_state.video_folder = ctx.video_folder_override
@@ -2218,8 +2225,6 @@ class DataWidget(QWidget):
         panels and layout are all left exactly as they are, so nothing here can
         reach them.
         """
-        from ethograph.io.trialtree import TrialTree
-
         app_state = self.app_state
         trial_id = app_state.trials_sel if app_state.trials_sel is not None else 1
         try:
@@ -2247,7 +2252,82 @@ class DataWidget(QWidget):
         app_state = self.app_state
         app_state.ds = app_state.dt.trial(app_state.trials_sel)
         self.catalog = catalog_from_xarray(app_state.ds, app_state.dt)
-        app_state.data_loader = DerivedLoader(XarrayLoader(app_state.ds, self.catalog))
+        self._serve_loader(XarrayLoader(app_state.ds, self.catalog))
+
+    def reload_dataset(self) -> bool:
+        """Re-read the dataset file under the live window: new data, same setup.
+
+        The user edits the ``.nc`` (or pynapple files) in a notebook, saves,
+        and clicks Reload: variables added, removed or rewritten reach the
+        catalog, the combos and every panel, while the media, the alignment,
+        the labels, the panels and their layout stay exactly as they are
+        (see :meth:`load_keypoint_dataset` for why a file load cannot do this).
+        Only the dataset's data may change: a file whose trials differ from
+        the alignment's is refused, since trial timing is the alignment's.
+        """
+        app_state = self.app_state
+        path = self._loaded_source_path
+        if path is None or not app_state.ready:
+            notify("Nothing to reload: load a dataset first.", "warning")
+            return False
+        try:
+            result = load_features_dataset(
+                path,
+                metadata_path=app_state.metadata_path,
+                alignment_path=getattr(app_state, "nwb_file_path", None),
+                ignore=app_state.ignored_files(),
+            )
+        except (OSError, ValueError, KeyError) as e:
+            logger.exception("reload_dataset failed")
+            notify_dialog(f"Could not reload {path}:\n{type(e).__name__}: {e}", "error", "Reload failed", self)
+            return False
+
+        trials = sorted(result.trial_ids) if result.trial_ids else [1]
+        if trials != list(app_state.trials):
+            notify_dialog(
+                f"The file's trials ({len(trials)}) no longer match the loaded session's "
+                f"({len(app_state.trials)}). Reload only swaps data; go back to the start page "
+                "to load a session whose trials changed.",
+                "warning",
+                "Reload refused",
+                self,
+            )
+            return False
+
+        derived = app_state.data_loader.derived if isinstance(app_state.data_loader, DerivedLoader) else {}
+        self.catalog = result.catalog
+        if result.dt is not None:
+            dt = result.dt
+            dt.detach()
+            if app_state.downsample_factor_used:
+                dt = eto.downsample_trialtree(dt, app_state.downsample_factor_used)
+            app_state.dt = dt
+            app_state.ds = dt.trial(app_state.trials_sel)
+            loader = XarrayLoader(app_state.ds, self.catalog)
+        else:
+            loader = result.data_loader
+        app_state.source_collection = result.source_collection
+        self._serve_loader(loader, derived=derived)
+        for plot in [*self.plot_container.line_plots, *self.plot_container.heatmap_plots]:
+            plot.invalidate_data()
+        self.refresh_feature_choices()
+        self.refresh_overlay_choices()
+        self.refresh_radial_plots()
+        self.update_main_plot(preserve_x_range=True)
+        notify(f"Reloaded {Path(path).name}", "info")
+        return True
+
+    def _serve_loader(self, base_loader, derived: dict | None = None) -> None:
+        """Point every data consumer at *base_loader* over ``self.catalog``.
+
+        The tail shared by :meth:`serve_current_tree` and :meth:`reload_dataset`.
+        Console features are the user's work, not the file's, so *derived*
+        carries them across to the new loader.
+        """
+        app_state = self.app_state
+        app_state.data_loader = DerivedLoader(base_loader)
+        for feature in (derived or {}).values():
+            app_state.data_loader.register(feature)
         self._install_display_offset_provider()
 
         self._rebuild_coord_controls()
@@ -2256,7 +2336,7 @@ class DataWidget(QWidget):
         # KeyError out of `.sel()` the moment the panel next renders.
         for plot in [*self.plot_container.line_plots, *self.plot_container.heatmap_plots]:
             plot.resync_selections()
-        if "keypoint" in app_state.ds.coords:
+        if app_state.ds is not None and "keypoint" in app_state.ds.coords:
             self.populate_keypoints([str(k) for k in app_state.ds.coords["keypoint"].values])
         store = self._space_store()
         for sp in self.space_plots:
