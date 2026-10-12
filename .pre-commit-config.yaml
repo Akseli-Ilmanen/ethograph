@@ -12,7 +12,7 @@ repos:
             # PEP 258 attribute docstrings — a string documenting a module-level
             # constant, which Sphinx renders — read as a second module docstring
             # to this hook. dlc2action is vendored and never edited (NOTICE.md).
-            exclude: '^(ethograph/segment/|tests/test_unit/test_segment_)'
+            exclude: '^(ethograph/segment/|ethograph/_vendor/|tests/test_unit/test_segment_)'
           - id: check-executables-have-shebangs
           - id: check-merge-conflict
           - id: check-toml
@@ -43,5 +43,6 @@ repos:
       hooks:
       - id: codespell
         args: [--write-changes]
+        exclude: '^ethograph/_vendor/'
         additional_dependencies:
         - tomli

@@ -64,7 +64,7 @@ The changepoints are stored in the dataset as `{feature}_{method}` (e.g.
 ```{tip}
 **Too many changepoints?** With every parameter left at `None`, both methods
 mark every local dip, including the noise between movements. Two parameters
-remove most of the irrelevant ones: `prominence` (how far a trough has to dip
+remove most of the irrelevant ones: `prominence` (how far a through has to dip
 below its surroundings, in the feature's units — see
 {func}`scipy.signal.peak_prominences`) and `distance` (the minimum number of
 samples between two changepoints). Raise `prominence` until only the clear

@@ -44,8 +44,8 @@ from docs_sidebar_screenshots import (  # noqa: E402
 from screenshot_gui import capture_widget  # noqa: E402
 
 from ethograph.gui import notify  # noqa: E402
-from ethograph.gui.dialog_smoothing import SmoothingDialog  # noqa: E402
 from ethograph.gui.active_panel import PanelKind  # noqa: E402
+from ethograph.gui.dialog_smoothing import SmoothingDialog  # noqa: E402
 
 WINDOW = (1500, 900)
 

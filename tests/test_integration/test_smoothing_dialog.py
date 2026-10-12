@@ -6,6 +6,7 @@ line on the console, and leaves the panel raw when it closes.
 """
 
 import numpy as np
+import pyqtgraph as pg
 from qtpy.QtWidgets import QApplication
 
 from ethograph.gui.dialog_smoothing import STEPS, open_smoothing_dialog
@@ -108,4 +109,22 @@ def test_every_stage_draws_its_own_curve(moll2025_gui, qtbot):
     named = [item.opts.get("name") for item in plot.plot_items if getattr(item, "opts", {}).get("name")]
     # changepoint scatters carry names too; the stage curves are the last ones drawn
     assert named[-3:] == [STEPS[s.kind].label for s in dlg.pipeline.steps], named
+    dlg.close()
+
+
+def test_preview_reuses_the_panels_changepoint_legend(moll2025_gui, qtbot):
+    """A speed panel with changepoint marks already has a legend; the stages join it, no second one stacks on top."""
+    _, meta = moll2025_gui
+    meta.app_state.show_changepoints = True
+    plot = meta.plot_container.line_plots[0]
+    meta.active_panels.set_active(_registration(meta, plot))
+    dlg = open_smoothing_dialog(meta.plot_container, meta.app_state)
+    qtbot.addWidget(dlg)
+    dlg._add_step("bridge_gaps")
+    dlg._add_step("gaussian")
+    QApplication.processEvents()
+
+    scene = plot.plot_item.scene()
+    legends = [item for item in scene.items() if isinstance(item, pg.LegendItem)]
+    assert len(legends) == 1, f"{len(legends)} legends stacked on the panel"
     dlg.close()
