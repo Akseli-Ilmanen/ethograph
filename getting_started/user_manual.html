@@ -1633,6 +1633,42 @@ alignment — and <a class="reference internal" href="../api/trialtree.html"><sp
 <p>If a model will learn from your trials, see <a class="reference internal" href="../models/trial_windows.html"><span class="doc">Trial windows</span></a> for
 how long to make them.</p>
 </section>
+<section id="editing-the-dataset-while-the-gui-is-open">
+<span id="target-reload-data"></span><h2>Editing the dataset while the GUI is open<a class="headerlink" href="#editing-the-dataset-while-the-gui-is-open" title="Link to this heading">#</a></h2>
+<p>There are two ways to change the data the GUI shows without restarting it:
+compute something on the fly in the <strong>console panel</strong>, or rewrite the file on
+disk and <strong>reload</strong> it.</p>
+<p><strong>In the console panel.</strong> Add it with ➕ Add panel like any other panel. Click
+a feature panel and its plotted values are bound to a Python name (a plain
+numpy array, as drawn: the current feature, selections and trial); anything
+you assign becomes a new feature you can plot. Good for a quick look —
+<code class="docutils literal notranslate"><span class="pre">speed_z</span> <span class="pre">=</span> <span class="pre">(speed</span> <span class="pre">-</span> <span class="pre">np.nanmean(speed))</span> <span class="pre">/</span> <span class="pre">np.nanstd(speed)</span></code> — but it lives for
+the current trial only and is never written to the dataset.</p>
+<p><strong>On disk, then reload.</strong> The GUI reads the dataset into memory and lets go of
+the file, so a notebook can sit beside it: change the data, save, and pull the
+new version in with <strong>File ▸ Reload data from disk</strong>. A panel showing a
+variable you rewrote redraws with the new values; a variable you added appears
+in the <strong>Features</strong> dropdown and in ➕ Add panel.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
+
+<span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">"session.nc"</span><span class="p">)</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">update_trial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">ds</span><span class="p">:</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">speed_smooth</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="c1"># -&gt; File ▸ Reload data from disk</span>
+</pre></div>
+</div>
+<p>A pynapple session works the same way: overwrite its <code class="docutils literal notranslate"><span class="pre">.npz</span></code> files and reload.</p>
+<p>Reload moves <strong>only the data</strong>. Media, alignment (so trial timing), labels,
+metadata and the panel layout are not re-read; a file whose trial ids differ
+from the loaded session is refused. For those, go back to the start page.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><strong>Smoothing and changepoints have dedicated tools.</strong> Both preview the result
+on the plot you clicked and hand you the code once you like what you see:
+<a class="reference internal" href="../advanced/smoothing.html"><span class="doc">Tools ▸ Data: Find smoothing parameters…</span></a> and
+<a class="reference internal" href="../advanced/changepoints/kinematic.html"><span class="doc">Changepoints ▸ Detect changepoints…</span></a>.</p>
+</div>
+</section>
 <section id="template-datasets">
 <span id="target-templates"></span><h2>Template datasets<a class="headerlink" href="#template-datasets" title="Link to this heading">#</a></h2>
 <p>Ready-made datasets with video, features and labels already in place, downloaded
@@ -1714,6 +1750,7 @@ from the start page. The notebooks that built them are in the
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-dropdowns">Feature dropdowns</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoints">Changepoints</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#storing-trials-dataset-vs-trialtree">Storing trials: Dataset vs TrialTree</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#editing-the-dataset-while-the-gui-is-open">Editing the dataset while the GUI is open</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-datasets">Template datasets</a></li>
 </ul>
   </nav></div>

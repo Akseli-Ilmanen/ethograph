@@ -486,7 +486,7 @@ then access each trial by ID or index:</p>
 <a class="reference internal" href="../getting_started/your_data/index.html"><span class="doc">Bring your own data</span></a>.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="ethograph.io.trialtree.TrialTree">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ethograph.io.trialtree.</span></span><span class="sig-name descname"><span class="pre">TrialTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/trialtree.html#TrialTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.trialtree.TrialTree" title="Link to this definition">#</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ethograph.io.trialtree.</span></span><span class="sig-name descname"><span class="pre">TrialTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/trialtree.html#TrialTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.io.trialtree.TrialTree" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <hr class="docutils" />
@@ -531,9 +531,9 @@ is called.  Time coordinates are shifted to 0 per trial.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ds</strong> (<span class="sphinx_autodoc_typehints-type">xr.Dataset</span>) – Full recording dataset.  Must have at least one dimension
+<li><p><strong>ds</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></span>) – Full recording dataset.  Must have at least one dimension
 whose name contains <code class="docutils literal notranslate"><span class="pre">&quot;time&quot;</span></code>.</p></li>
-<li><p><strong>epochs</strong> (<span class="sphinx_autodoc_typehints-type">pd.DataFrame | nap.IntervalSet</span>) – <p>Trial boundaries.  Accepts:</p>
+<li><p><strong>epochs</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> | <a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalSet</span></code></a></span>) – <p>Trial boundaries.  Accepts:</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> with columns <code class="docutils literal notranslate"><span class="pre">trial</span></code>, <code class="docutils literal notranslate"><span class="pre">start_time</span></code>,
 <code class="docutils literal notranslate"><span class="pre">stop_time</span></code>.</p></li>
@@ -544,7 +544,7 @@ metadata column, or <code class="docutils literal notranslate"><span class="pre"
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type">TrialTree</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#ethograph.io.trialtree.TrialTree" title="ethograph.io.trialtree.TrialTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">TrialTree</span></code></a></span></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>

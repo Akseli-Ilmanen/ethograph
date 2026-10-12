@@ -1391,6 +1391,20 @@ window.runMermaid = runMermaid;</script>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">variables</span> <span class="ow">in</span> <span class="n">detached</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataTree</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">ds</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">variables</span><span class="p">))</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">detach</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Read every variable into memory and release the file.</span>
+
+<span class="sd">        A tree served by the GUI is detached, so the user can rewrite the</span>
+<span class="sd">        ``.nc`` from a notebook (Windows refuses to replace an open file) and</span>
+<span class="sd">        reload it. A continuous tree's shared dataset is loaded too.</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+        <span class="n">continuous</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_continuous_ds"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">continuous</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_continuous_ds</span> <span class="o">=</span> <span class="n">continuous</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+            <span class="n">continuous</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_close_all</span><span class="p">()</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_close_all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Release every file handle this tree holds.</span>
 

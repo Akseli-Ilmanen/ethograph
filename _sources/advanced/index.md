@@ -13,6 +13,13 @@ the {doc}`user manual <../getting_started/user_manual>`.
 Per-trial conditions (metadata table) and the trials table filter UI.
 :::
 
+:::{grid-item-card} {fas}`chart-line` Smoothing and filtering
+:link: smoothing
+:link-type: doc
+
+Preview a filter/gap/smoothing pipeline on a line plot and copy the code.
+:::
+
 :::{grid-item-card} {fas}`wave-square` Changepoints
 :link: changepoints/index
 :link-type: doc
@@ -62,6 +69,7 @@ Common issues and fixes.
 :maxdepth: 2
 :hidden:
 
+smoothing
 changepoints/index
 classroom_pose_estimation/index
 refinement
