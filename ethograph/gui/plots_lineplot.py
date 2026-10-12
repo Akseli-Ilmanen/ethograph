@@ -501,6 +501,9 @@ def drop_legend(plot_item) -> None:
     legend = getattr(plot_item, "legend", None)
     if legend is None:
         return
+    host = legend.parentItem()
+    if isinstance(legend, _GutterLegend) and host is not None:
+        host.setMinimumWidth(0)  # the gutter gives its width back
     scene = legend.scene()
     if scene is not None:
         scene.removeItem(legend)  # detaches from its parent too (C++ side)
@@ -509,13 +512,24 @@ def drop_legend(plot_item) -> None:
     plot_item.legend = None
 
 
+class _GutterLegend(pg.LegendItem):
+    """A legend whose host gutter grows to fit it: the host clips to its own
+    width, so a long name would otherwise be cut off at the panel's edge."""
+
+    def updateSize(self) -> None:
+        super().updateSize()
+        host = self.parentItem()
+        if host is not None:
+            host.setMinimumWidth(self.width() + 2 * self.opts["offset"][0])
+
+
 def add_legend(plot_item, legend_host=None) -> pg.LegendItem:
     """Give the panel a legend — in the right gutter when the panel offers
     one (``BasePlot.legend_host``), else over the plotting rectangle."""
     if legend_host is None:
         plot_item.legend = plot_item.addLegend(offset=(10, 10))
     else:
-        legend = pg.LegendItem(offset=(2, 2))
+        legend = _GutterLegend(offset=(2, 2))
         legend.setParentItem(legend_host)
         plot_item.legend = legend
     return plot_item.legend

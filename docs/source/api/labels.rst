@@ -75,8 +75,6 @@ TSV storage
 
 .. autofunction:: set_trial_meta_attr
 
-.. autofunction:: migrate_label_dt_to_tsv
-
 ----
 
 Predictions
@@ -109,9 +107,6 @@ Crowsetta / pynapple converters
 .. autoclass:: CrowsettaLabelConverter
    :no-inherited-members:
 
-.. autoclass:: NWBLabelConverter
-   :no-inherited-members:
-
 .. autoclass:: PynappleLabelConverter
    :no-inherited-members:
 
@@ -133,8 +128,6 @@ Export helpers
 .. currentmodule:: ethograph.labels.export
 
 .. autofunction:: enrich_labels_df
-
-.. autofunction:: trees_to_df
 
 ----
 

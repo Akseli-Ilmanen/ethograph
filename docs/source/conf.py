@@ -23,11 +23,8 @@ autodoc_mock_imports = [
     "natsort",
     "neo",
     "noisereduce",
-    "numpy",
-    "pandas",
     "phylib",
     "pygfx",
-    "pynapple",
     "pynaviz",
     "pynwb",
     "pyqtgraph",
@@ -35,7 +32,6 @@ autodoc_mock_imports = [
     "remfile",
     "rendercanvas",
     "ruptures",
-    "scipy",
     "sounddevice",
     "soundfile",
     "torch",
@@ -44,7 +40,6 @@ autodoc_mock_imports = [
     "vocalpy",
     "librosa",
     "wgpu",
-    "xarray",
     "yaml",
 ]
 

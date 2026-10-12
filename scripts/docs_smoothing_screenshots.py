@@ -1,25 +1,31 @@
 """The *Find smoothing parameters* dialog and its preview for the docs.
 
-Loads the crow template, clicks the speed line plot, opens **Tools ▸ Data:
-Find smoothing parameters…** with a bridge-gaps step and a Gaussian step,
-and captures both the dialog and the previewed panel through
-:mod:`screenshot_gui`::
+Loads movement's wasp sample (``DLC_single-wasp.predictions.h5``, the one in
+movement's *filter and interpolate* and *smooth* examples) as a one-trial
+session, shows the stinger's x position as a line plot, opens
+**Tools ▸ Data: Find smoothing parameters…** and captures the two examples
+of ``docs/source/advanced/smoothing.md`` through :mod:`screenshot_gui`::
 
     python scripts/docs_smoothing_screenshots.py
 
 Writes into ``docs/source/_static/media``:
 
-- ``smoothing_dialog_annotated.png`` — the three stages, the selected step's
-  sliders and the generated code boxed, as the sidebar figures are.
-- ``smoothing_preview.png`` — the speed panel while the dialog is open: raw
-  faded, each step thin, the result thick in orange.
+- ``smoothing_filter_dialog.png`` / ``smoothing_filter_preview.png`` — a
+  single ``filter by confidence`` step: the dialog, and the panel with the
+  low-confidence samples blanked.
+- ``smoothing_dialog_annotated.png`` / ``smoothing_preview.png`` — movement's
+  combined pipeline (rolling median, interpolated gaps, Savitzky-Golay): the
+  dialog with its parts boxed, as the sidebar figures are, and the panel
+  with every stage drawn.
 """
 
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
+from movement import sample_data
 from qtpy.QtWidgets import QPushButton
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,7 +40,6 @@ from docs_sidebar_screenshots import (  # noqa: E402
     SCALE,
     annotate,
     launch_like_cli,
-    load_template,
     panel_to_click,
     qimage_to_pil,
     rect_in,
@@ -43,58 +48,102 @@ from docs_sidebar_screenshots import (  # noqa: E402
 )
 from screenshot_gui import capture_widget  # noqa: E402
 
+import ethograph as eto  # noqa: E402
 from ethograph.gui import notify  # noqa: E402
 from ethograph.gui.active_panel import PanelKind  # noqa: E402
-from ethograph.gui.dialog_smoothing import SmoothingDialog  # noqa: E402
+from ethograph.gui.dialog_smoothing import Pipeline, SmoothingDialog  # noqa: E402
 
-WINDOW = (1500, 900)
+WINDOW = (1500, 520)
+WASP_FILE = "DLC_single-wasp.predictions.h5"
+#: The stinger jumps around the 14th second: the filter view is the whole recording, the smoothing view zooms on it.
+FILTER_VIEW_S = (0.0, 27.1)
+SMOOTH_VIEW_S = (13.5, 15.5)
+
+
+def wasp_session(folder: Path) -> Path:
+    """movement's wasp sample written as a one-trial session: ``{folder}/wasp.nc``."""
+    ds = sample_data.fetch_dataset(WASP_FILE)
+    ds.attrs["trial"] = 1
+    nc = folder / "wasp.nc"
+    eto.from_datasets([ds]).save(str(nc))
+    return nc
 
 
 def button(dialog, text: str) -> QPushButton:
     return next(b for b in dialog.findChildren(QPushButton) if b.text() == text)
 
 
+def capture_panel(shell, reg, name: str) -> None:
+    # pyqtgraph views do not render into a pixmap on their own: shoot the window, crop the dock.
+    full = qimage_to_pil(capture_widget(shell, SCALE))
+    r = rect_in(reg.widget.parentWidget(), shell)  # the dock: plot plus the legend gutter
+    full.crop((r.left() * SCALE, r.top() * SCALE, (r.right() + 1) * SCALE, (r.bottom() + 1) * SCALE)).save(
+        OUT_DIR / name
+    )
+
+
+def set_pipeline(dialog: SmoothingDialog, steps: list[tuple[str, dict]]) -> None:
+    dialog._pipeline = Pipeline(())
+    for kind, params in steps:
+        dialog._add_step(kind)
+        for name, value in params.items():
+            dialog._set_param(name, value)
+    dialog._rebuild_param_form()  # the sliders follow the values, as they do after a click
+    wait(800)
+
+
 def main() -> None:
     app, shell, meta = launch_like_cli()
     notify.SUPPRESS = True
     meta.app_state._layout_snapshot_provider = None
-    real_apply = meta.apply_saved_panel_layout
-    meta.apply_saved_panel_layout = lambda: setattr(meta.app_state, "panel_layout", None) or real_apply()
-    load_template(meta, "moll2025")
-    shell.resize(*WINDOW)
+    folder = Path(tempfile.mkdtemp(prefix="ethograph_wasp_"))
+    nc = wasp_session(folder)
+    io = meta.io_widget
+    io._clear_all_line_edits()
+    io.nc_file_path_edit.setText(str(nc))
+    meta.app_state.nc_file_path = str(nc)
+    meta.data_widget.on_load_clicked()
     shell.show()
     wait(3000)
-    meta.reset_panels()
-    wait(2000)
+    shell.resize(*WINDOW)  # after the load: loading restores the saved window size
+    wait(500)
 
     pc = meta.plot_container
     for ribbon in pc.label_ribbons():
         pc.remove_panel(ribbon)
-    has_speed = any(
-        reg.kind == PanelKind.LINEPLOT and reg.plot is not None and reg.plot.panel_state.get("feature") == "speed"
-        for reg in meta.active_panels._regs
-    )
-    if not has_speed:
-        meta._create_panel_for_source("feature", "speed", "Lineplot")
+    for plot in list(pc.line_plots):
+        pc.remove_panel(plot)
+    meta._create_panel_for_source("feature", "position", "Lineplot")
     wait(500)
-    speed = panel_to_click(meta, PanelKind.LINEPLOT, "speed")
-    meta.active_panels.set_active(speed)
-    # Only the movement is of interest: no changepoint marks, and the view starts where the crow moves.
+    reg = panel_to_click(meta, PanelKind.LINEPLOT, "position")
+    plot = reg.plot
+    plot.set_panel_control("keypoint", "stinger")
+    plot.set_panel_control("space", "x")
+    plot.update_plot()
+    meta.active_panels.set_active(reg)
     meta.app_state.show_changepoints = False
+    plot.plot_item.setXRange(*FILTER_VIEW_S, padding=0)
     wait(500)
 
     dialog = SmoothingDialog(pc, meta.app_state, parent=shell)
-    dialog._pipeline = dialog._pipeline.__class__(())
     dialog.show()
-    dialog._add_step("bridge_gaps")
-    dialog._add_step("gaussian")
-    dialog._set_param("sigma_s", 0.008)
-    dialog._rebuild_param_form()  # the slider follows the value, as it does after a click
-    wait(800)
-    _x0, x1 = speed.plot.plot_item.viewRange()[0]
-    speed.plot.plot_item.setXRange(1.0, x1, padding=0)
-    wait(800)
 
+    # Example 1: only the confidence filter, as movement's filter_and_interpolate example (whole recording).
+    set_pipeline(dialog, [("filter_by_confidence", {"threshold": 0.6})])
+    qimage_to_pil(capture_widget(dialog, SCALE)).save(OUT_DIR / "smoothing_filter_dialog.png")
+    capture_panel(shell, reg, "smoothing_filter_preview.png")
+
+    # Example 2: movement's combined pipeline from its smooth example, zoomed on the jumps.
+    plot.plot_item.setXRange(*SMOOTH_VIEW_S, padding=0)
+    wait(500)
+    set_pipeline(
+        dialog,
+        [
+            ("rolling_filter", {"window_s": 0.1, "statistic": "median"}),
+            ("interpolate_over_time", {"max_gap_s": 1.0}),
+            ("savgol", {"window_s": 0.2, "polyorder": 2}),
+        ],
+    )
     boxes = [
         (union([rect_in(b, dialog) for b in dialog.boxes.values()]), BLUE, "Three stages: Add a step, drag to reorder"),
         (
@@ -109,15 +158,8 @@ def main() -> None:
             "Copy code, or send the result to the console",
         ),
     ]
-    img = qimage_to_pil(capture_widget(dialog, SCALE))
-    annotate(img, boxes).save(OUT_DIR / "smoothing_dialog_annotated.png")
-
-    # pyqtgraph views do not render into a pixmap on their own: shoot the window, crop the panel.
-    full = qimage_to_pil(capture_widget(shell, SCALE))
-    r = rect_in(speed.widget.parentWidget(), shell)  # the dock: plot plus the legend gutter
-    full.crop((r.left() * SCALE, r.top() * SCALE, (r.right() + 1) * SCALE, (r.bottom() + 1) * SCALE)).save(
-        OUT_DIR / "smoothing_preview.png"
-    )
+    annotate(qimage_to_pil(capture_widget(dialog, SCALE)), boxes).save(OUT_DIR / "smoothing_dialog_annotated.png")
+    capture_panel(shell, reg, "smoothing_preview.png")
 
     dialog.close()
     app.quit()
