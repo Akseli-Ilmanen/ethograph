@@ -117,6 +117,10 @@ ethograph/triangulate/        # 2D points from calibrated cameras → 3D, throug
     session.py                # A session's per-camera 2D points → position_3d in its .nc
     frame.py, geometry.py     # The world frame beside a calibration; static landmarks as a space/ geometry
 
+ethograph/samfill/            # SAM2 re-tracks low-confidence keypoints inside TSV-named video segments (Qt-free, scripted)
+    config.py, pairing.py, plan.py, sam.py, fill.py, review.py
+    samurai.py                # SAMURAI's motion-aware selection + memory as a subclass of OCTRON's SAM2 predictor (filter vendored in _vendor/samurai)
+
 ethograph/utils/              # io.py, xr_utils.py, sequences.py, device.py, system_check.py
     configkit.py              # Chained YAML + dotted overrides ↔ dataclass tree; segment and spot each pass a Schema
 ethograph/skeleton/           # PrecomputedRenderer, SkeletonState, config.py, shapes.py

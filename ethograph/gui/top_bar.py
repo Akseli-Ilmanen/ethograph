@@ -145,6 +145,7 @@ class TopBarBuilder:
         self._bulk_labels_dialog = None
         self._feature_labels_dialog = None
         self._neural_labels_dialog = None
+        self._measure_dialog = None
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -218,6 +219,11 @@ class TopBarBuilder:
         # source the grids and label navigation can walk — see
         # gui/dialog_feature_labels.py.
         menu.addAction("Labels: Create from a feature…", self._open_feature_labels)
+
+        menu.addSeparator()
+        # Two clicks on any time panel -> duration and y-range between them,
+        # in the clicked panel's own axis units -- see dialog_measure.py.
+        menu.addAction("Data: Measure duration / y-range…", self._open_measure)
 
         menu.addSeparator()
         # Drag a box on the video and read off the source pixels it covers,
@@ -397,6 +403,17 @@ class TopBarBuilder:
         if self._spot_crop_dialog is not None and self._spot_crop_dialog.isVisible():
             self._spot_crop_dialog.close()
         self._spot_crop_dialog = pick_spot_crop(data_widget, parent=self.shell)
+
+    def _open_measure(self):
+        """Two clicks on a time panel -> duration + y-range (Tools)."""
+        from .dialog_measure import open_measure_dialog
+
+        plot_container = getattr(self.meta, "plot_container", None)
+        if plot_container is None or self.app_state is None:
+            return
+        if self._measure_dialog is not None and self._measure_dialog.isVisible():
+            self._measure_dialog.close()
+        self._measure_dialog = open_measure_dialog(plot_container, self.app_state, parent=self.shell)
 
     def _open_keypoint_labelling(self):
         """Open the keypoint labelling dialog (owned by the DataWidget, so the

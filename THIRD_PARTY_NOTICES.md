@@ -19,6 +19,7 @@ edited beyond what their `NOTICE.md` lists (`pyproject.toml`,
 | `ethograph/spot/e2espot/` | [E2E-Spot](https://github.com/jhong93/spot), James Hong et al. | `edec420` (2023-02-15) | BSD-3-Clause | The pixel event-spotting trainer, evaluator and model (RegNet/ResNet + GSM/TSM + GRU head) |
 | `ethograph/_vendor/vocalseg/` | [vocalization-segmentation](https://github.com/timsainb/vocalization-segmentation), Tim Sainburg | `8bc85ee` (2021-04-12) | MIT | Dynamic-threshold and continuity segmentation of a spectrogram (audio changepoint candidates) |
 | `ethograph/utils/arraytools.py` | [thunderhopper](https://github.com/bendalab/thunderhopper), Jona Hartling and Jan Benda, Benda Lab | `5cc0c35` (2025-07-21) | AGPL-3.0 | Five array slicing / edge-extension helpers from its `arraytools.py` and two sequence helpers from its `misctools.py`, in one file; the header names each |
+| `ethograph/_vendor/samurai/` | [SAMURAI](https://github.com/yangchris11/samurai), Cheng-Yen Yang et al., UW Information Processing Lab | `76ba195` (2025-03-18) | Apache-2.0 | Its Kalman filter (`kalman_filter.py`) verbatim; SAMURAI's two changes to SAM 2 are re-implemented beside it in `ethograph/samfill/samurai.py` |
 | `ethograph/segment/feral_defaults/` | [FERAL](https://github.com/Skovorp/feral), Peter Skovorodnikov and Jacopo Razzauti | `f42aa4d` (2026-09-08, release 1.0.1) | MIT | Its `default_config.yaml` verbatim and its three presets as YAML — the defaults of the FERAL config ethograph writes; no code |
 
 DLC2Action's own `NOTICE.yml` records that several of its model files

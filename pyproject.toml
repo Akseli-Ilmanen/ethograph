@@ -214,6 +214,7 @@ exclude = ["tests", "docs*"]
 "ethograph.gui" = ["*.yaml", "assets/templates/*", "assets/wizard/*", "templates/*.j2", "templates/notebook/*"]
 ethograph = ["assets/*", "assets/space/*", "defaults/*", "defaults/**/*"]
 "ethograph._vendor.vocalseg" = ["LICENSE", "NOTICE.md"]
+"ethograph._vendor.samurai" = ["LICENSE", "NOTICE.md"]
 # The architectures read their defaults from these at build time — see NOTICE.md.
 "ethograph.segment.models" = ["config/*.yaml"]
 # FERAL's default config + presets, copied for the config ethograph writes for it — see NOTICE.md.
