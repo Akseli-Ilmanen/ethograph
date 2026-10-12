@@ -10,3 +10,9 @@ sphinx-design
 sphinx-sitemap
 sphinxcontrib-bibtex
 sphinxcontrib-mermaid
+# Real (not mocked in conf.py): features/timeaxis.py dispatches on their types
+numpy<2.5
+pandas
+pynapple>=0.10
+scipy
+xarray
