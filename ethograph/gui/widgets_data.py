@@ -530,6 +530,10 @@ class DataPanel(QWidget):
         grid.addLayout(skeleton_color_cell, 2, 4)
         grid.setColumnStretch(5, 1)
         design_vbox.addLayout(grid)
+        speed_hint = QLabel("Tip: navigating between trials is faster with points and skeleton hidden.")
+        speed_hint.setStyleSheet("color: grey; font-size: 10px;")
+        speed_hint.setWordWrap(True)
+        design_vbox.addWidget(speed_hint)
 
         color_by_row = QHBoxLayout()
         color_by_row.addWidget(QLabel("Colour by"))
