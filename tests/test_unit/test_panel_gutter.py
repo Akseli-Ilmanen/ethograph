@@ -103,3 +103,100 @@ def test_legend_without_host_overlays_the_viewbox(qapp, app_state):
     assert line.plot_item.legend.parentItem() is line.plot_item.vb
     drop_legend(line.plot_item)
     assert line.plot_item.legend is None
+
+
+# ---------------------------------------------------------------------------
+# A legend wider than the gutter widens every panel's gutter, never one alone.
+# Changepoint names such as ``distance_decrease_onset_cp`` are far wider than
+# the colorbar footprint; the panel showing them once ended its time axis
+# 140 px left of its neighbours.
+# ---------------------------------------------------------------------------
+
+_LONG_CPS = {
+    "distance_decrease_onset_cp": np.array([0.2, 0.5]),
+    "distance_decrease_end_cp": np.array([0.3]),
+}
+
+
+def _render_changepoints(line: LinePlot) -> None:
+    t = np.linspace(0.0, 1.0, 50)
+    data = PlotData(time=t, data=t, title="f", ylabel="y", changepoints=_LONG_CPS)
+    render_plot_data(line.plot_item, data, legend_host=line.legend_host())
+
+
+def _align(container, qapp, *panels) -> None:
+    """Run the container's right-inset pass over ``panels`` as its visible set."""
+    container._visible_plots = lambda: iter(panels)
+    container._align_axes_right()
+    for _ in range(3):
+        qapp.processEvents()
+
+
+@pytest.fixture
+def container():
+    from ethograph.gui.plots_container import UnifiedPanelContainer
+
+    return UnifiedPanelContainer.__new__(UnifiedPanelContainer)
+
+
+def test_long_legend_reports_its_need_and_does_not_grow_alone(qapp, app_state):
+    line = LinePlot(app_state)
+    plain = LinePlot(app_state)
+    _settle(qapp, line, plain)
+    assert line.gutter_need() == 0
+
+    _render_changepoints(line)
+    _settle(qapp, line, plain)
+    assert line.gutter_need() > PANEL_RIGHT_GUTTER_PX
+    assert _vb_right(line) == _vb_right(plain)  # the gutter column stays fixed
+
+    drop_legend(line.plot_item)
+    assert line.gutter_need() == 0
+
+
+def test_legend_growth_announces_itself(qapp, app_state):
+    line = LinePlot(app_state)
+    _settle(qapp, line)
+    fired = []
+    line.gutter_need_changed.connect(lambda: fired.append(True))
+    _render_changepoints(line)
+    assert fired
+
+
+@pytest.mark.parametrize(
+    "others",
+    [
+        pytest.param(("line",), id="line+line"),
+        pytest.param(("heatmap",), id="line+heatmap"),
+        pytest.param(("line", "heatmap"), id="line+line+heatmap"),
+        pytest.param(("right_axis",), id="line+right-axis-line"),
+        pytest.param(("line", "right_axis", "heatmap"), id="all"),
+    ],
+)
+def test_changepoint_legend_keeps_every_panel_type_aligned(qapp, app_state, container, others):
+    def make(kind):
+        if kind == "heatmap":
+            return HeatmapPlot(app_state)
+        plot = LinePlot(app_state)
+        if kind == "right_axis":
+            plot.plot_item.showAxis("right")
+        return plot
+
+    with_cps = LinePlot(app_state)
+    panels = [with_cps, *(make(k) for k in others)]
+    _settle(qapp, *panels)
+    _align(container, qapp, *panels)
+    before = {_vb_right(p) for p in panels}
+    assert len(before) == 1
+
+    _render_changepoints(with_cps)
+    _align(container, qapp, *panels)
+    rights = {_vb_right(p) for p in panels}
+    assert len(rights) == 1, [(_vb_right(p), type(p).__name__) for p in panels]
+    # The common gutter grew to fit the legend, so nothing is clipped.
+    assert rights.pop() < before.pop()
+    assert with_cps.plot_item.legend.width() <= with_cps.legend_host().geometry().width()
+
+    drop_legend(with_cps.plot_item)
+    _align(container, qapp, *panels)
+    assert len({_vb_right(p) for p in panels}) == 1

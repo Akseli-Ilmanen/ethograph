@@ -42,6 +42,7 @@ from .app_constants import (
     ENVELOPE_OVERLAY_DEBOUNCE_MS,
     ENVELOPE_OVERLAY_WIDTH,
     PANEL_MIN_HEIGHT,
+    PANEL_RIGHT_GUTTER_PX,
     PLOT_CONTAINER_SIZE_HINT_HEIGHT,
 )
 from .audio_player import AudioPlayer
@@ -1130,6 +1131,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
             if not getattr(widget, "_align_yhook", False):
                 widget._align_yhook = True
                 widget.plotItem.vb.sigYRangeChanged.connect(self.schedule_axis_align)
+                widget.gutter_need_changed.connect(self.schedule_axis_align)
 
         self._apply_all_zoom_constraints()
         QTimer.singleShot(0, self._apply_panel_sizes)
@@ -1216,10 +1218,13 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         QTimer.singleShot(0, self._align_axes_right)
 
     def _align_axes_right(self) -> None:
-        """Pass 2: every panel ends its plotting rectangle ``PANEL_RIGHT_GUTTER_PX``
-        from its right edge — the gutter, less what a visible right axis takes."""
-        for plot in self._visible_plots():
-            plot.reserve_right_gutter(right_gutter_width(plot))
+        """Pass 2: every panel ends its plotting rectangle one common gutter
+        from its right edge — ``PANEL_RIGHT_GUTTER_PX`` or the widest legend
+        any panel parks there, less what a visible right axis takes."""
+        panels = list(self._visible_plots())
+        gutter = max([PANEL_RIGHT_GUTTER_PX, *(plot.gutter_need() for plot in panels)])
+        for plot in panels:
+            plot.reserve_right_gutter(right_gutter_width(plot, gutter))
 
     def _setup_xlinks_from_visible(self, visible_names: list[str] | None = None):
         """Keep all panels' x-ranges in sync via explicit setXRange.

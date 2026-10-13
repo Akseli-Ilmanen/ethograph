@@ -417,13 +417,38 @@ class PanelStateMixin:
         ps.setdefault("color", getattr(self.app_state, "colors_sel", None))
 
 
-def right_gutter_width(plot: "BasePlot") -> int:
-    """The gutter a panel should reserve now: the colorbar footprint, less
+def right_gutter_width(plot: "BasePlot", gutter: int = PANEL_RIGHT_GUTTER_PX) -> int:
+    """The gutter a panel should reserve now: the common ``gutter`` (the
+    colorbar footprint, or the widest legend among the stacked panels), less
     what a visible right axis (confidence / envelope scale) already takes, so
     every panel's plotting rectangle ends on the same pixel."""
     axis = plot.plot_item.getAxis("right")
     taken = axis.geometry().width() if axis.isVisible() else 0.0
-    return max(0, int(round(PANEL_RIGHT_GUTTER_PX - taken)))
+    return max(0, int(round(gutter - taken)))
+
+
+class GutterHost(QGraphicsWidget):
+    """The gutter cell's item a legend anchors to. It clips to its own width
+    and reports the width its legend asks for, so the container can widen
+    every panel's gutter alike instead of this panel alone."""
+
+    need_changed = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setFlag(QGraphicsItem.ItemClipsChildrenToShape, True)
+        self._need = 0
+
+    @property
+    def need(self) -> int:
+        return self._need
+
+    def request_width(self, width: int) -> None:
+        width = max(0, int(width))
+        if width == self._need:
+            return
+        self._need = width
+        self.need_changed.emit()
 
 
 class BasePlot(IndividualPinMixin, pg.PlotWidget):
@@ -440,6 +465,8 @@ class BasePlot(IndividualPinMixin, pg.PlotWidget):
     """
 
     plot_clicked = Signal(object)
+    #: The legend in the gutter wants a different width (see ``GutterHost``).
+    gutter_need_changed = Signal()
 
     #: PlotItem layout cell right of the right axis. A colorbar lands there
     #: (``ColorBarItem.setImageItem(insert_in=)``); on every other panel the
@@ -450,7 +477,7 @@ class BasePlot(IndividualPinMixin, pg.PlotWidget):
         time_axis = TimeAxisItem(orientation="bottom")
         super().__init__(parent, background="white", axisItems={"bottom": time_axis}, **kwargs)
         self.app_state = app_state
-        self._gutter_host: QGraphicsWidget | None = None
+        self._gutter_host: GutterHost | None = None
         self.reserve_right_gutter(PANEL_RIGHT_GUTTER_PX)
 
         # Time marker with enhanced styling
@@ -483,7 +510,11 @@ class BasePlot(IndividualPinMixin, pg.PlotWidget):
         layout.setColumnFixedWidth(4, PANEL_RIGHT_SPACER_PX)
         layout.setColumnFixedWidth(5, max(0, width))
 
-    def legend_host(self) -> QGraphicsWidget | None:
+    def gutter_need(self) -> int:
+        """Width the panel's own legend asks of the gutter; 0 without one."""
+        return 0 if self._gutter_host is None else self._gutter_host.need
+
+    def legend_host(self) -> GutterHost | None:
         """The gutter item a legend anchors to; ``None`` when a colorbar holds
         the cell. Created on first use, after a subclass has had its chance to
         place a colorbar there."""
@@ -496,8 +527,8 @@ class BasePlot(IndividualPinMixin, pg.PlotWidget):
         in_grid = row < layout.rowCount() and col < layout.columnCount()
         if in_grid and layout.itemAt(row, col) is not None:
             return None
-        host = QGraphicsWidget()
-        host.setFlag(QGraphicsItem.ItemClipsChildrenToShape, True)
+        host = GutterHost()
+        host.need_changed.connect(self.gutter_need_changed)
         layout.addItem(host, row, col)
         self._gutter_host = host
         return host

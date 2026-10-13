@@ -135,7 +135,7 @@ def _pairing_table_figure() -> QTableWidget:
 class ModePage(QWidget):
     """Page 0: one long page, three modes, one figure each, plus the imports."""
 
-    import_requested = Signal(str)  # "dandi" | "boris" | "nwb"
+    import_requested = Signal(str)  # "dandi" | "nwb"
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -193,15 +193,11 @@ class ModePage(QWidget):
         imports.addWidget(_muted("Also:"))
         for label, key in [
             ("Download from DANDI…", "dandi"),
-            ("Import a BORIS project…", "boris"),
             ("Open an .nwb I already have…", "nwb"),
         ]:
             btn = QPushButton(label)
             btn.setFlat(True)
             btn.setAutoDefault(False)
-            if key == "boris":
-                btn.setEnabled(False)
-                btn.setToolTip("BORIS import is not available yet.")
             btn.clicked.connect(lambda _=False, k=key: self.import_requested.emit(k))
             imports.addWidget(btn)
         imports.addStretch()

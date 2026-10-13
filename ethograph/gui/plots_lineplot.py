@@ -24,7 +24,7 @@ from .app_constants import (  # noqa: E402
     MULTIDIM_COLORS,
 )
 from .make_pretty import clean_display_labels  # noqa: E402
-from .plots_base import BasePlot, PanelStateMixin, ThrottleDebounce  # noqa: E402
+from .plots_base import BasePlot, GutterHost, PanelStateMixin, ThrottleDebounce  # noqa: E402
 
 PREVIEW_COLOR = (255, 170, 0)
 #: Intermediate stages of a preview, in order; the final stage is PREVIEW_COLOR.
@@ -502,8 +502,8 @@ def drop_legend(plot_item) -> None:
     if legend is None:
         return
     host = legend.parentItem()
-    if isinstance(legend, _GutterLegend) and host is not None:
-        host.setMinimumWidth(0)  # the gutter gives its width back
+    if isinstance(host, GutterHost):
+        host.request_width(0)  # the gutter gives its width back
     scene = legend.scene()
     if scene is not None:
         scene.removeItem(legend)  # detaches from its parent too (C++ side)
@@ -513,14 +513,16 @@ def drop_legend(plot_item) -> None:
 
 
 class _GutterLegend(pg.LegendItem):
-    """A legend whose host gutter grows to fit it: the host clips to its own
-    width, so a long name would otherwise be cut off at the panel's edge."""
+    """A legend that tells its host gutter how wide it is. The host clips to
+    its own width, so a long name would otherwise be cut off at the panel's
+    edge; the host never grows by itself — the container widens every
+    stacked panel's gutter alike, or the time axes would drift apart."""
 
     def updateSize(self) -> None:
         super().updateSize()
         host = self.parentItem()
-        if host is not None:
-            host.setMinimumWidth(self.width() + 2 * self.opts["offset"][0])
+        if isinstance(host, GutterHost):
+            host.request_width(self.width() + 2 * self.opts["offset"][0])
 
 
 def add_legend(plot_item, legend_host=None) -> pg.LegendItem:

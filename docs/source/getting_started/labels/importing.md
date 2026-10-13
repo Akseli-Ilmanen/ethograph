@@ -9,8 +9,11 @@ format** dropdown offers:
 | **`.tsv`** | Ethograph TSV (backup, colleague's labels, manual edit) | (native) |
 | **`pynapple (.npz)`** | Pynapple file with {class}`~pynapple.IntervalSet` objects | {class}`~ethograph.labels.converters.PynappleLabelConverter` |
 | **`pynapple (.nwb)`** | NWB file loaded via {class}`~pynapple.IntervalSet` objects | {class}`~ethograph.labels.converters.PynappleLabelConverter` |
-| **BORIS** (`.boris`) | [BORIS](https://www.boris.unito.it/) project files | {class}`~ethograph.labels.boris.BorisLabelConverter` (via the BORIS import wizard) |
 | **Crowsetta formats** (aud-seq, simple-seq, textgrid, notmat, timit, yarden, ...) | [crowsetta](https://crowsetta.readthedocs.io/)-supported annotation tools (Audacity, Praat, Raven, ...) | {class}`~ethograph.labels.converters.CrowsettaLabelConverter` |
+
+A [BORIS](https://www.boris.unito.it/) project is not a label file for an open
+session: it holds the media and the trials too, so it is imported as whole
+sessions from the start page — see {doc}`../../advanced/migrating_from_boris`.
 
 
 ---
@@ -66,30 +69,6 @@ Global-time intervals are split across trials using the `trials` /
 `epochs` `IntervalSet` (or the session's trial table). See
 {class}`~ethograph.labels.converters.PynappleLabelConverter` for the
 conversion logic.
-
----
-
-## BORIS
-
-BORIS observations bind one or more media files (concatenated in Player 1)
-to a list of events coded in observation-global time.  The wizard splits
-events across media boundaries, treating **one media file as one trial**.
-
-The importer preserves BORIS's two event kinds (see
-{ref}`target-point-events`):
-
-- **State events** become intervals (`onset_s` → `offset_s`).  Events that
-  span a file boundary are clipped at the boundary with a warning.
-- **Point events** become rows with `event_type = "point"` and `offset_s = NaN`.
-
-The per-behavior `type` field from BORIS is written into
-the generated `mapping.txt` so the kind is preserved on round-trip and the
-labelling shortcut behaves correctly. The BORIS `Image index` column is ignored, as `ethograph`
-stores label times in time (seconds), and does not round to nearest frame. This becomes
-import when labelling multimodal & multi sampling rate data (video, audio, accelerometer, ...).
-
-The `.boris` JSON is parsed via {func}`~ethograph.labels.boris.load_boris_project`;
-the import wizard lives at `ethograph.gui.wizard_boris`.
 
 ---
 

@@ -629,7 +629,7 @@ class CoverPage(QDialog):
         tools = QToolButton()
         tools.setText("🛠  More tools")
         tools.setPopupMode(QToolButton.InstantPopup)
-        tools.setToolTip("Print tags before recording, refine a pose project, or exclude old files")
+        tools.setToolTip("Print tags before recording, refine a pose project, migrate from BORIS, or exclude old files")
         menu = QMenu(tools)
         menu.addSection("Before recording")
         menu.addAction("Print tag sheet…", self._open_tag_sheet)
@@ -642,6 +642,13 @@ class CoverPage(QDialog):
             "every extracted frame with draggable keypoints."
         )
         menu.addAction(refine)
+        boris = QAction("Import BORIS projects…", menu)
+        boris.triggered.connect(self._open_boris_import)
+        boris.setToolTip(
+            "Migrate from BORIS: every observation of one or more .boris files becomes a\n"
+            "session folder (one trial per media file) under the project folder."
+        )
+        menu.addAction(boris)
         menu.addSection("IO settings")
         exclude = QAction("Excluded files list…", menu)
         exclude.triggered.connect(self._open_excluded_files)
@@ -664,6 +671,13 @@ class CoverPage(QDialog):
             return
         if mode.enter(root, parent=self):
             self._close_if_loaded()
+
+    def _open_boris_import(self) -> None:
+        """Convert BORIS projects to sessions; they then open from the reopen list."""
+        from ethograph.gui.dialog_boris_import import BorisImportDialog
+
+        if BorisImportDialog(self.app_state, parent=self).exec_():
+            self._refresh_project_ui()
 
     def _open_excluded_files(self) -> None:
         from ethograph.gui.dialog_settings import IgnoredFilesDialog

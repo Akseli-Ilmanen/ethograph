@@ -236,11 +236,6 @@ class NCWizardDialog(QDialog):
 
             if NWBImportDialog(self.app_state, self.io_widget, self).exec_():
                 self.accept()
-        elif kind == "boris":
-            from ethograph.gui.wizard_boris import BorisImportDialog
-
-            if BorisImportDialog(self.app_state, self.io_widget, self).exec_():
-                self.accept()
         else:
             path = browse_open_file(self, self.app_state, "Open an NWB file", "NWB (*.nwb)")
             if path:
