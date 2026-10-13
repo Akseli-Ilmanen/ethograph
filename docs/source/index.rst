@@ -197,6 +197,17 @@ Quickstart
          </div>
        </div>
 
+       <div class="dcsub won" id="dcsubBoris">
+         <div class="dcqt">Are your existing labels in BORIS?</div>
+         <div class="dcqh">A <code>.boris</code> project holds the media and the events; Ethograph imports it whole.</div>
+         <div class="dcch">
+           <label class="dcc"><input type="radio" name="dcboris" value="no" onchange="dcRad(this,'boris')">
+             <div><strong>No</strong></div></label>
+           <label class="dcc"><input type="radio" name="dcboris" value="yes" onchange="dcRad(this,'boris')">
+             <div><strong>Yes &mdash; I coded in BORIS</strong><span>One or more <code>.boris</code> files</span></div></label>
+         </div>
+       </div>
+
        <div class="dcerr" id="dce1">Please answer every question above.</div>
      </div>
 
@@ -226,7 +237,8 @@ Quickstart
    <script>
    (function(){
    var PREP='getting_started/your_data/index.html';
-   var st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,trials:null},cur=0;
+   var BORIS='advanced/migrating_from_boris.html';
+   var st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,boris:null,trials:null},cur=0;
 
    function clearErr(){document.querySelectorAll('.dcerr').forEach(function(e){e.classList.remove('won');});}
    function show(id){document.querySelectorAll('.dcpg').forEach(function(p){p.classList.remove('won');});
@@ -252,10 +264,10 @@ Quickstart
    window.dcClose=function(){document.getElementById('dcov').classList.remove('won');dcReset();};
 
    function dcReset(){
-     st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,trials:null};cur=0;
+     st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,boris:null,trials:null};cur=0;
      document.querySelectorAll('.dcov input').forEach(function(i){i.checked=false;});
      document.querySelectorAll('.dcc').forEach(function(e){e.classList.remove('wsel');});
-     document.querySelectorAll('.dcsub').forEach(function(e){e.classList.remove('won');});
+     document.querySelectorAll('.dcsub').forEach(function(e){e.classList.toggle('won',e.id==='dcsubBoris');});
      clearErr();show('dcp0');
      document.getElementById('dcback').style.visibility='hidden';
      var n=document.getElementById('dcnext');n.style.display='';n.textContent='Next →';
@@ -269,11 +281,11 @@ Quickstart
        cur=1;show('dcp1');document.getElementById('dcback').style.visibility='visible';return;
      }
      if(cur===1){
-       var ok=st.d.size>0
+       var ok=st.d.size>0 && st.boris
          && !((st.d.has('video')||st.d.has('pose'))&&!st.cameras)
          && !(st.d.has('audio')&&(!st.audio_setup||!st.labelled));
        if(!ok){document.getElementById('dce1').classList.add('won');return;}
-       if(st.d.has('other'))return result();
+       if(st.d.has('other')||st.boris==='yes')return result();
        cur=2;show('dcp2');document.getElementById('dcnext').textContent='See my setup →';return;
      }
      if(cur===2){
@@ -284,7 +296,7 @@ Quickstart
 
    window.dcPrev=function(){
      clearErr();
-     if(cur==='r'){cur=st.nwb==='yes'?0:(st.d.has('other')?1:2);}
+     if(cur==='r'){cur=st.nwb==='yes'?0:((st.d.has('other')||st.boris==='yes')?1:2);}
      else cur=cur-1;
      show('dcp'+cur);
      var n=document.getElementById('dcnext');
@@ -328,6 +340,13 @@ Quickstart
    }
 
    function build(){
+     if(st.nwb!=='yes'&&st.boris==='yes'){
+       return '<div class="dcres ok"><h4>Import your BORIS project</h4>'+tags()
+         +'<p>Your <code>.boris</code> file already names the media files and codes the events, so there is '
+         +'nothing to arrange: on the start page open <strong>More tools &rarr; Import BORIS projects&hellip;</strong>. '
+         +'Every observation becomes a session, every media file a trial, and the ethogram becomes the '
+         +'project&rsquo;s label vocabulary &mdash; see <a href="'+BORIS+'">Migrating from BORIS</a>.</p></div>';
+     }
      if(st.nwb==='yes'){
        return '<div class="dcres ok"><h4>Drag &amp; drop your file</h4>'
          +'<div><span class="dctag">.nwb</span></div>'
