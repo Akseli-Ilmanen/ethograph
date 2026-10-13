@@ -1,7 +1,12 @@
 jinja2>=3.1.4
 linkify-it-py
 myst-nb
+# Real (not mocked in conf.py): features/timeaxis.py dispatches on their types
+numpy<2.5
+pandas
 pydata-sphinx-theme
+pynapple>=0.10
+scipy
 setuptools-scm
 sphinx>=7.4.7,<9
 sphinx-autobuild
@@ -10,9 +15,4 @@ sphinx-design
 sphinx-sitemap
 sphinxcontrib-bibtex
 sphinxcontrib-mermaid
-# Real (not mocked in conf.py): features/timeaxis.py dispatches on their types
-numpy<2.5
-pandas
-pynapple>=0.10
-scipy
 xarray
