@@ -485,17 +485,16 @@ format</strong> dropdown offers:</p>
 <td><p>NWB file loaded via <a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalSet</span></code></a> objects</p></td>
 <td><p><a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.PynappleLabelConverter" title="ethograph.labels.converters.PynappleLabelConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">PynappleLabelConverter</span></code></a></p></td>
 </tr>
-<tr class="row-odd"><td><p><strong>BORIS</strong> (<code class="docutils literal notranslate"><span class="pre">.boris</span></code>)</p></td>
-<td><p><a class="reference external" href="https://www.boris.unito.it/">BORIS</a> project files</p></td>
-<td><p><code class="xref py py-class docutils literal notranslate"><span class="pre">BorisLabelConverter</span></code> (via the BORIS import wizard)</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>Crowsetta formats</strong> (aud-seq, simple-seq, textgrid, notmat, timit, yarden, …)</p></td>
+<tr class="row-odd"><td><p><strong>Crowsetta formats</strong> (aud-seq, simple-seq, textgrid, notmat, timit, yarden, …)</p></td>
 <td><p><a class="reference external" href="https://crowsetta.readthedocs.io/">crowsetta</a>-supported annotation tools (Audacity, Praat, Raven, …)</p></td>
 <td><p><a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.CrowsettaLabelConverter" title="ethograph.labels.converters.CrowsettaLabelConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">CrowsettaLabelConverter</span></code></a></p></td>
 </tr>
 </tbody>
 </table>
 </div>
+<p>A <a class="reference external" href="https://www.boris.unito.it/">BORIS</a> project is not a label file for an open
+session: it holds the media and the trials too, so it is imported as whole
+sessions from the start page — see <a class="reference internal" href="../../advanced/migrating_from_boris.html"><span class="doc">Migrating from BORIS</span></a>.</p>
 <hr class="docutils" />
 <section id="comparing-predictions">
 <span id="target-prediction-panels"></span><h2>Comparing predictions<a class="headerlink" href="#comparing-predictions" title="Link to this heading">#</a></h2>
@@ -540,27 +539,6 @@ canonical <code class="docutils literal notranslate"><span class="pre">labels.ts
 <code class="docutils literal notranslate"><span class="pre">epochs</span></code> <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code> (or the session’s trial table). See
 <a class="reference internal" href="../../api/labels.html#ethograph.labels.converters.PynappleLabelConverter" title="ethograph.labels.converters.PynappleLabelConverter"><code class="xref py py-class docutils literal notranslate"><span class="pre">PynappleLabelConverter</span></code></a> for the
 conversion logic.</p>
-</section>
-<hr class="docutils" />
-<section id="boris">
-<h2>BORIS<a class="headerlink" href="#boris" title="Link to this heading">#</a></h2>
-<p>BORIS observations bind one or more media files (concatenated in Player 1)
-to a list of events coded in observation-global time.  The wizard splits
-events across media boundaries, treating <strong>one media file as one trial</strong>.</p>
-<p>The importer preserves BORIS’s two event kinds (see
-<a class="reference internal" href="mapping.html#target-point-events"><span class="std std-ref">State vs point events</span></a>):</p>
-<ul class="simple">
-<li><p><strong>State events</strong> become intervals (<code class="docutils literal notranslate"><span class="pre">onset_s</span></code> → <code class="docutils literal notranslate"><span class="pre">offset_s</span></code>).  Events that
-span a file boundary are clipped at the boundary with a warning.</p></li>
-<li><p><strong>Point events</strong> become rows with <code class="docutils literal notranslate"><span class="pre">event_type</span> <span class="pre">=</span> <span class="pre">&quot;point&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">offset_s</span> <span class="pre">=</span> <span class="pre">NaN</span></code>.</p></li>
-</ul>
-<p>The per-behavior <code class="docutils literal notranslate"><span class="pre">type</span></code> field from BORIS is written into
-the generated <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> so the kind is preserved on round-trip and the
-labelling shortcut behaves correctly. The BORIS <code class="docutils literal notranslate"><span class="pre">Image</span> <span class="pre">index</span></code> column is ignored, as <code class="docutils literal notranslate"><span class="pre">ethograph</span></code>
-stores label times in time (seconds), and does not round to nearest frame. This becomes
-import when labelling multimodal &amp; multi sampling rate data (video, audio, accelerometer, …).</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">.boris</span></code> JSON is parsed via <code class="xref py py-func docutils literal notranslate"><span class="pre">load_boris_project()</span></code>;
-the import wizard lives at <code class="docutils literal notranslate"><span class="pre">ethograph.gui.wizard_boris</span></code>.</p>
 </section>
 <hr class="docutils" />
 <section id="crowsetta-interop">
@@ -657,7 +635,6 @@ back through <code class="docutils literal notranslate"><span class="pre">existi
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#comparing-predictions">Comparing predictions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pynapple-nwb-intervalsets">Pynapple / NWB IntervalSets</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#boris">BORIS</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#crowsetta-interop">Crowsetta interop</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#programmatic-usage">Programmatic usage</a></li>
 </ul>
