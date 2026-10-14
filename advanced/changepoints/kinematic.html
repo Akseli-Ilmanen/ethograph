@@ -613,7 +613,7 @@ to be recognised.</p>
 <label class="sd-tab-label" for="sd-tab-item-1">
 Pynapple</label><div class="sd-tab-content docutils">
 <p>For pynapple data, changepoints are stored as a
-<a class="reference external" href="https://pynapple.org/generated/pynapple.TsGroup.html#pynapple.TsGroup" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsGroup</span></code></a> — one timestamp series per unit (keypoint,
+<a class="reference external" href="https://pynapple.org/generated/pynapple.TsGroup.html#pynapple.TsGroup" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsGroup</span></code></a> — one timestamp series per unit (keypoint,
 channel, neuron, …) with metadata columns marking it as a changepoint set.</p>
 <p>Use <a class="reference internal" href="../../api/pynapple_io.html#ethograph.io.pynapple.add_changepoints_to_nap" title="ethograph.io.pynapple.add_changepoints_to_nap"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_changepoints_to_nap()</span></code></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pynapple</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nap</span>
@@ -639,8 +639,8 @@ channel, neuron, …) with metadata columns marking it as a changepoint set.</p>
 <span class="c1">#   metadata.changepoint_mask = 1           # writes as attrs</span>
 </pre></div>
 </div>
-<p>Accepts <a class="reference external" href="https://pynapple.org/generated/pynapple.Tsd.html#pynapple.Tsd" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tsd</span></code></a>, <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a>, or
-<a class="reference external" href="https://pynapple.org/generated/pynapple.TsGroup.html#pynapple.TsGroup" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsGroup</span></code></a> as input. Existing metadata columns are carried
+<p>Accepts <a class="reference external" href="https://pynapple.org/generated/pynapple.Tsd.html#pynapple.Tsd" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tsd</span></code></a>, <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a>, or
+<a class="reference external" href="https://pynapple.org/generated/pynapple.TsGroup.html#pynapple.TsGroup" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsGroup</span></code></a> as input. Existing metadata columns are carried
 through when the input is a <code class="docutils literal notranslate"><span class="pre">TsGroup</span></code>.</p>
 </div>
 </div>

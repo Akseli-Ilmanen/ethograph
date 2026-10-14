@@ -499,7 +499,7 @@ recordings.</p>
 </tr>
 <tr class="row-even"><td><p><strong>Spike-sorted units</strong></p></td>
 <td><p>Raster / PSTH</p></td>
-<td><p><a class="reference external" href="https://github.com/MouseLand/Kilosort">Kilosort</a> folder, <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> file, <a class="reference external" href="https://pynapple.org/generated/pynapple.TsGroup.html#pynapple.TsGroup" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pynapple.TsGroup</span></code></a></p></td>
+<td><p><a class="reference external" href="https://github.com/MouseLand/Kilosort">Kilosort</a> folder, <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> file, <a class="reference external" href="https://pynapple.org/generated/pynapple.TsGroup.html#pynapple.TsGroup" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pynapple.TsGroup</span></code></a></p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Features</strong></p></td>
 <td><p>Line plots / heatmaps</p></td>
@@ -522,7 +522,7 @@ recordings.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">.nc</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Pynapple</strong></p></td>
-<td><p><a class="reference external" href="https://pynapple.org/generated/pynapple.Tsd.html#pynapple.Tsd" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tsd</span></code></a> / <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a></p></td>
+<td><p><a class="reference external" href="https://pynapple.org/generated/pynapple.Tsd.html#pynapple.Tsd" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tsd</span></code></a> / <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">.npz</span></code> or folder</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>NWB</strong></p></td>
@@ -1605,7 +1605,7 @@ either shape, and the GUI accepts both.</p>
 </div>
 <p><strong>TrialTree</strong> — wraps one <code class="docutils literal notranslate"><span class="pre">xr.Dataset</span></code> per trial into a single <code class="docutils literal notranslate"><span class="pre">.nc</span></code>, and is
 how multi-trial data is stored on the xarray side (pynapple uses an
-<a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalSet</span></code></a>; NWB uses its <code class="docutils literal notranslate"><span class="pre">nwb.trials</span></code> table):</p>
+<a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalSet</span></code></a>; NWB uses its <code class="docutils literal notranslate"><span class="pre">nwb.trials</span></code> table):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
 <span class="c1"># Multiple trials: one Dataset per trial</span>
@@ -1620,7 +1620,7 @@ how multi-trial data is stored on the xarray side (pynapple uses an
 <p><strong>One session-long <code class="docutils literal notranslate"><span class="pre">xr.Dataset</span></code> plus trial start/stop times?</strong> Pass both to
 <a class="reference internal" href="your_data/trials.html#target-from-continuous"><span class="std std-ref">from_continuous()</span></a>. The times can be a
 <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code> with <code class="docutils literal notranslate"><span class="pre">trial</span></code>, <code class="docutils literal notranslate"><span class="pre">start_time</span></code> and <code class="docutils literal notranslate"><span class="pre">stop_time</span></code> columns (in seconds, on
-the dataset’s time axis) or a <a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pynapple.IntervalSet</span></code></a>. Each trial becomes
+the dataset’s time axis) or a <a class="reference external" href="https://pynapple.org/generated/pynapple.IntervalSet.html#pynapple.IntervalSet" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pynapple.IntervalSet</span></code></a>. Each trial becomes
 its own window, with time starting at 0:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">trials</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"trial"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="s2">"start_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">120.0</span><span class="p">],</span> <span class="s2">"stop_time"</span><span class="p">:</span> <span class="p">[</span><span class="mf">100.0</span><span class="p">,</span> <span class="mf">250.0</span><span class="p">]})</span>
 <span class="n">dt</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">from_continuous</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">trials</span><span class="p">)</span>
