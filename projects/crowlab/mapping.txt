@@ -28,5 +28,7 @@
 27 reachRightCornerInTwo 0
 31 pelletStickFirstContact 1 point
 32 pelletStickLastContact 1 point
-33 pelletContact 1
+33 pelletStickContact 1
+35 pelletReady 1
+36 pelletBeakContact 1
 50 stimulation 0

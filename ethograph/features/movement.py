@@ -283,11 +283,12 @@ def get_angle_rgb(xy_pos, smooth_func=None, smoothing_params=None, input_type="p
     Parameters
     ----------
     xy_pos : array-like of shape (N, D)
-        N points with D dimensions. Uses first two columns as x, y coordinates.
+        N time points with D dimensions, time first. Uses first two columns as x, y coordinates.
     smooth_func : callable, optional
-        Function to smooth xy_pos before angle calculation. Should accept and return array-like of shape (N, D).
-    smooth_params: dict, optional
-        Parameters to pass to the smoothing function.
+        Function to smooth xy_pos before angle calculation. Called with ``axis=0`` (time),
+        so it should accept an ``axis`` keyword and return array-like of shape (N, D).
+    smoothing_params: dict, optional
+        Parameters to pass to the smoothing function, without ``axis``.
 
     Returns
     -------
@@ -304,7 +305,7 @@ def get_angle_rgb(xy_pos, smooth_func=None, smoothing_params=None, input_type="p
         return nan_rgb, nan_angles
 
     if smooth_func is not None:
-        xy_pos = smooth_func(xy_pos, **smoothing_params)
+        xy_pos = smooth_func(xy_pos, axis=0, **smoothing_params)
 
     cmap = matplotlib.colormaps["hsv"]
     cm = cmap(np.linspace(0, 1, 256))[:, :3]  # Get RGB, exclude alpha

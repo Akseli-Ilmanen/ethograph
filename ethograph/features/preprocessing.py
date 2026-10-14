@@ -160,6 +160,9 @@ def gaussian_smoothing(da, **smoothing_params):
         Smoothed position data.
     """
 
+    if "axis" in smoothing_params:
+        raise ValueError("gaussian_smoothing: axis is set internally to the time dimension; do not pass it")
+
     def in_samples(x, fs, *, axis=-1, **params):
         return gaussian_filter1d(x, axis=axis, **params)
 
