@@ -237,7 +237,8 @@ Quickstart
    <script>
    (function(){
    var PREP='getting_started/your_data/index.html';
-   var BORIS='advanced/migrating_from_boris.html';
+   var BORIS='getting_started/your_data/migrating_from_boris.html';
+   var EPHYS='getting_started/your_data/ephys.html';
    var st={nwb:null,d:new Set(),cameras:null,audio_setup:null,labelled:null,boris:null,trials:null},cur=0;
 
    function clearErr(){document.querySelectorAll('.dcerr').forEach(function(e){e.classList.remove('won');});}
@@ -341,11 +342,35 @@ Quickstart
 
    function build(){
      if(st.nwb!=='yes'&&st.boris==='yes'){
-       return '<div class="dcres ok"><h4>Import your BORIS project</h4>'+tags()
-         +'<p>Your <code>.boris</code> file already names the media files and codes the events, so there is '
-         +'nothing to arrange: on the start page open <strong>More tools &rarr; Import BORIS projects&hellip;</strong>. '
+       var extra=['ephys','numpy','other'].filter(function(k){return st.d.has(k);});
+       var names={ephys:'ephys',numpy:'feature array',other:'other timeseries'};
+       var what=extra.map(function(k){return names[k];}).join(' and ');
+       var pose = st.d.has('pose')
+         ? ' Pose files are paired with their video by the importer (the <strong>Pose folder</strong> field), '
+           +'so they come along without any extra work.'
+         : '';
+       var card='<div class="dcres ok"><h4>'+(extra.length?'Step 1: import your BORIS project':'Import your BORIS project')+'</h4>'+tags()
+         +'<p>BORIS codes events on video and audio, so for those streams the import is the whole job: '
+         +'on the start page open <strong>More tools &rarr; Import BORIS projects&hellip;</strong>. '
          +'Every observation becomes a session, every media file a trial, and the ethogram becomes the '
-         +'project&rsquo;s label vocabulary &mdash; see <a href="'+BORIS+'">Migrating from BORIS</a>.</p></div>';
+         +'project&rsquo;s label vocabulary &mdash; see <a href="'+BORIS+'">Migrating from BORIS</a>.'+pose+'</p>';
+       if(st.cameras==='multi'||st.audio_setup==='multi_files'){
+         card+='<p>Several files per observation must already be <strong>temporally aligned</strong>: the '
+           +'importer, like BORIS, assumes every file of a player starts at the same moment.</p>';
+       }
+       card+='</div>';
+       if(extra.length){
+         card+='<div class="dcres next" style="margin-top:.9rem"><h4>Step 2: add your '+what+' with a script</h4>'
+           +'<p>BORIS never saw your '+what+', so the importer cannot place it. It does half the work anyway: '
+           +'each session folder it writes already has its trials (one per media file) and its labels in trial '
+           +'time. The other half is a short Python script per session: load the '+what+', cut it into those '
+           +'trials on the video&rsquo;s clock, and save it as the session&rsquo;s dataset (<code>.nc</code>) '
+           +'inside that session folder. If the recording started earlier or later than the video, put that '
+           +'offset in the alignment file rather than shifting the data. '
+           +'See <a href="'+PREP+'">Bring your own data</a> for the dataset and alignment'
+           +(st.d.has('ephys')?', and <a href="'+EPHYS+'">Ephys recordings</a> for Kilosort and raw ephys':'')+'.</p></div>';
+       }
+       return card+importNote();
      }
      if(st.nwb==='yes'){
        return '<div class="dcres ok"><h4>Drag &amp; drop your file</h4>'

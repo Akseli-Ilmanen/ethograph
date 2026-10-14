@@ -46,6 +46,13 @@ Supported formats, Kilosort output, and the two trace viewers.
 Session, project and home folders: what lives where and who writes it.
 :::
 
+:::{grid-item-card} {fas}`file-import` 6. Migrating from BORIS
+:link: migrating_from_boris
+:link-type: doc
+
+Convert a BORIS project's observations into sessions, in the GUI or in a loop.
+:::
+
 ::::
 
 Ethograph supports three backends. Pick the one matching your workflow; every
@@ -188,4 +195,5 @@ trials
 media_alignment
 ephys
 folder_layout
+migrating_from_boris
 ```

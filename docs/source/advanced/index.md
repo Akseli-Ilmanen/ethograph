@@ -49,13 +49,6 @@ Reviewing a DeepLabCut / LightningPose training set, or editing a pose file.
 Precise (sub-frame) clicking, the timeline marker, and which channel Play sounds.
 :::
 
-:::{grid-item-card} {fas}`file-import` Migrating from BORIS
-:link: migrating_from_boris
-:link-type: doc
-
-Convert a BORIS project's observations into sessions, in the GUI or in a loop.
-:::
-
 :::{grid-item-card} {fas}`keyboard` Shortcuts
 :link: shortcuts
 :link-type: doc
@@ -82,7 +75,6 @@ classroom_pose_estimation/index
 refinement
 metadata
 playback
-migrating_from_boris
 shortcuts
 troubleshooting
 ```

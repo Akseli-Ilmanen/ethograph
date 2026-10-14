@@ -6,7 +6,7 @@ an ethogram (the behaviours), the subjects, and a list of **observations**, each
 binding one or more media files to events coded in observation time. Ethograph
 keeps a study as a **project folder** with one vocabulary (`mapping.txt`) and
 one **session folder** per recording, where labels are in trial time (see
-{doc}`../getting_started/your_data/folder_layout`). The importer maps one onto the other:
+{doc}`folder_layout`). The importer maps one onto the other:
 
 | BORIS | Ethograph |
 |---|---|
@@ -30,7 +30,7 @@ On the start page open **🛠 More tools ▸ Import BORIS projects…**.
 1. **Add .boris…** — pick one or more project files. The summary below the list
    says how many sessions, trials and events each will become.
 2. **Project folder** — your Ethograph project folder, the one chosen on the
-   start page (see {doc}`../getting_started/your_data/folder_layout`). It
+   start page (see {doc}`folder_layout`). It
    receives `mapping.txt` and one session folder per observation. No project
    yet? Make an empty folder and choose it; the folder holding your `.boris`
    files works too, since nothing is copied into it and the sessions only
@@ -56,7 +56,7 @@ points it to them.
 
 The GUI drives one function. A loop over a folder of `.boris` files migrates a
 whole archive into one project folder. `project` below is the Ethograph
-{doc}`project folder <../getting_started/your_data/folder_layout>`: an existing
+{doc}`project folder <folder_layout>`: an existing
 one, or a new empty folder that you then choose on the start page. It receives
 `mapping.txt` and one session folder per observation; the media stays where it
 is.
@@ -84,6 +84,20 @@ it wrote and the media it could not find. Afterwards, choose `D:/study` as the
 project folder on the start page. Sessions made from Python are not in its
 reopen list (that list is the GUI's), so open each by dragging its folder onto
 the start page.
+
+## Ephys and other timeseries
+
+BORIS codes events on video and audio, and the importer pairs a pose file with
+its video, so for those streams the import is the whole job. Ephys, sensor or
+pre-computed feature streams are something BORIS never saw, so the importer
+cannot place them. It still does half the work: every session folder it writes
+has its trials (one per media file) and its labels in trial time. The other
+half is a short Python script per session: load the stream, cut it into those
+trials on the video's clock, and save it as the session's dataset (`.nc`)
+inside the session folder ({doc}`dataset_schema`, {doc}`trials`; for Kilosort
+and raw ephys, {doc}`ephys`). A recording that started earlier or later than
+the video gets that offset in the alignment ({doc}`media_alignment`), not a
+shifted copy of the data.
 
 ## What to look at afterwards
 
