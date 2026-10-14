@@ -13,7 +13,7 @@ format** dropdown offers:
 
 A [BORIS](https://www.boris.unito.it/) project is not a label file for an open
 session: it holds the media and the trials too, so it is imported as whole
-sessions from the start page — see {doc}`../../advanced/migrating_from_boris`.
+sessions from the start page — see {doc}`../your_data/migrating_from_boris`.
 
 
 ---
