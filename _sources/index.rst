@@ -483,12 +483,12 @@ Ethograph is built on top of a number of open-source projects:
 `Neo <https://neo.readthedocs.io>`_ :cite:p:`garcia2014neo`,
 `crowsetta <https://github.com/vocalpy/crowsetta>`_ :cite:p:`nicholson2023crowsetta`,
 `Neurodata Without Borders <https://www.nwb.org/>`_ :cite:p:`rubel2022nwb`,
-`xarray <https://docs.xarray.dev/>`_ :cite:p:`hoyer2017xarray`,
+`xarray <https://docs.xarray.dev/>`_,
 `pynapple <https://pynapple.org/index.html>`_ :cite:p:`viejo2023pynapple`,
 `movement <https://movement.neuroinformatics.dev/>`_ :cite:p:`sirmpilatze_movement`,
 `phy <https://github.com/cortex-lab/phy>`_ :cite:p:`rossant2016phy`,
 `PyQtGraph <https://www.pyqtgraph.org/>`_, and
-`pygfx <https://pygfx.org/>`_ :cite:p:`klein_pygfx` (via
+`pygfx <https://pygfx.org/>`_ (via
 `pynaviz <https://github.com/pynapple-org/pynaviz>`_).
 The :doc:`models <models/index>` that segment behaviour build on
 `DLC2Action <https://github.com/amathislab/DLC2Action>`_ :cite:p:`kozlova2025dlc2action`,

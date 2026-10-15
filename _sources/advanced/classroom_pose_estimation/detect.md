@@ -37,4 +37,4 @@ Detections appear as hollow markers with a dot. The first time, Ethograph asks
 which tag ID is which keypoint and individual; correct any wrong guess in the
 table. A detection never overwrites your own label.[^apriltag]
 
-[^apriltag]: Detection runs through [pupil-apriltags](https://github.com/pupil-labs/apriltags), a binding to the AprilTag 3 library {cite:p}`krogius2019apriltag`.
+[^apriltag]: Detection runs through [pupil-apriltags](https://github.com/pupil-labs/apriltags), a binding to the AprilTag 3 library.

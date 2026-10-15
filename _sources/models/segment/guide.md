@@ -165,7 +165,7 @@ See {doc}`config` for each section's keys.
 
 Video features are extracted by the pipeline too, but written into the
 session rather than derived at open — a
-pretrained network (S3D {cite:p}`xie2018s3d` by default, a timm {cite:p}`wightman2019timm` backbone such as DINOv2 {cite:p}`oquab2024dinov2` by name) is expensive enough to
+pretrained network (S3D {cite:p}`xie2018s3d` by default, a [timm](https://github.com/huggingface/pytorch-image-models) backbone such as DINOv2 {cite:p}`oquab2024dinov2` by name) is expensive enough to
 run once per video and cache. See {doc}`video_features`; the short version is
 
 ```python

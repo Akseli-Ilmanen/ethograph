@@ -465,7 +465,7 @@ seconds — frame counts come from each video's own rate. See {doc}`video_featur
 
 | Key | Default | Meaning |
 |---|---|---|
-| `extractor` | `s3d` | The network, by registry name: `s3d` (clip-wise; Kinetics-400 {cite:p}`kay2017kinetics` S3D {cite:p}`xie2018s3d`), `timm` (frame-wise; any timm {cite:p}`wightman2019timm` image backbone; `pip install 'ethograph[timm]'`) or `feral` (FERAL {cite:p}`skovorodnikov2025feral`, fine-tuned in its own environment from an export the project writes; {doc}`feral`). Names the sidecar suffix and the merged variable. |
+| `extractor` | `s3d` | The network, by registry name: `s3d` (clip-wise; Kinetics-400 S3D {cite:p}`xie2018s3d`), `timm` (frame-wise; any [timm](https://github.com/huggingface/pytorch-image-models) image backbone; `pip install 'ethograph[timm]'`) or `feral` (FERAL {cite:p}`skovorodnikov2025feral`, fine-tuned in its own environment from an export the project writes; {doc}`feral`). Names the sidecar suffix and the merged variable. |
 | `model_name` | `null` | `timm` only: the backbone. `null` = `vit_base_patch14_reg4_dinov2.lvd142m` (DINOv2 ViT-B/14). |
 | `stack_s` | `null` | `s3d` only: temporal extent of one window — how much motion context each frame's feature sees. `null` = 0.5 s. |
 | `context_s` | `null` | `feral` only: seconds one FERAL chunk (64 frames) spans, resolved against each video's rate into FERAL's `chunk_step`; its chunk shifts scale with it. `null` = every frame, FERAL's own chunk. |

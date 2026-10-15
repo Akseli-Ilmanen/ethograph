@@ -11,7 +11,7 @@ For a worked example from a session to a ranked subset of S3D dimensions, see
 
 | `extractor` | Kind | What one frame's feature is | Docs |
 |---|---|---|---|
-| `s3d` (default) | clip-wise | the `stack_s` window of frames centred on it, embedded by S3D {cite:p}`xie2018s3d` (Kinetics-400 {cite:p}`kay2017kinetics`) — motion is in the feature | [video_features › S3D](https://v-iashin.github.io/video_features/models/s3d/) |
+| `s3d` (default) | clip-wise | the `stack_s` window of frames centred on it, embedded by S3D {cite:p}`xie2018s3d` (Kinetics-400) — motion is in the feature | [video_features › S3D](https://v-iashin.github.io/video_features/models/s3d/) |
 | `timm` | frame-wise | the frame on its own, embedded by an image backbone — DINOv2 {cite:p}`oquab2024dinov2` ViT-B/14 unless `model_name` says otherwise; needs `pip install 'ethograph[timm]'` | [video_features › timm](https://v-iashin.github.io/video_features/models/timm/) |
 
 Both follow the recipes of
@@ -43,7 +43,7 @@ already have a sidecar are skipped unless `overwrite=True`.
 | Parameter | Meaning |
 |---|---|
 | `extractor` | `s3d` (default) or `timm`. |
-| `model_name` | `timm` only: any timm model with pretrained weights {cite:p}`wightman2019timm`. `None` = DINOv2 ViT-B/14. |
+| `model_name` | `timm` only: any [timm](https://github.com/huggingface/pytorch-image-models) model with pretrained weights. `None` = DINOv2 ViT-B/14. |
 | `stack_s` | `s3d` only: window length in seconds. |
 | `analysis_fps` | Rate the network sees; `None` = every frame. |
 | `crop` | Pixel box `{x0, y0, x1, y1}` cut from every frame, as reported by *Tools ▸ Video: Pick a crop for a config…*. Draw it square: the network takes a square input, and a non-square box loses its long side. |
