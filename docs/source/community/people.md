@@ -26,9 +26,11 @@ development — thank you.
 - **[David Nicholson](https://github.com/NickleDave)**[^vocalpy]
 - **[Vedant Vakharia](https://github.com/vedantvakharia)**
 - **[Heberto Mayorquin](https://github.com/h-mayorquin)**[^nwb]
+- **[Edoardo Balzani](https://github.com/BalzaniEdoardo)**[^pynaviz]
 
 [^audian]: Author of [audian](https://github.com/bendalab/audian)
 [^phy]: Author of [phy](https://github.com/cortex-lab/phy)
 [^movement]: Core developer of [movement](https://github.com/neuroinformatics-unit/movement)
 [^vocalpy]: Author of [VocalPy](https://github.com/vocalpy/vocalpy) and [crowsetta](https://github.com/vocalpy/crowsetta)
 [^nwb]: Core developer of [NWB](https://nwb.org/) and [Neuroconv](https://neuroconv.readthedocs.io/en/stable/)
+[^pynaviz]: Core developer of [pynaviz](https://github.com/pynapple-org/pynaviz), which powers ethograph's video playback
