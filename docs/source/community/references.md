@@ -1,8 +1,9 @@
 (target-references)=
 # References
 
-Every paper, dataset and tool cited in these docs. A citation on any page
-links to its entry here.
+Every paper cited in these docs. A citation on any page links to its entry
+here. Common libraries (e.g. xarray, PyQtGraph) are linked directly, citation
+not included.
 
 ## Software Ethograph builds on
 
@@ -25,13 +26,6 @@ links to its entry here.
 :labelprefix: C
 ```
 
-## Keypoint labelling and tracking
-
-```{bibliography}
-:filter: keywords % "keypoints"
-:labelprefix: K
-```
-
 ## Point-event models
 
 ```{bibliography}
@@ -51,11 +45,4 @@ links to its entry here.
 ```{bibliography}
 :filter: keywords % "videofeatures"
 :labelprefix: V
-```
-
-## Curation and learning from corrections
-
-```{bibliography}
-:filter: keywords % "curation"
-:labelprefix: L
 ```

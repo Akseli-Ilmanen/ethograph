@@ -12,4 +12,4 @@ that span stay empty.
 Neither needs a GPU. Start with the spline and switch to optical flow if the
 filled points cut corners.[^fill]
 
-[^fill]: Spline: monotone cubic interpolation {cite:p}`fritsch1980pchip`. Optical flow: pyramidal Lucas–Kanade {cite:p}`lucas1981lk,bouguet2001pyramidal`, tracked forwards and backwards across each gap.
+[^fill]: Spline: monotone cubic interpolation ([`scipy.interpolate.PchipInterpolator`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.PchipInterpolator.html)). Optical flow: pyramidal Lucas–Kanade ([`cv2.calcOpticalFlowPyrLK`](https://docs.opencv.org/4.x/dc/d6b/group__video__track.html#ga473e4b886d0bcc6b65831eb88ed93323)), tracked forwards and backwards across each gap.

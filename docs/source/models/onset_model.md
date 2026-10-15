@@ -14,8 +14,8 @@ comfortable with code.
 
 **Model ▸ LightGBM: Train…** and **Model ▸ LightGBM: Predict…**
 
-Under the hood it is scikit-learn's {cite:p}`pedregosa2011sklearn`
-`HistGradientBoostingClassifier`, inspired by LightGBM {cite:p}`ke2017lightgbm`.
+Under the hood it is scikit-learn's
+[`HistGradientBoostingClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingClassifier.html), inspired by LightGBM {cite:p}`ke2017lightgbm`.
 
 ---
 
