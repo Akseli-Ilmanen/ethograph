@@ -10,6 +10,7 @@ What Ethograph already does, what is in progress, and what is still open. Groupe
 |---|---|
 | April 2026 | Movement community call demo ([slides](https://neuroinformatics.zulipchat.com/user_uploads/58792/jV4lyzfLheHU4Gj4qCQkKzwy/2026_04-Ethograph-demo.pptx)) |
 | 2026 | Segmentation pipeline, lightgbm models, pixel event spotting, curation workflows |
+| September 2026 | Ethograph demo at the Hahnloser lab |
 | Next | Shared feature schema with `movement`, NWB video alignment upstream |
 
 ---
@@ -39,5 +40,11 @@ What Ethograph already does, what is in progress, and what is still open. Groupe
 
 ## 4. Neural data
 
-- [ ] 🚧 Interactive PSTH (`ethograph.gui.widgets_psth`)
+- [x] Interactive PSTH (`ethograph.gui.widgets_psth`)
+- [ ] Burst detection module to find behavioural periods of interest from neural data ([pynapple#668](https://github.com/pynapple-org/pynapple/issues/668))
 - [ ] Single-trial neural dimensionality reduction; visualise label segments in latent space
+
+## 5. Make ethograph fast
+
+- [x] Much faster trial navigation: pynaviz's video teardown no longer blocks the GUI ([pynaviz#120](https://github.com/pynapple-org/pynaviz/issues/120))
+- [ ] Migrate video decoding to [asyncvideo](https://github.com/BalzaniEdoardo/asyncvideo) for full-rate playback at high resolution ([asyncvideo#26](https://github.com/BalzaniEdoardo/asyncvideo/issues/26), [pynaviz#128](https://github.com/pynapple-org/pynaviz/issues/128))

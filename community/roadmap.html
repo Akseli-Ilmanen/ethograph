@@ -463,7 +463,10 @@
 <tr class="row-odd"><td><p>2026</p></td>
 <td><p>Segmentation pipeline, lightgbm models, pixel event spotting, curation workflows</p></td>
 </tr>
-<tr class="row-even"><td><p>Next</p></td>
+<tr class="row-even"><td><p>September 2026</p></td>
+<td><p>Ethograph demo at the Hahnloser lab</p></td>
+</tr>
+<tr class="row-odd"><td><p>Next</p></td>
 <td><p>Shared feature schema with <code class="docutils literal notranslate"><span class="pre">movement</span></code>, NWB video alignment upstream</p></td>
 </tr>
 </tbody>
@@ -503,8 +506,16 @@
 <section id="neural-data">
 <h2>4. Neural data<a class="headerlink" href="#neural-data" title="Link to this heading">#</a></h2>
 <ul class="contains-task-list simple">
-<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">🚧 Interactive PSTH (<code class="docutils literal notranslate"><span class="pre">ethograph.gui.widgets_psth</span></code>)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Interactive PSTH (<code class="docutils literal notranslate"><span class="pre">ethograph.gui.widgets_psth</span></code>)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">Burst detection module to find behavioural periods of interest from neural data (<a class="reference external" href="https://github.com/pynapple-org/pynapple/issues/668">pynapple#668</a>)</p></li>
 <li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">Single-trial neural dimensionality reduction; visualise label segments in latent space</p></li>
+</ul>
+</section>
+<section id="make-ethograph-fast">
+<h2>5. Make ethograph fast<a class="headerlink" href="#make-ethograph-fast" title="Link to this heading">#</a></h2>
+<ul class="contains-task-list simple">
+<li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Much faster trial navigation: pynaviz’s video teardown no longer blocks the GUI (<a class="reference external" href="https://github.com/pynapple-org/pynaviz/issues/120">pynaviz#120</a>)</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">Migrate video decoding to <a class="reference external" href="https://github.com/BalzaniEdoardo/asyncvideo">asyncvideo</a> for full-rate playback at high resolution (<a class="reference external" href="https://github.com/BalzaniEdoardo/asyncvideo/issues/26">asyncvideo#26</a>, <a class="reference external" href="https://github.com/pynapple-org/pynaviz/issues/128">pynaviz#128</a>)</p></li>
 </ul>
 </section>
 </section>
@@ -561,6 +572,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#aligning-video-and-data-streams-via-nwb">2. Aligning video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoints">3. Changepoints</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#neural-data">4. Neural data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#make-ethograph-fast">5. Make ethograph fast</a></li>
 </ul>
   </nav></div>
 
