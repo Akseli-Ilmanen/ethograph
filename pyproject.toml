@@ -212,7 +212,7 @@ exclude = ["tests", "docs*"]
 
 [tool.setuptools.package-data]
 "ethograph.gui" = ["*.yaml", "assets/templates/*", "assets/wizard/*", "templates/*.j2", "templates/notebook/*"]
-ethograph = ["assets/*", "assets/space/*", "defaults/*", "defaults/**/*"]
+ethograph = ["assets/*", "assets/space/*", "defaults/*", "defaults/**/*", "projects/*", "projects/**/*"]
 "ethograph._vendor.vocalseg" = ["LICENSE", "NOTICE.md"]
 "ethograph._vendor.samurai" = ["LICENSE", "NOTICE.md"]
 # The architectures read their defaults from these at build time — see NOTICE.md.

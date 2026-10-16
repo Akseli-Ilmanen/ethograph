@@ -1,0 +1,34 @@
+0 background 0
+1 pullOutStick 0
+2 diagonalToBox 0
+3 toss 0
+4 swoop 0
+5 reachLeftCorner 0
+6 right 0
+7 pullOutAlongWall 0
+8 swoopOut 0
+9 stickToDisp 0
+10 stickInDisp 0
+11 lookToPellet 0
+12 snapPellet 0
+13 eat 0
+14 reachRightCorner 0
+15 nodding 0
+16 beakToDisp 0
+17 stickInDispTwo 0
+18 loseStick 0
+19 pickUpStick 0
+20 shake 0
+21 shiftRight 0
+22 shiftLeft 0
+23 pullOutLeft 0
+24 swoopOutLeft 0
+25 lookgToFallingPellet 0
+26 postNod 0
+27 reachRightCornerInTwo 0
+31 pelletStickFirstContact 1 point
+32 pelletStickLastContact 1 point
+33 pelletStickContact 1
+34 pelletReady 1
+35 pelletBeakContact 1
+50 stimulation 0

@@ -179,12 +179,13 @@ def ensure_default_configs() -> None:
     """
     import sys
 
-    from ethograph.utils.paths import ethograph_home, migrate_home_layout, seed_defaults
+    from ethograph.utils.paths import ethograph_home, migrate_home_layout, seed_bundled_projects, seed_defaults
 
     migrate_home_layout()
     global_dir = ethograph_home()
     global_dir.mkdir(parents=True, exist_ok=True)
     seed_defaults()
+    seed_bundled_projects()
 
     if sys.platform == "win32":
         internal = global_dir / "_internal"

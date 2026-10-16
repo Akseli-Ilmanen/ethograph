@@ -1,0 +1,43 @@
+name: Poppy_GBM
+description: ''
+steps:
+- kind: filter_trials
+  params:
+    filters:
+    - column: num_pellets
+      values:
+      - '1'
+      - '2'
+    clear_first: true
+- kind: predict
+  params:
+    model: pelletContact_Poppy
+    individual: Poppy
+    min_confidence: 0.005
+- kind: scope
+  params:
+    label_ids:
+    - 31
+    - 32
+    mode: frame
+- kind: label_grid
+  params:
+    cameras:
+    - cam-1
+    methods: automated
+    columns: 1
+    window_s: 0.3
+    panels:
+    - feature: pellet_stickClosest_dist
+      selections:
+        individual: Poppy
+        keypoint: beakTip
+        s3d_dims: '0'
+        space: x
+      title: pellet_stickClosest_dist
+    axis_auto: true
+    skip_video: true
+    threshold: 0.8
+    grid_mode: uncurate
+    mark_flagged: false
+    generate: true

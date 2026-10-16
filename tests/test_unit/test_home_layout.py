@@ -161,6 +161,41 @@ class TestSeed:
         assert cfg.root == defaults_dir("spot")
 
 
+class TestBundledProjects:
+    """A bundled project arrives whole, minus the maintainer's machine, and mirrors the repo's copy."""
+
+    def test_fresh_home_gets_the_crowlab_project(self, home: Path):
+        from ethograph.utils.paths import BUNDLED_PROJECT_EXCLUDES, bundled_project_dir, seed_bundled_projects
+
+        written = seed_bundled_projects()
+
+        crowlab = bundled_project_dir("crowlab")
+        assert crowlab == home / "crowlab"
+        assert (crowlab / "mapping.txt").is_file()
+        assert (crowlab / "workflows").is_dir()
+        assert not any((crowlab / name).exists() for name in BUNDLED_PROJECT_EXCLUDES)
+        assert written and all(crowlab in p.parents for p in written)
+        assert seed_bundled_projects() == []
+
+    def test_package_copy_mirrors_the_repo_project(self):
+        """``projects/crowlab`` is edited in the repo; the package ships a copy of it."""
+        from ethograph.utils.paths import BUNDLED_PROJECT_EXCLUDES, BUNDLED_PROJECTS_DIR, get_project_root
+
+        repo = get_project_root() / "projects" / "crowlab"
+        if not repo.is_dir():
+            pytest.skip("not a source checkout")
+        bundled = BUNDLED_PROJECTS_DIR / "crowlab"
+
+        def files(root: Path) -> dict[Path, bytes]:
+            return {
+                p.relative_to(root): p.read_bytes()
+                for p in root.rglob("*")
+                if p.is_file() and p.relative_to(root).parts[0] not in BUNDLED_PROJECT_EXCLUDES
+            }
+
+        assert files(bundled) == files(repo), "re-copy projects/crowlab into ethograph/projects/crowlab"
+
+
 class TestMappingResolution:
     """Most specific wins: the session's own copy, then the project's, then the bundled backup."""
 

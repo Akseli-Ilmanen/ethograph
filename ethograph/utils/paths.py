@@ -91,6 +91,9 @@ def ethograph_home() -> Path:
 #   defaults/           a project directory's layout, used while no project
 #                       is open: mapping.txt, skeleton/, space/, runs/lightgbm/,
 #                       workflows/, wizard/
+#   {name}/             a bundled project (ethograph/projects/{name}/), seeded
+#                       like defaults/ so a lab's vocabulary, workflows,
+#                       calibrations and geometries arrive with the install
 #
 # Everything about a *study* is meant to live in a project directory; these
 # are the fallbacks for a session opened without one, in the same shape.
@@ -146,31 +149,77 @@ def logs_dir() -> Path:
 BUNDLED_DEFAULTS_DIR = Path(__file__).resolve().parents[1] / "defaults"
 
 
+#: Whole project folders shipped beside the defaults (``ethograph/projects/{name}/``),
+#: each seeded into ``~/.ethograph/{name}/`` by :func:`seed_bundled_projects`.
+BUNDLED_PROJECTS_DIR = Path(__file__).resolve().parents[1] / "projects"
+
+#: What a bundled project leaves behind: trained runs, session records and the
+#: wizard's folder history are the maintainer's machine, not the project.
+BUNDLED_PROJECT_EXCLUDES = frozenset({"runs", "sessions", "sessions.txt", "wizard"})
+
+
+def bundled_project_dir(name: str) -> Path:
+    """``~/.ethograph/{name}`` — where the bundled project *name* is seeded."""
+    return ethograph_home() / name
+
+
+def _seed_tree(source: Path, dest: Path, skip: frozenset[str]) -> list[Path]:
+    """Copy every file under *source* into *dest* that is not there yet.
+
+    File by file, so a file added in a later release reaches an existing
+    install; a file the user edited is never overwritten. A top-level entry
+    named in *skip* is left out entirely.
+    """
+    import shutil
+
+    written: list[Path] = []
+    for src in sorted(source.rglob("*")):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source)
+        if rel.parts[0] in skip:
+            continue
+        target = dest / rel
+        if target.exists():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, target)
+        written.append(target)
+    return written
+
+
 def seed_defaults(dest: Path | None = None) -> list[Path]:
     """Copy every bundled default into *dest* (``defaults_dir()``) that is not there yet.
 
-    File by file, so an example added in a later release reaches an existing
-    install; a file the user edited is never overwritten. ``README.md`` is
-    documentation for the repo, not a default, and is skipped.
+    ``README.md`` is documentation for the repo, not a default, and is skipped.
 
     Returns
     -------
     list of Path
         The files written.
     """
-    import shutil
-
     dest = defaults_dir() if dest is None else dest
+    return _seed_tree(BUNDLED_DEFAULTS_DIR, dest, frozenset({"README.md"}))
+
+
+def seed_bundled_projects(home: Path | None = None) -> list[Path]:
+    """Seed every folder of :data:`BUNDLED_PROJECTS_DIR` into ``{home}/{name}/``.
+
+    Same contract as :func:`seed_defaults`: new files arrive, edited files
+    stay. :data:`BUNDLED_PROJECT_EXCLUDES` never leave the package.
+
+    Returns
+    -------
+    list of Path
+        The files written.
+    """
+    home = ethograph_home() if home is None else home
     written: list[Path] = []
-    for src in sorted(BUNDLED_DEFAULTS_DIR.rglob("*")):
-        if not src.is_file() or src.name == "README.md":
-            continue
-        target = dest / src.relative_to(BUNDLED_DEFAULTS_DIR)
-        if target.exists():
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, target)
-        written.append(target)
+    if not BUNDLED_PROJECTS_DIR.is_dir():
+        return written
+    for project in sorted(BUNDLED_PROJECTS_DIR.iterdir()):
+        if project.is_dir() and not project.name.startswith("_"):
+            written.extend(_seed_tree(project, home / project.name, BUNDLED_PROJECT_EXCLUDES))
     return written
 
 

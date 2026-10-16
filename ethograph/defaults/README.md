@@ -49,3 +49,10 @@ references:
 
 Add a file to this folder via PR to ship it as a default. The example configs
 must keep loading: `tests/test_unit/test_home_layout.py` builds each one.
+
+## Bundled projects (`ethograph/projects/`)
+
+Each folder here is a whole project, seeded into `~/.ethograph/{name}/` the
+same way (`seed_bundled_projects`). The repo's `projects/crowlab/` is the
+working copy; `ethograph/projects/crowlab/` is what ships, and a test keeps
+the two equal. `runs/`, `sessions/`, `sessions.txt` and `wizard/` never ship.

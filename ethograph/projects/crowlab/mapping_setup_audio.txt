@@ -1,0 +1,8 @@
+0 background
+1 Pellet_Feeder_Motor
+2 Pellet_Rutsche
+3 Klappe_auf
+4 Schieber
+5 Klappe_zu
+6 Stick_out
+7 Stick_Motor_Pull

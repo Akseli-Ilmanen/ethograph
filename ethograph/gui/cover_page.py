@@ -88,7 +88,7 @@ from ethograph.io.validation import (
     VIDEO_EXTENSIONS,
     movement_dataset_info,
 )
-from ethograph.utils.paths import SETTINGS_DIR, defaults_dir, seed_defaults
+from ethograph.utils.paths import SETTINGS_DIR, defaults_dir, seed_bundled_projects, seed_defaults
 
 # POSE_SOFTWARES is shared with the pose-overlay prompt in pose_render.
 from .app_constants import POSE_SOFTWARES
@@ -595,6 +595,7 @@ class CoverPage(QDialog):
         if chosen_project_dir(self.app_state) is not None:
             return
         seed_defaults()
+        seed_bundled_projects()
         starter = defaults_dir()
         starter.mkdir(parents=True, exist_ok=True)
         self.app_state.project_path = str(starter)

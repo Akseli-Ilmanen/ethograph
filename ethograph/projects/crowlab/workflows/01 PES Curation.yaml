@@ -1,0 +1,48 @@
+name: 01 PES Curation
+description: ''
+steps:
+- kind: filter_trials
+  params:
+    filters:
+    - column: num_pellets
+      values:
+      - '1'
+      - '2'
+    - column: poscat
+      values:
+      - '1'
+      - '3'
+    clear_first: true
+- kind: delete_labels
+  params:
+    which: hidden
+    label_ids:
+    - 31
+    - 32
+- kind: scope
+  params:
+    label_ids:
+    - 31
+    - 32
+    mode: frame
+- kind: label_grid
+  params:
+    cameras:
+    - cam-1
+    methods: automated
+    columns: 3
+    window_s: 0.5
+    panels:
+    - feature: pellet_stickClosest_dist
+      selections:
+        individual: Freddy
+        keypoint: beakTip
+        s3d_dims: '0'
+        space: x
+      title: pellet_stickClosest_dist
+    axis_auto: true
+    skip_video: true
+    threshold: 0.6
+    grid_mode: uncurate
+    mark_flagged: false
+    generate: true

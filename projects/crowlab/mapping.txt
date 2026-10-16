@@ -29,6 +29,6 @@
 31 pelletStickFirstContact 1 point
 32 pelletStickLastContact 1 point
 33 pelletStickContact 1
-35 pelletReady 1
-36 pelletBeakContact 1
+34 pelletReady 1
+35 pelletBeakContact 1
 50 stimulation 0
