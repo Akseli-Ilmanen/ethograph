@@ -609,14 +609,15 @@ class CurationPanel(QGroupBox):
         self.grid_btn = QPushButton("Label grid view…")
         self.grid_btn.setAutoDefault(False)
         self.grid_btn.setToolTip("A grid of video frames at the label times in scope — click a tile to go there")
-        self.grid_btn.clicked.connect(self.open_grid_view)
+        # clicked(checked) must not reach label_ids: False there reads as an empty scope.
+        self.grid_btn.clicked.connect(lambda _checked=False: self.open_grid_view())
         tools_row.addWidget(self.grid_btn)
         self.video_grid_btn = QPushButton("Video grid…")
         self.video_grid_btn.setAutoDefault(False)
         self.video_grid_btn.setToolTip(
             "Play the labels in scope side by side, one label class per group\n(decodes video — slower to build)"
         )
-        self.video_grid_btn.clicked.connect(self.open_video_grid)
+        self.video_grid_btn.clicked.connect(lambda _checked=False: self.open_video_grid())
         tools_row.addWidget(self.video_grid_btn)
         self.curves_pdf_btn = QPushButton("Confidence curves…")
         self.curves_pdf_btn.setAutoDefault(False)
@@ -1572,10 +1573,22 @@ class CurationPanel(QGroupBox):
             return False
         targets = self.build_queue()
         if not targets:
-            notify("No labels in scope to review.", severity="warning")
+            notify(self._empty_queue_message(), severity="warning")
             return False
         self._begin(targets, idx)
         return True
+
+    def _empty_queue_message(self) -> str:
+        """Why the queue is empty — names the method filter when it alone hides the labels."""
+        if self.automated_only_cb.isChecked():
+            self.automated_only_cb.blockSignals(True)
+            self.automated_only_cb.setChecked(False)
+            unfiltered = self.build_queue()
+            self.automated_only_cb.setChecked(True)
+            self.automated_only_cb.blockSignals(False)
+            if unfiltered:
+                return "Every label in scope is manual or curated — untick 'Show automated only' to review them."
+        return "No labels in scope to review."
 
     def start_review_at(self, inst: dict, field: str = "point") -> bool:
         """Drop into the review at *inst* (a grid tile): the scope's queue if
