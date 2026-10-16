@@ -134,3 +134,18 @@ def test_segment_end_frame_renders_while_cold(qapp):
         assert (11, True) in sync.view.seeks
     finally:
         sync.stop()
+
+
+def test_single_step_decodes_synchronously_while_cold(qapp):
+    """An arrow step must show its frame even before the worker has served
+    one — on macOS a forked worker could die at start-up and never serve."""
+    sync = _make_sync(qapp, ready=False)
+    sync.seek_to_frame(5)
+    assert sync.view.seeks == [(5, False), (5, True)]
+    assert sync.app_state.current_frame == 5
+
+
+def test_single_step_is_async_once_warm(qapp):
+    sync = _make_sync(qapp, ready=True)
+    sync.seek_to_frame(5)
+    assert sync.view.seeks == [(5, False)]

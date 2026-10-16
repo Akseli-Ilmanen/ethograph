@@ -148,7 +148,18 @@ class VideoSync(QObject):
         # leftover marker override from a prior continuous-end segment finish.
         self.marker_time_override = None
         frame = max(0, min(int(frame), self.total_frames - 1)) if self.total_frames else 0
+        # Same cold-worker tolerance as playback: an async seek against a
+        # worker that has not yet served a frame is dropped, so decode this
+        # one in-process too — an arrow step must always show its frame.
         self.view.seek_trial_frame(frame)
+        if not self.view.decoder_ready():
+            self.view.seek_trial_frame(frame, synchronous=True)
+        # The async path presents only through pynaviz's self-re-arming
+        # animate chain; the playback watchdog is the only other thing that
+        # restarts a dead one, and it does not run while stopped.
+        nudge = getattr(self.view, "nudge_render_if_stalled", None)
+        if nudge is not None and nudge():
+            logger.warning("Video render loop was stalled; re-armed the draw chain on seek.")
         self._apply_frame(frame)
 
     def _apply_frame(self, frame: int):

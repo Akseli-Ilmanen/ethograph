@@ -17,8 +17,10 @@ Seeking model:
 from __future__ import annotations
 
 import logging
+import multiprocessing
 import os
 import queue
+import sys
 import time
 from types import MethodType
 from typing import Optional
@@ -37,6 +39,25 @@ from .app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
 from .pose_overlay import PoseOverlay
 
 logger = logging.getLogger(__name__)
+
+
+def _spawn_decode_workers_on_macos() -> None:
+    """Start pynaviz's decode worker with ``spawn`` on macOS, as on Windows.
+
+    pynaviz forces the ``fork`` start method on every non-Windows platform at
+    import. Forking a process that already runs Cocoa, Metal/wgpu and libav
+    threads is unsupported on macOS: pynaviz's own tests record the worker
+    dying with SIGSEGV at start-up because the libav demux thread's mutexes are
+    copied locked. A dead worker serves no async seek, so a single-frame step
+    moves the playhead but never the picture. ``spawn`` is the path Windows
+    already takes; its slow start-up is covered by the cold-decoder bridge in
+    :class:`~ethograph.gui.video_sync.VideoSync`.
+    """
+    if sys.platform == "darwin":
+        multiprocessing.set_start_method("spawn", force=True)
+
+
+_spawn_decode_workers_on_macos()
 
 
 # Heartbeat age past which the render chain is considered dead (see
