@@ -37,10 +37,13 @@ def _trial_timing(nwb_alignment, trial_id) -> tuple[float | None, float | None]:
     """The trial's start and stop on the session clock, or ``(None, None)``.
 
     A session with no alignment has no session clock, so the global columns are
-    simply absent. A trial the alignment does not know is worth a warning: the
-    labels and the alignment disagree about which trials exist.
+    simply absent; so are they when the alignment's times are placeholders or
+    were stacked from media durations (a drag-and-drop session), which would
+    read as a clock without being one. A trial the alignment does not know is
+    worth a warning: the labels and the alignment disagree about which trials
+    exist.
     """
-    if nwb_alignment is None:
+    if nwb_alignment is None or not nwb_alignment.session_clock:
         return None, None
     try:
         return nwb_alignment.start_time(trial_id), nwb_alignment.stop_time(trial_id)
@@ -109,8 +112,9 @@ def enrich_labels_df(
     all_labels_df : pd.DataFrame
         Raw labels with required columns: onset_s, offset_s, labels, individual, trial.
     nwb_alignment
-        Session alignment, for trial timing. Without one the global columns are
-        left out.
+        Session alignment, for trial timing. Without one, or with one whose
+        times are no session clock (``alignment.session_clock``), the global
+        columns are left out.
     dt : TrialTree, optional
         Handed to *exporter*; unused otherwise.
     metadata_df : pd.DataFrame, optional

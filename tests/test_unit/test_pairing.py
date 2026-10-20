@@ -260,6 +260,38 @@ class TestPairMedia:
             pair_media(trial_table, output_path=path)
 
 
+class TestTimingProvenance:
+    """Stacked-from-media times order the trials but are no session clock; the
+    alignment says so, and given times are never mistaken for stacked ones."""
+
+    def _pair(self, tmp_path, monkeypatch, *, with_times: bool):
+        from ethograph.utils import stream_durations
+
+        cam = tmp_path / "cam"
+        cam.mkdir()
+        for i in (1, 2):
+            (cam / f"t{i}.mp4").touch()
+        monkeypatch.setattr(stream_durations, "get_video_duration", lambda path: 4.0)
+        table = pd.DataFrame({"trial": [1, 2], "video_cam-1": [str(cam / "t1.mp4"), str(cam / "t2.mp4")]})
+        if with_times:
+            table["start_time"] = [0.0, 4.0]
+            table["stop_time"] = [4.0, 8.0]
+        out = tmp_path / "alignment.nwb"
+        pair_media(table, stream_rates={"video": 30.0}, output_path=out)
+        return NWBAlignment(out)
+
+    def test_inferred_times_are_marked(self, tmp_path, monkeypatch):
+        align = self._pair(tmp_path, monkeypatch, with_times=False)
+        assert align.timing_inferred
+        assert align.has_real_timing  # the numbers alone cannot tell
+        assert not align.session_clock
+
+    def test_given_times_are_a_session_clock(self, tmp_path, monkeypatch):
+        align = self._pair(tmp_path, monkeypatch, with_times=True)
+        assert not align.timing_inferred
+        assert align.session_clock
+
+
 class TestPerDeviceRate:
     def test_device_key_overrides_stream_rate(self, tmp_path: Path):
         table = pd.DataFrame(

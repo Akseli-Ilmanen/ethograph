@@ -962,6 +962,112 @@ def test_cover_page_many_npy_drop_is_one_trial_each(gui, tmp_path, monkeypatch):
     assert align.stop_time(2) == pytest.approx(15.0)
 
 
+def _write_mp4(path: Path, with_audio: bool, n_frames: int = 10, fps: int = 10, rate: int = 24000) -> Path:
+    """A tiny mpeg4 clip, with an AAC tone track when *with_audio*."""
+    from fractions import Fraction
+
+    av = pytest.importorskip("av")
+    with av.open(str(path), "w") as container:
+        video = container.add_stream("mpeg4", rate=fps)
+        video.width = video.height = 32
+        video.pix_fmt = "yuv420p"
+        audio = None
+        if with_audio:
+            audio = container.add_stream("aac", rate=rate)
+            audio.layout = "stereo"
+        for i in range(n_frames):
+            frame = av.VideoFrame.from_ndarray(np.zeros((32, 32, 3), dtype=np.uint8), format="rgb24")
+            frame.pts = i
+            for packet in video.encode(frame):
+                container.mux(packet)
+        for packet in video.encode(None):
+            container.mux(packet)
+        if audio is not None:
+            t = np.arange(int(rate * n_frames / fps)) / rate
+            tone = (0.3 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
+            stereo = np.ascontiguousarray(np.stack([tone, tone]))
+            for pos in range(0, stereo.shape[1], 1024):
+                aframe = av.AudioFrame.from_ndarray(
+                    np.ascontiguousarray(stereo[:, pos : pos + 1024]), format="fltp", layout="stereo"
+                )
+                aframe.sample_rate = rate
+                aframe.pts = pos
+                aframe.time_base = Fraction(1, rate)
+                for packet in audio.encode(aframe):
+                    container.mux(packet)
+            for packet in audio.encode(None):
+                container.mux(packet)
+    return path
+
+
+def test_cover_page_multi_trial_drop_extracts_every_video_audio_track(gui, monkeypatch, tmp_path):
+    """Several trials of one camera: saying yes to the audio prompt gives every
+    trial whose video carries a track its audio; a silent video's trial gets
+    none, and the drop is not refused for the mismatch."""
+    from ethograph.gui.cover_page import CoverPage, classify_files
+    from ethograph.io.audio_extract import ensure_extracted_audio, has_embedded_audio
+
+    pytest.importorskip("soundfile")
+    rig = tmp_path / "rig"
+    rig.mkdir()
+    videos = [
+        _write_mp4(rig / "trial_1.mp4", with_audio=True),
+        _write_mp4(rig / "trial_2.mp4", with_audio=False),
+        _write_mp4(rig / "trial_3.mp4", with_audio=True),
+    ]
+    with_track = [str(v) for v in videos if has_embedded_audio(v)]
+    assert [Path(v).name for v in with_track] == ["trial_1.mp4", "trial_3.mp4"]
+
+    shell, meta = gui
+    page = CoverPage(shell, meta.io_widget)
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: session_dir)
+    cache = tmp_path / "audio_cache"
+    monkeypatch.setattr(
+        page, "_extract_video_audio", lambda paths: [str(ensure_extracted_audio(v, cache)) for v in paths]
+    )
+    page._drop_layout_combo.setCurrentIndex(page._drop_layout_combo.findData("multi_trial"))
+    buckets = classify_files([str(v) for v in videos])
+
+    class _Dialog(cover_page_mod._DropDetailsDialog):
+        def exec_(self):
+            assert self._extract_audio_cb is not None and self._extract_audio_cb.isChecked()
+            return True
+
+    with patch.object(cover_page_mod, "_DropDetailsDialog", _Dialog):
+        details = page._collect_drop_details(buckets)
+    assert details is not None
+    assert details["extract_audio"] and details["audio_track_videos"] == with_track
+
+    page._populate_io_from_buckets(buckets, details)
+
+    align = meta.app_state.nwb_alignment
+    for trial, video in enumerate(videos, start=1):
+        resolved = align.resolve_media_path(trial, "audio", device="mic-1")
+        if str(video) in with_track:
+            assert resolved and Path(resolved).suffix == ".wav" and Path(resolved).parent == cache
+        else:
+            assert not resolved
+    assert meta.app_state.audio_folder == str(cache)
+
+
+@pytest.mark.parametrize(
+    ("n_with_track", "n_videos", "expect"),
+    [
+        (1, 1, "contains an audio track"),
+        (3, 3, "All 3 dropped videos"),
+        (2, 3, "2 of 3 dropped videos"),
+    ],
+)
+def test_audio_track_note_counts_silent_videos(n_with_track, n_videos, expect):
+    from ethograph.gui.cover_page import _audio_track_note
+
+    note = _audio_track_note([f"v{i}.mp4" for i in range(n_with_track)], n_videos)
+    assert expect in note
+    assert ("silent" in note) == (n_with_track < n_videos)
+
+
 def test_cover_page_npy_rate_defaults_to_video_fps(gui):
     from ethograph.datasets import dataset_dir, is_dataset_downloaded
     from ethograph.gui import cover_page

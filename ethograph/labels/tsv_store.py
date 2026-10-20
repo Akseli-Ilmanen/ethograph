@@ -201,6 +201,10 @@ def save_labels_tsv(path: str | Path, df: pd.DataFrame) -> None:
     else:
         out = out.sort_values(["trial", "onset_s"]).reset_index(drop=True)
 
+    # A prediction column that is its default on every row says nothing about
+    # this session (no model ran, nothing was changepoint-corrected); it is
+    # left out, and the loader restores the default.
+    out = out.drop(columns=_all_default_trial_meta(out))
     out = out[write_order(out.columns)]
 
     # Drop negative-duration state intervals; keep point events (NaN offset).
@@ -210,6 +214,15 @@ def save_labels_tsv(path: str | Path, df: pd.DataFrame) -> None:
     tmp = path.with_suffix(".tsv.tmp")
     out.to_csv(tmp, sep="\t", index=False, encoding="utf-8-sig")
     tmp.replace(path)
+
+
+def _all_default_trial_meta(df: pd.DataFrame) -> list[str]:
+    """The trial-meta columns of *df* holding their default on every row."""
+    return [
+        col
+        for col, default in TRIAL_META_DEFAULTS.items()
+        if col in df.columns and bool((df[col].fillna(default) == default).all())
+    ]
 
 
 def labels_equal(left: pd.DataFrame | None, right: pd.DataFrame | None) -> bool:

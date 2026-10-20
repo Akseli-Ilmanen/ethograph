@@ -25,6 +25,7 @@ import natsort
 import pandas as pd
 
 from ethograph.io.nwb_alignment import (
+    INFERRED_TIMING_DESCRIPTION,
     _add_external_series,
     _coerce_trial_id,
     _infer_times_from_media,
@@ -309,6 +310,10 @@ def _pair_into_new(
         )
     )
 
+    if not has_times:
+        from pynwb.epoch import TimeIntervals
+
+        nwbfile.trials = TimeIntervals(name="trials", description=INFERRED_TIMING_DESCRIPTION)
     if "trial" in table.columns:
         nwbfile.add_trial_column(name="trial", description="Trial number")
     for col in media_cols:

@@ -164,6 +164,12 @@ def make_nwb_alignment(nwb_path: str | Path | None = None):
 # ---------------------------------------------------------------------------
 
 
+#: The trials table's description when ``pair_media`` stacked its start/stop
+#: times from the media durations rather than being given them: a trial order,
+#: not a session clock.
+INFERRED_TIMING_DESCRIPTION = "experimental trials; timing inferred from media durations, not a session clock"
+
+
 class EmpytAlignment:
     """Base session metadata interface with null-object defaults.
 
@@ -174,6 +180,18 @@ class EmpytAlignment:
     @property
     def trials_df(self) -> pd.DataFrame:
         return pd.DataFrame()
+
+    @property
+    def has_real_timing(self) -> bool:
+        return False
+
+    @property
+    def timing_inferred(self) -> bool:
+        return False
+
+    @property
+    def session_clock(self) -> bool:
+        return False
 
     @property
     def individuals(self) -> list[str]:
@@ -573,6 +591,22 @@ class NWBAlignment:
 
     # ── Timing ──
 
+    @property
+    def timing_inferred(self) -> bool:
+        """Whether the trial times were stacked from media durations by ``pair_media``.
+
+        Such times order the trials but are no session clock; a reader that
+        would present them as one (the labels export's global columns) checks
+        this before :attr:`has_real_timing`, which only looks at the numbers.
+        """
+        trials = self.nwb.trials
+        return trials is not None and trials.description == INFERRED_TIMING_DESCRIPTION
+
+    @property
+    def session_clock(self) -> bool:
+        """Whether the trial times are a real session clock: given, and not placeholders."""
+        return self.has_real_timing and not self.timing_inferred
+
     @cached_property
     def has_real_timing(self) -> bool:
         """Whether the trials table has meaningful start/stop times.
@@ -790,6 +824,23 @@ class NWBAlignment:
 
     # ── Media path resolution ──
 
+    def _trial_has_no_media(self, trial, stream: str, device: str | None) -> bool:
+        """True when the trials table pairs this stream/device per trial and leaves *trial*'s cell empty.
+
+        An empty cell is the pairing's own statement that the trial has no file
+        (a silent video in a row of extracted audio tracks, say), so the
+        acquisition's file list — which only holds the trials that do — must
+        not be read positionally for it.
+        """
+        row = self._trial_row(trial)
+        if row is None:
+            return False
+        col = f"{stream}_{device}" if device else stream
+        if col not in row.index:
+            return False
+        val = row[col]
+        return pd.isna(val) or not str(val)
+
     def resolve_media_path(
         self,
         trial,
@@ -810,6 +861,9 @@ class NWBAlignment:
 
         trial_idx = self._trial_index(trial)
         nwb_base_dir = self._path.parent
+
+        if self._trial_has_no_media(trial, stream, device):
+            return None
 
         if acq is not None and hasattr(acq, "external_file") and acq.external_file:
             files = list(acq.external_file)

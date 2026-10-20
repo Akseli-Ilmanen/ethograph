@@ -41,6 +41,35 @@ class _Tree:
         return self._Trial()
 
 
+class _Alignment:
+    """An alignment with one trial clock, real or not."""
+
+    def __init__(self, session_clock: bool):
+        self.session_clock = session_clock
+
+    def start_time(self, trial):
+        return 10.0 * (trial - 1)
+
+    def stop_time(self, trial):
+        return 10.0 * trial
+
+
+class TestSessionClock:
+    """The global timing columns exist only on a real session clock: an
+    alignment whose times were stacked from media durations (a drag-and-drop
+    session) or are placeholders gives none, not numbers that look like one."""
+
+    def test_a_session_clock_gives_global_times(self):
+        out = enrich_labels_df(_labels(), nwb_alignment=_Alignment(session_clock=True))
+        assert out["onset_global"].tolist() == pytest.approx([0.5, 1.5, 10.2])
+        assert {"trial_onset", "trial_offset", "offset_global"} <= set(out.columns)
+
+    def test_no_session_clock_gives_none(self):
+        out = enrich_labels_df(_labels(), nwb_alignment=_Alignment(session_clock=False))
+        assert not {"trial_onset", "trial_offset", "onset_global", "offset_global"} & set(out.columns)
+        assert "duration" in out.columns
+
+
 class TestRegistry:
     def test_standard_is_registered_and_first(self):
         names = [name for name, _ in exporters.choices()]

@@ -361,6 +361,21 @@ class _CamMatchDialog(QDialog):
         return [self._poses[self._pose_list.item(i).text()] for i in range(self._pose_list.count())]
 
 
+def _audio_track_note(audio_track_videos: list[str], n_videos: int) -> str:
+    """The rich-text line telling which of *n_videos* dropped videos carry an audio track."""
+    names = [f"<b>{Path(v).name}</b>" for v in audio_track_videos]
+    if len(names) == 1 and n_videos <= 1:
+        return f"{names[0]} contains an audio track."
+    listed = ", ".join(names) if len(names) <= 4 else ", ".join(names[:3]) + f", … (+{len(names) - 3} more)"
+    if len(names) == n_videos:
+        return f"All {n_videos} dropped videos contain an audio track: {listed}"
+    silent = n_videos - len(names)
+    return (
+        f"{len(names)} of {n_videos} dropped videos contain an audio track: {listed}<br>"
+        f"The other {silent} {'is' if silent == 1 else 'are'} silent and get no audio for that trial."
+    )
+
+
 class _DropDetailsDialog(QDialog):
     """Follow-up prompt for the few dropped inputs that cannot be inferred.
 
@@ -381,6 +396,7 @@ class _DropDetailsDialog(QDialog):
         need_pose_fps: bool = False,
         audio_track_videos: list[str] | None = None,
         extract_audio_default: bool = True,
+        n_videos: int = 0,
         npy_sr_default: float = 30.0,
         pose_software_default: str | None = None,
         parent=None,
@@ -396,12 +412,15 @@ class _DropDetailsDialog(QDialog):
         self._extract_audio_cb = None
 
         if audio_track_videos:
-            names = ", ".join(f"<b>{Path(v).name}</b>" for v in audio_track_videos)
-            note = QLabel(f"{names} contains an audio track.")
+            note = QLabel(_audio_track_note(audio_track_videos, n_videos))
             note.setTextFormat(Qt.RichText)
             note.setWordWrap(True)
             layout.addWidget(note)
-            self._extract_audio_cb = QCheckBox("Extract the audio for audio trace / spectrogram plots")
+            self._extract_audio_cb = QCheckBox(
+                "Extract the audio of every video with a track for audio trace / spectrogram plots"
+                if len(audio_track_videos) > 1
+                else "Extract the audio for audio trace / spectrogram plots"
+            )
             self._extract_audio_cb.setChecked(extract_audio_default)
             layout.addWidget(self._extract_audio_cb)
 
@@ -1302,6 +1321,7 @@ class CoverPage(QDialog):
             need_pose_fps,
             audio_track_videos=audio_track_videos,
             extract_audio_default=not buckets["audio"],
+            n_videos=len(buckets["video"]),
             npy_sr_default=npy_sr_default,
             pose_software_default=self.app_state.get_with_default("pose_software_default"),
             parent=self,
@@ -1519,6 +1539,25 @@ class CoverPage(QDialog):
             state.audio.file_mode = "aligned_to_trial"
             state.audio.audio_sr = rate
             columns["audio_mic-1"] = audios
+        if videos and details.get("extract_audio") and details.get("audio_track_videos"):
+            # The user opted to pull the videos' embedded audio: each video with
+            # a track gives its trial a .wav; a silent video leaves the cell
+            # empty. Dropped audio files keep mic-1, the extracts become mic-2.
+            with_track = set(details["audio_track_videos"])
+            extracted = dict(
+                zip(
+                    [v for v in videos if v in with_track],
+                    self._extract_video_audio([v for v in videos if v in with_track]),
+                    strict=True,
+                )
+            )
+            wavs = [extracted.get(v, "") for v in videos]
+            state.audio.enabled = True
+            state.audio.files = [*state.audio.files, *extracted.values()]
+            state.audio.file_mode = "aligned_to_trial"
+            if not state.audio.audio_sr:
+                state.audio.audio_sr, _duration = _audio_info(next(iter(extracted.values())))
+            columns[f"audio_mic-{2 if audios else 1}"] = wavs
 
         npy_datasets: list[xr.Dataset] = []
         if npys:
@@ -1564,6 +1603,8 @@ class CoverPage(QDialog):
             app_state.source_software = state.pose.source_software
         if audios:
             app_state.audio_folder = str(Path(audios[0]).parent)
+        elif state.audio.files:
+            app_state.audio_folder = str(Path(state.audio.files[0]).parent)
 
     def _populate_io_from_npy(self, buckets: dict[str, list[str]], details: dict):
         """Convert a dropped .npy into a .nc (the one case that must persist data).
