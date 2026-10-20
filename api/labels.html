@@ -1230,8 +1230,9 @@ session clock (<code class="docutils literal notranslate"><span class="pre">tria
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>all_labels_df</strong> (<em>pd.DataFrame</em>) – Raw labels with required columns: onset_s, offset_s, labels, individual, trial.</p></li>
-<li><p><strong>nwb_alignment</strong> – Session alignment, for trial timing. Without one the global columns are
-left out.</p></li>
+<li><p><strong>nwb_alignment</strong> – Session alignment, for trial timing. Without one, or with one whose
+times are no session clock (<code class="docutils literal notranslate"><span class="pre">alignment.session_clock</span></code>), the global
+columns are left out.</p></li>
 <li><p><strong>dt</strong> (<a class="reference internal" href="trialtree.html#ethograph.io.trialtree.TrialTree" title="ethograph.io.trialtree.TrialTree"><em>TrialTree</em></a><em>, </em><em>optional</em>) – Handed to <em>exporter</em>; unused otherwise.</p></li>
 <li><p><strong>metadata_df</strong> (<em>pd.DataFrame</em><em>, </em><em>optional</em>) – Trial metadata table, joined per trial.</p></li>
 <li><p><strong>exporter</strong> (<em>callable</em><em>, </em><em>optional</em>) – The lab’s own columns (<code class="docutils literal notranslate"><span class="pre">labels/exporters/</span></code>). Without one, only the

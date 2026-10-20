@@ -950,6 +950,12 @@ window.runMermaid = runMermaid;</script>
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
 
+<span class="c1">#: The trials table's description when ``pair_media`` stacked its start/stop</span>
+<span class="c1">#: times from the media durations rather than being given them: a trial order,</span>
+<span class="c1">#: not a session clock.</span>
+<span class="n">INFERRED_TIMING_DESCRIPTION</span> <span class="o">=</span> <span class="s2">"experimental trials; timing inferred from media durations, not a session clock"</span>
+
+
 <div class="viewcode-block" id="EmpytAlignment">
 <a class="viewcode-back" href="../../../api/nwb_alignment.html#ethograph.EmpytAlignment">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">EmpytAlignment</span><span class="p">:</span>
@@ -962,6 +968,18 @@ window.runMermaid = runMermaid;</script>
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">trials_df</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_real_timing</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">timing_inferred</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">session_clock</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">individuals</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -1388,6 +1406,22 @@ window.runMermaid = runMermaid;</script>
 
     <span class="c1"># ── Timing ──</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">timing_inferred</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether the trial times were stacked from media durations by ``pair_media``.</span>
+
+<span class="sd">        Such times order the trials but are no session clock; a reader that</span>
+<span class="sd">        would present them as one (the labels export's global columns) checks</span>
+<span class="sd">        this before :attr:`has_real_timing`, which only looks at the numbers.</span>
+<span class="sd">        """</span>
+        <span class="n">trials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nwb</span><span class="o">.</span><span class="n">trials</span>
+        <span class="k">return</span> <span class="n">trials</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">trials</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="n">INFERRED_TIMING_DESCRIPTION</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">session_clock</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether the trial times are a real session clock: given, and not placeholders."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_real_timing</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">timing_inferred</span>
+
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">has_real_timing</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Whether the trials table has meaningful start/stop times.</span>
@@ -1617,6 +1651,23 @@ window.runMermaid = runMermaid;</script>
 
     <span class="c1"># ── Media path resolution ──</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_trial_has_no_media</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">stream</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""True when the trials table pairs this stream/device per trial and leaves *trial*'s cell empty.</span>
+
+<span class="sd">        An empty cell is the pairing's own statement that the trial has no file</span>
+<span class="sd">        (a silent video in a row of extracted audio tracks, say), so the</span>
+<span class="sd">        acquisition's file list — which only holds the trials that do — must</span>
+<span class="sd">        not be read positionally for it.</span>
+<span class="sd">        """</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_row</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stream</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">device</span> <span class="k">else</span> <span class="n">stream</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+
 <div class="viewcode-block" id="NWBAlignment.resolve_media_path">
 <a class="viewcode-back" href="../../../api/nwb_alignment.html#ethograph.NWBAlignment.resolve_media_path">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve_media_path</span><span class="p">(</span>
@@ -1639,6 +1690,9 @@ window.runMermaid = runMermaid;</script>
 
         <span class="n">trial_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_index</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
         <span class="n">nwb_base_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">parent</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_has_no_media</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
 
         <span class="k">if</span> <span class="n">acq</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="s2">"external_file"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">acq</span><span class="o">.</span><span class="n">external_file</span><span class="p">:</span>
             <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">acq</span><span class="o">.</span><span class="n">external_file</span><span class="p">)</span>

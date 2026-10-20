@@ -805,6 +805,7 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.io.nwb_alignment</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">INFERRED_TIMING_DESCRIPTION</span><span class="p">,</span>
     <span class="n">_add_external_series</span><span class="p">,</span>
     <span class="n">_coerce_trial_id</span><span class="p">,</span>
     <span class="n">_infer_times_from_media</span><span class="p">,</span>
@@ -1095,6 +1096,10 @@ window.runMermaid = runMermaid;</script>
         <span class="p">)</span>
     <span class="p">)</span>
 
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_times</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pynwb.epoch</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeIntervals</span>
+
+        <span class="n">nwbfile</span><span class="o">.</span><span class="n">trials</span> <span class="o">=</span> <span class="n">TimeIntervals</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"trials"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">INFERRED_TIMING_DESCRIPTION</span><span class="p">)</span>
     <span class="k">if</span> <span class="s2">"trial"</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="n">nwbfile</span><span class="o">.</span><span class="n">add_trial_column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"trial"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Trial number"</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">media_cols</span><span class="p">:</span>

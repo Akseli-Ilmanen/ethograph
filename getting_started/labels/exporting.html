@@ -578,6 +578,9 @@ next label you create. Files written before recipients existed have no
 </tbody>
 </table>
 </div>
+<p>These three are written only once something set them: a file where no model
+ran and nothing was changepoint-corrected leaves them out, and loading such a
+file restores their defaults.</p>
 </section>
 <section id="computed-columns-generated-on-save">
 <h3>Computed columns (generated on save)<a class="headerlink" href="#computed-columns-generated-on-save" title="Link to this heading">#</a></h3>
@@ -616,7 +619,8 @@ recalculated.</p>
 <h3>Timing columns (computed, requires alignment)<a class="headerlink" href="#timing-columns-computed-requires-alignment" title="Link to this heading">#</a></h3>
 <p>These columns convert trial-relative times to session-absolute times. They
 only appear when the <a class="reference internal" href="../your_data/media_alignment.html#target-nwb-alignment"><span class="std std-ref">NWB alignment file</span></a> has real
-trial start/stop times (i.e. <code class="docutils literal notranslate"><span class="pre">alignment.has_real_timing</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>).</p>
+trial start/stop times. A drag-and-drop session has none (its trials are
+stacked from the media durations), so its labels file leaves them out.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Column</p></th>

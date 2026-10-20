@@ -817,10 +817,13 @@ window.runMermaid = runMermaid;</script>
 <span class="w">    </span><span class="sd">"""The trial's start and stop on the session clock, or ``(None, None)``.</span>
 
 <span class="sd">    A session with no alignment has no session clock, so the global columns are</span>
-<span class="sd">    simply absent. A trial the alignment does not know is worth a warning: the</span>
-<span class="sd">    labels and the alignment disagree about which trials exist.</span>
+<span class="sd">    simply absent; so are they when the alignment's times are placeholders or</span>
+<span class="sd">    were stacked from media durations (a drag-and-drop session), which would</span>
+<span class="sd">    read as a clock without being one. A trial the alignment does not know is</span>
+<span class="sd">    worth a warning: the labels and the alignment disagree about which trials</span>
+<span class="sd">    exist.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">nwb_alignment</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">nwb_alignment</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">session_clock</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="n">trial_id</span><span class="p">),</span> <span class="n">nwb_alignment</span><span class="o">.</span><span class="n">stop_time</span><span class="p">(</span><span class="n">trial_id</span><span class="p">)</span>
@@ -891,8 +894,9 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    all_labels_df : pd.DataFrame</span>
 <span class="sd">        Raw labels with required columns: onset_s, offset_s, labels, individual, trial.</span>
 <span class="sd">    nwb_alignment</span>
-<span class="sd">        Session alignment, for trial timing. Without one the global columns are</span>
-<span class="sd">        left out.</span>
+<span class="sd">        Session alignment, for trial timing. Without one, or with one whose</span>
+<span class="sd">        times are no session clock (``alignment.session_clock``), the global</span>
+<span class="sd">        columns are left out.</span>
 <span class="sd">    dt : TrialTree, optional</span>
 <span class="sd">        Handed to *exporter*; unused otherwise.</span>
 <span class="sd">    metadata_df : pd.DataFrame, optional</span>

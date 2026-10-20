@@ -70,6 +70,10 @@ These have the same value for every row in a trial:
 | `prediction_source` | str | Path to the prediction file that produced these labels (empty for human-labeled) |
 | `n_samples` | int | The trial's sample count, used for dense conversion; `0` if unknown |
 
+These three are written only once something set them: a file where no model
+ran and nothing was changepoint-corrected leaves them out, and loading such a
+file restores their defaults.
+
 
 ### Computed columns (generated on save)
 
@@ -88,7 +92,8 @@ recalculated.
 
 These columns convert trial-relative times to session-absolute times. They
 only appear when the {ref}`NWB alignment file <target-nwb-alignment>` has real
-trial start/stop times (i.e. `alignment.has_real_timing` is `True`).
+trial start/stop times. A drag-and-drop session has none (its trials are
+stacked from the media durations), so its labels file leaves them out.
 
 | Column | Type | Description |
 |--------|------|-------------|

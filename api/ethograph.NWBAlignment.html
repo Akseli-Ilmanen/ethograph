@@ -622,6 +622,17 @@ means <code class="xref py py-func docutils literal notranslate"><span class="pr
 </dl>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="ethograph.NWBAlignment.session_clock">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">session_clock</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#ethograph.NWBAlignment.session_clock" title="Link to this definition">#</a></dt>
+<dd><p>given, and not placeholders.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the trial times are a real session clock</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="ethograph.NWBAlignment.stream_offset_for_trial">
 <span class="sig-name descname"><span class="pre">stream_offset_for_trial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trial</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stream</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ethograph/io/nwb_alignment.html#NWBAlignment.stream_offset_for_trial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ethograph.NWBAlignment.stream_offset_for_trial" title="Link to this definition">#</a></dt>
@@ -647,6 +658,15 @@ Does not compute duration — external files must be probed for that.</p>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]]</span></p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ethograph.NWBAlignment.timing_inferred">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">timing_inferred</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#ethograph.NWBAlignment.timing_inferred" title="Link to this definition">#</a></dt>
+<dd><p>Whether the trial times were stacked from media durations by <code class="docutils literal notranslate"><span class="pre">pair_media</span></code>.</p>
+<p>Such times order the trials but are no session clock; a reader that
+would present them as one (the labels export’s global columns) checks
+this before <a class="reference internal" href="#ethograph.NWBAlignment.has_real_timing" title="ethograph.NWBAlignment.has_real_timing"><code class="xref py py-attr docutils literal notranslate"><span class="pre">has_real_timing</span></code></a>, which only looks at the numbers.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -700,8 +720,10 @@ Does not compute duration — external files must be probed for that.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.pose_keys"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.pose_keys</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.reload"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.reload()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.resolve_media_path"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.resolve_media_path()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.session_clock"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.session_clock</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.stream_offset_for_trial"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.stream_offset_for_trial()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.stream_rates"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.stream_rates()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.timing_inferred"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.timing_inferred</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph.NWBAlignment.trials_ep"><code class="docutils literal notranslate"><span class="pre">NWBAlignment.trials_ep</span></code></a></li>
 </ul>
 </li>
