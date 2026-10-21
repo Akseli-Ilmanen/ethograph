@@ -77,7 +77,7 @@ two plot clicks, and `V` replays it.
 
 ## Pose estimation
 
-Live while the {doc}`pose estimation dialog <classroom_pose_estimation/index>` is
+Live while the {doc}`pose estimation dialog <../teaching/classroom_pose_estimation/index>` is
 open, wherever the key is pressed — on the dialog, on the video canvas or
 anywhere in the main window. `Backspace`, `Delete`, `Ctrl+Z`, `Shift+H` and `N`
 work even with no labelling mode armed; the rest need one.

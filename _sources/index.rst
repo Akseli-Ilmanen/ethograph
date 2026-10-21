@@ -8,6 +8,7 @@
    advanced/index
    models/index
    examples/index
+   teaching/index
    api_index
    community/index
 

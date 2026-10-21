@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>5. Fill &#8212; ethograph</title>
+    <title>6. The correction loop &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/fill';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'teaching/classroom_pose_estimation/correction';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/fill.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/teaching/classroom_pose_estimation/correction.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="6. The correction loop" href="correction.html" />
-    <link rel="prev" title="3. Detect — optional, if your animals wear tags" href="detect.html" />
+    <link rel="next" title="7. Visualizing &amp; exporting" href="export.html" />
+    <link rel="prev" title="5. Fill" href="fill.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
@@ -152,8 +152,8 @@
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="../index.html">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
     Advanced
   </a>
 </li>
@@ -173,19 +173,36 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../api_index.html">
-    API reference
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Teaching
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api_index.html">
+    API
   </a>
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../community/index.html">
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../community/index.html">
     Community
   </a>
 </li>
 
+                </ul>
+            </li>
+            
   </ul>
 </nav></div>
       
@@ -288,8 +305,8 @@
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="../index.html">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
     Advanced
   </a>
 </li>
@@ -309,9 +326,16 @@
 </li>
 
 
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Teaching
+  </a>
+</li>
+
+
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../../api_index.html">
-    API reference
+    API
   </a>
 </li>
 
@@ -380,28 +404,16 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../smoothing.html">Smoothing and filtering</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../changepoints/index.html">Changepoints</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/overview.html">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/kinematic.html">Kinematic changepoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/audio.html">Audio changepoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/ruptures.html">Ruptures</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
-</ul>
-</details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
 <li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">5. Fill</a></li>
-<li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">6. The correction loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../live_recording.html">Live audio recording</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../audio_video_alignment.html">Aligning a microphone to a video</a></li>
 </ul>
 </div>
 </nav></div>
@@ -443,12 +455,12 @@
       </a>
     </li>
     
-    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Teaching</a></li>
     
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Classroom pose estimation</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">5. Fill</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">6. The correction loop</span></li>
   </ul>
 </nav>
 </div>
@@ -465,40 +477,27 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="fill">
-<h1>5. Fill<a class="headerlink" href="#fill" title="Link to this heading">#</a></h1>
-<p>Press <strong>Fill frames between labels</strong>. Every frame between your first and last
-label gets a position; your own labels are never changed, and frames outside
-that span stay empty.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Backend</p></th>
-<th class="head"><p>When</p></th>
-<th class="head"><p>Cost</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><strong>Spline</strong> (default)</p></td>
-<td><p>smooth motion, labels close together</p></td>
-<td><p>instant</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>Optical flow</strong></p></td>
-<td><p>fast turns, wingbeats — anything that is not a smooth curve between two labels</p></td>
-<td><p>about video speed</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Neither needs a GPU. Start with the spline and switch to optical flow if the
-filled points cut corners.<a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
+  <section class="tex2jax_ignore mathjax_ignore" id="the-correction-loop">
+<span id="target-correction-loop"></span><h1>6. The correction loop<a class="headerlink" href="#the-correction-loop" title="Link to this heading">#</a></h1>
+<p>The fill is a first draft. Repeat until the overlay looks right:</p>
+<ol class="arabic simple">
+<li><p><strong>Fill.</strong></p></li>
+<li><p>Set the suggestion method to <strong>Lowest fill confidence</strong> and press
+<strong>Suggest frames</strong>. It brings forward the frames where the fill was least
+sure about any one keypoint.</p></li>
+<li><p>Press <code class="docutils literal notranslate"><span class="pre">N</span></code> to go to the next one. <strong>Drag</strong> a wrong point to correct it;
+<strong>click</strong> a right one to accept it.</p></li>
+<li><p>When a whole frame looks right, press <strong>Approve frame</strong> (<code class="docutils literal notranslate"><span class="pre">Shift+H</span></code>): every
+point on it becomes your label.</p></li>
+<li><p><strong>Fill again.</strong> Your labels and approvals stay put; only the gaps are
+recomputed.</p></li>
+</ol>
+<p>The <strong>conf</strong> columns in the points table show the fill’s confidence per
+keypoint: 1 is a label, lower means less sure. For optical flow, the
+<strong>Disagreement tolerance</strong> (in pixels) sets how far the forward and backward
+tracks may differ before a point counts as unreliable. Raise it for large or
+fast animals.</p>
 </section>
-<hr class="footnotes docutils" />
-<aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id2" role="doc-footnote">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
-<p>Spline: monotone cubic interpolation (<a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.PchipInterpolator.html"><code class="docutils literal notranslate"><span class="pre">scipy.interpolate.PchipInterpolator</span></code></a>). Optical flow: pyramidal Lucas–Kanade (<a class="reference external" href="https://docs.opencv.org/4.x/dc/d6b/group__video__track.html#ga473e4b886d0bcc6b65831eb88ed93323"><code class="docutils literal notranslate"><span class="pre">cv2.calcOpticalFlowPyrLK</span></code></a>), tracked forwards and backwards across each gap.</p>
-</aside>
-</aside>
 
 
                 </article>
@@ -511,20 +510,20 @@ filled points cut corners.<a class="footnote-reference brackets" href="#id2" id=
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="detect.html"
+       href="fill.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">3. Detect — optional, if your animals wear tags</p>
+        <p class="prev-next-title">5. Fill</p>
       </div>
     </a>
     <a class="right-next"
-       href="correction.html"
+       href="export.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">6. The correction loop</p>
+        <p class="prev-next-title">7. Visualizing &amp; exporting</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -543,7 +542,7 @@ filled points cut corners.<a class="footnote-reference brackets" href="#id2" id=
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/classroom_pose_estimation/fill.md">
+    <a href="../../_sources/teaching/classroom_pose_estimation/correction.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

@@ -92,7 +92,7 @@ its images in natural order, one frame per image, on an image-sequence clock
 features are shown — the selection was made in the other stage, and every
 frame here is to be reviewed.
 
-The Labels section is the {doc}`Label & Edit tab <classroom_pose_estimation/labelling>` of the
+The Labels section is the {doc}`Label & Edit tab <../teaching/classroom_pose_estimation/labelling>` of the
 pose estimation dialog with Sequential already armed: every row of the
 table is a solid, draggable label; `Tab` cycles keypoints, `1`–`9` pick the
 individual, `Backspace` deletes, `Ctrl+Z` undoes. There is no fill, no

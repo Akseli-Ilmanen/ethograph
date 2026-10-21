@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>6. The correction loop &#8212; ethograph</title>
+    <title>3. Detect — optional, if your animals wear tags &#8212; ethograph</title>
   
   
   
@@ -44,14 +44,14 @@
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/classroom_pose_estimation/correction';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'teaching/classroom_pose_estimation/detect';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
-    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/advanced/classroom_pose_estimation/correction.html" />
+    <link rel="canonical" href="https://Akseli-Ilmanen.github.io/ethograph/teaching/classroom_pose_estimation/detect.html" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="7. Visualizing &amp; exporting" href="export.html" />
-    <link rel="prev" title="5. Fill" href="fill.html" />
+    <link rel="next" title="5. Fill" href="fill.html" />
+    <link rel="prev" title="1-2. Define keypoints and label frames" href="labelling.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
@@ -152,8 +152,8 @@
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="../index.html">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
     Advanced
   </a>
 </li>
@@ -173,19 +173,36 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../api_index.html">
-    API reference
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Teaching
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api_index.html">
+    API
   </a>
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../community/index.html">
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../community/index.html">
     Community
   </a>
 </li>
 
+                </ul>
+            </li>
+            
   </ul>
 </nav></div>
       
@@ -288,8 +305,8 @@
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="../index.html">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
     Advanced
   </a>
 </li>
@@ -309,9 +326,16 @@
 </li>
 
 
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    Teaching
+  </a>
+</li>
+
+
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../../api_index.html">
-    API reference
+    API
   </a>
 </li>
 
@@ -380,28 +404,16 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../smoothing.html">Smoothing and filtering</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../changepoints/index.html">Changepoints</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/overview.html">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/kinematic.html">Kinematic changepoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/audio.html">Audio changepoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/ruptures.html">Ruptures</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changepoints/correction.html">Changepoint correction</a></li>
-</ul>
-</details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Classroom pose estimation</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="labelling.html">1-2. Define keypoints and label frames</a></li>
-<li class="toctree-l2"><a class="reference internal" href="detect.html">3. Detect — optional, if your animals wear tags</a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">3. Detect — optional, if your animals wear tags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fill.html">5. Fill</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">6. The correction loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="correction.html">6. The correction loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="export.html">7. Visualizing &amp; exporting</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../refinement.html">Refinement</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Trial metadata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../playback.html">Video &amp; Audio playback</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../shortcuts.html">Keyboard Shortcuts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../live_recording.html">Live audio recording</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../audio_video_alignment.html">Aligning a microphone to a video</a></li>
 </ul>
 </div>
 </nav></div>
@@ -443,12 +455,12 @@
       </a>
     </li>
     
-    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Advanced</a></li>
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Teaching</a></li>
     
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Classroom pose estimation</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">6. The correction loop</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">3. Detect — optional, if your animals wear tags</span></li>
   </ul>
 </nav>
 </div>
@@ -465,27 +477,52 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="the-correction-loop">
-<span id="target-correction-loop"></span><h1>6. The correction loop<a class="headerlink" href="#the-correction-loop" title="Link to this heading">#</a></h1>
-<p>The fill is a first draft. Repeat until the overlay looks right:</p>
-<ol class="arabic simple">
-<li><p><strong>Fill.</strong></p></li>
-<li><p>Set the suggestion method to <strong>Lowest fill confidence</strong> and press
-<strong>Suggest frames</strong>. It brings forward the frames where the fill was least
-sure about any one keypoint.</p></li>
-<li><p>Press <code class="docutils literal notranslate"><span class="pre">N</span></code> to go to the next one. <strong>Drag</strong> a wrong point to correct it;
-<strong>click</strong> a right one to accept it.</p></li>
-<li><p>When a whole frame looks right, press <strong>Approve frame</strong> (<code class="docutils literal notranslate"><span class="pre">Shift+H</span></code>): every
-point on it becomes your label.</p></li>
-<li><p><strong>Fill again.</strong> Your labels and approvals stay put; only the gaps are
-recomputed.</p></li>
-</ol>
-<p>The <strong>conf</strong> columns in the points table show the fill’s confidence per
-keypoint: 1 is a label, lower means less sure. For optical flow, the
-<strong>Disagreement tolerance</strong> (in pixels) sets how far the forward and backward
-tracks may differ before a point counts as unreliable. Raise it for large or
-fast animals.</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="detect-optional-if-your-animals-wear-tags">
+<span id="target-detect"></span><h1>3. Detect — optional, if your animals wear tags<a class="headerlink" href="#detect-optional-if-your-animals-wear-tags" title="Link to this heading">#</a></h1>
+<p>If your animals carry printed AprilTags, a detector can read the tag position
+off every frame on its own. A detection counts exactly like a click, so the
+fill interpolates between both. Skip this page if there are no tags.</p>
+<section id="print-the-tags">
+<h2>Print the tags<a class="headerlink" href="#print-the-tags" title="Link to this heading">#</a></h2>
+<p>On the start page, open <strong>🛠 More tools ▸ Print tag sheet…</strong>, keep the default
+family <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code>, set the tag size in millimetres and print the PDF.</p>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../../_images/apriltags.png"><img alt="Two example tags each from the tag16h5, tag25h9 and tag36h11 AprilTag families" src="../../_images/apriltags.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">AprilTag families. <code class="docutils literal notranslate"><span class="pre">tag36h11</span></code> is the default; <code class="docutils literal notranslate"><span class="pre">tag16h5</span></code> has a coarser grid for
+very small animals or low-resolution video.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<div class="important admonition">
+<p class="admonition-title">Printing — all four of these matter</p>
+<ul class="simple">
+<li><p><strong>Do not cut off the white border.</strong> Cut in the white, never on the black edge.</p></li>
+<li><p><strong>Print at 100 % / actual size.</strong> Each sheet has a 50 mm rule: measure it.</p></li>
+<li><p><strong>Matte paper on a laser printer</strong>, black cartridge only.</p></li>
+<li><p><strong>Glue the tag to card</strong> so it stays flat.</p></li>
+</ul>
+</div>
 </section>
+<section id="run-the-detector">
+<h2>Run the detector<a class="headerlink" href="#run-the-detector" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Family</strong> must match what you printed.</p></li>
+<li><p>Leave <strong>Downscale</strong> at <code class="docutils literal notranslate"><span class="pre">1.0</span></code>; raise <strong>Sharpening</strong> if the video is blurry.</p></li>
+<li><p>Choose a frame range and press <strong>Run detector</strong>.</p></li>
+</ol>
+<p>Detections appear as hollow markers with a dot. The first time, Ethograph asks
+which tag ID is which keypoint and individual; correct any wrong guess in the
+table. A detection never overwrites your own label.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
+</section>
+</section>
+<hr class="footnotes docutils" />
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="apriltag" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Detection runs through <a class="reference external" href="https://github.com/pupil-labs/apriltags">pupil-apriltags</a>, a binding to the AprilTag 3 library.</p>
+</aside>
+</aside>
 
 
                 </article>
@@ -498,20 +535,20 @@ fast animals.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="fill.html"
+       href="labelling.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">5. Fill</p>
+        <p class="prev-next-title">1-2. Define keypoints and label frames</p>
       </div>
     </a>
     <a class="right-next"
-       href="export.html"
+       href="fill.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">7. Visualizing &amp; exporting</p>
+        <p class="prev-next-title">5. Fill</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -527,10 +564,23 @@ fast animals.</p>
 
 
   <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#print-the-tags">Print the tags</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-the-detector">Run the detector</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
 
   
   <div class="tocsection sourcelink">
-    <a href="../../_sources/advanced/classroom_pose_estimation/correction.md">
+    <a href="../../_sources/teaching/classroom_pose_estimation/detect.md">
       
         <i class="fa-solid fa-file-lines"></i> Show Source
       

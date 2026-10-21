@@ -529,18 +529,35 @@ window.runMermaid = runMermaid;</script>
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../api_index.html">
-    API reference
+  <a class="nav-link nav-internal" href="../../../teaching/index.html">
+    Teaching
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../api_index.html">
+    API
   </a>
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../community/index.html">
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../community/index.html">
     Community
   </a>
 </li>
 
+                </ul>
+            </li>
+            
   </ul>
 </nav></div>
       
@@ -663,8 +680,15 @@ window.runMermaid = runMermaid;</script>
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../teaching/index.html">
+    Teaching
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../api_index.html">
-    API reference
+    API
   </a>
 </li>
 
@@ -2084,6 +2108,12 @@ window.runMermaid = runMermaid;</script>
             <span class="n">seg_nsamples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">valid</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()):</span>
                 <span class="n">duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"stop_time"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"start_time"</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">start_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="c1"># A file placed by its own start is not the trial's length:</span>
+                    <span class="c1"># a microphone that ran on past the camera keeps its tail.</span>
+                    <span class="n">own</span> <span class="o">=</span> <span class="n">_probe_file_duration</span><span class="p">(</span><span class="n">external_files</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">stream</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">own</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">duration</span> <span class="o">=</span> <span class="n">own</span>
                 <span class="n">seg_starts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">starts</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
                 <span class="n">seg_nsamples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">duration</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)))</span>
 
@@ -2156,6 +2186,15 @@ window.runMermaid = runMermaid;</script>
                     <span class="k">return</span> <span class="n">dur</span>
 
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not probe duration for trial row: </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_probe_file_duration</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">stream</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A media file's own length in seconds, ``None`` when it is not on this machine."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">ethograph.utils.stream_durations</span><span class="w"> </span><span class="kn">import</span> <span class="n">probe_duration</span>
+
+    <span class="k">if</span> <span class="n">_existing_media_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">probe_duration</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">stream</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_existing_media_path</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
