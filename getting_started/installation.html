@@ -492,7 +492,7 @@ Windows</label><div class="sd-tab-content docutils">
 Use the GUI</label><div class="sd-tab-content docutils">
 <p>For annotating data, teaching, or trying it out. No virtual environment
 needed — <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span></code> keeps ethograph in its own, managed for you:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--compile-bytecode<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
 ethograph<span class="w"> </span>check<span class="w">     </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
 ethograph<span class="w"> </span>launch
 </pre></div>
@@ -502,7 +502,7 @@ ethograph<span class="w"> </span>launch
 (see <a class="reference internal" href="../advanced/troubleshooting.html#command-not-found"><span class="std std-ref">ethograph is not recognized as a command</span></a>).</p>
 <p>Upgrade by re-running the install with <code class="docutils literal notranslate"><span class="pre">--force</span> <span class="pre">--refresh</span></code>, remove with
 <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">uninstall</span> <span class="pre">ethograph</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--force<span class="w"> </span>--refresh<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--compile-bytecode<span class="w"> </span>--force<span class="w"> </span>--refresh<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
 </pre></div>
 </div>
 </div>
@@ -516,7 +516,7 @@ Write scripts</label><div class="sd-tab-content docutils">
 uv</label><div class="sd-tab-content docutils">
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>venv<span class="w"> </span>--python<span class="o">=</span><span class="m">3</span>.12
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">        </span><span class="c1"># Windows: .venv\Scripts\activate</span>
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--compile-bytecode<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
 ethograph<span class="w"> </span>check<span class="w">                  </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
 </pre></div>
 </div>
@@ -526,7 +526,7 @@ ethograph<span class="w"> </span>check<span class="w">                  </span><
 conda</label><div class="sd-tab-content docutils">
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>ethograph<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12<span class="w"> </span>-y
 conda<span class="w"> </span>activate<span class="w"> </span>ethograph
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--compile-bytecode<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
 ethograph<span class="w"> </span>check<span class="w">                  </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
 ethograph<span class="w"> </span>shortcut<span class="w">               </span><span class="c1"># optional: desktop / Start Menu launcher</span>
 ethograph<span class="w"> </span>launch
@@ -539,7 +539,7 @@ desktop and Start Menu entry that activates this environment for you — one
 click instead of a terminal.</p>
 </div>
 </div>
-<p>Upgrade with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">&quot;ethograph[gui,audio]&quot;</span></code>; if that doesn’t seem
+<p>Upgrade with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">--compile-bytecode</span> <span class="pre">&quot;ethograph[gui,audio]&quot;</span></code>; if that doesn’t seem
 to take effect, start from a fresh environment.</p>
 </div>
 <input id="sd-tab-item-4" name="sd-tab-set-1" type="radio">
@@ -555,7 +555,7 @@ uv</label><div class="sd-tab-content docutils">
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>venv<span class="w"> </span>--python<span class="o">=</span><span class="m">3</span>.12
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">        </span><span class="c1"># Windows: .venv\Scripts\activate</span>
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[gui,audio,model]"</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--compile-bytecode<span class="w"> </span><span class="s2">"ethograph[gui,audio,model]"</span>
 ethograph<span class="w"> </span>check<span class="w">                  </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
 </pre></div>
 </div>
@@ -566,7 +566,7 @@ conda</label><div class="sd-tab-content docutils">
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>ethograph<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12<span class="w"> </span>-y
 conda<span class="w"> </span>activate<span class="w"> </span>ethograph
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--torch-backend<span class="o">=</span>auto<span class="w"> </span>torch<span class="w"> </span>torchvision
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ethograph[gui,audio,model]"</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--compile-bytecode<span class="w"> </span><span class="s2">"ethograph[gui,audio,model]"</span>
 ethograph<span class="w"> </span>check<span class="w">                  </span><span class="c1"># Linux/WSL only: lists missing system libraries</span>
 ethograph<span class="w"> </span>shortcut<span class="w">               </span><span class="c1"># optional: desktop / Start Menu launcher</span>
 ethograph<span class="w"> </span>launch

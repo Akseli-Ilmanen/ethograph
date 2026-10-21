@@ -450,7 +450,7 @@ Then install the GUI as a standalone tool — one command, no environment to cre
 
 .. code-block:: bash
 
-   uv tool install --python 3.12 "ethograph[gui,audio]"
+   uv tool install --python 3.12 --compile-bytecode "ethograph[gui,audio]"
 
 To open the GUI, run:
 

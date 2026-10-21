@@ -548,10 +548,19 @@ starts, so the current window will keep reporting the same error. After that,
 <p>The GUI still behaves like the old version. Re-run the install instead of
 upgrading — this ignores uv’s cached package index and rebuilds the environment
 from scratch:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--force<span class="w"> </span>--refresh<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--compile-bytecode<span class="w"> </span>--force<span class="w"> </span>--refresh<span class="w"> </span><span class="s2">"ethograph[gui,audio]"</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">tool</span> <span class="pre">list</span></code> shows which version is installed.</p>
+</section>
+<section id="the-first-launch-takes-minutes">
+<span id="first-launch-slow"></span><h3>The first launch takes minutes<a class="headerlink" href="#the-first-launch-takes-minutes" title="Link to this heading">#</a></h3>
+<p>uv installs packages without compiling them to bytecode, so the first launch
+compiles thousands of files before a window appears; later launches reuse
+them. Installing with <code class="docutils literal notranslate"><span class="pre">--compile-bytecode</span></code>, as every line in
+<a class="reference internal" href="../getting_started/installation.html#target-installation"><span class="std std-ref">Installation</span></a> does, moves that work into the install. Without
+the flag, <code class="docutils literal notranslate"><span class="pre">ethograph</span> <span class="pre">launch</span></code> compiles the environment itself first and says
+so (<code class="docutils literal notranslate"><span class="pre">ethograph:</span> <span class="pre">first</span> <span class="pre">launch</span> <span class="pre">-</span> <span class="pre">compiling</span> <span class="pre">...</span></code>), about a minute, once.</p>
 </section>
 <section id="linux-system-libraries-the-wheels-need">
 <span id="linux-system-libraries"></span><h3>Linux: system libraries the wheels need<a class="headerlink" href="#linux-system-libraries-the-wheels-need" title="Link to this heading">#</a></h3>
@@ -751,6 +760,7 @@ uncompressed. Converting in bulk up front is faster for a whole project:</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installation-fails-with-resolution-too-deep">Installation fails with “resolution-too-deep”</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ethograph-is-not-recognized-as-a-command"><code class="docutils literal notranslate"><span class="pre">ethograph</span></code> is not recognized as a command</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#upgrading-did-not-change-anything">Upgrading did not change anything</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-first-launch-takes-minutes">The first launch takes minutes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#linux-system-libraries-the-wheels-need">Linux: system libraries the wheels need</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#windows-subsystem-for-linux-wsl">Windows Subsystem for Linux (WSL)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#silent-audio-on-linux">Silent audio on Linux</a></li>

@@ -525,7 +525,7 @@ pop-up of its own, so the two steps never share a window.</p>
 mark every local dip, including the noise between movements. Two parameters
 remove most of the irrelevant ones: <code class="docutils literal notranslate"><span class="pre">prominence</span></code> (how far a through has to dip
 below its surroundings, in the feature’s units — see
-<a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.peak_prominences.html#scipy.signal.peak_prominences" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.signal.peak_prominences()</span></code></a>) and <code class="docutils literal notranslate"><span class="pre">distance</span></code> (the minimum number of
+<code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.signal.peak_prominences()</span></code>) and <code class="docutils literal notranslate"><span class="pre">distance</span></code> (the minimum number of
 samples between two changepoints). Raise <code class="docutils literal notranslate"><span class="pre">prominence</span></code> until only the clear
 dips remain, then <code class="docutils literal notranslate"><span class="pre">distance</span></code> to merge the ones that sit right next to each
 other. The fastest way to find the values is in the GUI: change one, click
@@ -541,7 +541,7 @@ and <strong>Detect</strong>. <code class="docutils literal notranslate"><span cl
 <code class="docutils literal notranslate"><span class="pre">width</span></code> are still off.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
-<p><strong>Troughs</strong> take <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html#scipy.signal.find_peaks" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.signal.find_peaks()</span></code></a>’ own parameters:
+<p><strong>Troughs</strong> take <code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.signal.find_peaks()</span></code>’ own parameters:
 <code class="docutils literal notranslate"><span class="pre">prominence</span></code>, <code class="docutils literal notranslate"><span class="pre">distance</span></code>, <code class="docutils literal notranslate"><span class="pre">height</span></code>, <code class="docutils literal notranslate"><span class="pre">width</span></code>, etc.</p>
 <p><strong>Turning points:</strong></p>
 <div class="pst-scrollable-table-container"><table class="table">

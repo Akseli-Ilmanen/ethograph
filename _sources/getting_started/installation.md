@@ -34,7 +34,7 @@ For annotating data, teaching, or trying it out. No virtual environment
 needed — `uv tool` keeps ethograph in its own, managed for you:
 
 ```bash
-uv tool install --python 3.12 "ethograph[gui,audio]"
+uv tool install --python 3.12 --compile-bytecode "ethograph[gui,audio]"
 ethograph check     # Linux/WSL only: lists missing system libraries
 ethograph launch
 ```
@@ -47,7 +47,7 @@ Upgrade by re-running the install with `--force --refresh`, remove with
 `uv tool uninstall ethograph`:
 
 ```bash
-uv tool install --python 3.12 --force --refresh "ethograph[gui,audio]"
+uv tool install --python 3.12 --compile-bytecode --force --refresh "ethograph[gui,audio]"
 ```
 ````
 
@@ -60,7 +60,7 @@ For importing ethograph in your own code.
 ```bash
 uv venv --python=3.12
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-uv pip install "ethograph[gui,audio]"
+uv pip install --compile-bytecode "ethograph[gui,audio]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
 ```
 ::::
@@ -69,7 +69,7 @@ ethograph check                  # Linux/WSL only: lists missing system librarie
 ```bash
 conda create -y -n ethograph -c conda-forge python=3.12 -y
 conda activate ethograph
-uv pip install "ethograph[gui,audio]"
+uv pip install --compile-bytecode "ethograph[gui,audio]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
 ethograph shortcut               # optional: desktop / Start Menu launcher
 ethograph launch
@@ -85,7 +85,7 @@ click instead of a terminal.
 
 :::::
 
-Upgrade with `uv pip install -U "ethograph[gui,audio]"`; if that doesn't seem
+Upgrade with `uv pip install -U --compile-bytecode "ethograph[gui,audio]"`; if that doesn't seem
 to take effect, start from a fresh environment.
 ````
 
@@ -101,7 +101,7 @@ separately.**
 uv venv --python=3.12
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 uv pip install --torch-backend=auto torch torchvision
-uv pip install "ethograph[gui,audio,model]"
+uv pip install --compile-bytecode "ethograph[gui,audio,model]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
 ```
 ::::
@@ -111,7 +111,7 @@ ethograph check                  # Linux/WSL only: lists missing system librarie
 conda create -y -n ethograph -c conda-forge python=3.12 -y
 conda activate ethograph
 uv pip install --torch-backend=auto torch torchvision
-uv pip install "ethograph[gui,audio,model]"
+uv pip install --compile-bytecode "ethograph[gui,audio,model]"
 ethograph check                  # Linux/WSL only: lists missing system libraries
 ethograph shortcut               # optional: desktop / Start Menu launcher
 ethograph launch
