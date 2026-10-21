@@ -82,6 +82,25 @@ def browse_open_dir(
     return path
 
 
+def browse_open_files(
+    parent: QWidget | None,
+    app_state,
+    caption: str,
+    file_filter: str = ALL_FILES,
+    preferred_dir: str | Path | None = None,
+) -> list[str]:
+    """Pick one or more existing files. Returns ``[]`` when the user cancels."""
+    paths, _ = QFileDialog.getOpenFileNames(
+        parent,
+        caption=caption,
+        dir=browse_start_dir(app_state, preferred_dir),
+        filter=file_filter,
+    )
+    if paths:
+        remember_browse_dir(app_state, paths[0])
+    return list(paths)
+
+
 def browse_open_dirs(
     parent: QWidget | None,
     app_state,

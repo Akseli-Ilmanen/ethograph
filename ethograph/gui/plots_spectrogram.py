@@ -40,6 +40,26 @@ def _audio_load_hint(audio_path, err: Exception) -> str:
     )
 
 
+def auto_levels_db(sxx_db: np.ndarray) -> tuple[float, float] | None:
+    """audian's levels rule, shared by every spectrogram: the floor is the 95th
+    percentile of the band's top sixteenth (noise), the ceiling the maximum,
+    the span clamped to 20–80 dB. ``sxx_db`` is ``(F, T)``."""
+    if sxx_db.size == 0:
+        return None
+    nf = max(1, sxx_db.shape[0] // 16)
+    with np.errstate(all="ignore"):
+        zmin = float(np.percentile(sxx_db[-nf:, :], 95))
+        zmax = float(np.max(sxx_db))
+    if not np.isfinite(zmin) or not np.isfinite(zmax):
+        return None
+    zmax = zmin + 0.95 * (zmax - zmin)
+    if zmax - zmin < 20:
+        zmax = zmin + 20
+    if zmax - zmin > 80:
+        zmin = zmax - 80
+    return round(zmin, 1), round(zmax, 1)
+
+
 class SharedAudioCache:
     """Singleton cache for AudioLoader instances.
 

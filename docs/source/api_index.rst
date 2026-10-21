@@ -1,7 +1,7 @@
 .. _target-api:
 
-API reference
-=============
+API
+===
 
 Organized by module group. Each page has full signatures with type hints,
 examples, and cross-links to the narrative docs.

@@ -34,6 +34,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 
 import natsort
@@ -581,6 +582,8 @@ class CoverPage(QDialog):
         #: discovering that *after* labelling has started is too late. Templates are
         #: exempt: they bring their own folder (see :meth:`_on_template`).
         self._needs_project = (self._drop_card, self._custom_card, self._load_bar)
+        if hasattr(self, "_record_action"):
+            self._needs_project = (*self._needs_project, self._record_action)
         body.addLayout(right, 7)
         outer.addLayout(body)
 
@@ -653,6 +656,20 @@ class CoverPage(QDialog):
         menu = QMenu(tools)
         menu.addSection("Before recording")
         menu.addAction("Print tag sheet…", self._open_tag_sheet)
+        menu.addSection("Live recording")
+        record = QAction("Record audio…", menu)
+        record.triggered.connect(self._open_live_recorder)
+        record.setToolTip(
+            "Record from a microphone with a live oscillogram and spectrogram. Every take is a\n"
+            "WAV in {project}/recordings/{date} (or a folder of your choice); the folder then\n"
+            "opens as a session with one trial per file."
+        )
+        if find_spec("sounddevice") is None or find_spec("soundfile") is None:
+            record.setEnabled(False)
+            record.setToolTip("Needs the audio extra: pip install ethograph[audio]")
+        else:
+            self._record_action = record
+        menu.addAction(record)
         menu.addSection("GUI tools")
         refine = QAction("Refine DLC / LightningPose training data…", menu)
         refine.triggered.connect(self._open_pose_project)
@@ -669,6 +686,17 @@ class CoverPage(QDialog):
             "session folder (one trial per media file) under the project folder."
         )
         menu.addAction(boris)
+        align = QAction("Pair & align audio with video…", menu)
+        align.triggered.connect(self._open_audio_align)
+        align.setToolTip(
+            "N videos with a soundtrack + N microphone files: find which belongs to which and where\n"
+            "each starts on its video's clock, approve every offset on a spectrogram, then open the\n"
+            "result as a session with one trial per video."
+        )
+        if find_spec("soundfile") is None:
+            align.setEnabled(False)
+            align.setToolTip("Needs the audio extra: pip install ethograph[audio]")
+        menu.addAction(align)
         menu.addSection("IO settings")
         exclude = QAction("Excluded files list…", menu)
         exclude.triggered.connect(self._open_excluded_files)
@@ -692,12 +720,55 @@ class CoverPage(QDialog):
         if mode.enter(root, parent=self):
             self._close_if_loaded()
 
+    def _open_live_recorder(self) -> None:
+        """Record audio live; the window stays open beside this page until it is closed."""
+        from ethograph.gui.live_recorder import LiveRecorderWindow
+
+        project = self._project_dir()
+        if project is None:
+            return
+        self._live_recorder = LiveRecorderWindow(
+            self.app_state, project, on_open_session=self.open_recorded_session, parent=self
+        )
+        self._live_recorder.show()
+
+    def open_recorded_session(self, wav_paths: list[str]) -> None:
+        """The recorder's hand-off: its folder's WAVs are a multi-trial drop, one trial per file.
+
+        Dropping them is exactly what a user would do by hand, so the folder gets the
+        same alignment, drop record and project registration as any drop, and a
+        later recording day re-drops into the same session with its labels intact.
+        """
+        self._drop.clear_paths()
+        for p in wav_paths:
+            self._drop.paths.append(p)
+            self._drop.addItem(Path(p).name)
+        combo = self._drop_layout_combo
+        previous = combo.currentIndex()
+        combo.setCurrentIndex(max(0, combo.findData("multi_trial")))
+        try:
+            self._on_shared_load()
+        finally:
+            # The layout combo is the user's habit; the hand-off borrowed it.
+            combo.setCurrentIndex(previous)
+
     def _open_boris_import(self) -> None:
         """Convert BORIS projects to sessions; they then open from the reopen list."""
         from ethograph.gui.dialog_boris_import import BorisImportDialog
 
         if BorisImportDialog(self.app_state, parent=self).exec_():
             self._refresh_project_ui()
+
+    def _open_audio_align(self) -> None:
+        """Pair microphone files with videos by sound; an accepted set loads as a multi-trial session."""
+        from ethograph.gui.dialog_audio_align import AudioAlignDialog
+
+        dlg = AudioAlignDialog(self.app_state, parent=self)
+        if not dlg.exec_() or dlg.session_dir is None:
+            return
+        self._refresh_project_ui()
+        self.io_widget._on_load_clicked()
+        self._close_if_loaded()
 
     def _open_excluded_files(self) -> None:
         from ethograph.gui.dialog_settings import IgnoredFilesDialog

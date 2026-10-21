@@ -73,7 +73,6 @@ gui = [
     "jinja2",
     "nbformat",
     "tqdm",
-    "nwb-video-widgets",
     "phylib>=2.6.4",
     "neo",
     # The onset detector (labels/onset_model.py, Model menu) and frame

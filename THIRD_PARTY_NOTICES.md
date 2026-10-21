@@ -48,6 +48,7 @@ The adapted function says so in its docstring.
 | `ethograph/spot/msagsm.py` | [GSM](https://github.com/swathikirans/GSM), Swathikiran Sudhakaran, FBK (vendored as `ethograph/spot/e2espot/model/impl/gsm.py`) | BSD-2-Clause | Multi-scale attention gated shift, written from the MSAGSM paper (arXiv 2507.07381); follows GSM's structure without copying its code, and takes no code from the MSAGSM reference repository, which carries no licence |
 | `ethograph/spot/stream.py` | [E2E-Spot](https://github.com/jhong93/spot), James Hong et al. | BSD-3-Clause | Streaming inference that mirrors its `test_e2e.py`: window starts, padding, evaluation transform, score accumulation |
 | `ethograph/gui/plots_ephystrace.py` | [phy](https://github.com/cortex-lab/phy), Cortex Lab | BSD-3-Clause | Right-drag box scaling and the trace-view plotting algorithm |
+| `ethograph/io/audio_align.py` | [audio-offset-finder](https://github.com/bbc/audio-offset-finder), BBC | Apache-2.0 | The method only: standardised MFCC frames cross-correlated, the peak scored by its standard score. Written independently; no code copied |
 
 ## Documentation figures
 

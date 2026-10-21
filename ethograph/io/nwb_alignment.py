@@ -1248,6 +1248,12 @@ def sync_acquisition_for_streams(
             seg_nsamples: list[int] = []
             for i, (_, row) in enumerate(valid.iterrows()):
                 duration = float(row["stop_time"]) - float(row["start_time"])
+                if start_col in df.columns:
+                    # A file placed by its own start is not the trial's length:
+                    # a microphone that ran on past the camera keeps its tail.
+                    own = _probe_file_duration(external_files[i], stream)
+                    if own is not None:
+                        duration = own
                 seg_starts.append(float(starts[i]))
                 seg_nsamples.append(max(1, int(duration * rate)))
 
@@ -1319,6 +1325,15 @@ def _probe_trial_duration(
                     return dur
 
     raise ValueError(f"Could not probe duration for trial row: {row.to_dict()}")
+
+
+def _probe_file_duration(path: str, stream: str) -> float | None:
+    """A media file's own length in seconds, ``None`` when it is not on this machine."""
+    from ethograph.utils.stream_durations import probe_duration
+
+    if _existing_media_path(path) is None:
+        return None
+    return probe_duration(str(path), stream)
 
 
 def _existing_media_path(value: Any) -> Path | None:

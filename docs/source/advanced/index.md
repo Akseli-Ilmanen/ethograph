@@ -27,14 +27,6 @@ Preview a filter/gap/smoothing pipeline on a line plot and copy the code.
 Detection methods (kinematic, audio, ruptures) and label-boundary correction.
 :::
 
-:::{grid-item-card} {fas}`crosshairs` Classroom pose estimation
-:link: classroom_pose_estimation/index
-:link-type: doc
-
-Pose estimation without a GPU: click a few frames, let a tracker fill the
-rest, correct, export.
-:::
-
 :::{grid-item-card} {fas}`pen-to-square` Refinement
 :link: refinement
 :link-type: doc
@@ -71,7 +63,6 @@ Common issues and fixes.
 
 smoothing
 changepoints/index
-classroom_pose_estimation/index
 refinement
 metadata
 playback

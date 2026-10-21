@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-import numpy as np
 from qtpy.QtCore import QSignalBlocker, Qt, QTimer
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import (
@@ -27,6 +26,7 @@ from .app_state import AppStateSpec
 from .heatmap_sort import SORT_MODES
 from .notify import notify
 from .plots_heatmap import AUTO_COLORMAP
+from .plots_spectrogram import auto_levels_db
 
 HEATMAP_COLORMAPS = [
     AUTO_COLORMAP,
@@ -1016,24 +1016,10 @@ class PlotSettingsWidget(QWidget):
         if Sxx_db.size == 0:
             return
 
-        nf = max(1, Sxx_db.shape[0] // 16)
-
-        with np.errstate(all="ignore"):
-            zmin = np.percentile(Sxx_db[-nf:, :], 95)
-            zmax = np.max(Sxx_db)
-
-        if not np.isfinite(zmin) or not np.isfinite(zmax):
+        levels = auto_levels_db(Sxx_db)
+        if levels is None:
             return
-
-        zmax = zmin + 0.95 * (zmax - zmin)
-
-        if zmax - zmin < 20:
-            zmax = zmin + 20
-        if zmax - zmin > 80:
-            zmin = zmax - 80
-
-        zmin = round(zmin, 1)
-        zmax = round(zmax, 1)
+        zmin, zmax = levels
 
         self.vmin_db_edit.setText(str(zmin))
         self.vmax_db_edit.setText(str(zmax))

@@ -365,3 +365,30 @@ class TestOnExisting:
         table = self._table(tmp_path, monkeypatch)
         with pytest.raises(ValueError, match="on_existing must be"):
             pair_media(table, output_path=tmp_path / "a.nwb", on_existing="overwrite")
+
+
+class TestOffsetPlacedFile:
+    def test_audio_placed_by_its_own_start_keeps_its_own_length(self, tmp_path: Path):
+        """``audio_mic-1_start`` moves the file; the trial's length must not clip it."""
+        sf = pytest.importorskip("soundfile")
+        wav = tmp_path / "mic.wav"
+        sf.write(wav, np.zeros(12 * 8000, dtype=np.float32), 8000)
+        table = pd.DataFrame(
+            [
+                {
+                    "trial": 1,
+                    "start_time": 0.0,
+                    "stop_time": 10.0,
+                    "video_cam-1": str(tmp_path / "cam.mp4"),
+                    "audio_mic-1": str(wav),
+                    "audio_mic-1_start": -5.0,
+                }
+            ]
+        )
+        out = tmp_path / ".ethograph" / "alignment.nwb"
+        pair_media(table, stream_rates={"video_cam-1": 30.0, "audio_mic-1": 8000.0}, output_path=out)
+
+        alignment = NWBAlignment(out)
+        assert alignment.stream_offset_for_trial(1, "audio", "mic-1") == pytest.approx(-5.0)
+        [(_, t_start, t_end)] = alignment.file_time_spans("audio", "mic-1")
+        assert (t_start, t_end) == pytest.approx((-5.0, 7.0))

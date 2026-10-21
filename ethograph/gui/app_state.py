@@ -499,6 +499,17 @@ class AppStateSpec:
         "downsample_factor_used": (int | None, None, False),
         "nfft": (int, 256, True),
         "hop_frac": (float, 0.5, True),
+        # Live audio recording (gui/live_recorder.py): a habit of the user and
+        # their rig, so global. The folder is None for {project}/recordings/{date}.
+        "live_recording_folder": (str | None, None, True),
+        "live_recording_prefix": (str, "rec", True),
+        "live_recording_device": (str | None, None, True),
+        "live_recording_rate": (float | None, None, True),
+        "live_recording_channels": (int, 1, True),
+        "live_recording_subtype": (str, "PCM_16", True),
+        "live_recording_roll_min": (int, 60, True),
+        "live_recording_window_s": (float, 5.0, True),
+        "live_recording_channel_shown": (int, 0, True),
         "vmin_db": (float, -120.0, True),
         "vmax_db": (float, -20.0, True),
         "buffer_multiplier": (float, 5.0, True),
@@ -646,6 +657,7 @@ class AppStateSpec:
         "last_browse_dir": "dir",
         "project_path": "dir",
         "remote_backup_path": "dir",
+        "live_recording_folder": "dir",
     }
 
     @classmethod

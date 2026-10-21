@@ -16,7 +16,7 @@ always follows ``app_state.video_path``, the primary camera's current video,
 and labels made against another trial are simply another sidecar. A second
 camera view is a second store beside this one, never an axis of it (see
 :mod:`~ethograph.gui.pose_second_view`). The full design rules live in
-``docs/source/advanced/classroom_pose_estimation/``.
+``docs/source/teaching/classroom_pose_estimation/``.
 
 Non-modal, because the whole point is to keep navigating frames with the normal
 playhead while labelling. It owns a :class:`~ethograph.gui.pose_annotate.KeypointStore`,
