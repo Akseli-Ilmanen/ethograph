@@ -125,6 +125,7 @@ ethograph/utils/              # io.py, xr_utils.py, sequences.py, device.py, sys
     configkit.py              # Chained YAML + dotted overrides ↔ dataclass tree; segment and spot each pass a Schema
 ethograph/skeleton/           # PrecomputedRenderer, SkeletonState, config.py, shapes.py
 THIRD_PARTY_NOTICES.md        # Index of every vendored tree and adapted file
+ethograph_launcher.py         # The console scripts' entry, stdlib only: compiles an uncompiled env before the package imports
 ```
 
 ## Architecture

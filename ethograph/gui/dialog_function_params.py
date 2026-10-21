@@ -26,6 +26,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.notify import notify_dialog
+from ethograph.gui.theme import monospace_font
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -821,8 +822,9 @@ def _build_help_html(spec: FunctionSpec, font_size: int = 16) -> str:
         html_lines.append("&nbsp;" * indent + content)
     code_as_div = "<br>".join(html_lines)
 
+    family = monospace_font().family()
     return (
-        f'<html><body style="font-family:Consolas,Monaco,monospace; font-size:{font_size}px; '
+        f"<html><body style=\"font-family:'{family}',monospace; font-size:{font_size}px; "
         f'line-height:1.4; margin:0; background:#fff; color:#000;">'
         f'<div style="background:#f6f8fa; padding:16px; margin:12px; '
         f'border:1px solid #d0d7de;">'
@@ -940,12 +942,9 @@ class FunctionParamsDialog(QDialog):
         last_line = 1 + n_auto + n_fixed + n_params
         protected = {0, *range(1, 1 + n_auto + n_fixed), last_line}
 
-        editor_font = QFont("Consolas")
-        editor_font.setStyleHint(QFont.Monospace)
         self._editor = ProtectedLineEditor(protected)
-        self._editor.setFont(editor_font)
+        self._editor.setFont(monospace_font(18))
         self._highlighter = PythonParamHighlighter(self._editor.document())
-        self._editor.setStyleSheet("QPlainTextEdit { font-family: 'Consolas'; font-size: 18pt; }")
         editor_text = _build_editor_text(
             self._spec,
             self._param_infos,

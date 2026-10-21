@@ -55,6 +55,7 @@ from ethograph.gui.table_filter import (
     MultiColumnFilterProxy,
     NumericFilterDialog,
 )
+from ethograph.gui.theme import monospace_font
 from ethograph.gui.unit_events import UnitEventsArea
 from ethograph.labels.feature_events import classes_along
 from ethograph.utils.qt import (
@@ -146,7 +147,6 @@ _RAWIO_TO_DISPLAY = {
 _PROBE_COLOR_SELECTED = QColor(0x00, 0xBB, 0xFF)
 _PROBE_COLOR_UNSELECTED = QColor(140, 140, 140)
 _PROBE_DOT_SIZE = 12
-_PROBE_LABEL_FONT = pg.Qt.QtGui.QFont("monospace", 7)
 
 
 class _RectangleSelector:
@@ -335,7 +335,7 @@ class ProbeChannelDialog(QDialog):
                 anchor=(0.5, 0.5),
                 fill=pg.mkBrush(0, 0, 0, 160),
             )
-            ti.setFont(_PROBE_LABEL_FONT)
+            ti.setFont(monospace_font(7))
             ti.setPos(float(x[i]), float(y[i]))
             self._plot_widget.addItem(ti)
             self._text_items.append(ti)
@@ -832,7 +832,6 @@ class EphysWidget(QWidget):
                 color: #fff;
                 border: none;
                 border-right: 1px solid #666;
-                font-family: sans-serif;
                 font-size: 11px;
             }
             QHeaderView::section:last { border-right: none; }

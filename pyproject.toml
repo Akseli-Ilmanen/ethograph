@@ -48,10 +48,10 @@ dependencies = [
 "User Support" = "https://github.com/Akseli-Ilmanen/ethograph/issues"
 
 [project.scripts]
-ethograph = "ethograph.cli:main"
+ethograph = "ethograph_launcher:main"
 
 [project.gui-scripts]
-ethograph-gui = "ethograph.cli:launch"
+ethograph-gui = "ethograph_launcher:launch"
 
 [project.optional-dependencies]
 
@@ -205,6 +205,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 include-package-data = true
+# The console scripts' stdlib-only front door; see its docstring.
+py-modules = ["ethograph_launcher"]
 
 [tool.setuptools.packages.find]
 include = ["ethograph*"]

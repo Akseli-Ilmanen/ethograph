@@ -1162,8 +1162,13 @@ def write_frames_pdf(
         page_w, page_h = writer.width(), writer.height()
         margin, gap = 40, 18
         cell_w = (page_w - 2 * margin - (columns - 1) * gap) // columns
-        body_font = QFont("Helvetica", 7)
-        conf_font = QFont("Helvetica", 10, QFont.Bold)
+        # The application font, not a named family: a family missing on this
+        # machine makes Qt scan every installed font for an alias.
+        body_font = QFont()
+        body_font.setPointSize(7)
+        conf_font = QFont()
+        conf_font.setPointSize(10)
+        conf_font.setBold(True)
         painter.setFont(conf_font)
         conf_h = painter.fontMetrics().height()
         painter.setFont(body_font)

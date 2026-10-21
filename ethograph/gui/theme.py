@@ -13,7 +13,23 @@ background.
 
 from __future__ import annotations
 
-from qtpy.QtGui import QColor, QPalette
+from qtpy.QtGui import QColor, QFont, QFontDatabase, QPalette
+
+
+def monospace_font(point_size: int | None = None) -> QFont:
+    """The platform's fixed-pitch font, never one named by family.
+
+    A family that is not installed ("Consolas" on macOS, "monospace"
+    anywhere) makes Qt scan every font on the machine for an alias the first
+    time it is asked for — seconds on a large font library, logged as
+    "Populating font family aliases took ... ms". The system fixed font
+    always exists, so it costs nothing.
+    """
+    font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+    if point_size is not None:
+        font.setPointSize(point_size)
+    return font
+
 
 # napari "dark" theme colours (RGB) — the source of the grey-blue chrome.
 _BACKGROUND = QColor(38, 41, 48)  # #262930 — sidebar / window

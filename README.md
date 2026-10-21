@@ -34,7 +34,7 @@ Then install the GUI as a standalone tool — one command, no environment to
 create or activate:
 
 ```bash
-uv tool install --python 3.12 "ethograph[gui,audio]"
+uv tool install --python 3.12 --compile-bytecode "ethograph[gui,audio]"
 ```
 
 To open the GUI, run:
@@ -50,7 +50,7 @@ ethograph launch
 To upgrade later, run the same command with `--force --refresh`:
 
 ```bash
-uv tool install --python 3.12 --force --refresh "ethograph[gui,audio]"
+uv tool install --python 3.12 --compile-bytecode --force --refresh "ethograph[gui,audio]"
 ```
 
 For installing into a dedicated virtual environment,segmentation models, and troubleshooting, see

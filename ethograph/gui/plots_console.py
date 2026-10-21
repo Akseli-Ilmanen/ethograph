@@ -28,11 +28,12 @@ import re
 
 import numpy as np
 from qtpy.QtCore import Qt, Signal
-from qtpy.QtGui import QFont, QTextCursor
+from qtpy.QtGui import QTextCursor
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 
 from ethograph.features.preprocessing import SMOOTHERS, bridge_gaps, nan_aware
 from ethograph.features.timeaxis import apply_along_time, sampling_rate
+from ethograph.gui.theme import monospace_font
 from ethograph.io.derived import DerivedLoader, Root, TracedArray, make_derived, stack
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class _ConsoleInput(QPlainTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFont(QFont("Consolas", 9))
+        self.setFont(monospace_font(9))
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
         self.setFixedHeight(24)
         self.setPlaceholderText("theta = np.deg2rad(angle)    (? for commands)")
@@ -182,7 +183,7 @@ class ConsolePanel(QWidget):
         layout.addLayout(header)
 
         self.help_label = QLabel(self._HELP)
-        self.help_label.setFont(QFont("Consolas", 8))
+        self.help_label.setFont(monospace_font(8))
         self.help_label.setWordWrap(True)
         self.help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.help_label.setStyleSheet("color: rgba(255,255,255,150); padding: 2px 4px;")
@@ -191,7 +192,7 @@ class ConsolePanel(QWidget):
 
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
-        self.output.setFont(QFont("Consolas", 9))
+        self.output.setFont(monospace_font(9))
         layout.addWidget(self.output, 1)
 
         self.input = _ConsoleInput()

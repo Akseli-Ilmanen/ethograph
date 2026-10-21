@@ -60,6 +60,7 @@ from ethograph.features.timeaxis import sampling_rate
 from ethograph.gui.active_panel import PanelKind
 from ethograph.gui.notify import notify
 from ethograph.gui.plots_lineplot import LinePreview
+from ethograph.gui.theme import monospace_font
 from ethograph.io.catalog import PynappleLoader
 
 CACHE_KEY = "smoothing"
@@ -603,7 +604,7 @@ class SmoothingDialog(QDialog):
         lower.addLayout(code_col, 1)
         self.code_edit = QPlainTextEdit()
         self.code_edit.setReadOnly(True)
-        self.code_edit.setStyleSheet("QPlainTextEdit { font-family: Consolas, monospace; }")
+        self.code_edit.setFont(monospace_font())
         self.code_edit.setMinimumWidth(560)
         code_col.addWidget(self.code_edit, 1)
         buttons = QHBoxLayout()

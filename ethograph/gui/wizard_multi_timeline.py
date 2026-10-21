@@ -14,7 +14,6 @@ from qtpy.QtCore import QRectF, QRegularExpression, Qt
 from qtpy.QtGui import (
     QBrush,
     QColor,
-    QFont,
     QPainterPath,
     QPen,
     QSyntaxHighlighter,
@@ -40,6 +39,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.dialog_function_params import _do_open_source
+from ethograph.gui.theme import monospace_font
 from ethograph.gui.wizard_media_files import extract_file_row
 from ethograph.gui.wizard_multi_codegen import generate_alignment_code
 from ethograph.gui.wizard_state import ModalityConfig, WizardState, session_output_path
@@ -611,7 +611,7 @@ class TimelinePage(QWidget):
 
         self._code_editor = QPlainTextEdit()
         self._code_editor.setReadOnly(True)
-        self._code_editor.setFont(QFont("Consolas", 10))
+        self._code_editor.setFont(monospace_font(10))
         self._code_editor.setStyleSheet(
             "QPlainTextEdit { background-color: #1e1e1e; color: #d4d4d4; border: 1px solid #3e3e3e; }"
         )

@@ -43,6 +43,7 @@ from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.make_pretty import styled_link
 from ethograph.gui.project import project_dir_of
 from ethograph.gui.session_folder import ranked_kinds
+from ethograph.gui.theme import monospace_font
 from ethograph.gui.wizard_state import ModalityConfig, WizardState
 from ethograph.utils.paths import defaults_dir
 
@@ -421,7 +422,8 @@ class WritePage(QWidget):
         self._hint = _muted("")
         lay.addWidget(self._hint)
         self._cells = _muted("")
-        self._cells.setStyleSheet("color: #9aa0ac; font-family: monospace;")
+        self._cells.setStyleSheet("color: #9aa0ac;")
+        self._cells.setFont(monospace_font())
         lay.addWidget(self._cells)
         lay.addStretch()
 

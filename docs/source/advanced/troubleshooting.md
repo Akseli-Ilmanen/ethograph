@@ -79,10 +79,21 @@ upgrading — this ignores uv's cached package index and rebuilds the environmen
 from scratch:
 
 ```bash
-uv tool install --python 3.12 --force --refresh "ethograph[gui,audio]"
+uv tool install --python 3.12 --compile-bytecode --force --refresh "ethograph[gui,audio]"
 ```
 
 `uv tool list` shows which version is installed.
+
+
+(first-launch-slow)=
+### The first launch takes minutes
+
+uv installs packages without compiling them to bytecode, so the first launch
+compiles thousands of files before a window appears; later launches reuse
+them. Installing with `--compile-bytecode`, as every line in
+{ref}`target-installation` does, moves that work into the install. Without
+the flag, `ethograph launch` compiles the environment itself first and says
+so (`ethograph: first launch - compiling ...`), about a minute, once.
 
 
 (linux-system-libraries)=
