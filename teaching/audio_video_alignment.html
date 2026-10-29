@@ -550,9 +550,10 @@ matters.</p>
 </section>
 <section id="create-session">
 <h2>Create session<a class="headerlink" href="#create-session" title="Link to this heading">#</a></h2>
-<p><strong>Create session</strong> asks which folder becomes the session (when the files came
-from more than one), writes its <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> and loads it. The
-result is an ordinary multi-trial session, one trial per video:</p>
+<p><strong>Create session</strong> makes a new session folder under the project,
+<code class="docutils literal notranslate"><span class="pre">{project}/sessions/{timestamp}/</span></code>, writes its <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> and
+loads it. Nothing is written beside your media. The result is an ordinary
+multi-trial session, one trial per video:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">video_cam-1</span></code> — the video.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">audio_mic-1</span></code> — your audio file, placed by its own start on the session

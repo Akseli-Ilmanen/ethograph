@@ -500,11 +500,11 @@ you:</p>
 <tbody>
 <tr class="row-even"><td><p><strong>Session folder</strong> — one per recording</p></td>
 <td><p>You: the session file. The GUI: labels, alignment, layout.</p></td>
-<td><p>Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session’s videos is itself a fine session folder, but nothing requires it.</p></td>
+<td><p>Any location — inside the project folder or anywhere else. Media folders are separate, absolute paths recorded in the alignment; they may be inside the session folder, and a folder of one session’s videos is itself a fine session folder, but nothing requires it. A drag &amp; drop always makes its own: <code class="docutils literal notranslate"><span class="pre">{project}/sessions/{timestamp}/</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Project folder</strong> — one per research project</p></td>
 <td><p>You, on the start page.</p></td>
-<td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, a list of the sessions made by drag &amp; drop. Your session folders can live here too, but don’t have to — Ethograph never copies data into it.</p></td>
+<td><p>Everything that spans sessions: the label vocabulary, pipeline configs, trained models, curation workflows, the sessions made by drag &amp; drop (<code class="docutils literal notranslate"><span class="pre">sessions/</span></code>) and a list of them. Your own session folders can live here too, but don’t have to — Ethograph never copies data into it.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">~/.ethograph/</span></code></p></td>
 <td><p>The GUI.</p></td>
@@ -523,6 +523,8 @@ you:</p>
     ├── calibration/                   # camera calibrations for 3D, one aniposelib .toml per rig
     ├── workflows/                     # curation workflows
     ├── wizard/                        # Data wizard notebooks, one per rig
+    ├── sessions/                      # one timestamped session folder per drag &amp; drop; media stay where they were
+    ├── sessions.txt                   # the sessions the start page lists for reopening
     ├── segment/
     │   └── segment.yaml               # action-segmentation config (copy from ~/.ethograph/defaults/segment/)
     └── spot/
