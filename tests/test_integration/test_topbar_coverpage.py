@@ -782,8 +782,7 @@ def test_cover_page_pose_only_drop_loads_as_features(gui, monkeypatch, tmp_path)
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
-    # The session folder is chosen by the drop; keep it out of the data folder here.
-    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
+    meta.app_state.project_path = str(tmp_path)  # the drop's session goes under the project
     buckets = classify_files([str(pose_csv)])
     assert buckets["pose"] == [str(pose_csv)]
     page._populate_io_from_buckets(buckets, {"data_sr": None, "source_software": "DeepLabCut", "pose_fps": 30.0})
@@ -860,8 +859,7 @@ def test_cover_page_session_plus_media_builds_alignment(gui, birdpark_data_dir, 
         pytest.skip("birdpark is missing a video or .nc session file")
 
     page = CoverPage(shell, meta.io_widget)
-    # The session folder is chosen by the drop; keep it out of the data folder here.
-    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
+    meta.app_state.project_path = str(tmp_path)  # the drop's session goes under the project
     buckets = classify_files([str(session), str(videos[0])])
     page._populate_io_from_buckets(buckets, {"data_sr": None, "source_software": None})
 
@@ -917,8 +915,7 @@ def test_cover_page_multi_trial_drop_pairs_by_natural_sort(gui, monkeypatch, tmp
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
-    # The session folder is chosen by the drop; keep it out of the data folder here.
-    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
+    meta.app_state.project_path = str(tmp_path)  # the drop's session goes under the project
     page._drop_layout_combo.setCurrentIndex(page._drop_layout_combo.findData("multi_trial"))
     buckets = classify_files([str(v) for v in videos] + [str(p) for p in poses])
     assert page._is_multi_trial_drop(buckets)
@@ -952,8 +949,7 @@ def test_cover_page_many_npy_drop_is_one_trial_each(gui, tmp_path, monkeypatch):
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
-    # The session folder is chosen by the drop; keep it out of the data folder here.
-    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: tmp_path)
+    meta.app_state.project_path = str(tmp_path)  # the drop's session goes under the project
     page._populate_io_from_buckets(classify_files(npys), {"data_sr": 10.0, "pose_fps": None})
 
     dt = eto.open(meta.app_state.nc_file_path)
@@ -1020,9 +1016,7 @@ def test_cover_page_multi_trial_drop_extracts_every_video_audio_track(gui, monke
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
-    session_dir = tmp_path / "session"
-    session_dir.mkdir()
-    monkeypatch.setattr(cover_page_mod, "choose_session_folder", lambda folders, app_state, parent=None: session_dir)
+    meta.app_state.project_path = str(tmp_path)  # the drop's session goes under the project
     cache = tmp_path / "audio_cache"
     monkeypatch.setattr(
         page, "_extract_video_audio", lambda paths: [str(ensure_extracted_audio(v, cache)) for v in paths]
@@ -1262,12 +1256,11 @@ def test_birdpark_load_then_toggle_changepoints_via_menu(birdpark_gui):
 
 
 def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
-    """The dropped files' own folder becomes the session (it gets .ethograph/);
-    with a project set it is registered there and the reopen list puts its
-    recorded state back into the IO fields. Without a project the list is hidden
-    and the session folder is the same: data never moves."""
+    """A drop's session is a fresh timestamped folder under the project's sessions/,
+    never the dropped files' own folder; it is registered in the project and the
+    reopen list puts its recorded state back into the IO fields."""
     from ethograph.gui.cover_page import CoverPage
-    from ethograph.gui.project import list_drops, record_drop, register_session
+    from ethograph.gui.project import SESSIONS_DIRNAME, list_drops, record_drop, register_session
 
     shell, meta = gui
     page = CoverPage(shell, meta.io_widget)
@@ -1275,13 +1268,6 @@ def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
     rig = tmp_path / "rig"
     rig.mkdir()
     (rig / "clip.mp4").touch()
-    buckets = {"video": [str(rig / "clip.mp4")]}
-
-    state.project_path = None
-    page._refresh_project_ui()
-    assert page._reopen_row.isHidden()
-    assert page._choose_session_dir(buckets) == rig
-    assert (rig / ".ethograph").is_dir()
 
     project = tmp_path / "study"
     project.mkdir()
@@ -1290,9 +1276,13 @@ def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
     assert not page._reopen_row.isHidden()
     assert not page._reopen_combo.isEnabled()  # nothing recorded yet
 
-    drop_dir = page._choose_session_dir(buckets)
-    assert drop_dir == rig
-    state.video_folder = str(tmp_path)
+    drop_dir = page._new_session_dir()
+    assert drop_dir.parent == project / SESSIONS_DIRNAME
+    assert (drop_dir / ".ethograph").is_dir()
+    assert not (rig / ".ethograph").exists(), "nothing is written beside the media"
+    assert page._new_session_dir() != drop_dir, "redoing a drop is a new session, never an overwrite"
+
+    state.video_folder = str(rig)
     state.primary_camera = "cam-1"
     record_drop(drop_dir, [str(rig / "clip.mp4")], state)
     register_session(project, drop_dir)
@@ -1304,7 +1294,7 @@ def test_cover_page_project_drops_are_kept_and_reopenable(gui, qtbot, tmp_path):
     state.primary_camera = None
     page._reopen_combo.setCurrentIndex(1)
     page._on_reopen_drop(1)
-    assert state.video_folder == str(tmp_path)
+    assert state.video_folder == str(rig)
     assert state.primary_camera == "cam-1"
     assert page._reopened_drop == drop_dir
     assert page._drop.paths == []  # Load takes the restored fields, not a rebuild
@@ -1324,77 +1314,6 @@ def test_reset_local_settings_survives_the_next_auto_save(moll2025_gui):
 
     assert len(pc._dyn_panels) == n_default
     assert len(meta.app_state.panel_layout["panels"]) == n_default
-
-
-def test_a_drop_asks_before_replacing_an_alignment_it_did_not_make(gui, tmp_path, monkeypatch):
-    """Re-dropping a folder's videos is normal; a foreign alignment is the user's call.
-
-    It used to raise, which left no way to re-pair a folder that had once been set
-    up by hand — the drop simply could not proceed.
-    """
-    from ethograph.gui.cover_page import CoverPage, _DropCancelled
-
-    shell, meta = gui
-    page = CoverPage(shell, meta.io_widget)
-    rig = tmp_path / "rig"
-    (rig / ".ethograph").mkdir(parents=True)
-    (rig / ".ethograph" / "alignment.nwb").touch()  # somebody else's: no drop record
-    (rig / "clip.mp4").touch()
-    buckets = {"video": [str(rig / "clip.mp4")]}
-
-    asked: list[str] = []
-
-    def _answer(yes):
-        def _confirm(folder):
-            asked.append(folder.name)
-            return yes
-
-        return _confirm
-
-    monkeypatch.setattr(page, "_confirm_overwrite_alignment", _answer(False))
-    with pytest.raises(_DropCancelled):
-        page._choose_session_dir(buckets)
-    assert asked == ["rig"], "the user is asked, not refused"
-
-    monkeypatch.setattr(page, "_confirm_overwrite_alignment", _answer(True))
-    assert page._choose_session_dir(buckets) == rig
-
-
-def test_only_an_alignment_holding_work_is_asked_about(gui, tmp_path, monkeypatch):
-    """A drop rebuilds the alignment whole, so it asks exactly when that loses something.
-
-    Media filenames and trial timing come back from the files; declared individuals
-    and trial metadata do not. Without this the re-drop fix would have turned a loud
-    crash into silent data loss.
-    """
-    import pandas as pd
-    from qtpy.QtWidgets import QMessageBox
-
-    from ethograph.gui.cover_page import CoverPage
-    from ethograph.gui.project import record_drop
-    from ethograph.io.nwb_alignment import set_individuals
-    from ethograph.io.pairing import pair_media
-
-    shell, meta = gui
-    page = CoverPage(shell, meta.io_widget)
-    asked: list[str] = []
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: asked.append(a[2]) or QMessageBox.Cancel)
-
-    rig = tmp_path / "rig"
-    rig.mkdir()
-    (rig / "clip.mp4").touch()
-    alignment = rig / ".ethograph" / "alignment.nwb"
-    alignment.parent.mkdir()
-    table = pd.DataFrame([{"trial": 1, "start_time": 0.0, "stop_time": 4.0, "video_cam-1": str(rig / "clip.mp4")}])
-    pair_media(table, stream_rates={"video": 30.0}, output_path=alignment, on_existing="replace")
-    record_drop(rig, [str(rig / "clip.mp4")], meta.app_state)
-
-    assert page._confirm_overwrite_alignment(rig) is True
-    assert asked == [], "a drop's own alignment holds only what a drop writes"
-
-    set_individuals(alignment, ["crow1", "crow2"])
-    assert page._confirm_overwrite_alignment(rig) is False  # the fake answers Cancel
-    assert len(asked) == 1 and "crow1, crow2" in asked[0], "the question names what would be lost"
 
 
 def test_a_fresh_install_starts_in_the_starter_project(gui, tmp_path, monkeypatch):

@@ -34,7 +34,6 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -43,11 +42,9 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.gui.dialog_busy_progress import BusyProgressDialog
-from ethograph.gui.dialog_session_folder import choose_session_folder
 from ethograph.gui.file_dialogs import browse_open_files
 from ethograph.gui.notify import notify_dialog
-from ethograph.gui.project import chosen_project_dir, is_foreign_session, record_drop, register_session
-from ethograph.gui.session_folder import source_folders
+from ethograph.gui.project import chosen_project_dir, new_session_dir, record_drop, register_session
 from ethograph.io.audio_align import (
     ANALYSIS_RATE,
     GOOD_SCORE,
@@ -476,20 +473,12 @@ class AudioAlignDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _on_accept(self) -> None:
-        folders = source_folders({"video": self._videos.paths, "audio": self._audios.paths})
-        chosen = choose_session_folder(folders, self.app_state, self)
-        if chosen is None:
+        project = chosen_project_dir(self.app_state)
+        if project is None:
+            notify_dialog("Choose a project folder first: the session is created in it.", "error")
             return
-        if is_foreign_session(chosen) and alignment_path(chosen).is_file():
-            answer = QMessageBox.question(
-                self,
-                "Overwrite this alignment?",
-                f"<b>{chosen.name}</b> already holds an alignment no drag &amp; drop made. Replace it?",
-            )
-            if answer != QMessageBox.Yes:
-                return
         try:
-            self.write_session(chosen)
+            self.write_session(new_session_dir(project))
         except Exception as exc:  # noqa: BLE001 - outermost GUI boundary
             logger.exception("Writing the aligned session failed")
             notify_dialog(f"Could not write the session:\n{exc}", "error")

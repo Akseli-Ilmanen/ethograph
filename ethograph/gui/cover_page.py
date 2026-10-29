@@ -18,10 +18,9 @@ Presents three entry points (matching the design in the project brief):
      folder of ``trial001.mp4, trial002.mp4, ...`` (optionally with matching
      pose/audio files) becomes a real multi-trial ``TrialTree``.
 
-   The folder the files came from becomes the session and gets ``.ethograph/``
-   (from several folders, the user picks one — ``dialog_session_folder``).
-   With a **project folder** chosen (remembered in ``gui_settings.yaml``) the
-   session is registered there and listed for reopening (``gui/project.py``).
+   Every drop makes a fresh session folder, ``{project}/sessions/{timestamp}/``
+   (``gui/project.py``): nothing is written beside the media, the media never
+   move, and the session is registered in the project and listed for reopening.
 3. **Data wizard** — reuse :meth:`IOWidget._on_create_nc_clicked`.
 
 The page runs *before* the main window is shown: it accepts once a dataset
@@ -65,18 +64,16 @@ from qtpy.QtWidgets import (
 
 from ethograph.datasets import DATASETS
 from ethograph.gui.dialog_select_template import TEMPLATE_ASSETS_DIR
-from ethograph.gui.dialog_session_folder import choose_session_folder
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.project import (
     DropRecord,
     chosen_project_dir,
-    is_foreign_session,
     list_drops,
+    new_session_dir,
     record_drop,
     register_session,
     restore_drop,
 )
-from ethograph.gui.session_folder import source_folders
 from ethograph.io.audio_extract import ensure_extracted_audio, has_embedded_audio
 from ethograph.io.nc_drop import add_speed, concat_on_camera, positions_fit_frame
 from ethograph.io.netcdf import netcdf_engine
@@ -486,10 +483,6 @@ class _DropDetailsDialog(QDialog):
 
     def extract_audio(self) -> bool:
         return self._extract_audio_cb is not None and self._extract_audio_cb.isChecked()
-
-
-class _DropCancelled(Exception):
-    """The user closed the session-folder question; the drop is abandoned quietly."""
 
 
 class _DropList(QListWidget):
@@ -1337,8 +1330,6 @@ class CoverPage(QDialog):
                 if project is not None:
                     register_session(project, self._drop_session_dir)
                     self._refresh_project_ui()
-        except _DropCancelled:
-            return False
         except Exception as e:  # noqa: BLE001 - outermost GUI boundary
             logger.exception("Failed to prepare dropped files")
             notify_dialog(f"Could not prepare dropped files:\n{e}", "error")
@@ -1472,7 +1463,7 @@ class CoverPage(QDialog):
         feature_entries = self._feature_entries(cam_map, nc_sessions)
         needs_session_file = not other_sessions and self._session_nc_is_written(feature_entries)
         if has_media or needs_session_file:
-            self._drop_session_dir = self._choose_session_dir(buckets)
+            self._drop_session_dir = self._new_session_dir()
         if details.get("extract_audio") and details.get("audio_track_videos"):
             # The user opted to pull the videos' embedded audio: each track
             # becomes a throwaway .wav that joins the dropped audio files.
@@ -1642,7 +1633,7 @@ class CoverPage(QDialog):
                 columns["stop_time"] = list(stops)
 
         state.trial_table = pd.DataFrame(columns)
-        self._drop_session_dir = self._choose_session_dir(buckets)
+        self._drop_session_dir = self._new_session_dir()
         state.session_dir = str(self._drop_session_dir)
         state.output_path = str(self._drop_session_dir / "session.nc")
 
@@ -2019,72 +2010,23 @@ class CoverPage(QDialog):
 
         out_path = self._drop_session_dir / SETTINGS_DIR / "alignment.nwb"
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        # A drop states what the session is, so it writes the alignment whole:
-        # dropping the same folder twice must land where dropping it once did.
-        # Permission to discard one this drop did not make is asked for in
-        # `_choose_session_dir`, before anything is written.
+        # The session folder is this drop's own and fresh (`_new_session_dir`),
+        # so there is nothing here to protect.
         pair_media(pairing, stream_rates=stream_rates, output_path=out_path, on_existing="replace")
         return out_path
 
-    def _choose_session_dir(self, buckets: dict[str, list[str]]) -> Path:
-        """The folder that becomes this drop's session: it receives ``.ethograph/``.
+    def _new_session_dir(self) -> Path:
+        """The folder this drop's session files go to: ``{project}/sessions/{timestamp}/``.
 
-        Files from one folder: that folder, no question asked. From several: the
-        user picks one (:func:`choose_session_folder`), preselected by kind and
-        by what they chose last time. Data never moves.
-
-        An alignment a previous *drop* made is regenerable and is replaced without
-        asking. One somebody set up on purpose — ``.ethograph/`` with no drop
-        record, from the wizard, a notebook or the Custom set-up card — is theirs,
-        so the drop asks before replacing it instead of refusing: re-dropping a
-        folder's videos is a normal thing to do, and only the user knows whether
-        the old pairing still matters.
+        Always a new folder under the project (there is always one — the starter
+        at worst), never beside the dropped media: redoing a drop is a new
+        session rather than a question about which of the old folders to reuse,
+        and the media are only ever referenced by absolute path.
         """
-        folders = source_folders(buckets)
-        if not folders:
-            raise RuntimeError("Nothing dropped names a folder to put the session in.")
-        chosen = choose_session_folder(folders, self.app_state, self)
-        if chosen is None:
-            raise _DropCancelled
-        if not self._confirm_overwrite_alignment(chosen):
-            raise _DropCancelled
-        (chosen / SETTINGS_DIR).mkdir(parents=True, exist_ok=True)
-        return chosen
-
-    def _confirm_overwrite_alignment(self, folder: Path) -> bool:
-        """Whether the drop may write this folder's alignment. Only a drop asks.
-
-        A drop rebuilds the alignment whole, so the question is what that would
-        throw away. Media filenames and trial timing come back from the files, so
-        replacing them is free and silent. Two things are not free: an alignment
-        somebody else set up (no drop record), and anything a person put inside one
-        — declared individuals, trial metadata typed into the table. Either is named
-        in the question, so nobody loses work they cannot see.
-        """
-        from qtpy.QtWidgets import QMessageBox
-
-        from ethograph.io.nwb_alignment import alignment_extras
-
-        alignment = folder / SETTINGS_DIR / "alignment.nwb"
-        if not alignment.is_file():
-            return True
-        reasons = alignment_extras(alignment)
-        if is_foreign_session(folder):
-            reasons.append("an alignment no drag &amp; drop made")
-        if not reasons:
-            return True  # a previous drop's, holding nothing but what a drop writes
-
-        listed = "".join(f"<li>{reason}</li>" for reason in reasons)
-        answer = QMessageBox.question(
-            self,
-            "Overwrite this alignment?",
-            f"<b>{folder.name}</b> already holds an <code>.ethograph/alignment.nwb</code> — "
-            f"do you want to overwrite it? Rebuilding it loses:<ul>{listed}</ul>"
-            "You can open this previous alignment from the <b>Custom set-up</b> card instead.",
-            QMessageBox.Yes | QMessageBox.Cancel,
-            QMessageBox.Cancel,
-        )
-        return answer == QMessageBox.Yes
+        project = self._project_dir()
+        if project is None:
+            raise RuntimeError("Choose a project folder before dropping files: the session is created in it.")
+        return new_session_dir(project)
 
     # ------------------------------------------------------------------
     # Loaded-state helpers
