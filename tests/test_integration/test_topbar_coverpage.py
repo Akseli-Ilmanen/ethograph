@@ -628,6 +628,28 @@ def test_cover_page_classify_files():
     assert buckets["unknown"] == ["junk.xyz"]
 
 
+def test_cover_page_classify_files_units_npz_is_neurons(tmp_path):
+    """A saved pynapple ``TsGroup`` is spike data for the raster, never a
+    feature session; a ``Tsd`` ``.npz`` stays a session. Both carry the same
+    suffix, so the archive's ``type`` key is the only thing that tells them apart."""
+    import numpy as np
+    import pynapple as nap
+
+    from ethograph.gui.cover_page import classify_files
+    from ethograph.utils.stream_durations import get_units_npz_duration
+
+    units = tmp_path / "units.npz"
+    nap.TsGroup({1: nap.Ts(np.array([0.1, 0.5]))}, time_support=nap.IntervalSet(0.0, 12.0)).save(str(units))
+    speed = tmp_path / "speed.npz"
+    nap.Tsd(t=np.arange(3.0), d=np.zeros(3)).save(str(speed))
+
+    buckets = classify_files([str(units), str(speed)])
+    assert buckets["neurons"] == [str(units)]
+    assert buckets["session"] == [str(speed)]
+    assert get_units_npz_duration(units) == 12.0
+    assert get_units_npz_duration(speed) is None
+
+
 def test_cover_page_classify_files_skips_settings_dir(tmp_path):
     """A dropped ``.ethograph`` sidecar folder must never be bucketed as a
     session — it is not hidden on Windows, so "drop everything in this
@@ -1366,3 +1388,40 @@ def test_without_a_project_folder_your_own_data_is_shut_out(gui, tmp_path):
 
     assert not any(w.isEnabled() for w in page._needs_project)
     assert "choose a folder" in page._project_hint.text()
+
+
+def test_cover_page_alignment_prompt_sees_parent_sidecar(gui, monkeypatch, tmp_path):
+    """The "make this folder a session?" prompt must agree with the loader:
+    a pynapple subfolder whose alignment sits one folder up is already a
+    session, so the prompt never fires (a yes would write a second alignment
+    that then shadows the real one)."""
+    from qtpy.QtWidgets import QMessageBox
+
+    from ethograph.gui.cover_page import CoverPage
+
+    shell, meta = gui
+    session = tmp_path / "behav"
+    (session / ".ethograph").mkdir(parents=True)
+    (session / ".ethograph" / "alignment.nwb").touch()
+    pynapple_dir = session / "pynapple"
+    pynapple_dir.mkdir()
+    # A stray single-trial .nc (what a neurons-only drop writes) the prompt would otherwise offer.
+    import numpy as np
+    import xarray as xr
+
+    import ethograph as eto
+
+    ds = xr.Dataset(
+        {"speed": (("time", "individuals"), np.zeros((5, 1)))},
+        coords={"time": np.arange(5.0), "individuals": ["a"]},
+        attrs={"trial": 1},
+    )
+    eto.from_datasets([ds]).to_netcdf(pynapple_dir / "units.nc")
+
+    asked: list[str] = []
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: asked.append("asked") or QMessageBox.No)
+    meta.app_state.nc_file_path = str(pynapple_dir)
+    meta.app_state.nwb_file_path = None
+    page = CoverPage(shell, meta.io_widget)
+    page._maybe_offer_alignment_from_trials()
+    assert asked == []

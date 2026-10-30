@@ -126,6 +126,21 @@ def get_ephys_duration(path: str) -> float | None:
     return len(loader) / loader.rate
 
 
+def get_units_npz_duration(path: Path) -> float | None:
+    """End of the time support of a pynapple ``TsGroup`` saved as ``.npz``.
+
+    pynapple stores the group's ``time_support`` as ``start``/``end`` arrays;
+    the last ``end`` is the recording length the spikes were cut to.
+    """
+    import numpy as np
+
+    with np.load(path, allow_pickle=True) as raw:
+        if "type" not in raw or str(np.asarray(raw["type"]).item()) != "TsGroup":
+            return None
+        end = float(np.asarray(raw["end"]).max())
+    return end if end > 0 else None
+
+
 def get_kilosort_duration(folder: str) -> float | None:
     """Estimate recording duration from a kilosort output folder.
 

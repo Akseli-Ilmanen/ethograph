@@ -175,6 +175,42 @@ class TestTriggered:
         assert triggered.stream_offset_for_trial(2, "video", NAME) == pytest.approx(0.2)
 
 
+class TestTrialWithoutSegment:
+    @pytest.fixture
+    def appended(self, tmp_path: Path) -> NWBAlignment:
+        """Three triggered files, then a fourth trial added to the trials table
+        by hand -- a video column names its file, the acquisition has no segment."""
+        nwbfile = _nwbfile()
+        onsets = [1.0, 20.0, 45.0]
+        n = 300
+        nwbfile.add_acquisition(
+            ImageSeries(
+                name="video_cam-1",
+                description="",
+                unit="Frames",
+                format="external",
+                external_file=["t1.mp4", "t2.mp4", "t3.mp4"],
+                starting_frame=[0, n, 2 * n],
+                timestamps=np.concatenate([o + np.arange(n) / FPS for o in onsets]),
+            )
+        )
+        nwbfile.add_trial_column(name="video_cam-1", description="")
+        for o, name in zip([*onsets, 100.0], ["t1.mp4", "t2.mp4", "t3.mp4", "t4.mp4"]):
+            nwbfile.add_trial(start_time=o, stop_time=o + n / FPS, **{"video_cam-1": name})
+        alignment = _write(nwbfile, tmp_path / "appended.nwb")
+        (tmp_path / "t4.mp4").touch()
+        return alignment
+
+    def test_table_names_the_trials_own_file(self, appended: NWBAlignment):
+        assert appended.media_filename(4, "video", "cam-1") == "t4.mp4"
+        assert appended.media_filename(1, "video", "cam-1") == "t1.mp4"
+
+    def test_path_comes_from_the_table_not_the_first_segment(self, appended: NWBAlignment, tmp_path: Path):
+        path = appended.resolve_media_path(4, "video", "cam-1", fallback_folder=str(tmp_path))
+        assert path is not None and Path(path).name == "t4.mp4"
+        assert appended.stream_offset_for_trial(4, "video", "cam-1") == pytest.approx(0.0)
+
+
 class TestFreeRunning:
     def test_every_trial_reads_the_one_file(self, free_running: NWBAlignment):
         for trial in (1, 2, 3):

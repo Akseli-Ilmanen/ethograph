@@ -32,3 +32,4 @@
 34 pelletReady 1
 35 pelletBeakContact 1
 50 stimulation 0
+51 sleep 0

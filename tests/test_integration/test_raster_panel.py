@@ -243,3 +243,84 @@ def test_a_selected_units_coloured_id_cell_paints(units_widget):
         ew._cluster_id_delegate.paint(painter, option, index)
     finally:
         painter.end()
+
+
+def test_a_right_click_on_the_raster_seeks_like_every_other_panel(gui, monkeypatch):
+    """The raster is a fixed panel, so ``panel_added`` never announces it; the
+    Labels widget must subscribe to it by name like the ephys trace."""
+    _, meta = gui
+    seen: list[dict] = []
+    monkeypatch.setattr(meta.labels_widget, "_on_plot_clicked", seen.append)
+    raster = meta.plot_container.raster_plot
+    raster.plot_clicked.disconnect()
+    meta.labels_widget.set_plot_container(meta.plot_container)
+    raster.plot_clicked.emit({"x": 1.0, "y": 0.0, "button": Qt.RightButton, "plot": raster})
+    assert seen, "the Labels widget does not hear the raster's clicks"
+
+
+def test_a_pasted_unit_order_becomes_every_panel_row_order(moll2025_gui):
+    from qtpy.QtWidgets import QApplication
+
+    _, meta = moll2025_gui
+    _units_in(meta)
+    ew = meta.ephys_widget
+    QApplication.clipboard().setText("[5, 2, 9]")
+
+    ew.order_paste_btn.click()
+
+    assert ew.raster_row_order_combo.currentData() == "custom"
+    assert meta.app_state.raster_custom_unit_order == [5, 2, 9]
+    order = ew.ordered_unit_ids()
+    assert order[:3] == [5, 2, 9] and sorted(order) == list(range(12))
+    assert [units for _, units in sorted(ew._raster_row_units.items())] == [[unit] for unit in order]
+
+    ew.order_copy_btn.click()
+
+    assert QApplication.clipboard().text() == "[" + ", ".join(map(str, order)) + "]"
+
+
+def test_a_burst_filter_draws_only_the_bursting_spikes(gui, units_widget, qtbot):
+    """Tools ▸ Neural: Raster of burst spikes only — the filter, its popup source and its title."""
+    from ethograph.gui.dialog_burst_raster import BurstRasterDialog
+    from ethograph.labels.feature_events import INSTANTANEOUS_RATE, LOG_ISI, BurstRule
+
+    _, meta = gui
+    ew, raster = units_widget
+    burst = 5.0 + np.arange(4) * 0.005
+    # GOOD_A gets a 200 Hz run; the units and their table rows stay the fixture's.
+    ew._tsgroup = nap.TsGroup(
+        {
+            GOOD_A: nap.Ts(t=np.concatenate([[1.0, 2.0], burst, [30.0]])),
+            MUA: nap.Ts(t=np.array([3.0])),
+            GOOD_B: nap.Ts(t=np.array([4.0])),
+        }
+    )
+    ew._spike_table_cache = None
+
+    dialog = BurstRasterDialog(meta)
+    qtbot.addWidget(dialog)
+    assert dialog.method() == LOG_ISI, "logISI is the default detector"
+    dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(INSTANTANEOUS_RATE))
+    dialog._burst_inputs["rate_threshold"].setValue(150.0)
+    rule = dialog.show_bursts()
+
+    assert rule == BurstRule(INSTANTANEOUS_RATE, {"rate_threshold": 150.0, "min_spikes_in_burst": 2})
+    (drawn,) = _times_by_color(raster).values()
+    assert np.allclose(drawn, burst), "only the 200 Hz run is a burst; the lone spikes and GOOD_B are gone"
+    assert meta.app_state.raster_burst_filter == rule.to_dict()
+    assert meta.app_state.raster_burst_filters == [rule.to_dict()]
+    assert raster.base_title == "raster — bursts instantaneous_rate (rate_threshold=150)"
+
+    # The popup offers the filter as a raster of its own, beside the plain raster.
+    meta.source_popup.refresh(n_units=3, burst_filters=meta.app_state.raster_burst_filters)
+    labels = [meta.source_popup._list.item(i).text().strip() for i in range(meta.source_popup._list.count())]
+    assert "Spike raster — bursts instantaneous_rate (rate_threshold=150)" in labels
+    assert "Spike raster (3 units)" in labels
+
+    # Showing it again does not duplicate the source; every spike comes back on request.
+    dialog.show_bursts()
+    assert len(meta.app_state.raster_burst_filters) == 1
+    dialog.show_all()
+    (drawn,) = _times_by_color(raster).values()
+    assert drawn == [1.0, 2.0, 4.0, *burst.tolist()]
+    assert meta.app_state.raster_burst_filter == {} and raster.base_title == "raster"

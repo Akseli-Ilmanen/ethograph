@@ -160,6 +160,41 @@ def test_source_collection_trials():
     assert sc.find_trial(15.0) == 1
 
 
+def test_session_range_reaches_data_past_the_trials():
+    """Session scope spans the recording, not just first trial start to last
+    trial end: a source running past the trials widens it, an empty one never
+    drags it to zero."""
+    from ethograph.io.time_model import SourceCollection
+
+    class _Source:
+        def __init__(self, name, start, end):
+            self.name = name
+            self.time_range = TimeRange(start, end)
+            self.sampling_rate = None
+
+        def get_data(self, t0, t1):
+            return np.array([]), np.array([])
+
+    sc = SourceCollection()
+    sc.set_trials(ids=[1, 2], starts=[100.0, 200.0], stops=[150.0, 250.0])
+    sc.add(_Source("spikes", 50.0, 4000.0))
+    sc.add(_Source("empty", 0.0, 0.0))
+    assert sc.session_range == TimeRange(50.0, 4000.0)
+
+
+def test_tsgroup_source_extent_is_its_time_support():
+    import numpy as np
+    import pynapple as nap
+
+    from ethograph.io.time_sources import TsGroupSource
+
+    group = nap.TsGroup({1: nap.Ts(np.array([10.0, 20.0]))}, time_support=nap.IntervalSet(0.0, 3600.0))
+    src = TsGroupSource("units", group)
+    assert src.time_range == TimeRange(0.0, 3600.0)
+    t, units = src.get_data(5.0, 15.0)
+    assert t.tolist() == [10.0] and units.tolist() == [1]
+
+
 def test_source_collection_infer_stops():
     from ethograph.io.time_model import SourceCollection
 

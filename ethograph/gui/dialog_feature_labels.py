@@ -56,6 +56,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.features.neural import BURST_INSTANTANEOUS_RATE_HZ
+from ethograph.gui.burst_form import BURST_METHODS, BURST_PARAMETERS, build_burst_inputs, read_burst_rule, seconds_spin
 from ethograph.gui.dialog_onset_model import base_loader, iter_trial_windows
 from ethograph.gui.notify import notify
 from ethograph.gui.widgets_ephys import (
@@ -67,8 +68,6 @@ from ethograph.io.catalog import INDIVIDUAL_DIMS, SPACE_DIM
 from ethograph.labels.feature_events import (
     ABOVE,
     BELOW,
-    LOG_ISI,
-    MAX_INTERVAL,
     PERCENTILE,
     RAW,
     ZSCORE,
@@ -77,7 +76,6 @@ from ethograph.labels.feature_events import (
     SeriesSample,
     ThresholdRule,
     burst_events,
-    burst_parameters,
     classes_along,
     event_mappings,
     feature_events,
@@ -107,55 +105,11 @@ _METHODS: dict[str, tuple[str, str]] = {
         "Threshold: a firing rate above or below a value",
         "The periods a unit's rate spends past a value. Right for activity lasting\nhundreds of milliseconds or more.",
     ),
-    MAX_INTERVAL: (
-        "Bursts: MaxInterval",
-        "Bursts read off the spike times with fixed limits on the intervals between spikes:\n"
-        "one to start a burst, one to stay in it, then bursts close together are merged and\n"
-        "small ones dropped. One set of numbers for every unit.\n"
-        "Ranked first of eight detectors by Cotterill et al. (2016, J Neurophysiol 116:306).",
-    ),
-    LOG_ISI: (
-        "Bursts: logISI",
-        "Bursts read off the spike times with a limit each unit sets for itself: the valley\n"
-        "between the within-burst and between-burst peaks of its own ISI histogram, over the\n"
-        "trials shown. Units with different firing patterns need no tuning.\n"
-        "Pasquale et al. (2010); ranked second by Cotterill et al. (2016).",
-    ),
+    **BURST_METHODS,
 }
 
-#: A burst detector's parameters as the form shows them: name → (row label, tooltip).
-_BURST_PARAMETERS: dict[str, tuple[str, str]] = {
-    "max_isi_start": (
-        "Start when two spikes are closer than:",
-        "A burst starts at the first of two spikes closer together than this.",
-    ),
-    "max_isi_burst": (
-        "Continue while spikes are within:",
-        "The burst goes on while consecutive spikes are no further apart than this.",
-    ),
-    "min_inter_burst_interval": (
-        "Merge bursts closer than:",
-        "Two bursts separated by less than this (last spike to first spike) become one.",
-    ),
-    "min_burst_duration": (
-        "Drop bursts shorter than:",
-        "A burst shorter than this, first spike to last, is dropped (after merging).",
-    ),
-    "min_spikes_in_burst": ("Fewest spikes in a burst:", "A burst with fewer spikes than this is dropped."),
-    "max_cutoff": (
-        "Longest within-burst interval:",
-        "The within-burst peak of a unit's ISI histogram must lie below this.\n"
-        "It is also the limit used for a unit whose histogram has no clear valley.",
-    ),
-    "fallback": (
-        "Units with no clear valley:",
-        "Ticked: such a unit is read with the limit above, as the published method does.\n"
-        "Unticked: it gets no bursts — the careful choice over units nobody has looked at.",
-    ),
-}
-
-#: The fewest and most spikes a burst may be asked to have.
-_SPIKE_COUNT_RANGE = (2, 10_000)
+#: The burst parameters' rows, as the shared form shows them.
+_BURST_PARAMETERS = BURST_PARAMETERS
 
 #: The widest a raw or z-scored threshold may be typed.
 _THRESHOLD_LIMIT = 1e12
@@ -499,15 +453,7 @@ class FeatureLabelsDialog(QDialog):
         lay.addWidget(self.histogram)
         return group
 
-    @staticmethod
-    def _seconds_spin(tooltip: str) -> QDoubleSpinBox:
-        spin = QDoubleSpinBox()
-        spin.setRange(0.0, 3600.0)
-        spin.setDecimals(3)
-        spin.setSingleStep(0.05)
-        spin.setSuffix(" s")
-        spin.setToolTip(tooltip)
-        return spin
+    _seconds_spin = staticmethod(seconds_spin)
 
     # ------------------------------------------------------------------
     # Method
@@ -530,31 +476,11 @@ class FeatureLabelsDialog(QDialog):
         """One row per parameter of the picked detector, opening at the detector's own default."""
         for stale in self._burst_inputs.values():
             self._burst_form.removeRow(stale)
-        self._burst_inputs = {}
-        for name, default in burst_parameters(self.method()).items():
-            label, tooltip = _BURST_PARAMETERS[name]
-            widget: QCheckBox | QSpinBox | QDoubleSpinBox
-            if isinstance(default, bool):
-                widget = QCheckBox("read them with that limit")
-                widget.setChecked(default)
-            elif isinstance(default, int):
-                widget = QSpinBox()
-                widget.setRange(*_SPIKE_COUNT_RANGE)
-                widget.setValue(default)
-            else:
-                widget = self._seconds_spin(tooltip)
-                widget.setValue(default)
-            widget.setToolTip(tooltip)
-            self._burst_form.addRow(label, widget)
-            self._burst_inputs[name] = widget
+        self._burst_inputs = build_burst_inputs(self._burst_form, self.method())
 
     def burst_rule(self) -> BurstRule:
         """The detector and parameters the form selects."""
-        params = {
-            name: widget.isChecked() if isinstance(widget, QCheckBox) else widget.value()
-            for name, widget in self._burst_inputs.items()
-        }
-        return BurstRule(self.method(), params)
+        return read_burst_rule(self.method(), self._burst_inputs)
 
     def burst_units(self) -> list[str]:
         """The units read: every one listed, or the one picked."""

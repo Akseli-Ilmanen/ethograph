@@ -121,6 +121,19 @@ FOLDER_LAYOUT_URL = "https://Akseli-Ilmanen.github.io/ethograph/getting_started/
 _MIN_SCALE = 0.6
 
 
+def is_units_npz(path: Path) -> bool:
+    """A pynapple ``.npz`` that deserialises to a ``TsGroup`` (spike times, not a feature).
+
+    pynapple writes the class name under ``type``; reading that one key is
+    far cheaper than ``nap.load_file`` and never imports pynapple here.
+    """
+    try:
+        with np.load(path, allow_pickle=True) as raw:
+            return "type" in raw and str(np.asarray(raw["type"]).item()) == "TsGroup"
+    except (OSError, ValueError, KeyError):
+        return False
+
+
 def _available_geometry(widget=None):
     """Available geometry of the widget's screen (primary screen as fallback)."""
     handle = getattr(widget, "screen", None) if widget is not None else None
@@ -136,7 +149,8 @@ def classify_files(paths: list[str]) -> dict[str, list[str]]:
     A ``.nwb`` can be pose, ephys or a feature/session file; it is treated as a
     *session* (feature) file here since that is the loadable unit.  A folder is a
     Kilosort output when it holds ``spike_times.npy`` (``neurons`` bucket),
-    otherwise a pynapple ``session`` folder.
+    otherwise a pynapple ``session`` folder. A ``.npz`` holding a pynapple
+    ``TsGroup`` is ``neurons`` too; any other ``.npz`` is a session.
     """
     buckets: dict[str, list[str]] = {
         "session": [],
@@ -167,7 +181,10 @@ def classify_files(paths: list[str]) -> dict[str, list[str]]:
                 buckets["session"].append(p)
             continue
         ext = path.suffix.lower()
-        if ext == ".nc" and movement_dataset_info(p) is not None:
+        if ext == ".npz" and is_units_npz(path):
+            # A saved TsGroup is neurons (raster), not a session of features.
+            buckets["neurons"].append(p)
+        elif ext == ".nc" and movement_dataset_info(p) is not None:
             # A movement poses/bboxes dataset is a pose file that needs no
             # conversion: it pairs with a camera like a DLC .h5 does.
             buckets["pose"].append(p)
@@ -1250,6 +1267,7 @@ class CoverPage(QDialog):
         """
         from qtpy.QtWidgets import QMessageBox
 
+        from ethograph.io.data_loader import _pynapple_sidecar_alignment
         from ethograph.io.nwb_alignment import alignment_from_trials_ep, alignment_from_trialtree
         from ethograph.io.pynapple import find_trials_intervalset
         from ethograph.io.session_layout import alignment_path, session_dir_of
@@ -1261,7 +1279,10 @@ class CoverPage(QDialog):
         folder = session_dir_of(source)
         sidecar = alignment_path(folder)
         explicit = getattr(self.app_state, "nwb_file_path", None)
-        if sidecar.exists() or (explicit and Path(explicit).exists()) or source.suffix.lower() == ".nwb":
+        # The same lookup the loader uses: a pynapple subfolder's alignment may
+        # sit one folder up, and offering to write a second one would shadow it.
+        found = _pynapple_sidecar_alignment(folder)
+        if found is not None or (explicit and Path(explicit).exists()) or source.suffix.lower() == ".nwb":
             return
 
         write = None
@@ -1712,7 +1733,8 @@ class CoverPage(QDialog):
         ephys_path = buckets["ephys"][0] if buckets["ephys"] else None
         neurons_path = buckets["neurons"][0] if buckets["neurons"] else None
         anchor = ephys_path or neurons_path
-        output_path = str(Path(anchor).with_suffix(".nc")) if ephys_path else str(Path(anchor) / "session.nc")
+        anchor_path = Path(anchor)
+        output_path = str(anchor_path / "session.nc" if anchor_path.is_dir() else anchor_path.with_suffix(".nc"))
 
         dt = wizard_single_from_ephys(
             output_nc_path=output_path,

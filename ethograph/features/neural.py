@@ -25,7 +25,7 @@ spikes are never written out as a feature file; the transform runs at
 session open, every time.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -88,8 +88,13 @@ class SpikeTable:
 
     @classmethod
     def from_tsgroup(cls, tsgroup: nap.TsGroup) -> "SpikeTable":
-        unit_ids = [int(uid) for uid in tsgroup.keys()]
-        trains = [np.asarray(tsgroup[uid].times(), dtype=np.float64) for uid in unit_ids]
+        return cls.from_trains({int(uid): np.asarray(tsgroup[uid].times(), dtype=np.float64) for uid in tsgroup.keys()})
+
+    @classmethod
+    def from_trains(cls, trains_by_unit: Mapping[int, np.ndarray]) -> "SpikeTable":
+        """The table of spike times given per unit, each already on one clock."""
+        unit_ids = list(trains_by_unit)
+        trains = [np.asarray(trains_by_unit[uid], dtype=np.float64) for uid in unit_ids]
         if not trains:
             return cls(np.empty(0, dtype=np.float64), np.empty(0, dtype=np.int64))
         times = np.concatenate(trains)

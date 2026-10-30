@@ -619,11 +619,17 @@ class AppStateSpec:
         "fr_bin_size": (float, 0.01, True),
         "fr_sigma": (float, 2.0, True),
         # Spike raster: "auto" | "ticks" | "density" (raster_render.RENDER_MODES), and
-        # the row order: "depth" | "table" | "rastermap" (raster_render.ROW_ORDERS).
+        # the row order (raster_render.ROW_ORDERS); "custom" reads raster_custom_unit_order.
         "raster_render_mode": (str, "auto", True),
         # Tick width in pixels; 0 lets the raster pick one from how crowded the view is.
         "raster_tick_width": (int, 0, True),
         "raster_row_order": (str, "depth", True),
+        # The pasted unit order; unit ids belong to one dataset.
+        "raster_custom_unit_order": (list[int], [], True, SCOPE_LOCAL),
+        # Burst filters made for the raster (labels.feature_events.BurstRule.to_dict), each a
+        # source in the add-panel popup; and the one the raster draws now ({} = every spike).
+        "raster_burst_filters": (list, [], True, SCOPE_LOCAL),
+        "raster_burst_filter": (dict, {}, True, SCOPE_LOCAL),
         # Changepoint correction
         "cp_min_label_length_s": (float, 0.05, True),
         "cp_stitch_gap_len_s": (float, 0.015, True),

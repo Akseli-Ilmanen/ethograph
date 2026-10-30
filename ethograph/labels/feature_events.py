@@ -45,7 +45,11 @@ import numpy as np
 import pandas as pd
 import pynapple as nap
 
-from ethograph.features.bursts import detect_bursts_log_isi, detect_bursts_max_interval
+from ethograph.features.bursts import (
+    detect_bursts_instantaneous_rate,
+    detect_bursts_log_isi,
+    detect_bursts_max_interval,
+)
 from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.labels.intervals import (
     EVENT_TYPE_STATE,
@@ -406,11 +410,13 @@ def feature_events(
 
 MAX_INTERVAL = "max_interval"
 LOG_ISI = "log_isi"
+INSTANTANEOUS_RATE = "instantaneous_rate"
 
 #: The burst detectors a rule can name: each takes a spike train and its own keyword parameters.
 BURST_DETECTORS: dict[str, Callable[..., nap.IntervalSet]] = {
     MAX_INTERVAL: detect_bursts_max_interval,
     LOG_ISI: detect_bursts_log_isi,
+    INSTANTANEOUS_RATE: detect_bursts_instantaneous_rate,
 }
 
 #: One trial of a spike train: ``(trial, t0, t1, shift)`` — the trial's window on
@@ -442,9 +448,44 @@ class BurstRule:
         """``"bursts max_interval"`` — the rule as it reads in a set name."""
         return f"bursts {self.method}"
 
+    def settings(self) -> str:
+        """``"max_cutoff=0.05, fallback=False"`` — the parameters set away from their defaults, or empty."""
+        defaults = burst_parameters(self.method)
+        changed = {name: value for name, value in self.params.items() if value != defaults[name]}
+        return ", ".join(
+            f"{name}={value:g}" if isinstance(value, float) else f"{name}={value}" for name, value in changed.items()
+        )
+
+    def label(self) -> str:
+        """``"bursts log_isi (max_cutoff=0.05)"`` — the rule, with any parameter set away from its default."""
+        settings = self.settings()
+        return f"{self.describe()} ({settings})" if settings else self.describe()
+
+    def to_dict(self) -> dict[str, Any]:
+        """The rule as it is saved in a settings file; :meth:`from_dict` reads it back."""
+        return {"method": self.method, "params": dict(self.params)}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "BurstRule":
+        return cls(str(data["method"]), dict(data.get("params") or {}))
+
     def detect(self, spikes: nap.Ts) -> nap.IntervalSet:
         """*spikes*' bursts, within each epoch of its time support."""
         return BURST_DETECTORS[self.method](spikes, **self.params)
+
+
+def burst_spike_times(train: nap.Ts | nap.Tsd, epochs: nap.IntervalSet, rule: BurstRule) -> np.ndarray:
+    """The spikes of *train* inside *epochs* that belong to a burst, as the detector of *rule* finds them.
+
+    The train is cut to *epochs* first, so a detector that adapts to the
+    train (logISI's threshold) reads the spikes of those epochs only — the
+    same reading :func:`burst_events` gives the same epochs.
+    """
+    spikes = nap.Ts(t=train.t, time_support=train.time_support).restrict(epochs)
+    bursts = rule.detect(spikes)
+    if len(bursts) == 0:
+        return np.empty(0, dtype=np.float64)
+    return np.asarray(spikes.restrict(bursts).t, dtype=np.float64)
 
 
 def burst_events(
