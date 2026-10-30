@@ -554,6 +554,11 @@
 </table>
 </div>
 <p>The firing rate is binned for the trial on screen and re-binned when the trial, the neuron table’s filters or the bin settings change.</p>
+<section id="only-the-bursting-spikes">
+<h3>Only the bursting spikes<a class="headerlink" href="#only-the-bursting-spikes" title="Link to this heading">#</a></h3>
+<p><strong>Tools ▸ Neural: Raster of burst spikes only…</strong> draws the raster from the spikes a burst detector puts in a burst, and nothing else. Pick a method — <strong>logISI</strong> (the default: each unit sets its own limit from the valley of its inter-spike-interval histogram), <strong>MaxInterval</strong> (fixed limits for every unit) or <strong>instantaneous rate</strong> (a run of spikes above a rate, 125 Hz by default) — set its parameters, and <strong>Show burst spikes only</strong>. The raster’s title says which filter is on; <strong>Show every spike</strong> takes it off.</p>
+<p>Each filter you make is also listed in <strong>➕ Add panel</strong> under <em>Ephys: spikes</em> as <strong>Spike raster — bursts <code class="docutils literal notranslate"><span class="pre">method</span></code></strong>, with any parameter you changed from its default in brackets, beside the plain <strong>Spike raster</strong>. Dropping one switches the raster to that filter, so two detectors, or two settings of one, can be compared on the same units. The filters are kept with the dataset. The detectors are the ones <strong>Neural: Neuronal firing / burst detection…</strong> uses to make labels of the bursts; this view only changes what the raster draws.</p>
+</section>
 <section id="raster-rendering">
 <h3>Raster rendering<a class="headerlink" href="#raster-rendering" title="Link to this heading">#</a></h3>
 <p>The <strong>Raster</strong> setting chooses how spikes are drawn:</p>
@@ -773,6 +778,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#load-it-drag-drop">Load it — drag &amp; drop</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-ephys-trace-viewers">Two ephys trace viewers</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spikes-raster-and-firing-rate">Spikes: raster and firing rate</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#only-the-bursting-spikes">Only the bursting spikes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#raster-rendering">Raster rendering</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#row-order">Row order</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#selecting-units">Selecting units</a></li>

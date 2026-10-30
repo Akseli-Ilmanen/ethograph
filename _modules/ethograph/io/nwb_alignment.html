@@ -847,18 +847,16 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    gap just before a file (a triggered camera's first frame lands after the</span>
 <span class="sd">    trigger) still takes that file when ``t1`` reaches into it.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">t1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">t_start</span> <span class="o">&lt;=</span> <span class="n">t0</span> <span class="o">&lt;=</span> <span class="n">s</span><span class="o">.</span><span class="n">t_end</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">s</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">spans</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">best</span><span class="p">:</span> <span class="n">_FileSpan</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">best_overlap</span> <span class="o">=</span> <span class="mf">0.0</span>
-    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">:</span>
-        <span class="n">overlap</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">t_end</span><span class="p">,</span> <span class="n">t1</span><span class="p">)</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">overlap</span> <span class="o">&gt;</span> <span class="n">best_overlap</span><span class="p">:</span>
-            <span class="n">best</span><span class="p">,</span> <span class="n">best_overlap</span> <span class="o">=</span> <span class="n">s</span><span class="p">,</span> <span class="n">overlap</span>
-    <span class="k">return</span> <span class="n">best</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">t_start</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">t_end</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">t1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">hits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">((</span><span class="n">starts</span> <span class="o">&lt;=</span> <span class="n">t0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t0</span> <span class="o">&lt;=</span> <span class="n">ends</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">spans</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">hits</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">overlap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">ends</span><span class="p">,</span> <span class="n">t1</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
+    <span class="n">best</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">overlap</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">spans</span><span class="p">[</span><span class="n">best</span><span class="p">]</span> <span class="k">if</span> <span class="n">overlap</span><span class="p">[</span><span class="n">best</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="kc">None</span>
 
 
 <span class="c1"># Extension → stream mapping, checked in order (first match wins).</span>
@@ -1180,6 +1178,7 @@ window.runMermaid = runMermaid;</script>
         <span class="bp">self</span><span class="o">.</span><span class="n">_io</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_nwb</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_trials_df_cache</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trial_pos_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rate_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_span_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">_FileSpan</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
 
@@ -1193,6 +1192,7 @@ window.runMermaid = runMermaid;</script>
         <span class="n">instance</span><span class="o">.</span><span class="n">_io</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">instance</span><span class="o">.</span><span class="n">_nwb</span> <span class="o">=</span> <span class="n">nwb_obj</span>
         <span class="n">instance</span><span class="o">.</span><span class="n">_trials_df_cache</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">instance</span><span class="o">.</span><span class="n">_trial_pos_cache</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">instance</span><span class="o">.</span><span class="n">_rate_dict</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">instance</span><span class="o">.</span><span class="n">_span_cache</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">return</span> <span class="n">instance</span></div>
@@ -1242,18 +1242,24 @@ window.runMermaid = runMermaid;</script>
                     <span class="k">break</span>
         <span class="k">return</span> <span class="n">folders</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_trial_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Row position of each trial id, keyed by its spelling; built once per table.</span>
+
+<span class="sd">        Every per-trial lookup (filenames, times, offsets) goes through here, so</span>
+<span class="sd">        a table of thousands of trials is scanned once, not once per trial.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_pos_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_trial_pos_cache</span> <span class="o">=</span> <span class="n">_trial_positions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trials_df</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_pos_cache</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_trial_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trials_df</span>
         <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="s2">"trial"</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-            <span class="n">match</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">==</span> <span class="n">trial</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">match</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-                <span class="n">match</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial</span><span class="p">)]</span>
-            <span class="k">if</span> <span class="n">match</span><span class="o">.</span><span class="n">empty</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">trial</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
-                <span class="n">match</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">trial</span><span class="p">)]</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">match</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">_lookup_trial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trial_positions</span><span class="p">(),</span> <span class="n">trial</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
             <span class="c1"># Single-row tables (e.g. "session" label) — fall back to the only row</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -1269,10 +1275,7 @@ window.runMermaid = runMermaid;</script>
         <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="s2">"trial"</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]):</span>
-                <span class="k">if</span> <span class="n">val</span> <span class="o">==</span> <span class="n">trial</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial</span><span class="p">):</span>
-                    <span class="k">return</span> <span class="n">i</span>
-            <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="n">_lookup_trial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trial_positions</span><span class="p">(),</span> <span class="n">trial</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_to_iloc</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
@@ -1342,15 +1345,9 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        """</span>
         <span class="n">acq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_acquisition</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">acq</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="s2">"external_file"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">acq</span><span class="o">.</span><span class="n">external_file</span><span class="p">)</span>
             <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_for_trial</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="n">trial</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">index</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">trial_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_index</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">trial_idx</span> <span class="k">if</span> <span class="n">trial_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">trial_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">_filename_from_url_or_path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">idx</span><span class="p">]))</span>
+                <span class="k">return</span> <span class="n">_filename_from_url_or_path</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
 
         <span class="n">media</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_media</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_filename_from_url_or_path</span><span class="p">(</span><span class="n">media</span><span class="p">)</span> <span class="k">if</span> <span class="n">media</span> <span class="k">else</span> <span class="kc">None</span></div>
@@ -1593,14 +1590,16 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        time (no timing, or trial-relative timing with per-trial files all</span>
 <span class="sd">        starting at 0) time says nothing, so the trial's position is used --</span>
 <span class="sd">        one file per trial when the counts agree, else the first file.</span>
+
+<span class="sd">        With session timing, a trial no file overlaps (added to the trials</span>
+<span class="sd">        table without an acquisition segment) has no file here; the caller</span>
+<span class="sd">        falls back to the trials table's own filename.</span>
 <span class="sd">        """</span>
         <span class="n">spans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_acq_spans</span><span class="p">(</span><span class="n">acq</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">spans</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_real_timing</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trials_df</span><span class="p">[</span><span class="s2">"start_time"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">best</span> <span class="o">=</span> <span class="n">_span_overlapping</span><span class="p">(</span><span class="n">spans</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="n">trial</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop_time</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">best</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">best</span>
+            <span class="k">return</span> <span class="n">_span_overlapping</span><span class="p">(</span><span class="n">spans</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">(</span><span class="n">trial</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop_time</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
         <span class="n">trial_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_index</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">trial_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">spans</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trials_df</span><span class="p">)</span> <span class="ow">and</span> <span class="n">trial_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">spans</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">spans</span><span class="p">[</span><span class="n">trial_idx</span><span class="p">]</span>
@@ -1712,24 +1711,17 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        """</span>
         <span class="n">acq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_acquisition</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
-        <span class="n">trial_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_index</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
         <span class="n">nwb_base_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="o">.</span><span class="n">parent</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_has_no_media</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="k">if</span> <span class="n">acq</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="s2">"external_file"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">acq</span><span class="o">.</span><span class="n">external_file</span><span class="p">:</span>
-            <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">acq</span><span class="o">.</span><span class="n">external_file</span><span class="p">)</span>
+            <span class="c1"># The span already carries the path: reading ``external_file`` here</span>
+            <span class="c1"># would iterate the HDF5 dataset once per trial.</span>
             <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_for_trial</span><span class="p">(</span><span class="n">acq</span><span class="p">,</span> <span class="n">trial</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">file_idx</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">index</span>
-            <span class="k">elif</span> <span class="n">trial_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">trial_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
-                <span class="n">file_idx</span> <span class="o">=</span> <span class="n">trial_idx</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">file_idx</span> <span class="o">=</span> <span class="mi">0</span>
-
-            <span class="k">if</span> <span class="n">file_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
-                <span class="n">raw_path</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="n">file_idx</span><span class="p">]</span>
+                <span class="n">raw_path</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">path</span>
                 <span class="c1"># URLs returned directly</span>
                 <span class="k">if</span> <span class="n">_is_url</span><span class="p">(</span><span class="n">raw_path</span><span class="p">):</span>
                     <span class="c1"># If fallback_folder has a local copy, prefer that</span>
@@ -1845,6 +1837,7 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_trials_df_cache</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trial_pos_cache</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rate_dict</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_span_cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
 </div>
@@ -1854,6 +1847,30 @@ window.runMermaid = runMermaid;</script>
 <span class="c1"># ---------------------------------------------------------------------------</span>
 <span class="c1"># Helpers</span>
 <span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_trial_keys</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The spellings a trial id answers to: ``5``, ``"5"`` and ``5.0`` all read ``"5"``."""</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>
+        <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">keys</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_trial_positions</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""First row position of every trial id in *df*'s ``trial`` column, by each spelling."""</span>
+    <span class="n">positions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"trial"</span><span class="p">]):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_trial_keys</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+            <span class="n">positions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">positions</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_lookup_trial</span><span class="p">(</span><span class="n">positions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">trial</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_trial_keys</span><span class="p">(</span><span class="n">trial</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">positions</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_is_url</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
