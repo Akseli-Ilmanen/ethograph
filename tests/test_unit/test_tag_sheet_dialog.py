@@ -72,6 +72,21 @@ def test_a_second_family_warns_that_detection_needs_two_passes(dialog):
     assert "2 detection passes" in dialog.warnings.text()
 
 
+def test_add_row_duplicates_the_selected_row_and_continues_its_ids(dialog):
+    first = dialog._rows[0]
+    first.count.setValue(6)
+    first.tag_mm.setValue(12.0)
+    dialog._on_add_row()
+    second = dialog._rows[1].to_row()
+    assert (second.count, second.tag_mm, second.first_id) == (6, 12.0, 6)
+
+    # The copy follows the selection, not the last row.
+    dialog.row_table.selectRow(0)
+    dialog._on_add_row()
+    third = dialog._rows[2].to_row()
+    assert (third.count, third.tag_mm, third.first_id) == (6, 12.0, 6)
+
+
 def test_it_lays_out_a_page_and_says_how_much_fits(dialog):
     assert dialog._pages
     assert "tag(s)" in dialog.summary.text()

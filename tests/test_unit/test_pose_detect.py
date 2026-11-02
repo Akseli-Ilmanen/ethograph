@@ -22,6 +22,7 @@ import pytest
 from ethograph.gui.pose_annotate import (
     LEARNED,
     MANUAL,
+    SCANNED,
     Assignment,
     AssignmentError,
     AssignmentTable,
@@ -38,10 +39,12 @@ from ethograph.gui.pose_detect import (
     TAG_DICTIONARIES,
     TAG_FAMILIES,
     TAG_PART_STRIDE,
+    TAG_PARTS,
     AprilTagDetector,
     Detection,
     PointDetector,
     PointDetectorError,
+    ScannedLabels,
     available_detectors,
     build_detector,
     check_family,
@@ -52,8 +55,12 @@ from ethograph.gui.pose_detect import (
     label_name,
     label_preview,
     learn_assignment,
+    marker_part,
+    part_named,
+    propose_assignment,
     quad_forward_vector,
     run_detector,
+    scan_labels,
 )
 
 cv2 = pytest.importorskip("cv2")
@@ -723,6 +730,108 @@ class ConstantDetector:
 
     def detect(self, frame):
         return list(self._detections)
+
+
+def test_scan_counts_each_label_once_per_frame_and_samples_the_span():
+    """A tag emitting its centre and corners on one frame is seen once, not five times."""
+    frames = FakeFrames([np.zeros((10, 10, 3), np.uint8)] * 100)
+    detector = ConstantDetector([Detection((1.0, 1.0), 8), Detection((2.0, 2.0), 8), Detection((3.0, 3.0), 9)])
+    scanned = scan_labels(detector, frames, span=(10, 29), n_samples=5)
+    assert scanned.frames_scanned == 5
+    assert scanned.counts == {8: 5, 9: 5}
+
+    cancelled = scan_labels(detector, frames, n_samples=5, progress=lambda _f: False)
+    assert cancelled.frames_scanned == 0 and cancelled.seen() == []
+
+
+def test_scan_streams_when_the_source_can():
+    """The forward pass is the point: one seek, not one per sampled frame."""
+
+    class Streaming(FakeFrames):
+        def __init__(self, frames):
+            super().__init__(frames)
+            self.asked: list[int] = []
+
+        def iter_frames(self, indices, gray=False, progress=None):
+            for i in indices:
+                self.asked.append(int(i))
+                yield int(i), self._frames[int(i)]
+
+        def __getitem__(self, key):
+            raise AssertionError("random access while a stream was offered")
+
+    frames = Streaming([np.zeros((4, 4, 3), np.uint8)] * 50)
+    scan_labels(ConstantDetector([]), frames, n_samples=4)
+    assert frames.asked == [0, 16, 33, 49]
+
+
+def test_a_single_read_is_a_misread_until_a_second_frame_agrees():
+    scanned = ScannedLabels(counts={8: 1, 16: 7}, frames_scanned=10)
+    assert scanned.seen() == [16]
+
+
+def test_one_tag_per_animal_needs_no_label():
+    """Two individuals, one keypoint each, two tags seen: paired lowest-first, by order."""
+    store = KeypointStore(keypoint_names=["tag"], individual_names=["a", "b"], n_frames=10)
+    detector = AprilTagDetector()
+    scanned = ScannedLabels(counts={detector.label_for(7): 30, detector.label_for(3): 28}, frames_scanned=40)
+    found = propose_assignment(detector, scanned, store)
+    assert [(a.label, a.individual, a.keypoint, a.source) for a in found.proposals] == [
+        (detector.label_for(3), "a", "tag", SCANNED),
+        (detector.label_for(7), "b", "tag", SCANNED),
+    ]
+    assert found.unmatched_labels == [] and found.unmatched_targets == []
+    assert found.proposals[0].matched_frames == 28
+
+
+def test_the_tags_seen_most_win_when_there_are_more_tags_than_animals():
+    """A spurious decode on two frames must not take an individual from a real tag."""
+    store = KeypointStore(keypoint_names=["tag"], individual_names=["a"], n_frames=10)
+    detector = AprilTagDetector()
+    scanned = ScannedLabels(counts={detector.label_for(1): 2, detector.label_for(9): 35}, frames_scanned=40)
+    found = propose_assignment(detector, scanned, store)
+    assert [a.label for a in found.proposals] == [detector.label_for(9)]
+    assert found.unmatched_labels == [detector.label_for(1)]
+
+
+def test_corners_go_to_keypoints_named_after_them_and_the_rest_by_order():
+    store = KeypointStore(keypoint_names=["Corner 2", "body", "center"], individual_names=["a"], n_frames=10)
+    detector = AprilTagDetector(parts=TAG_PARTS)
+    counts = {detector.label_for(5, part): 20 for part in TAG_PARTS}
+    found = propose_assignment(detector, ScannedLabels(counts=counts, frames_scanned=20), store)
+    by_keypoint = {a.keypoint: detector.decode_label(a.label)[1] for a in found.proposals}
+    # Named parts first, whatever their position; the nameless keypoint takes
+    # the lowest part still free.
+    assert by_keypoint == {"Corner 2": "corner_2", "center": "centre", "body": "corner_0"}
+    assert [detector.decode_label(label)[1] for label in found.unmatched_labels] == ["corner_1", "corner_3"]
+
+
+def test_fewer_tags_than_animals_names_who_is_missing():
+    store = KeypointStore(keypoint_names=["tag"], individual_names=["a", "b", "c"], n_frames=10)
+    detector = AprilTagDetector()
+    found = propose_assignment(detector, ScannedLabels(counts={detector.label_for(4): 9}, frames_scanned=9), store)
+    assert [(a.individual) for a in found.proposals] == ["a"]
+    assert found.unmatched_targets == [("b", "tag"), ("c", "tag")]
+
+
+def test_a_detector_without_parts_pairs_whole_labels():
+    store = KeypointStore(keypoint_names=["tag"], individual_names=["a", "b"], n_frames=10)
+    detector = ConstantDetector([])
+    assert marker_part(detector, 42) == (42, 0)
+    assert part_named(detector, "centre") is None
+    found = propose_assignment(detector, ScannedLabels(counts={42: 5, 41: 5}, frames_scanned=5), store)
+    assert [(a.label, a.individual) for a in found.proposals] == [(41, "a"), (42, "b")]
+
+
+def test_a_scanned_row_is_replaced_by_a_learn_and_never_a_manual_one(store):
+    store.assignment.learn([Assignment(8, None, NAMES[0], SCANNED)])
+    assert store.assignment.get(8).source == SCANNED
+    store.assignment.learn([Assignment(8, None, NAMES[1], LEARNED)])
+    assert store.assignment.get(8).keypoint == NAMES[1]
+    store.assignment.set(8, None, NAMES[0], MANUAL)
+    store.assignment.learn([Assignment(8, None, NAMES[1], SCANNED)])
+    assert store.assignment.get(8).keypoint == NAMES[0]
+    assert Assignment.from_dict(store.assignment.get(8).to_dict()) == store.assignment.get(8)
 
 
 def test_run_detector_writes_flat_rows_and_skips_unassigned_labels():

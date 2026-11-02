@@ -492,8 +492,19 @@ class TagSheetDialog(QDialog):
         count.valueChanged.connect(self._refresh)
 
     def _on_add_row(self) -> None:
-        last = self._rows[-1].to_row() if self._rows else TagRow()
-        self._add_row(TagRow(family=last.family, tag_mm=last.tag_mm))
+        """Duplicate the selected row (the last one if none is), its IDs continuing after it."""
+        index = self.row_table.currentRow()
+        source = self._rows[index if 0 <= index < len(self._rows) else -1].to_row() if self._rows else TagRow()
+        n_ids = dictionary_info(source.family).n_ids
+        self._add_row(
+            TagRow(
+                family=source.family,
+                first_id=min(source.first_id + source.count, n_ids - 1),
+                count=source.count,
+                tag_mm=source.tag_mm,
+            )
+        )
+        self.row_table.selectRow(self.row_table.rowCount() - 1)
         self._refresh()
 
     def _on_remove_row(self) -> None:

@@ -22,9 +22,18 @@ What a detector does *not* know
 A tag decodes to the integer ``7``. It does not know it is the *beak*, or
 *bee 12*. Closing that gap is the
 :class:`~ethograph.gui.pose_annotate.AssignmentTable`, which is explicit,
-editable and persisted rather than an implementation detail of a run:
-:func:`learn_assignment` proposes it by matching detections to the frames the
-user labelled, and the dialog lets any row be corrected by hand.
+editable and persisted rather than an implementation detail of a run. Two
+things propose it, and the dialog lets any row be corrected by hand:
+
+- :func:`propose_assignment` needs **no label at all**: :func:`scan_labels`
+  samples the video, and the markers it saw are paired with the schema by
+  order — the lowest tag ID to the first individual, a tag's parts to that
+  individual's keypoints. For the common set-up, one tag per animal and one
+  keypoint per tag, that guess is the answer, and the whole of labelling is
+  skipped.
+- :func:`learn_assignment` matches detections to the frames the user labelled,
+  for the set-ups where order says nothing — several tags on one animal, or a
+  tag on a keypoint whose name does not say which.
 
 :func:`run_detector` is the whole stage, and it is a free function rather than a
 class because it holds no state between frames. That independence is what makes
@@ -110,7 +119,7 @@ from typing import Mapping, Protocol, Sequence, runtime_checkable
 
 import numpy as np
 
-from ethograph.gui.pose_annotate import LEARNED, Assignment, KeypointStore
+from ethograph.gui.pose_annotate import LEARNED, SCANNED, Assignment, KeypointStore
 from ethograph.gui.pose_fill import Progress, no_progress
 
 #: Most frames decoded per read. One frame at a time would re-seek per frame; a
@@ -190,7 +199,18 @@ MATCH_RADIUS_FRACTION = 0.02
 
 #: Labelled frames that must agree before an assignment is proposed. One frame
 #: is a coincidence — the nearest detection to a click is *always* something.
+#: :func:`scan_labels` applies the same bar to a marker seen in the video: a
+#: single decode is a misread until a second frame says otherwise.
 MIN_AGREEING_FRAMES = 2
+
+#: Frames :func:`scan_labels` samples, spread evenly over the span. Enough for
+#: a marker visible on a tenth of the frames to clear
+#: :data:`MIN_AGREEING_FRAMES`, and seconds of work rather than minutes.
+SCAN_FRAMES = 40
+
+#: Keypoint-name spellings folded together by :func:`part_named`, after lower
+#: casing and turning spaces and dashes into underscores.
+_PART_ALIASES = {"center": "centre"}
 
 #: Parts of a tag that can be detected, in a fixed order. The label a detection
 #: carries is ``tag_id * TAG_PART_STRIDE + index into this tuple``, so a saved
@@ -349,6 +369,35 @@ def label_preview(detector: object, label: int) -> np.ndarray | None:
     """Small RGB image standing for a label — a swatch, or the tag itself."""
     preview = getattr(detector, "preview", None)
     return preview(label) if callable(preview) else None
+
+
+def marker_part(detector: object, label: int) -> tuple[int, int]:
+    """``(marker, part index)`` a label stands for.
+
+    A tag emits several labels — its centre and its corners — that belong to
+    one physical marker, and :func:`propose_assignment` pairs *markers* with
+    individuals before it pairs parts with keypoints. A detector whose labels
+    are whole markers reports ``(label, 0)``.
+    """
+    splitter = getattr(detector, "marker_part", None)
+    if callable(splitter):
+        marker, part = splitter(label)
+        return int(marker), int(part)
+    return int(label), 0
+
+
+def part_named(detector: object, keypoint: str) -> int | None:
+    """The part index a keypoint's *name* asks for, or ``None`` when it does not.
+
+    ``corner_0`` on a tag detector is corner 0 whatever its position in the
+    keypoint list; ``thorax`` says nothing and is paired by order instead.
+    """
+    namer = getattr(detector, "part_named", None)
+    if not callable(namer):
+        return None
+    normalised = keypoint.strip().lower().replace("-", "_").replace(" ", "_")
+    part = namer(_PART_ALIASES.get(normalised, normalised))
+    return None if part is None else int(part)
 
 
 def diagnose_frame(detector: object, frame: np.ndarray) -> DetectionPreview:
@@ -558,6 +607,16 @@ class AprilTagDetector:
         tag_id, part = self.decode_label(label)
         return f"tag {tag_id}" if part == "centre" else f"tag {tag_id} · {part.replace('_', ' ')}"
 
+    @staticmethod
+    def marker_part(label: int) -> tuple[int, int]:
+        """The tag and the part index a label stands for (see :func:`marker_part`)."""
+        return divmod(int(label), TAG_PART_STRIDE)
+
+    @staticmethod
+    def part_named(name: str) -> int | None:
+        """The part a normalised keypoint name spells, or ``None``."""
+        return TAG_PARTS.index(name) if name in TAG_PARTS else None
+
     def preview(self, label: int) -> np.ndarray | None:
         """The tag itself, rendered — a thumbnail nobody has to decode by eye.
 
@@ -755,16 +814,132 @@ def _unambiguous(detections: Sequence[Detection], rows: Mapping[int, int] | None
 
 @dataclass
 class LearnedAssignments:
-    """What :func:`learn_assignment` found, including what it could not."""
+    """What a proposal found, including what it could not.
+
+    Shared by :func:`learn_assignment` and :func:`propose_assignment`, so the
+    dialog reports both the same way.
+    """
 
     proposals: list[Assignment] = field(default_factory=list)
-    #: Labels seen but matched to no labelled point often enough to propose.
+    #: Labels seen but assigned to nothing: matched to no labelled point often
+    #: enough, or more parts than the individual has keypoints.
     unmatched_labels: list[int] = field(default_factory=list)
-    #: ``(individual, keypoint)`` pairs the user labelled that no detector label
-    #: claimed — the warning that stops a run from quietly producing nothing.
+    #: ``(individual, keypoint)`` pairs no detector label claimed — for a learn,
+    #: only the ones the user labelled — the warning that stops a run from
+    #: quietly producing nothing.
     unmatched_targets: list[tuple[str, str]] = field(default_factory=list)
-    #: Labelled frames actually scanned.
+    #: Frames actually scanned.
     frames_scanned: int = 0
+
+
+@dataclass
+class ScannedLabels:
+    """What :func:`scan_labels` saw: each label and how many frames it was on."""
+
+    counts: dict[int, int] = field(default_factory=dict)
+    frames_scanned: int = 0
+
+    def seen(self, min_frames: int = MIN_AGREEING_FRAMES) -> list[int]:
+        """Labels decoded on at least *min_frames* frames, lowest first."""
+        return sorted(label for label, count in self.counts.items() if count >= min_frames)
+
+
+def scan_labels(
+    detector: PointDetector,
+    frames,
+    span: tuple[int, int] | None = None,
+    n_samples: int = SCAN_FRAMES,
+    progress: Progress = no_progress,
+) -> ScannedLabels:
+    """Which labels the detector finds at all, over *n_samples* frames of *span*.
+
+    The frames are spread evenly — a marker present through the clip is seen
+    on most of them, a misread on one — and visited in one forward pass where
+    the source offers ``iter_frames``. Cancelling returns what was counted so
+    far, so the proposal built on it is partial rather than absent.
+    """
+    total_frames = len(frames)
+    first, last = span if span is not None else (0, total_frames - 1)
+    first, last = max(int(first), 0), min(int(last), total_frames - 1)
+    result = ScannedLabels()
+    if last < first:
+        return result
+    indices = np.unique(np.linspace(first, last, min(int(n_samples), last - first + 1)).round().astype(int))
+    for done, (_index, image) in enumerate(_sample_frames(frames, indices)):
+        if not progress(done / len(indices)):
+            break
+        result.frames_scanned += 1
+        for label in {detection.label for detection in detector.detect(np.asarray(image))}:
+            result.counts[label] = result.counts.get(label, 0) + 1
+    return result
+
+
+def _sample_frames(frames, indices: np.ndarray):
+    """``(index, frame)`` for *indices*, streamed when the source can."""
+    streamed = getattr(frames, "iter_frames", None)
+    if callable(streamed):
+        yield from streamed(indices)
+        return
+    for index in indices:
+        yield int(index), frames[int(index)]
+
+
+def propose_assignment(
+    detector: PointDetector,
+    scanned: ScannedLabels,
+    store: KeypointStore,
+    min_frames: int = MIN_AGREEING_FRAMES,
+) -> LearnedAssignments:
+    """Pair what the scan saw with the schema, by order — no label needed.
+
+    Markers go to individuals: the markers seen on the most frames, as many as
+    there are individuals, and among those the lowest to the first individual.
+    A marker's parts go to its individual's keypoints: a keypoint named after a
+    part (``centre``, ``corner_0`` …) takes that part, the rest pair in order,
+    so one keypoint per animal gets the tag's centre. Every row is a guess the
+    table shows for what it is (:data:`~ethograph.gui.pose_annotate.SCANNED`),
+    and a single combo fixes a wrong one.
+    """
+    labels = scanned.seen(min_frames)
+    markers: dict[int, dict[int, int]] = {}
+    for label in labels:
+        marker, part = marker_part(detector, label)
+        markers.setdefault(marker, {})[part] = label
+    support = {marker: max(scanned.counts[label] for label in parts.values()) for marker, parts in markers.items()}
+    individuals = store.individual_names
+    chosen = sorted(sorted(markers, key=lambda marker: (-support[marker], marker))[: len(individuals)])
+
+    result = LearnedAssignments(frames_scanned=scanned.frames_scanned)
+    claimed: set[tuple[str, str]] = set()
+    assigned: set[int] = set()
+    for marker, individual in zip(chosen, individuals):
+        parts = markers[marker]
+        keypoints = store.keypoints_for(individual)
+        by_name: dict[str, int] = {}
+        for keypoint in keypoints:
+            named = part_named(detector, keypoint)
+            if named is not None and named in parts and named not in by_name.values():
+                by_name[keypoint] = named
+        in_order = zip(
+            [keypoint for keypoint in keypoints if keypoint not in by_name],
+            [part for part in sorted(parts) if part not in by_name.values()],
+        )
+        for keypoint, part in [*by_name.items(), *in_order]:
+            label = parts[part]
+            result.proposals.append(
+                Assignment(label, individual, keypoint, SCANNED, matched_frames=scanned.counts[label])
+            )
+            claimed.add((individual, keypoint))
+            assigned.add(label)
+    result.proposals.sort(key=lambda a: a.label)
+    result.unmatched_labels = sorted(set(labels) - assigned)
+    result.unmatched_targets = sorted(
+        (individual, keypoint)
+        for individual in individuals
+        for keypoint in store.keypoints_for(individual)
+        if (individual, keypoint) not in claimed
+    )
+    return result
 
 
 def learn_assignment(

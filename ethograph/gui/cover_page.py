@@ -233,6 +233,20 @@ def _reject_mixed_session_folder(dropped: list[str], buckets: dict[str, list[str
         )
 
 
+def _release_alignment(app_state, path: Path) -> None:
+    """Let go of the GUI's open handle on *path* before it is rewritten.
+
+    pynwb keeps the loaded alignment open for reading, and Windows refuses to
+    delete an open file — so dropping the same folder twice in one session
+    used to fail at the unlink. ``reload`` drops the handle and every cached
+    table; the next read reopens whatever the drop wrote.
+    """
+    alignment = app_state.nwb_alignment
+    held = getattr(alignment, "path", None)
+    if held is not None and Path(held).resolve() == Path(path).resolve():
+        alignment.reload()
+
+
 def _audio_info(path: str) -> tuple[float, float]:
     """Read a real audio (sample_rate, duration_s) — never hardcode a fallback.
 

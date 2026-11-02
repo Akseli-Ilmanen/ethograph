@@ -10,6 +10,7 @@ import pandas as pd
 import xarray as xr
 from scipy import interpolate
 from scipy.integrate import cumulative_trapezoid
+from scipy.ndimage import binary_dilation, uniform_filter1d
 from scipy.spatial.distance import cdist
 
 
@@ -328,6 +329,97 @@ def get_angle_rgb(xy_pos, smooth_func=None, smoothing_params=None, input_type="p
     rgb_matrix[valid] = cm[cmap_indices[valid].astype(int)]
 
     return rgb_matrix, angles
+
+
+# --- Periodic movement -------------------------------------------------------
+#
+# NOTE: incomplete and provisional. These are first-pass scores for fast
+# periodic movements sampled near the Nyquist rate of the video (tail
+# quivering in birds at ~24 Hz on a 47 fps camera; rodent sniffing/whisking
+# is the next candidate). More features — a proper spectral estimate, a period
+# estimate, per-keypoint variants — are expected to join them in the near
+# future; treat the API as unstable.
+#
+# Every window is given in *frames*; callers convert from seconds with the
+# video's own rate (never a hardcoded fps): ``window = round(0.3 * fps)``.
+
+
+def _moving_mean(a: np.ndarray, window: int) -> np.ndarray:
+    return uniform_filter1d(a, window, mode="nearest")
+
+
+def _fill_nans(x: np.ndarray) -> np.ndarray:
+    return np.where(np.isnan(x), np.nanmedian(x), x)
+
+
+def periodic_valid_mask(x: np.ndarray, window: int) -> np.ndarray:
+    """Samples whose windowed statistic is not contaminated by a gap or the array edge.
+
+    Any NaN (and the two ends of the array) is dilated by half a window so
+    that no returned value was computed over filled-in data.
+    """
+    x = np.asarray(x, dtype=float)
+    invalid = np.isnan(x)
+    invalid[[0, -1]] = True
+    return ~binary_dilation(invalid, iterations=window // 2 + 1)
+
+
+def alternation(x: np.ndarray, window: int) -> np.ndarray:
+    """Lag-1 anticorrelation of the detrended signal, clipped to ``[0, 1]``.
+
+    A signal that reverses direction every frame (a movement at about half the
+    sampling rate) has a lag-1 autocorrelation near -1; smooth movement and
+    white noise sit at or above 0. The score is ``clip(-r1, 0, 1)`` with
+    ``r1`` estimated over a moving *window*. NaN where the window is not
+    valid (:func:`periodic_valid_mask`).
+    """
+    x = np.asarray(x, dtype=float)
+    filled = _fill_nans(x)
+    centred = filled - _moving_mean(filled, window)
+    covariance = _moving_mean(centred[1:] * centred[:-1], window)
+    variance = _moving_mean(centred**2, window)[1:]
+    r1 = np.pad(covariance / np.where(variance > 1e-6, variance, np.nan), (1, 0), constant_values=np.nan)
+    return np.where(periodic_valid_mask(x, window), np.clip(-r1, 0, 1), np.nan)
+
+
+def flip_rate(x: np.ndarray, window: int) -> np.ndarray:
+    """Fraction of frames at which the direction of change reverses, over a moving *window*.
+
+    1.0 means a reversal on every frame; smooth movement reads near 0. The
+    first two samples are NaN (two differences are needed for one flip).
+    """
+    x = np.asarray(x, dtype=float)
+    step = np.diff(x)
+    flips = np.sign(step[1:]) * np.sign(step[:-1]) < 0
+    rate = _moving_mean(flips.astype(float), window)
+    return np.pad(rate, (2, 0), constant_values=np.nan)
+
+
+def high_band_ratio(x: np.ndarray, window: int, high_pass_frames: int = 3) -> np.ndarray:
+    """Share of the windowed variance that lives above a *high_pass_frames* boxcar.
+
+    Near 1 when all the movement is frame-to-frame jitter, near 0 when it is
+    a slow sweep. NaN where the window's total variance is negligible.
+    """
+    x = np.asarray(x, dtype=float)
+    high_pass = x - _moving_mean(x, high_pass_frames)
+    high_var = _moving_mean(high_pass**2, window)
+    total_var = _moving_mean((x - _moving_mean(x, window)) ** 2, window)
+    return high_var / np.where(total_var > 1e-6, total_var, np.nan)
+
+
+def jitter_features(x: np.ndarray, window: int) -> dict[str, np.ndarray]:
+    """``flip_rate``, ``high_band_ratio`` and their product, each NaN outside :func:`periodic_valid_mask`.
+
+    The product is the "jitter score": high only when the signal both
+    reverses often *and* most of its energy is at the frame scale.
+    """
+    x = np.asarray(x, dtype=float)
+    valid = periodic_valid_mask(x, window)
+    filled = _fill_nans(x)
+    rate = np.where(valid, flip_rate(filled, window), np.nan)
+    ratio = np.where(valid, high_band_ratio(filled, window), np.nan)
+    return {"flip_rate": rate, "high_band_ratio": ratio, "jitter_score": rate * ratio}
 
 
 #: Frames masked on either side of a keyframe: the frames right after a fresh

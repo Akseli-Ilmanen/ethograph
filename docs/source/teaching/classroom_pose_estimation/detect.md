@@ -5,6 +5,10 @@ If your animals carry printed AprilTags, a detector can read the tag position
 off every frame on its own. A detection counts exactly like a click, so the
 fill interpolates between both. Skip this page if there are no tags.
 
+With **one tag per animal** you do not need to label a single frame: define
+the individuals and one keypoint, press **Run detector**, and the tags found in
+the video are paired with your individuals in order.
+
 ## Print the tags
 
 On the start page, open **🛠 More tools ▸ Print tag sheet…**, keep the default
@@ -33,8 +37,24 @@ very small animals or low-resolution video.
 2. Leave **Downscale** at `1.0`; raise **Sharpening** if the video is blurry.
 3. Choose a frame range and press **Run detector**.
 
-Detections appear as hollow markers with a dot. The first time, Ethograph asks
-which tag ID is which keypoint and individual; correct any wrong guess in the
-table. A detection never overwrites your own label.[^apriltag]
+Detections appear as hollow markers with a dot. A detection never overwrites
+your own label.[^apriltag]
+
+## Which tag is which animal
+
+The table **What the detector's labels mean** says which tag ID lands on
+which individual and keypoint. It is filled in one of two ways, and any row
+can be changed by hand; a row you edit is never overwritten.
+
+- **Find tags in video** (also run for you by **Run detector** when the table
+  is empty) scans a few dozen frames and pairs the tags it sees with your
+  individuals in order: the lowest tag ID becomes the first individual. A
+  tag's parts go to that individual's keypoints in order, so a single keypoint
+  gets the tag's centre, and a keypoint named `corner_0` gets that corner.
+  With one tag per animal this is all you need.
+- **Learn from labels** is for when order says nothing — several tags on one
+  animal, or a tag on a keypoint whose name does not say which. Label a few
+  frames first; each decoded tag is matched to the nearest labelled point, and
+  a row is proposed once two frames agree.
 
 [^apriltag]: Detection runs through [pupil-apriltags](https://github.com/pupil-labs/apriltags), a binding to the AprilTag 3 library.
