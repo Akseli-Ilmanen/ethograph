@@ -324,3 +324,27 @@ def test_a_burst_filter_draws_only_the_bursting_spikes(gui, units_widget, qtbot)
     (drawn,) = _times_by_color(raster).values()
     assert drawn == [1.0, 2.0, 4.0, *burst.tolist()]
     assert meta.app_state.raster_burst_filter == {} and raster.base_title == "raster"
+
+
+def test_on_the_session_clock_the_burst_filter_reads_the_whole_recording(gui, units_widget, monkeypatch):
+    """A burst between trials is drawn in session scope, where the raster shows the inter-trial periods."""
+    from ethograph.labels.feature_events import INSTANTANEOUS_RATE, BurstRule
+
+    _, meta = gui
+    ew, raster = units_widget
+    burst = 7.0 + np.arange(4) * 0.005
+    ew._tsgroup = nap.TsGroup({GOOD_A: nap.Ts(t=np.concatenate([[1.0], burst])), GOOD_B: nap.Ts(t=np.array([4.0]))})
+    ew._spike_table_cache = None
+    # The trials shown end before the burst; only the session clock reads past them.
+    monkeypatch.setattr(ew, "firing_rate_windows", lambda trials: iter([("t1", None, 0.0, 5.0, 0.0)]))
+    rule = BurstRule(INSTANTANEOUS_RATE, {"rate_threshold": 150.0})
+
+    monkeypatch.setattr(type(meta.app_state), "display_basis", property(lambda self: "trial"))
+    ew.set_burst_filter(rule)
+    assert _times_by_color(raster) == {}, "on the trial clock a burst outside the trials shown is not read"
+
+    monkeypatch.setattr(type(meta.app_state), "display_basis", property(lambda self: "session"))
+    ew._burst_table_cache = None
+    ew.set_burst_filter(rule)
+    (drawn,) = _times_by_color(raster).values()
+    assert np.allclose(drawn, burst)

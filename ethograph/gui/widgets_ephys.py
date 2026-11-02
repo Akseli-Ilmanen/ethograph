@@ -1634,7 +1634,15 @@ class EphysWidget(QWidget):
         pc.set_panel_title(pc.raster_plot, pc.panel_title(pc.raster_plot))
 
     def _burst_epochs(self, trial_ep: nap.IntervalSet) -> nap.IntervalSet:
-        """The trials shown, on the spike clock — what a detector reads; without an alignment, the current trial."""
+        """What a detector reads, on the spike clock.
+
+        On the session clock the raster draws the inter-trial periods too, so
+        the whole recording (every unit's time support) is read; on the trial
+        clock, the trials shown — the same reading the burst labels get.
+        Without an alignment, the window on screen.
+        """
+        if self.app_state.display_basis == "session":
+            return self._tsgroup.time_support
         spans = [(t0, t1) for _trial, _reader, t0, t1, _shift in self.firing_rate_windows(self.app_state.trials)]
         if not spans:
             return trial_ep
