@@ -380,6 +380,11 @@ class NWBAlignment:
         self._nwb = self._io.read()
 
     @property
+    def path(self) -> Path:
+        """The file this alignment reads — what a writer must release first."""
+        return self._path
+
+    @property
     def nwb(self):
         self._open()
         return self._nwb

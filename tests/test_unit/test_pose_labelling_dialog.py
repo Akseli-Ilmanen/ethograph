@@ -1721,12 +1721,37 @@ def test_detection_reads_frames_at_full_resolution(dialog, monkeypatch):
     monkeypatch.setattr(dialog, "_video_path", lambda: "clip.mp4")
     monkeypatch.setattr(dialog, "_fps", lambda: 30.0)
     assert dialog._preview_frame_source() is None
-    for runner in (dialog._run_learn_assignment, dialog._run_detection):
+    for runner in (dialog._run_learn_assignment, dialog._run_find_markers, dialog._run_detection):
         with pytest.raises(ValueError):
             runner(lambda _f: True)
 
     assert dialog_module.DETECT_MAX_SIDE is None
-    assert asked == [None, None, None], "every detect path decodes full-size"
+    assert asked == [None, None, None, None], "every detect path decodes full-size"
+
+
+def test_finding_tags_needs_no_label_and_no_keypoint(dialog, monkeypatch):
+    """Two individuals and a video are the whole set-up for one tag per animal."""
+    from ethograph.gui.pose_detect import AprilTagDetector, ScannedLabels, propose_assignment
+
+    dialog._apply_schema(keypoints=[], individuals=["a", "b"])
+    assert dialog.store.keypoint_names == []
+    monkeypatch.setattr(dialog, "_n_frames", lambda: 10)
+    detector = AprilTagDetector()
+
+    def _found(_progress):
+        # Built against the store as it is *when the scan runs*, after the
+        # implied keypoint is in place.
+        scanned = ScannedLabels(counts={detector.label_for(8): 5, detector.label_for(3): 5}, frames_scanned=5)
+        return propose_assignment(detector, scanned, dialog.store)
+
+    monkeypatch.setattr(dialog, "_run_find_markers", _found)
+    monkeypatch.setattr(dialog_module, "BusyProgressDialog", _CancellingBusy)
+    monkeypatch.setattr(dialog_module, "notify", lambda message, level="info": None)
+    assert dialog._on_find_markers()
+    assert dialog.store.keypoint_names == [dialog_module.TAG_KEYPOINT]
+    assert dialog.store.assignment.target(detector.label_for(3)) == ("a", dialog_module.TAG_KEYPOINT)
+    assert dialog.store.assignment.target(detector.label_for(8)) == ("b", dialog_module.TAG_KEYPOINT)
+    assert len(dialog.store.assignment_rows()) == 2, "a run has somewhere to write"
 
 
 def test_the_detect_tab_does_not_offer_to_print_tags(dialog):

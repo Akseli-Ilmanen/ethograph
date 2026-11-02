@@ -475,10 +475,18 @@ class VideoFrameSource:
         self._seek(start)
         for frame in self._container.decode(self._stream):
             index = self._frame_index(frame)
+            if index < start:
+                continue
+            if index >= stop and decoded:
+                break
+            # A phone's variable frame timing can skip an index outright
+            # (392 → 394). A request that falls entirely in such a gap is
+            # served by the frame that follows it, as ``iter_frames`` does.
+            decoded[min(index, stop - 1)] = frame.reformat(
+                width=self._size[0], height=self._size[1], format="rgb24"
+            ).to_ndarray()
             if index >= stop:
                 break
-            if index >= start:
-                decoded[index] = frame.reformat(width=self._size[0], height=self._size[1], format="rgb24").to_ndarray()
         if not decoded:
             raise ValueError(f"No frames decoded for [{start}, {stop}) in {self._path}")
 

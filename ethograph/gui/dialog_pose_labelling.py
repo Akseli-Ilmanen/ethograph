@@ -143,6 +143,7 @@ from ethograph.gui.pose_annotate import (
     LEARNED,
     MANUAL,
     RECOMMENDED_LABEL_SHARE,
+    SCANNED,
     AssignmentError,
     KeypointStore,
     KeypointStoreError,
@@ -155,6 +156,7 @@ from ethograph.gui.pose_annotate import (
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, COLOR_BY_MODES
 from ethograph.gui.pose_detect import (
     APRILTAG_DETECTOR,
+    SCAN_FRAMES,
     TAG_FAMILIES,
     TAG_PARTS,
     PointDetectorError,
@@ -165,7 +167,9 @@ from ethograph.gui.pose_detect import (
     label_name,
     label_preview,
     learn_assignment,
+    propose_assignment,
     run_detector,
+    scan_labels,
 )
 from ethograph.gui.pose_detect_preview import PreviewPanel
 from ethograph.gui.pose_edit_mixin import (
@@ -219,6 +223,12 @@ MAX_SIDE = 512
 #: advice in `pose_tagsheet` is computed against the camera's real width, so
 #: detection has to see that width too or the advice is self-defeating.
 DETECT_MAX_SIDE = None
+
+#: The keypoint 'Find tags in video' adds when the schema has none. Two
+#: individuals and nothing else is a complete description of "one tag per
+#: animal" — the point the tag lands on is implied, so the user is not sent
+#: back to the Keypoints tab to type it.
+TAG_KEYPOINT = "tag"
 
 _LABELLED_MARK = "●"
 _UNLABELLED_MARK = "·"
@@ -357,7 +367,7 @@ _ASSIGNMENT_COLUMNS = ("Label", "Individual", "Keypoint", "Matched on", "Set by"
 
 #: How :data:`~ethograph.gui.pose_annotate.LEARNED` / ``MANUAL`` read in the
 #: "Set by" column — the store's vocabulary is for the sidecar, not the user.
-_ASSIGNMENT_SOURCE_LABELS = {LEARNED: "learning", MANUAL: "you"}
+_ASSIGNMENT_SOURCE_LABELS = {LEARNED: "learning", SCANNED: "finding", MANUAL: "you"}
 
 _ASSIGNMENT_TOOLTIPS = (
     "What the detector produces — a decoded tag ID.\nThe icon is that tag itself, rendered.",
@@ -367,6 +377,8 @@ _ASSIGNMENT_TOOLTIPS = (
     "Two is the minimum — the nearest detection to a single click is always\nsomething.",
     "Where this row's meaning came from — NOT where a coordinate came from\n"
     "(that is the points table's Source column).\n\n"
+    "finding — guessed by 'Find tags in video' from the order the tags were\n"
+    "seen in; a later find or learn may change it.\n"
     "learning — proposed by 'Learn from labels'; a later re-learn may change it.\n"
     "you — you picked it, so no re-learn will ever overwrite it.",
 )
@@ -2200,11 +2212,26 @@ class PoseLabellingDialog(QDialog):
         box.addWidget(self.assignment_table)
 
         buttons = QHBoxLayout()
+        find_btn = QPushButton("Find tags in video")
+        find_btn.setToolTip(
+            "No labelling needed. Scans a few dozen frames spread over the range\n"
+            "and pairs the tags it finds with your individuals in order: the\n"
+            "lowest tag ID becomes the first individual, and a tag's parts go to\n"
+            "that individual's keypoints in order — so one keypoint per animal\n"
+            "gets the tag's centre, and a keypoint named corner_0 gets corner 0.\n\n"
+            "One tag per animal: this is all you need. Fix any row that is wrong\n"
+            "in the table; 'Run detector' does this for you when the table is empty."
+        )
+        find_btn.clicked.connect(self._on_find_markers)
+        buttons.addWidget(find_btn)
+
         learn_btn = QPushButton("Learn from labels")
         learn_btn.setToolTip(
-            "Run the detector on the frames you labelled and match each decoded\n"
-            "tag to the nearest labelled point — so labelling the animal a tag is\n"
-            "stuck to is what teaches Ethograph whose tag it is.\n\n"
+            "For when order says nothing — several tags on one animal, or a tag\n"
+            "on a keypoint whose name does not say which. Runs the detector on the\n"
+            "frames you labelled and matches each decoded tag to the nearest\n"
+            "labelled point, so labelling the animal a tag is stuck to is what\n"
+            "teaches Ethograph whose tag it is.\n\n"
             "At least two labelled frames must agree before a row is proposed."
         )
         learn_btn.clicked.connect(self._on_learn_assignment)
@@ -2568,7 +2595,10 @@ class PoseLabellingDialog(QDialog):
     def _refresh_assignment_warning(self) -> None:
         """Name what will silently produce nothing, rather than letting it."""
         if not len(self.store.assignment):
-            self.assignment_warning.setText("No labels assigned yet — press 'Learn from labels'.")
+            self.assignment_warning.setText(
+                "No tags assigned yet — press 'Find tags in video' (no labelling needed), "
+                "or label a few frames and 'Learn from labels'."
+            )
             return
         messages = []
         invalid = self.store.assignment.invalid_labels(self.store)
@@ -2590,10 +2620,64 @@ class PoseLabellingDialog(QDialog):
             messages.append("No detector label lands on: " + ", ".join(unclaimed) + ".")
         self.assignment_warning.setText("  ".join(messages))
 
+    def _on_find_markers(self) -> bool:
+        """Propose the table from the video alone; ``True`` if a row was added."""
+        if not self._n_frames():
+            notify("Frame count is unknown — load a video first.", "warning")
+            return False
+        if not self.store.keypoint_names:
+            self._apply_schema(keypoints=[TAG_KEYPOINT])
+            notify(f"Added the keypoint '{TAG_KEYPOINT}' for the tags to land on.", "info")
+        busy = BusyProgressDialog("Looking for tags…", parent=self)
+
+        def progress(fraction: float) -> bool:
+            busy.setLabelText(f"Looking for tags on {SCAN_FRAMES} frames… {fraction:.0%}")
+            busy.pump_events()
+            return not busy.wasCanceled()
+
+        found, error = busy.execute(self._run_find_markers, progress)
+        if error is not None or found is None:
+            return False
+        taken = self.store.assignment.learn(found.proposals)
+        self._refresh_assignment_table()
+        self._save_store()
+        if not found.proposals:
+            notify(
+                f"No tag was read on two or more of {found.frames_scanned} frames. Check the family "
+                "against the sheet you printed, and tick 'Preview' to see what the detector sees.",
+                "warning",
+            )
+            return False
+        pairs = ", ".join(f"{self._label_text(a.label)} → {a.individual} · {a.keypoint}" for a in found.proposals)
+        message = f"Found on {found.frames_scanned} frames: {pairs}. Change any row that is wrong."
+        kept = len(found.proposals) - taken
+        if kept:
+            message += f" {kept} left alone (yours, or already taken)."
+        if found.unmatched_labels:
+            seen = ", ".join(self._label_text(label) for label in found.unmatched_labels)
+            message += f" Also seen, assigned to nothing: {seen}."
+        if found.unmatched_targets:
+            message += f" No tag for: {', '.join(f'{i} · {k}' for i, k in found.unmatched_targets)}."
+        notify(message, "info")
+        return bool(taken)
+
+    def _run_find_markers(self, progress):
+        detector = self._current_detector(progress)
+        frames = self._open_frames(max_side=DETECT_MAX_SIDE)
+        try:
+            scanned = scan_labels(detector, frames, self._detect_span(), progress=progress)
+        finally:
+            frames.close()
+        return propose_assignment(detector, scanned, self.store)
+
     def _on_learn_assignment(self) -> None:
         """Propose what each label means by matching detections to the labels."""
         if not self.store.anchor_frames():
-            notify("Label a few frames first — this learns by matching detections to your labels.", "warning")
+            notify(
+                "Label a few frames first — this learns by matching detections to your labels. "
+                "With one tag per animal, 'Find tags in video' needs no labels at all.",
+                "warning",
+            )
             return
         busy = BusyProgressDialog("Learning what the detector's labels mean…", parent=self)
 
@@ -2673,14 +2757,18 @@ class PoseLabellingDialog(QDialog):
         self._after_detections_changed()
 
     def _on_run_detector(self) -> None:
-        if not self.store.assignment_rows():
-            notify(
-                "Nothing to detect — no usable label is assigned to a keypoint. Press 'Learn from labels'.",
-                "warning",
-            )
-            return
         if not self._n_frames():
             notify("Frame count is unknown — load a video first.", "warning")
+            return
+        # An empty table is filled from the video first, so the common case —
+        # one tag per animal — is one press of this button and no labelling.
+        if not self.store.assignment_rows() and not self._on_find_markers():
+            return
+        if not self.store.assignment_rows():
+            notify(
+                "Nothing to detect — no usable tag is assigned to a keypoint. Fix the rows shown in red.",
+                "warning",
+            )
             return
         self.store.n_frames = self._n_frames()
 

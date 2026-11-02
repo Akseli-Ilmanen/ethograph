@@ -148,6 +148,10 @@ class AssignmentError(KeypointStoreError):
 
 #: An assignment the detector proposed by matching its output to the labels.
 LEARNED = "learned"
+#: An assignment proposed from the video alone — the markers seen, paired with
+#: the schema by order (see :func:`~ethograph.gui.pose_detect.propose_assignment`).
+#: As overridable as :data:`LEARNED`: a learn or a later scan replaces it.
+SCANNED = "scanned"
 #: An assignment the user typed or picked, which a re-learn must never touch.
 MANUAL = "manual"
 
@@ -178,8 +182,10 @@ class Assignment:
         object.__setattr__(self, "keypoint", str(self.keypoint))
         if self.individual is not None:
             object.__setattr__(self, "individual", str(self.individual))
-        if self.source not in (LEARNED, MANUAL):
-            raise AssignmentError(f"Unknown assignment source {self.source!r}; expected {LEARNED!r} or {MANUAL!r}")
+        if self.source not in (LEARNED, SCANNED, MANUAL):
+            raise AssignmentError(
+                f"Unknown assignment source {self.source!r}; expected {LEARNED!r}, {SCANNED!r} or {MANUAL!r}"
+            )
 
     @property
     def target(self) -> tuple[str | None, str]:

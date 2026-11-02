@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -109,3 +110,35 @@ def test_motion_trace_ranks_a_bout_over_a_spike_without_decoding():
     trace[40:48] = 4.0  # a real movement
     picks = suggest_frames("motion", 1, N_FRAMES, motion=trace, motion_window=8)
     assert 40 <= picks[0] < 48
+
+
+def test_an_index_a_phone_skipped_is_served_by_the_next_frame(tmp_path: Path):
+    """Variable frame timing can skip an index outright (392 → 394).
+
+    Regression guard: asking for the missing one raised "No frames decoded",
+    which took the detector's learn step down on a Pixel recording. The gap
+    is served by the frame that follows it, as ``iter_frames`` already did.
+    """
+    av = pytest.importorskip("av")
+    path = tmp_path / "vfr.mp4"
+    skipped = 20
+    with av.open(str(path), "w") as container:
+        stream = container.add_stream("mpeg4", rate=FPS)
+        stream.width, stream.height = 64, 48
+        stream.pix_fmt = "yuv420p"
+        stream.time_base = Fraction(1, FPS)
+        for index in range(N_FRAMES):
+            if index == skipped:
+                continue
+            frame = av.VideoFrame.from_ndarray(np.full((48, 64, 3), index * 4, np.uint8), format="rgb24")
+            frame.pts = index
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+
+    with VideoFrameSource(path, fps=FPS, n_frames=N_FRAMES) as src:
+        assert np.array_equal(src[skipped], src[skipped + 1])
+        clip = src[skipped - 1 : skipped + 2]
+        assert clip.shape[0] == 3
+        assert np.array_equal(clip[1], clip[0]), "inside a clip the gap holds the previous frame"
