@@ -482,6 +482,9 @@
 <p>If your animals carry printed AprilTags, a detector can read the tag position
 off every frame on its own. A detection counts exactly like a click, so the
 fill interpolates between both. Skip this page if there are no tags.</p>
+<p>With <strong>one tag per animal</strong> you do not need to label a single frame: define
+the individuals and one keypoint, press <strong>Run detector</strong>, and the tags found in
+the video are paired with your individuals in order.</p>
 <section id="print-the-tags">
 <h2>Print the tags<a class="headerlink" href="#print-the-tags" title="Link to this heading">#</a></h2>
 <p>On the start page, open <strong>🛠 More tools ▸ Print tag sheet…</strong>, keep the default
@@ -511,9 +514,26 @@ very small animals or low-resolution video.</span><a class="headerlink" href="#i
 <li><p>Leave <strong>Downscale</strong> at <code class="docutils literal notranslate"><span class="pre">1.0</span></code>; raise <strong>Sharpening</strong> if the video is blurry.</p></li>
 <li><p>Choose a frame range and press <strong>Run detector</strong>.</p></li>
 </ol>
-<p>Detections appear as hollow markers with a dot. The first time, Ethograph asks
-which tag ID is which keypoint and individual; correct any wrong guess in the
-table. A detection never overwrites your own label.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
+<p>Detections appear as hollow markers with a dot. A detection never overwrites
+your own label.<a class="footnote-reference brackets" href="#apriltag" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
+</section>
+<section id="which-tag-is-which-animal">
+<h2>Which tag is which animal<a class="headerlink" href="#which-tag-is-which-animal" title="Link to this heading">#</a></h2>
+<p>The table <strong>What the detector’s labels mean</strong> says which tag ID lands on
+which individual and keypoint. It is filled in one of two ways, and any row
+can be changed by hand; a row you edit is never overwritten.</p>
+<ul class="simple">
+<li><p><strong>Find tags in video</strong> (also run for you by <strong>Run detector</strong> when the table
+is empty) scans a few dozen frames and pairs the tags it sees with your
+individuals in order: the lowest tag ID becomes the first individual. A
+tag’s parts go to that individual’s keypoints in order, so a single keypoint
+gets the tag’s centre, and a keypoint named <code class="docutils literal notranslate"><span class="pre">corner_0</span></code> gets that corner.
+With one tag per animal this is all you need.</p></li>
+<li><p><strong>Learn from labels</strong> is for when order says nothing — several tags on one
+animal, or a tag on a keypoint whose name does not say which. Label a few
+frames first; each decoded tag is matched to the nearest labelled point, and
+a row is proposed once two frames agree.</p></li>
+</ul>
 </section>
 </section>
 <hr class="footnotes docutils" />
@@ -573,6 +593,7 @@ table. A detection never overwrites your own label.<a class="footnote-reference 
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#print-the-tags">Print the tags</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-the-detector">Run the detector</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-tag-is-which-animal">Which tag is which animal</a></li>
 </ul>
   </nav></div>
 
