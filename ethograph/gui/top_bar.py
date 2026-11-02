@@ -145,6 +145,7 @@ class TopBarBuilder:
         self._bulk_labels_dialog = None
         self._feature_labels_dialog = None
         self._neural_labels_dialog = None
+        self._burst_raster_dialog = None
         self._measure_dialog = None
         self._smoothing_dialog = None
 
@@ -269,6 +270,8 @@ class TopBarBuilder:
         # The same dialog as Labels: Create from a feature, for the units: a
         # threshold on a rate read off the spikes, or a burst detector.
         menu.addAction("Neural: Neuronal firing / burst detection…", self._open_neural_labels)
+        # A burst detector as a view: the raster drawn from the bursting spikes alone.
+        menu.addAction("Neural: Raster of burst spikes only…", self._open_burst_raster)
 
     def _build_model_menu(self, menu_bar):
         """Model menu — supervised modelling of the session's labels.
@@ -396,6 +399,20 @@ class TopBarBuilder:
         self._neural_labels_dialog.show()
         self._neural_labels_dialog.raise_()
         self._neural_labels_dialog.activateWindow()
+
+    def _open_burst_raster(self):
+        """Pick a burst detector and show the raster with only the spikes it puts in a burst (Tools)."""
+        from .dialog_burst_raster import BurstRasterDialog
+        from .dialog_feature_labels import has_firing_rates
+
+        if not has_firing_rates(self.meta):
+            notify("Load units first, and let at least one through the neuron table's filters.", severity="warning")
+            return
+        if self._burst_raster_dialog is None or not self._burst_raster_dialog.isVisible():
+            self._burst_raster_dialog = BurstRasterDialog(self.meta, parent=self.shell)
+        self._burst_raster_dialog.show()
+        self._burst_raster_dialog.raise_()
+        self._burst_raster_dialog.activateWindow()
 
     def _open_spot_crop(self):
         """Arm the rectangle tool on the clicked camera and report the box."""

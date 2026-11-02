@@ -42,7 +42,7 @@ from qtpy.QtWidgets import (
 from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.make_pretty import styled_link
 from ethograph.gui.project import project_dir_of
-from ethograph.gui.session_folder import ranked_kinds
+from ethograph.gui.session_folder import KIND_ORDER
 from ethograph.gui.theme import monospace_font
 from ethograph.gui.wizard_state import ModalityConfig, WizardState
 from ethograph.utils.paths import defaults_dir
@@ -383,13 +383,12 @@ class TimingPage(QWidget):
 def default_session_dir(state: WizardState, app_state=None) -> str:
     """The folder the wizard proposes as ``session_dir`` in the notebook (it receives ``.ethograph/``).
 
-    The enabled media folder of the best-ranked kind (``session_folder.ranked_kinds``,
-    honouring the user's remembered choice) — the folder itself, never its parent,
-    since a media folder is a fine session folder when there is one per session.
-    With no media folder, the project folder, then home.
+    The enabled media folder of the best-ranked kind (``session_folder.KIND_ORDER``)
+    — the folder itself, never its parent, since a media folder is a fine session
+    folder when there is one per session. With no media folder, the project
+    folder, then home.
     """
-    preferred = list(getattr(app_state, "session_folder_kinds", None) or [])
-    for kind in ranked_kinds(preferred):
+    for kind in KIND_ORDER:
         cfg: ModalityConfig | None = getattr(state, kind, None)
         if cfg is not None and cfg.enabled and cfg.folder_path and not cfg.is_continuous_mode:
             return str(Path(cfg.folder_path).resolve())

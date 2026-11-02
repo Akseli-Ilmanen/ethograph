@@ -252,3 +252,19 @@ def test_find_trials_intervalset(tmp_path):
     ep.save(str(tmp_path / "trials.npz"))
     found = find_trials_intervalset(tmp_path)
     assert found is not None and len(found) == 2
+
+
+def test_a_metadata_tsv_keeps_the_trials_it_does_not_describe(tmp_path):
+    """A trial with timing in the alignment but no row in metadata.tsv is still listed, with its cells empty."""
+    from ethograph.io.metadata_table import with_every_trial
+
+    tsv = tmp_path / "metadata.tsv"
+    tsv.write_text("trial\tgenotype\n2\tKO\n1\tWT\n", encoding="utf-8")
+
+    mdf, source = load_metadata_df(metadata_path=tsv, trial_ids=[1, 2, 3, 4])
+
+    assert source == str(tsv)
+    assert list(mdf["trial"]) == [2, 1, 3, 4], "the file's rows in its order, then the trials it lacks"
+    assert mdf["genotype"].tolist()[:2] == ["KO", "WT"] and mdf["genotype"].isna().tolist()[2:] == [True, True]
+    # Nothing to add: the table is returned as it is.
+    assert with_every_trial(mdf, [1, 2]).equals(mdf)

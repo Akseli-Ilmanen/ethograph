@@ -59,9 +59,10 @@ matters.
 
 ## Create session
 
-**Create session** asks which folder becomes the session (when the files came
-from more than one), writes its `.ethograph/alignment.nwb` and loads it. The
-result is an ordinary multi-trial session, one trial per video:
+**Create session** makes a new session folder under the project,
+`{project}/sessions/{timestamp}/`, writes its `.ethograph/alignment.nwb` and
+loads it. Nothing is written beside your media. The result is an ordinary
+multi-trial session, one trial per video:
 
 - `video_cam-1` — the video.
 - `audio_mic-1` — your audio file, placed by its own start on the session

@@ -310,6 +310,7 @@ class LabelsWidget(QWidget):
             *plot_container.heatmap_plots,
             *plot_container.neo_trace_plots,
             plot_container.ephys_trace_plot,
+            plot_container.raster_plot,
             *plot_container.line_plots,
         ]:
             if plot is not None:

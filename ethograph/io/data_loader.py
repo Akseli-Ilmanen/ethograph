@@ -556,12 +556,15 @@ def _build_source_collection_pynapple(
     """Build SourceCollection from pynapple objects."""
     import pynapple as nap
 
-    from ethograph.io.time_sources import PynappleSource
+    from ethograph.io.time_sources import PynappleSource, TsGroupSource
 
     sc = SourceCollection()
     for key, obj in data.items():
         if isinstance(obj, (nap.Tsd, nap.TsdFrame, nap.TsdTensor)):
             sc.add(PynappleSource(key, obj, trials_ep))
+        elif isinstance(obj, nap.TsGroup):
+            # Spikes are not a plotted feature, but they bound the session.
+            sc.add(TsGroupSource(key, obj))
     if trials_ep is not None and len(trials_ep) > 0:
         sc.set_trials(
             ids=_trial_ids_from_ep(trials_ep),
@@ -795,7 +798,7 @@ def _ephys_session_duration(
     so the ephys file (or the Kilosort output) is the only time anchor.
     """
     from ethograph.io.ephys_loader import load_ephys
-    from ethograph.utils.stream_durations import get_kilosort_duration
+    from ethograph.utils.stream_durations import get_kilosort_duration, get_units_npz_duration
 
     duration = None
     if ephys_path:
@@ -805,7 +808,8 @@ def _ephys_session_duration(
         duration = len(loader) / loader.rate
 
     if not duration and neurons_path:
-        duration = get_kilosort_duration(str(neurons_path))
+        neurons = Path(neurons_path)
+        duration = get_kilosort_duration(str(neurons)) if neurons.is_dir() else get_units_npz_duration(neurons)
 
     if not duration or duration <= 0:
         raise ValueError(f"Recording has no readable duration: {ephys_path or neurons_path}")

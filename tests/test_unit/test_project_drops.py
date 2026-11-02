@@ -14,8 +14,8 @@ from ethograph.gui.project import (
     DROP_STATE_FIELDS,
     DropRecord,
     drop_record_path,
-    is_foreign_session,
     list_drops,
+    new_session_dir,
     record_drop,
     register_session,
     restore_drop,
@@ -61,15 +61,13 @@ class TestRecord:
         assert fresh.video_folder is None
 
 
-class TestForeignSession:
-    def test_a_session_without_a_drop_record_is_foreign(self, tmp_path: Path):
-        assert not is_foreign_session(tmp_path)  # no .ethograph at all: free
-        (tmp_path / ".ethograph").mkdir()
-        assert not is_foreign_session(tmp_path)  # settings alone make no session
-        (tmp_path / ".ethograph" / "alignment.nwb").touch()
-        assert is_foreign_session(tmp_path)  # the wizard's or a notebook's
-        record_drop(tmp_path, [], _state())
-        assert not is_foreign_session(tmp_path)  # a drop's own: regenerable
+class TestNewSessionDir:
+    def test_timestamped_under_the_project_and_never_reused(self, tmp_path: Path):
+        when = datetime(2026, 9, 6, 21, 47, 12)
+        first = new_session_dir(tmp_path, when)
+        assert first == tmp_path / "sessions" / "2026-09-06_21-47-12"
+        assert (first / ".ethograph").is_dir()
+        assert new_session_dir(tmp_path, when) == tmp_path / "sessions" / "2026-09-06_21-47-12_2"
 
 
 class TestListing:

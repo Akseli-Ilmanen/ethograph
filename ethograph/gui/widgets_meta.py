@@ -1,5 +1,6 @@
 """Widget container for other collapsible widgets."""
 
+import json
 import logging
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.io.validation import IMAGE_FILE_FILTER
+from ethograph.labels.feature_events import BurstRule
 from ethograph.utils.paths import default_config_dir
 from ethograph.utils.qt import (
     apply_compact_widget_style,
@@ -513,6 +515,7 @@ class MetaWidget(GridSectionContainer):
             neo_streams=neo_streams,
             phy_available=self._phy_available(),
             n_units=self._n_units(),
+            burst_filters=self.app_state.raster_burst_filters,
         )
 
     def _on_source_dropped(self, kind: str, name: str):
@@ -604,7 +607,9 @@ class MetaWidget(GridSectionContainer):
         elif kind == "phy":
             self._add_phy_panel()
         elif kind == "raster":
-            self._add_raster_panel()
+            self._add_raster_panel(None)
+        elif kind == "raster_bursts":
+            self._add_raster_panel(BurstRule.from_dict(json.loads(name)))
         elif kind == "firing_rate":
             self._add_firing_rate_panel()
         elif kind == "video":
@@ -719,14 +724,16 @@ class MetaWidget(GridSectionContainer):
         self._activate_panel(pc.ephys_trace_plot, "ephys")
         pc.schedule_labels_redraw()
 
-    def _add_raster_panel(self):
-        """Add (or re-show) the spike raster. Like the Phy trace it is a
-        singleton toggled visible; the two are independent panels."""
+    def _add_raster_panel(self, burst_rule: BurstRule | None):
+        """Add (or re-show) the spike raster, drawing every spike or only those
+        *burst_rule* puts in a burst. Like the Phy trace it is a singleton
+        toggled visible; the two are independent panels."""
         ew = self.ephys_widget
         pc = self.plot_container
         if ew is None or not ew.n_units():
             notify("No spike-sorted units loaded for the raster.", "warning")
             return
+        ew.set_burst_filter(burst_rule)
         ew.show_raster()
         self._activate_panel(pc.raster_plot, "raster")
         pc.schedule_labels_redraw()
@@ -1155,6 +1162,7 @@ class MetaWidget(GridSectionContainer):
             neo_streams=self.data_widget.neo_stream_names(),
             phy_available=self._phy_available(),
             n_units=self._n_units(),
+            burst_filters=self.app_state.raster_burst_filters,
         )
         self._relocate_overlay_checkboxes()
         self._set_default_context()

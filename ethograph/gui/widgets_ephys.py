@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from qtpy.QtCore import (
     Qt,
     Signal,
 )
-from qtpy.QtGui import QBrush, QColor, QPen, QStandardItem, QStandardItemModel
+from qtpy.QtGui import QBrush, QClipboard, QColor, QPen, QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -57,7 +58,7 @@ from ethograph.gui.table_filter import (
 )
 from ethograph.gui.theme import monospace_font
 from ethograph.gui.unit_events import UnitEventsArea
-from ethograph.labels.feature_events import classes_along
+from ethograph.labels.feature_events import BurstRule, burst_spike_times, classes_along
 from ethograph.utils.qt import (
     find_combo_index,
     get_combo_value,
@@ -78,8 +79,10 @@ from .raster_render import (
     RENDER_MODES,
     ROW_ORDERS,
     TICK_WIDTH_AUTO,
+    format_unit_order,
     group_by_color,
     order_units,
+    parse_unit_order,
 )
 from .right_context import CONTEXT_TITLE_STYLE
 
@@ -622,6 +625,8 @@ class EphysWidget(QWidget):
         self._templates: np.ndarray | None = None
         self._ephys_n_channels = 0
         self._tsgroup = None
+        #: The bursting spikes of the filtered units, keyed by what they were found from.
+        self._burst_table_cache: tuple[tuple, SpikeTable] | None = None
         self._neurons_source: str | None = None  # "kilosort" or "pynapple"
         self._pynapple_cid_to_row: dict[int, int] = {}  # cluster_id → raster row index
         # Every spike in one time-sorted table, built once per loaded TsGroup.
@@ -898,7 +903,8 @@ class EphysWidget(QWidget):
             "Neuron table: the table's order — sort the table to reorder.\n"
             "Rastermap: units with similar activity next to each other; fitted once, then kept.\n"
             "Peak time (each trial): by when each unit's rate peaks, earliest on top; re-sorted on every trial.\n"
-            "Peak time (visible window): the same over what is on screen, sorted when the button is pressed."
+            "Peak time (visible window): the same over what is on screen, sorted when the button is pressed.\n"
+            "Custom: the order pasted with the Paste button, e.g. [20, 35, 201]; Copy gives the order shown now."
         )
         self.raster_row_order_combo.currentIndexChanged.connect(self._on_raster_row_order_changed)
         order_row.addWidget(self.raster_row_order_combo)
@@ -916,6 +922,20 @@ class EphysWidget(QWidget):
         self.order_apply_btn.setToolTip("Fit or sort again on the units and the trial or window shown now")
         self.order_apply_btn.clicked.connect(self._on_order_apply_clicked)
         order_row.addWidget(self.order_apply_btn)
+
+        self.order_copy_btn = QPushButton("Copy")
+        self.order_copy_btn.setToolTip(
+            "Copy the unit order shown now to the clipboard as a Python list, e.g. [20, 35, 201]"
+        )
+        self.order_copy_btn.clicked.connect(self._copy_unit_order)
+        order_row.addWidget(self.order_copy_btn)
+        self.order_paste_btn = QPushButton("Paste")
+        self.order_paste_btn.setToolTip(
+            "Order the units as the clipboard's list, e.g. [20, 35, 201], and switch to the custom order.\n"
+            "Units not in the list follow at the bottom in the table's order."
+        )
+        self.order_paste_btn.clicked.connect(self._paste_unit_order)
+        order_row.addWidget(self.order_paste_btn)
         order_row.addStretch()
         neuron_layout.addLayout(order_row)
         neuron_layout.addLayout(self._selection_row)
@@ -1532,6 +1552,8 @@ class EphysWidget(QWidget):
             return order_units(unit_ids, self._rastermap_units)
         if order in PEAK_ORDERS:
             return order_units(unit_ids, self._peak_units)
+        if order == "custom":
+            return order_units(unit_ids, self.app_state.get_with_default("raster_custom_unit_order"))
         if order == "depth":
             channels = self._unit_channels(unit_ids)
             rank = {int(hw): i for i, hw in enumerate(self._depth_ordered_channels())}
@@ -1571,18 +1593,69 @@ class EphysWidget(QWidget):
         return rows
 
     def _draw_raster(self) -> None:
-        """The filtered units in grey; the selected ones among them in their colours."""
+        """The filtered units in grey; the selected ones among them in their colours.
+
+        With a burst filter on (``app_state.raster_burst_filter``) only the
+        spikes its detector puts in a burst are drawn.
+        """
         if not self.plot_container or self._tsgroup is None:
             return
         trial_ep = self._trial_ep()
         if trial_ep is None:
             return
         rows = self._raster_rows(self.ordered_unit_ids())
-        times, units = self._spike_table().window(float(trial_ep.start[0]), float(trial_ep.end[0]))
+        rule = self.burst_rule()
+        self._sync_raster_title(rule)
+        table = self._spike_table() if rule is None else self._burst_spike_table(rule, trial_ep)
+        times, units = table.window(float(trial_ep.start[0]), float(trial_ep.end[0]))
         entries = group_by_color(
             times - self._ephys_offset(), units, rows, self._multi_cluster_colors, _UNSELECTED_DOT_COLOR
         )
         self.plot_container.raster_plot.set_multi_cluster_spike_data(entries)
+
+    # ------------------------------------------------------------------
+    # Burst filter: the raster of the bursting spikes alone
+    # ------------------------------------------------------------------
+
+    def burst_rule(self) -> BurstRule | None:
+        """The burst detector the raster draws through, or ``None`` for every spike."""
+        saved = self.app_state.raster_burst_filter
+        return BurstRule.from_dict(saved) if saved else None
+
+    def set_burst_filter(self, rule: BurstRule | None) -> None:
+        """Draw the raster from the spikes *rule* puts in a burst (``None``: every spike)."""
+        self.app_state.raster_burst_filter = {} if rule is None else rule.to_dict()
+        self.refresh_raster()
+
+    def _sync_raster_title(self, rule: BurstRule | None) -> None:
+        """The raster's title says which spikes it draws; ``base_title`` so a retitle keeps it."""
+        pc = self.plot_container
+        pc.raster_plot.base_title = "raster" if rule is None else f"raster — {rule.label()}"
+        pc.set_panel_title(pc.raster_plot, pc.panel_title(pc.raster_plot))
+
+    def _burst_epochs(self, trial_ep: nap.IntervalSet) -> nap.IntervalSet:
+        """The trials shown, on the spike clock — what a detector reads; without an alignment, the current trial."""
+        spans = [(t0, t1) for _trial, _reader, t0, t1, _shift in self.firing_rate_windows(self.app_state.trials)]
+        if not spans:
+            return trial_ep
+        with warnings.catch_warnings():
+            # Trials that touch are still two epochs; pynapple says so every time.
+            warnings.simplefilter("ignore", UserWarning)
+            return nap.IntervalSet(start=[t0 for t0, _ in spans], end=[t1 for _, t1 in spans])
+
+    def _burst_spike_table(self, rule: BurstRule, trial_ep: nap.IntervalSet) -> SpikeTable:
+        """The filtered units' bursting spikes over the trials shown, found once per rule and kept."""
+        unit_ids = self.ordered_unit_ids()
+        epochs = self._burst_epochs(trial_ep)
+        key = (id(self._tsgroup), rule, tuple(unit_ids), tuple(map(float, epochs.start)), tuple(map(float, epochs.end)))
+        if self._burst_table_cache is None or self._burst_table_cache[0] != key:
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                bursting = {cid: burst_spike_times(self._tsgroup[cid], epochs, rule) for cid in unit_ids}
+            finally:
+                QApplication.restoreOverrideCursor()
+            self._burst_table_cache = (key, SpikeTable.from_trains(bursting))
+        return self._burst_table_cache[1]
 
     # ------------------------------------------------------------------
     # Raster rendering + row order
@@ -1627,6 +1700,32 @@ class EphysWidget(QWidget):
         self._draw_raster()
         self._refresh_firing_rates()
         self.unit_rows_changed.emit()
+
+    @staticmethod
+    def _clipboard() -> QClipboard:
+        clipboard = QApplication.clipboard()
+        assert clipboard is not None
+        return clipboard
+
+    def _copy_unit_order(self) -> None:
+        self._clipboard().setText(format_unit_order(self.ordered_unit_ids()))
+        notify("Unit order copied to the clipboard", "info")
+
+    def _paste_unit_order(self) -> None:
+        try:
+            ids = parse_unit_order(self._clipboard().text())
+        except ValueError as e:
+            notify(f"Cannot read a unit order from the clipboard: {e}", "warning")
+            return
+        self.set_custom_unit_order(ids)
+
+    def set_custom_unit_order(self, ids: list[int]) -> None:
+        """Order the units as ``ids`` (top row first) and switch every unit panel to that order."""
+        self.app_state.raster_custom_unit_order = list(ids)
+        if self._row_order() == "custom":
+            self._apply_unit_order()
+        else:
+            self.raster_row_order_combo.setCurrentIndex(self.raster_row_order_combo.findData("custom"))
 
     def _on_cluster_table_sorted(self, *_) -> None:
         if self._row_order() == "table":

@@ -1,10 +1,11 @@
 """A project directory: the study-level home the cover page remembers.
 
-Qt-free. A drag & drop makes a session out of the folder the files came from
-(or the folder the user picks when they came from several): that folder gets
+Qt-free. A drag & drop makes a fresh session folder under the project,
+``{project}/sessions/{timestamp}/`` (:func:`new_session_dir`): it gets
 ``.ethograph/`` with the alignment NWB, any derived ``.nc``, the drop's
-:class:`DropRecord` and its ``local_settings.yaml``. Data never moves. The
-project keeps a registry of the session folders dropped while it was open, so
+:class:`DropRecord` and its ``local_settings.yaml``. Nothing is ever written
+beside the dropped media, and the media never move: the alignment records
+their absolute paths. The project keeps a registry of its session folders, so
 the cover page can list and reopen them.
 
 **The project folder holds files, never a settings file.** ``mapping.txt``, the
@@ -22,14 +23,13 @@ Layout::
     ├── skeleton/*.yaml               # the skeleton library
     ├── workflows/, wizard/           # curation workflows, Data wizard notebooks
     ├── segment/, spot/               # a pipeline's YAML and, beside it, its data and runs
-    └── sessions.txt                  # one session folder per line, oldest first
-
-    D:/rig/2026-09-06/                # the dropped folder, now a session
-    ├── cam0.mp4, cam1.mp4, ...
-    └── .ethograph/
-        ├── alignment.nwb
-        ├── drop.yaml                 # DropRecord
-        └── local_settings.yaml
+    ├── sessions.txt                  # one session folder per line, oldest first
+    └── sessions/
+        └── 2026-09-06_21-47-12/      # one drop; the media stay in D:/rig/...
+            └── .ethograph/
+                ├── alignment.nwb
+                ├── drop.yaml         # DropRecord
+                └── local_settings.yaml
 """
 
 from __future__ import annotations
@@ -48,6 +48,7 @@ from ethograph.utils.paths import SETTINGS_DIR
 logger = logging.getLogger(__name__)
 
 SESSIONS_REGISTRY_FILENAME = "sessions.txt"
+SESSIONS_DIRNAME = "sessions"
 DROP_RECORD_FILENAME = "drop.yaml"
 _STAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
@@ -155,17 +156,22 @@ def drop_record_path(session_dir: Path | str) -> Path:
     return Path(session_dir) / SETTINGS_DIR / DROP_RECORD_FILENAME
 
 
-def is_foreign_session(folder: Path | str) -> bool:
-    """Whether *folder* is a session someone made on purpose, which a drop must ask about.
+def new_session_dir(project: Path | str, now: datetime | None = None) -> Path:
+    """Make the folder a new drop writes into: ``{project}/sessions/{timestamp}/``.
 
-    A folder with ``.ethograph/alignment.nwb`` but no drop record was set up by the
-    wizard, a notebook or by hand; a drop re-pairing into it would replace their
-    alignment, so the cover page asks first. A folder whose alignment came from a
-    drop is regenerable and replaced silently, and a bare ``.ethograph/`` (settings
-    only) makes nothing a session.
+    Always fresh, so a drop never overwrites a session and never asks where to
+    go: redoing a drop is a new session, and the old one stays in the reopen
+    list. Two drops within one second get ``_2``, ``_3`` suffixes.
     """
-    folder = Path(folder)
-    return (folder / SETTINGS_DIR / "alignment.nwb").is_file() and not drop_record_path(folder).is_file()
+    stamp = (now or datetime.now()).strftime(_STAMP_FORMAT)
+    root = Path(project) / SESSIONS_DIRNAME
+    folder = root / stamp
+    n = 1
+    while folder.exists():
+        n += 1
+        folder = root / f"{stamp}_{n}"
+    (folder / SETTINGS_DIR).mkdir(parents=True)
+    return folder
 
 
 @dataclass

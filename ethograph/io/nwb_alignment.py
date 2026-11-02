@@ -43,18 +43,16 @@ def _span_overlapping(spans: list[_FileSpan], t0: float, t1: float | None) -> _F
     gap just before a file (a triggered camera's first frame lands after the
     trigger) still takes that file when ``t1`` reaches into it.
     """
-    if t1 is None:
-        for s in spans:
-            if s.t_start <= t0 <= s.t_end:
-                return s
+    if not spans:
         return None
-    best: _FileSpan | None = None
-    best_overlap = 0.0
-    for s in spans:
-        overlap = min(s.t_end, t1) - max(s.t_start, t0)
-        if overlap > best_overlap:
-            best, best_overlap = s, overlap
-    return best
+    starts = np.array([s.t_start for s in spans], dtype=float)
+    ends = np.array([s.t_end for s in spans], dtype=float)
+    if t1 is None:
+        hits = np.flatnonzero((starts <= t0) & (t0 <= ends))
+        return spans[int(hits[0])] if len(hits) else None
+    overlap = np.minimum(ends, t1) - np.maximum(starts, t0)
+    best = int(np.argmax(overlap))
+    return spans[best] if overlap[best] > 0.0 else None
 
 
 # Extension → stream mapping, checked in order (first match wins).
@@ -356,6 +354,7 @@ class NWBAlignment:
         self._io: Any = None
         self._nwb: Any = None
         self._trials_df_cache: pd.DataFrame | None = None
+        self._trial_pos_cache: dict[str, int] | None = None
         self._rate_dict: dict[tuple[str, str | None], float] = {}
         self._span_cache: dict[str, list[_FileSpan]] = {}
 
@@ -367,6 +366,7 @@ class NWBAlignment:
         instance._io = None
         instance._nwb = nwb_obj
         instance._trials_df_cache = None
+        instance._trial_pos_cache = None
         instance._rate_dict = {}
         instance._span_cache = {}
         return instance
@@ -420,18 +420,24 @@ class NWBAlignment:
                     break
         return folders
 
+    def _trial_positions(self) -> dict[str, int]:
+        """Row position of each trial id, keyed by its spelling; built once per table.
+
+        Every per-trial lookup (filenames, times, offsets) goes through here, so
+        a table of thousands of trials is scanned once, not once per trial.
+        """
+        if self._trial_pos_cache is None:
+            self._trial_pos_cache = _trial_positions(self.trials_df)
+        return self._trial_pos_cache
+
     def _trial_row(self, trial) -> pd.Series | None:
         df = self.trials_df
         if df.empty:
             return None
         if "trial" in df.columns:
-            match = df[df["trial"] == trial]
-            if match.empty:
-                match = df[df["trial"] == str(trial)]
-            if match.empty and isinstance(trial, str) and trial.isdigit():
-                match = df[df["trial"] == int(trial)]
-            if not match.empty:
-                return match.iloc[0]
+            idx = _lookup_trial(self._trial_positions(), trial)
+            if idx is not None:
+                return df.iloc[idx]
             # Single-row tables (e.g. "session" label) — fall back to the only row
             if len(df) == 1:
                 return df.iloc[0]
@@ -447,10 +453,7 @@ class NWBAlignment:
         if df.empty:
             return None
         if "trial" in df.columns:
-            for i, val in enumerate(df["trial"]):
-                if val == trial or str(val) == str(trial):
-                    return i
-            return None
+            return _lookup_trial(self._trial_positions(), trial)
         return self._trial_to_iloc(trial)
 
     @staticmethod
@@ -515,15 +518,9 @@ class NWBAlignment:
         """
         acq = self._find_acquisition(stream, device)
         if acq is not None and getattr(acq, "external_file", None):
-            files = list(acq.external_file)
             found = self._file_for_trial(acq, trial)
             if found is not None:
-                idx = found.index
-            else:
-                trial_idx = self._trial_index(trial)
-                idx = trial_idx if trial_idx is not None and trial_idx < len(files) else 0
-            if idx < len(files):
-                return _filename_from_url_or_path(str(files[idx]))
+                return _filename_from_url_or_path(found.path)
 
         media = self.get_media(trial, stream, device)
         return _filename_from_url_or_path(media) if media else None
@@ -756,14 +753,16 @@ class NWBAlignment:
         time (no timing, or trial-relative timing with per-trial files all
         starting at 0) time says nothing, so the trial's position is used --
         one file per trial when the counts agree, else the first file.
+
+        With session timing, a trial no file overlaps (added to the trials
+        table without an acquisition segment) has no file here; the caller
+        falls back to the trials table's own filename.
         """
         spans = self._acq_spans(acq)
         if not spans:
             return None
         if self.has_real_timing and self.trials_df["start_time"].nunique() > 1:
-            best = _span_overlapping(spans, self.start_time(trial), self.stop_time(trial))
-            if best is not None:
-                return best
+            return _span_overlapping(spans, self.start_time(trial), self.stop_time(trial))
         trial_idx = self._trial_index(trial)
         if trial_idx is not None and len(spans) == len(self.trials_df) and trial_idx < len(spans):
             return spans[trial_idx]
@@ -864,24 +863,17 @@ class NWBAlignment:
         """
         acq = self._find_acquisition(stream, device)
 
-        trial_idx = self._trial_index(trial)
         nwb_base_dir = self._path.parent
 
         if self._trial_has_no_media(trial, stream, device):
             return None
 
         if acq is not None and hasattr(acq, "external_file") and acq.external_file:
-            files = list(acq.external_file)
+            # The span already carries the path: reading ``external_file`` here
+            # would iterate the HDF5 dataset once per trial.
             found = self._file_for_trial(acq, trial)
             if found is not None:
-                file_idx = found.index
-            elif trial_idx is not None and trial_idx < len(files):
-                file_idx = trial_idx
-            else:
-                file_idx = 0
-
-            if file_idx < len(files):
-                raw_path = files[file_idx]
+                raw_path = found.path
                 # URLs returned directly
                 if _is_url(raw_path):
                     # If fallback_folder has a local copy, prefer that
@@ -994,6 +986,7 @@ class NWBAlignment:
         """
         self.close()
         self._trials_df_cache = None
+        self._trial_pos_cache = None
         self._rate_dict.clear()
         self._span_cache.clear()
 
@@ -1001,6 +994,30 @@ class NWBAlignment:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _trial_keys(value: Any) -> list[str]:
+    """The spellings a trial id answers to: ``5``, ``"5"`` and ``5.0`` all read ``"5"``."""
+    keys = [str(value)]
+    if isinstance(value, float) and value.is_integer():
+        keys.append(str(int(value)))
+    return keys
+
+
+def _trial_positions(df: pd.DataFrame) -> dict[str, int]:
+    """First row position of every trial id in *df*'s ``trial`` column, by each spelling."""
+    positions: dict[str, int] = {}
+    for i, val in enumerate(df["trial"]):
+        for key in _trial_keys(val):
+            positions.setdefault(key, i)
+    return positions
+
+
+def _lookup_trial(positions: dict[str, int], trial: Any) -> int | None:
+    for key in _trial_keys(trial):
+        if key in positions:
+            return positions[key]
+    return None
 
 
 def _is_url(path: str) -> bool:
@@ -1397,43 +1414,6 @@ def read_individuals(nwbfile) -> list[str]:
     if INDIVIDUALS_TABLE not in nwbfile.scratch:
         return []
     return [str(v) for v in nwbfile.scratch[INDIVIDUALS_TABLE].to_dataframe()["individual"]]
-
-
-def alignment_extras(path: str | Path) -> list[str]:
-    """What an existing alignment holds that re-pairing its media cannot rebuild.
-
-    Media filenames and trial timing come back from the files themselves, so
-    rebuilding them costs nothing. Anything *else* was put there by a person — the
-    individuals they declared, the metadata columns they typed into the trials
-    table — and a rebuild would drop it silently. Returns one human-readable phrase
-    per finding, so a caller can name them in a confirmation; ``[]`` when a rebuild
-    loses nothing.
-    """
-    from ethograph.io.metadata_table import is_media_column
-
-    path = Path(path)
-    if not path.is_file():
-        return []
-    found: list[str] = []
-    try:
-        with NWBHDF5IO(str(path), "r", load_namespaces=True) as io:
-            nwbfile = io.read()
-            if read_individuals(nwbfile):
-                found.append(f"the individuals it declares ({', '.join(read_individuals(nwbfile))})")
-            table = nwbfile.trials
-            if table is not None:
-                extra = [
-                    c
-                    for c in table.colnames
-                    if c not in ("start_time", "stop_time", "trial") and not is_media_column(str(c))
-                ]
-                if extra:
-                    found.append(f"trial metadata ({', '.join(extra)})")
-    except (OSError, RuntimeError, ValueError):
-        # Unreadable is not the same as empty: say so, so a caller still asks.
-        logger.warning("Could not inspect %s; treating it as holding work worth asking about", path)
-        return ["contents this drop could not read"]
-    return found
 
 
 def set_individuals(nwb_path: str | Path, individuals: Sequence[str]) -> None:

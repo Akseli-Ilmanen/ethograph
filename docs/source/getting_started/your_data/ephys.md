@@ -49,6 +49,12 @@ Once spike-sorted units are loaded (a Kilosort folder or a pynapple file with a 
 
 The firing rate is binned for the trial on screen and re-binned when the trial, the neuron table's filters or the bin settings change.
 
+### Only the bursting spikes
+
+**Tools ▸ Neural: Raster of burst spikes only…** draws the raster from the spikes a burst detector puts in a burst, and nothing else. Pick a method — **logISI** (the default: each unit sets its own limit from the valley of its inter-spike-interval histogram), **MaxInterval** (fixed limits for every unit) or **instantaneous rate** (a run of spikes above a rate, 125 Hz by default) — set its parameters, and **Show burst spikes only**. The raster's title says which filter is on; **Show every spike** takes it off.
+
+Each filter you make is also listed in **➕ Add panel** under *Ephys: spikes* as **Spike raster — bursts `method`**, with any parameter you changed from its default in brackets, beside the plain **Spike raster**. Dropping one switches the raster to that filter, so two detectors, or two settings of one, can be compared on the same units. The filters are kept with the dataset. The detectors are the ones **Neural: Neuronal firing / burst detection…** uses to make labels of the bursts; this view only changes what the raster draws.
+
 ### Raster rendering
 
 The **Raster** setting chooses how spikes are drawn:

@@ -409,15 +409,24 @@ class SourceCollection:
 
     @property
     def session_range(self) -> TimeRange | None:
-        """Full session extent: min(trial starts) .. max(trial ends).
+        """Full session extent: the trials' span widened to every source's data.
 
-        Falls back to :attr:`union_range` if no trial intervals are set.
+        A recording often runs past the last trial (spikes, a continuous
+        trace); session scope must reach it, not stop at the last trial's end.
+        Sources with no samples (an empty ``TimeRange``) widen nothing.
         """
+        ranges = [s.time_range for s in self._sources.values()]
+        ranges = [r for r in ranges if r.end_s > r.start_s]
         if self._trial_intervals:
             starts = [s for s, _ in self._trial_intervals]
             ends = [e for _, e in self._trial_intervals]
-            return TimeRange(min(starts), max(ends))
-        return self.union_range
+            ranges.append(TimeRange(min(starts), max(ends)))
+        if not ranges:
+            return None
+        result = ranges[0]
+        for r in ranges[1:]:
+            result = result.union(r)
+        return result
 
 
 # ---------------------------------------------------------------------------

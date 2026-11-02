@@ -78,6 +78,52 @@ class XarrayTrialSource:
 
 
 # ---------------------------------------------------------------------------
+# TsGroupSource
+# ---------------------------------------------------------------------------
+
+
+class TsGroupSource:
+    """TimeSource wrapping a pynapple ``TsGroup`` (spike times of many units).
+
+    Navigation only needs its extent: the group's ``time_support`` is the
+    recording the spikes were cut to, which usually outlasts the trials.
+    """
+
+    def __init__(self, name: str, group: nap.TsGroup) -> None:
+        self._name = name
+        self._group = group
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def time_range(self) -> TimeRange:
+        ts = self._group.time_support
+        if len(ts) == 0:
+            return TimeRange(0.0, 0.0)
+        return TimeRange(float(ts.start[0]), float(ts.end[-1]))
+
+    @property
+    def sampling_rate(self) -> float | None:
+        return None
+
+    def get_data(self, t0: float, t1: float) -> tuple[np.ndarray, np.ndarray]:
+        """Spike times in the window with the unit id of each, both time-sorted."""
+        times: list[np.ndarray] = []
+        units: list[np.ndarray] = []
+        for unit_id, ts in self._group.items():
+            t = np.asarray(ts.get(t0, t1).t, dtype=np.float64)
+            times.append(t)
+            units.append(np.full(t.shape, unit_id))
+        if not times:
+            return np.empty(0, dtype=np.float64), np.empty(0)
+        t_all = np.concatenate(times)
+        order = np.argsort(t_all, kind="stable")
+        return t_all[order], np.concatenate(units)[order]
+
+
+# ---------------------------------------------------------------------------
 # PynappleSource
 # ---------------------------------------------------------------------------
 

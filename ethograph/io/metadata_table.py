@@ -340,7 +340,38 @@ def load_metadata_df(
         trials_ep=trials_ep,
         trial_ids=trial_ids,
     )
+    if path is not None and Path(path).suffix.lower() in TABULAR_METADATA_EXTS:
+        df = with_every_trial(df, _known_trials(trial_ids, nwb_alignment or opened, trials_ep))
     return attach_media_columns(df, nwb_alignment or opened), path
+
+
+def _known_trials(trial_ids, nwb_alignment, trials_ep) -> list[int | str]:
+    """Every trial the session has timing for: the ids given, then the alignment's, then the IntervalSet's."""
+    known: list[int | str] = list(trial_ids or [])
+    trials_df = getattr(nwb_alignment, "trials_df", None)
+    if trials_df is not None and not trials_df.empty:
+        known += list(_normalise_trial_column(trials_df, None)["trial"].dropna())
+    if trials_ep is not None and getattr(trials_ep, "metadata", None) is not None:
+        known += list(_normalise_trial_column(pd.DataFrame(trials_ep.metadata), None).get("trial", pd.Series([])))
+    return list(dict.fromkeys(known))
+
+
+def with_every_trial(df: pd.DataFrame, trial_ids: list[int | str]) -> pd.DataFrame:
+    """*df* with a row for each of *trial_ids* it lacks, its other columns empty.
+
+    A metadata table is additive: a trial it does not describe still has its
+    timing from the alignment, so it stays in the trials table (with less to
+    show) and can be navigated to. The table's own rows come first, in its
+    order; the missing trials follow in the order given.
+    """
+    if "trial" not in df.columns or not trial_ids:
+        return df
+    present = set(df["trial"].dropna().tolist())
+    missing = [t for t in trial_ids if t not in present]
+    if not missing:
+        return df
+    extra = pd.DataFrame({"trial": missing})
+    return pd.concat([df, extra], ignore_index=True)
 
 
 def _resolve_metadata_source(

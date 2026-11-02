@@ -232,7 +232,7 @@ def test_a_burst_rule_takes_only_its_detectors_own_parameters():
 
 @pytest.mark.parametrize("method", BURST_DETECTORS)
 def test_a_unit_with_no_spikes_in_the_trials_read_has_no_bursts(method):
-    burst = np.arange(5) * 0.01
+    burst = np.arange(5) * 0.005
     # Unit "away" fires only outside the trials: cut to them, its train is empty.
     trains = {"away": nap.Ts(t=50.0 + burst), "here": nap.Ts(t=101.0 + burst)}
     events = burst_events(trains, _SPANS, BurstRule(method), "crow")

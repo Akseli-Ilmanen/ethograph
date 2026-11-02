@@ -26,6 +26,7 @@ ROW_ORDERS: dict[str, str] = {
     "rastermap": "Rastermap",
     "peak_trial": "Peak time (each trial)",
     "peak_window": "Peak time (visible window)",
+    "custom": "Custom (pasted list)",
 }
 #: The orders read off the firing rates: the first re-sorts on every trial, the second when asked.
 PEAK_ORDERS = ("peak_trial", "peak_window")
@@ -87,6 +88,31 @@ def auto_tick_width(n_spikes: int, n_cells: int, tick_height_px: float) -> int:
     gap_px = max(n_cells, 1) / max(n_spikes, 1)
     widest = min(_AUTO_TICK_WIDTH_MAX, int(tick_height_px // 3))
     return max(1, min(int(gap_px * _AUTO_TICK_GAP_FRACTION), widest))
+
+
+def format_unit_order(unit_ids: list[int]) -> str:
+    """Unit ids as a Python list literal, ``[20, 35, 201]`` — what ``parse_unit_order`` reads back."""
+    return "[" + ", ".join(str(int(cid)) for cid in unit_ids) + "]"
+
+
+def parse_unit_order(text: str) -> list[int]:
+    """Unit ids from a pasted ``[20, 35, 201]`` (brackets optional, comma or whitespace separated).
+
+    Raises ``ValueError`` naming the offending token; a repeated id keeps its first place.
+    """
+    body = text.strip()
+    if body.startswith("[") and body.endswith("]"):
+        body = body[1:-1]
+    ids: list[int] = []
+    for token in body.replace(",", " ").split():
+        if not token.lstrip("-").isdigit():
+            raise ValueError(f"Not a unit id: {token!r}")
+        cid = int(token)
+        if cid not in ids:
+            ids.append(cid)
+    if not ids:
+        raise ValueError("No unit ids in the pasted text")
+    return ids
 
 
 def order_units(unit_ids: list[int], fitted: list[int] | None) -> list[int]:

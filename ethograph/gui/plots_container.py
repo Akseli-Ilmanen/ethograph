@@ -383,6 +383,13 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
         # --- Current-label floating indicator (top-right corner) ---
         self._label_indicator = CurrentLabelIndicator(self)
 
+        # Which labels collapse into a cluster marker depends on pixels per
+        # second, so a zoom redraws the labels — once the wheel has settled.
+        self._zoom_labels_timer = QTimer(self)
+        self._zoom_labels_timer.setSingleShot(True)
+        self._zoom_labels_timer.setInterval(150)
+        self._zoom_labels_timer.timeout.connect(self.schedule_labels_redraw)
+
         # --- X-axis sync: every panel's x-range change is copied verbatim to
         # all other open panels (see _sync_panel_xrange). _xlink_master is the
         # first open panel — kept as the conventional target for programmatic
@@ -1082,6 +1089,7 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def _on_plot_zoom(self):
         self.update_audio_changepoint_styles()
         self.update_oscillatory_event_styles()
+        self._zoom_labels_timer.start()
 
     # ------------------------------------------------------------------
     # Panel configuration

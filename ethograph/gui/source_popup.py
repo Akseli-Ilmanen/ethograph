@@ -26,6 +26,7 @@ typing. Feature plot-type options are gated by data shape ``(T, N)``:
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -46,6 +47,7 @@ from qtpy.QtWidgets import (
 )
 
 from ethograph.io.video_feature_files import video_feature_sources
+from ethograph.labels.feature_events import BurstRule
 
 from .plots_radial import feature_angular_unit
 from .plots_skeleton import skeleton_plot_types
@@ -114,7 +116,7 @@ def allowed_plot_types(kind: str, name: str, app_state) -> list[str]:
         return ["Prediction timeline"]
     if kind == "phy":
         return ["Phy TraceView"]
-    if kind == "raster":
+    if kind in ("raster", "raster_bursts"):
         return ["Raster"]
     if kind == "firing_rate":
         return ["Heatmap"]
@@ -317,7 +319,7 @@ class SourcePopup(QWidget):
         self._list.addItem(item)
         return item
 
-    def refresh(self, catalog=None, neo_streams=None, phy_available=False, n_units=0):
+    def refresh(self, catalog=None, neo_streams=None, phy_available=False, n_units=0, burst_filters=()):
         """Repopulate from the current session (cameras, mics, features).
 
         *catalog* is the loaded DataCatalog: its ``feature_choices()`` is the
@@ -327,7 +329,9 @@ class SourcePopup(QWidget):
         …); each is a "neo" source whose channels are picked on drop.
         *phy_available* adds the raw-data "Ephys (Phy-like viewer)" source.
         *n_units* is how many spike-sorted units are loaded; any adds the raster
-        and the firing-rate heatmap.
+        and the firing-rate heatmap. *burst_filters* are the burst rules made
+        in Tools ▸ Neural (``BurstRule.to_dict``); each is a raster of only
+        the spikes its detector puts in a burst.
         """
         self._list.clear()
         sio = getattr(self.app_state, "nwb_alignment", None)
@@ -375,6 +379,9 @@ class SourcePopup(QWidget):
         if n_units:
             self._add_header("Ephys: spikes")
             self._add_source(f"Spike raster ({n_units} units)", "raster", "raster")
+            for rule in burst_filters:
+                label = BurstRule.from_dict(rule).label()
+                self._add_source(f"Spike raster — {label}", "raster_bursts", json.dumps(rule))
             self._add_source(f"Firing rate ({n_units} units)", "firing_rate", "firing_rate")
 
         features: list[str] = catalog.feature_choices() if catalog is not None else []
