@@ -250,6 +250,17 @@ class NavigationWidget(QWidget):
         scope_row.addWidget(self.scope_combo, stretch=1)
         time_window_layout.addLayout(scope_row)
 
+        # Session scope puts every trial on one axis; the bars say which is which.
+        self.trial_bars_checkbox = QCheckBox("Show trial bars")
+        self.trial_bars_checkbox.setObjectName("trial_bars_checkbox")
+        self.trial_bars_checkbox.setToolTip(
+            "Under session scope, draw one coloured bar per trial along the\n"
+            "bottom of every panel, with its trial id above."
+        )
+        self.trial_bars_checkbox.setChecked(app_state.get_with_default("trial_bars_visible"))
+        self.trial_bars_checkbox.toggled.connect(self._on_trial_bars_toggled)
+        time_window_layout.addWidget(self.trial_bars_checkbox)
+
         # X-limits mode: slider-scope-based or fixed window
         xlim_row = QHBoxLayout()
         xlim_row.addWidget(QLabel("X-limits:"))
@@ -348,6 +359,7 @@ class NavigationWidget(QWidget):
         self.scope_combo.blockSignals(True)
         self.scope_combo.setCurrentIndex(scope_idx)
         self.scope_combo.blockSignals(False)
+        self.trial_bars_checkbox.setEnabled(saved_scope == "session")
 
     def refresh_after_load(self):
         self._populate_label_combo()
@@ -549,14 +561,12 @@ class NavigationWidget(QWidget):
     def _on_scope_changed(self, scope_text: str):
         scope_key = _SCOPE_DISPLAY_TO_KEY.get(scope_text, "trial")
         self.app_state.slider_scope = scope_key
+        self.trial_bars_checkbox.setEnabled(scope_key == "session")
 
-        if scope_key == "session":
-            self._apply_slider_scope()
-            self._update_viewport_for_scope()
-        elif scope_key in ("trial", "trial_start"):
+        if scope_key in ("trial", "trial_start"):
             self._snap_to_closest_trial()
         else:
-            self._apply_slider_scope()
+            self._refresh_all_panels()
 
         # The scope decides the display basis, so the label rectangles must be
         # re-laid-out on the new axis (session basis: ALL trials' labels;
@@ -564,6 +574,27 @@ class NavigationWidget(QWidget):
         # first, exactly like every other panel-creation path.
         if self.plot_container is not None:
             self.plot_container.schedule_labels_redraw()
+
+    def _on_trial_bars_toggled(self, visible: bool):
+        self.app_state.trial_bars_visible = visible
+        if self.plot_container is not None:
+            self.plot_container.schedule_labels_redraw()
+
+    def _refresh_all_panels(self):
+        """Re-run the trial refresh for the current trial under the new scope.
+
+        Every panel re-reads its data on ``trial_changed``, so a scope switch
+        (a new display basis / extent) takes the same path a trial switch
+        does — keeping the marker where the user left it — then re-fits the
+        viewport to the new ``restrict_window``.
+        """
+        if not self.app_state.ready:
+            self._apply_slider_scope()
+            return
+        with self.app_state.switching_trial(keep_marker=True):
+            self.app_state.trial_changed.emit()
+        self._update_counter()
+        self._update_viewport_for_scope()
 
     def _on_xlim_mode_changed(self, mode_text: str):
         mode = _XLIM_DISPLAY_TO_KEY.get(mode_text, "interval")
@@ -671,8 +702,7 @@ class NavigationWidget(QWidget):
                 self._update_counter()
                 return
 
-        self._apply_slider_scope()
-        self._update_viewport_for_scope()
+        self._refresh_all_panels()
 
     def _apply_slider_scope(self):
         """Build restrict_window from the current slider scope + before/after."""

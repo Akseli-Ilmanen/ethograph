@@ -58,6 +58,7 @@ from .plots_lineplot import LinePlot
 from .plots_overlay import OverlayManager
 from .plots_raster import RasterPlot
 from .plots_spectrogram import SharedAudioCache, SpectrogramPlot
+from .trial_bars import draw_trial_bars, trial_bars
 from .widgets_transform import compute_energy_envelope
 
 #: Overlay-name prefix of the per-class onset-model probability curves.
@@ -1164,6 +1165,36 @@ class UnifiedPanelContainer(LabelDrawingMixin, QWidget):
     def _emit_labels_redraw(self) -> None:
         self._labels_redraw_scheduled = False
         self.labels_redraw_needed.emit()
+
+    def redraw_trial_bars(self) -> None:
+        """Trial bars on every visible panel: drawn under session basis, else cleared.
+
+        Runs with every label redraw, which already fires on y-range changes,
+        zoom/pan and scope switches — the same events that move the strip.
+        """
+        for plot in getattr(self, "_trial_bar_plots", []):
+            for item in getattr(plot, "trial_bar_items", []):
+                try:
+                    plot.plot_item.removeItem(item)
+                except (RuntimeError, AttributeError, ValueError):
+                    pass
+            plot.trial_bar_items = []
+        self._trial_bar_plots = []
+        state = self.app_state
+        sc = getattr(state, "source_collection", None)
+        if (
+            not state.get_with_default("trial_bars_visible")
+            or state.display_basis != "session"
+            or sc is None
+            or sc.n_trials < 2
+        ):
+            return
+        bars = trial_bars(sc, list(state.trials), TimeRange(*self.get_current_xlim()))
+        for plot in self._visible_plots():
+            if not hasattr(plot, "plot_item"):
+                continue
+            plot.trial_bar_items = draw_trial_bars(plot, bars, inverted_y=self._is_inverted_y_plot(plot))
+            self._trial_bar_plots.append(plot)
 
     # ------------------------------------------------------------------
     # X-axis alignment across stacked panels

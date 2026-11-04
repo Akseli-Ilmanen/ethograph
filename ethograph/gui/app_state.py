@@ -305,6 +305,9 @@ class AppStateSpec:
         # delay in widgets_navigation) whenever navigation lands. Global — a
         # reviewing habit, not a property of any one dataset.
         "autoplay_on_navigate": (bool, False, True),
+        # Trial-extent bars along the bottom of the current plot under session
+        # scope. Global: a way of reading the axis, not a property of a dataset.
+        "trial_bars_visible": (bool, True, True),
         "time_jump_s": (float, 0.1, True),
         "time": (
             xr.DataArray | None,

@@ -1073,6 +1073,7 @@ class MetaWidget(GridSectionContainer):
         if not self.app_state.ready:
             return
         self.data_widget.update_label_plot()
+        self.plot_container.redraw_trial_bars()
         self.data_widget.update_trial_curation()
         # A panel opened after an import gets the curve too.
         self.data_widget._update_confidence_overlay()
