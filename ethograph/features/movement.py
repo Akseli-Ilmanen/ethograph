@@ -6,10 +6,7 @@ from pathlib import Path
 
 import matplotlib
 import numpy as np
-import pandas as pd
 import xarray as xr
-from scipy import interpolate
-from scipy.integrate import cumulative_trapezoid
 from scipy.ndimage import binary_dilation, uniform_filter1d
 from scipy.spatial.distance import cdist
 
@@ -519,4 +516,3 @@ def extract_packet_motion(video_path: Path | str, fps: float, time_coord_name: s
     keyframes = np.flatnonzero(keys)
     motion = mask_keyframes(gop_relative_sizes(sizes, keyframes), keyframes)
     return xr.DataArray(motion, dims=[time_coord_name], coords={time_coord_name: np.arange(len(motion)) / fps})
-
