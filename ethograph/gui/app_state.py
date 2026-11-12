@@ -132,6 +132,9 @@ class AppStateSpec:
         # Decoupled from the navigation Before/After padding — a reviewing
         # preference, so global like autoplay_on_navigate.
         "refine_window_s": (float, 0.5, True),
+        # Segment review: seconds shown either side of the whole label.
+        # Negative means "use the navigation Before/After padding".
+        "segment_context_s": (float, -1.0, True),
         # Curation (widgets_curation, docs models/curation/).
         # curation_mode: "manual" | "inspect" | "segment" | "frame" — SCOPE_LOCAL, because
         # "inspect is enough" curates a trial by merely opening it and must not

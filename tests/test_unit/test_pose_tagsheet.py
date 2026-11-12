@@ -21,8 +21,9 @@ from qtpy.QtWidgets import QApplication  # noqa: E402
 
 from ethograph.gui.pose_detect import DEFAULT_TAG_FAMILY, TAG_FAMILIES, family_modules  # noqa: E402
 from ethograph.gui.pose_tagsheet import (  # noqa: E402
+    CUT_GAP_MM,
+    DEFAULT_QUIET_MIN_MM,
     FOOTER_MM,
-    LABEL_MM,
     MIN_PX_PER_MODULE,
     MIN_QUIET_MM,
     PDF_RESOLUTION,
@@ -161,9 +162,9 @@ def test_an_unknown_camera_gets_no_minimum_rather_than_a_guess():
     assert min_tag_mm(8, 1920, 0.0) is None
 
 
-def test_the_quiet_zone_defaults_to_a_module_with_a_floor():
-    assert default_quiet_mm(16.0, 8) == pytest.approx(2.0)
-    assert default_quiet_mm(4.0, 8) == MIN_QUIET_MM
+def test_the_quiet_zone_defaults_to_two_modules_with_a_floor():
+    assert default_quiet_mm(16.0, 8) == pytest.approx(4.0)
+    assert default_quiet_mm(4.0, 8) == DEFAULT_QUIET_MIN_MM
 
 
 # ----------------------------------------------------------------------
@@ -179,28 +180,22 @@ def _spec(**kwargs) -> SheetSpec:
 def test_the_grid_is_the_arithmetic_it_claims():
     spec = _spec(rows=[TagRow(DEFAULT_TAG_FAMILY, 0, 60, 3.0, 1.0)], margin_mm=10.0, labels=False)
     pages = layout_sheet(spec)
-    cell = 3.0 + 2 * 1.0
+    cell = 3.0 + 2 * 1.0 + CUT_GAP_MM
     columns = int((210.0 - 20.0 - ROW_LABEL_MM) // cell)
     placements = pages[0]
     assert len(pages) == 1
     assert len(placements) == 60
     # First tag sits one quiet zone inside the margin and the size gutter, and
     # the row wraps at exactly `columns`.
-    assert placements[0].x_mm == pytest.approx(10.0 + ROW_LABEL_MM + 1.0)
-    assert placements[0].y_mm == pytest.approx(10.0 + 1.0)
+    assert placements[0].x_mm == pytest.approx(10.0 + ROW_LABEL_MM + CUT_GAP_MM / 2 + 1.0)
+    assert placements[0].y_mm == pytest.approx(10.0 + CUT_GAP_MM / 2 + 1.0)
     assert placements[columns].y_mm == pytest.approx(placements[0].y_mm + cell)
     assert placements[columns].x_mm == pytest.approx(placements[0].x_mm)
 
 
-def test_labels_make_the_cell_taller_but_not_wider():
+def test_labels_live_in_the_quiet_zone_and_do_not_move_tags():
     rows = [TagRow(DEFAULT_TAG_FAMILY, 0, 60, 3.0, 1.0)]
-    without = layout_sheet(_spec(rows=rows, labels=False))[0]
-    with_labels = layout_sheet(_spec(rows=rows, labels=True))[0]
-    columns = sum(1 for place in without if place.y_mm == without[0].y_mm)
-    assert sum(1 for place in with_labels if place.y_mm == with_labels[0].y_mm) == columns
-    assert with_labels[columns].y_mm - with_labels[0].y_mm == pytest.approx(
-        without[columns].y_mm - without[0].y_mm + LABEL_MM
-    )
+    assert layout_sheet(_spec(rows=rows, labels=False)) == layout_sheet(_spec(rows=rows, labels=True))
 
 
 def test_overflow_paginates():

@@ -73,7 +73,7 @@ from pathlib import Path
 
 import numpy as np
 from qtpy.QtCore import QMarginsF, QRectF, Qt
-from qtpy.QtGui import QBrush, QColor, QFont, QPageLayout, QPageSize, QPainter, QPdfWriter
+from qtpy.QtGui import QBrush, QColor, QFont, QPageLayout, QPageSize, QPainter, QPdfWriter, QPen
 
 from ethograph.gui.pose_detect import (
     DEFAULT_TAG_FAMILY,
@@ -99,8 +99,27 @@ BORDER_BITS = 1
 #: floor is for.
 MIN_QUIET_MM = 1.0
 
-#: Height reserved under a tag for its printed ID.
-LABEL_MM = 2.6
+#: Quiet zone the dialog gives a tag, in modules, and its floor in mm. Wider
+#: than the enforced minimum so that a cut that wanders off the grey line still
+#: leaves white around the black border.
+DEFAULT_QUIET_MODULES = 2
+DEFAULT_QUIET_MIN_MM = 2.0
+
+#: White space between neighbouring cut boxes, so each box has its own grey
+#: line and a cut along one never eats into the next tag's quiet zone.
+CUT_GAP_MM = 3.0
+
+#: Grey of the cut line: visible enough to cut along, far too light for the
+#: detector to mistake for a tag edge.
+CUT_LINE_GREY = 170
+CUT_LINE_MM = 0.2
+
+#: The printed ID sits in the bottom-left corner of the quiet zone, at most
+#: this fraction of the zone tall, so the white directly beside the tag's black
+#: border stays clean and the cut box stays square.
+LABEL_QUIET_FRACTION = 0.4
+LABEL_MAX_MM = 1.4
+LABEL_PAD_MM = 0.3
 
 #: How far text may be shrunk to fit before it falls back to a shorter wording.
 #: Deliberately close to 1: a label squeezed until it touches its neighbours is
@@ -221,8 +240,8 @@ def min_tag_mm(modules: int, image_width_px: float, fov_width_mm: float) -> floa
 
 
 def default_quiet_mm(tag_mm: float, modules: int) -> float:
-    """One module of white around the tag, but never under :data:`MIN_QUIET_MM`."""
-    return max(tag_mm / modules, MIN_QUIET_MM)
+    """:data:`DEFAULT_QUIET_MODULES` of white around the tag, never under :data:`DEFAULT_QUIET_MIN_MM`."""
+    return max(DEFAULT_QUIET_MODULES * tag_mm / modules, DEFAULT_QUIET_MIN_MM)
 
 
 # ----------------------------------------------------------------------
@@ -332,8 +351,9 @@ def layout_sheet(spec: SheetSpec) -> list[list[Placement]]:
     used_h = 0.0
     for row in spec.rows:
         info = row.validate()
-        cell_w = row.tag_mm + 2 * row.quiet_mm
-        cell_h = cell_w + (LABEL_MM if spec.labels else 0.0)
+        box_w = row.tag_mm + 2 * row.quiet_mm
+        cell_w = box_w + CUT_GAP_MM
+        cell_h = cell_w
         columns = int(usable_w // cell_w)
         if columns < 1 or cell_h > usable_h + _EPS:
             raise TagSheetError(
@@ -350,8 +370,8 @@ def layout_sheet(spec: SheetSpec) -> list[list[Placement]]:
                     Placement(
                         family=row.family,
                         marker_id=marker_id,
-                        x_mm=spec.margin_mm + ROW_LABEL_MM + column * cell_w + row.quiet_mm,
-                        y_mm=spec.margin_mm + used_h + row.quiet_mm,
+                        x_mm=spec.margin_mm + ROW_LABEL_MM + column * cell_w + CUT_GAP_MM / 2 + row.quiet_mm,
+                        y_mm=spec.margin_mm + used_h + CUT_GAP_MM / 2 + row.quiet_mm,
                         tag_mm=row.tag_mm,
                         quiet_mm=row.quiet_mm,
                         label=f"{info.short_name}·{marker_id}" if mixed else str(marker_id),
@@ -444,7 +464,8 @@ def draw_page(
     page_number: int,
     page_count: int,
 ) -> None:
-    """One page: its tags, then the footer that makes the print verifiable."""
+    """One page: cut boxes, tags, then the footer that makes the print verifiable."""
+    _draw_cut_boxes(painter, spec, page, scale)
     painter.save()
     painter.setPen(Qt.NoPen)
     painter.setBrush(QBrush(QColor(0, 0, 0)))
@@ -455,6 +476,45 @@ def draw_page(
         _draw_labels(painter, page, scale)
     _draw_band_sizes(painter, spec, page, scale)
     _draw_footer(painter, spec, scale, page_number, page_count)
+
+
+def _cut_box(placement: Placement) -> QRectF:
+    """The grey square to cut along, in mm: the tag and its quiet zone."""
+    side = placement.tag_mm + 2 * placement.quiet_mm
+    return QRectF(
+        placement.x_mm - placement.quiet_mm,
+        placement.y_mm - placement.quiet_mm,
+        side,
+        side,
+    )
+
+
+def _draw_cut_boxes(painter: QPainter, spec: SheetSpec, page: Sequence[Placement], scale: float) -> None:
+    """A grey line around each tag's white, and scissors on the first one.
+
+    Cutting at the black border is the classic way to destroy a tag: the quad
+    finder needs the white outside it. The line says where to cut instead.
+    """
+    if not page:
+        return
+    grey = QColor(CUT_LINE_GREY, CUT_LINE_GREY, CUT_LINE_GREY)
+    painter.save()
+    pen = QPen(grey)
+    pen.setWidthF(CUT_LINE_MM * scale)
+    painter.setPen(pen)
+    painter.setBrush(Qt.NoBrush)
+    for placement in page:
+        box = _cut_box(placement)
+        painter.drawRect(QRectF(box.x() * scale, box.y() * scale, box.width() * scale, box.height() * scale))
+    first = _cut_box(page[0])
+    size = CUT_GAP_MM * 0.9
+    painter.setFont(_text_font(painter, scale, size))
+    painter.drawText(
+        QRectF((first.x() + 0.5) * scale, (first.y() - size / 2) * scale, size * 1.5 * scale, size * scale),
+        Qt.AlignCenter,
+        "✂",
+    )
+    painter.restore()
 
 
 def _draw_band_sizes(painter: QPainter, spec: SheetSpec, page: Sequence[Placement], scale: float) -> None:
@@ -515,27 +575,30 @@ def _text_font(painter: QPainter, scale: float, height_mm: float) -> QFont:
 
 
 def _draw_labels(painter: QPainter, page: Sequence[Placement], scale: float) -> None:
-    """The printed ID under each tag, shrunk to fit rather than cut off.
+    """The printed ID, small, in the bottom-left corner of each cut box.
 
-    A mixed sheet spells the family into every label, which is far longer than a
-    5 mm cell is wide. The label therefore degrades rather than being clipped:
-    shrink to fit, and past :data:`MIN_LABEL_SHRINK` fall back to the bare ID —
-    a small label is readable, "tag36h1" is a lie.
+    It lives inside the quiet zone, hugging the cut line and kept away from the
+    tag's black border, whose white surround the quad finder needs. A mixed sheet
+    spells the family into every label, which is often wider than the box: the
+    label shrinks to fit, and past :data:`MIN_LABEL_SHRINK` falls back to the
+    bare ID — a small label is readable, "tag36h1" is a lie.
     """
     painter.save()
     painter.setPen(QColor(0, 0, 0))
-    base = _text_font(painter, scale, LABEL_MM * 0.72)
     for placement in page:
-        cell_w = (placement.tag_mm + 2 * placement.quiet_mm) * scale
-        text, font = _fitted_text(painter, base, (placement.label, str(placement.marker_id)), cell_w)
+        box = _cut_box(placement)
+        height = min(placement.quiet_mm * LABEL_QUIET_FRACTION, LABEL_MAX_MM)
+        width = (box.width() - 2 * LABEL_PAD_MM) * scale
+        base = _text_font(painter, scale, height)
+        text, font = _fitted_text(painter, base, (placement.label, str(placement.marker_id)), width)
         painter.setFont(font)
         rect = QRectF(
-            (placement.x_mm - placement.quiet_mm) * scale,
-            (placement.y_mm + placement.tag_mm + placement.quiet_mm) * scale,
-            cell_w,
-            LABEL_MM * scale,
+            (box.x() + LABEL_PAD_MM) * scale,
+            (box.bottom() - LABEL_PAD_MM - height) * scale,
+            width,
+            height * scale,
         )
-        painter.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter, text)
+        painter.drawText(rect, Qt.AlignLeft | Qt.AlignBottom, text)
     painter.restore()
 
 

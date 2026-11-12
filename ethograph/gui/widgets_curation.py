@@ -511,8 +511,8 @@ class CurationPanel(QGroupBox):
         self.delta_label.setAlignment(Qt.AlignCenter)
         frame_lay.addWidget(self.delta_label)
 
-        # The view window is the frame review's; the segment review shows the
-        # whole label with the navigation padding, so the row hides with it.
+        # The view window is the frame review's; the segment review has its
+        # own context row below, so each row hides outside its mode.
         self.window_row = QWidget()
         win_row = QHBoxLayout(self.window_row)
         win_row.setContentsMargins(0, 0, 0, 0)
@@ -542,6 +542,28 @@ class CurationPanel(QGroupBox):
         self.lock_checkbox.toggled.connect(self._on_lock_toggled)
         win_row.addWidget(self.lock_checkbox)
         frame_lay.addWidget(self.window_row)
+
+        # The segment review's counterpart: how much to show left and right
+        # of the whole label.
+        self.context_row = QWidget()
+        ctx_row = QHBoxLayout(self.context_row)
+        ctx_row.setContentsMargins(0, 0, 0, 0)
+        ctx_row.addWidget(QLabel("Context left/right:"))
+        self.context_spin = QDoubleSpinBox()
+        self.context_spin.setRange(-1.0, 600.0)
+        self.context_spin.setDecimals(2)
+        self.context_spin.setSingleStep(0.1)
+        self.context_spin.setSuffix(" s")
+        self.context_spin.setSpecialValueText("Navigation padding")
+        self.context_spin.setToolTip(
+            "Seconds shown before the label's start and after its end.\n"
+            "At the minimum, the navigation Before/After padding is used."
+        )
+        self.context_spin.setValue(float(self.app_state.get_with_default("segment_context_s")))
+        self.context_spin.valueChanged.connect(self._on_context_changed)
+        self.context_spin.editingFinished.connect(self.context_spin.clearFocus)
+        ctx_row.addWidget(self.context_spin, stretch=1)
+        frame_lay.addWidget(self.context_row)
 
         review_opts_row = QHBoxLayout()
         self.next_curates_cb = QCheckBox("Click N curates current")
@@ -783,6 +805,7 @@ class CurationPanel(QGroupBox):
         self.mode_combo.setToolTip(_MODE_HINTS[key])
         self.frame_group.setVisible(key in REVIEW_MODES)
         self.window_row.setVisible(key == "frame")
+        self.context_row.setVisible(key == "segment")
         self.auto_advance_cb.setText("Jump to next after ⌫" if key == "segment" else "Jump to next after ↵/⌫")
         # The queue is the mode's (boundaries vs whole labels): leaving the
         # mode a session started in ends it.
@@ -1854,6 +1877,29 @@ class CurationPanel(QGroupBox):
             target = self._targets[self._idx]
             self.nav.set_view_range(target.inst["trial"], self._view_rel(self._seed_rel(target)))
 
+    def _segment_view_rel(self, inst: dict) -> TimeRange | None:
+        """The label plus the context either side, clipped to the trial;
+        ``None`` hands the view to the navigation padding."""
+        pad = float(self.app_state.get_with_default("segment_context_s"))
+        if pad < 0.0:
+            return None
+        onset = float(inst["onset_s"])
+        offset = float(inst["offset_s"]) if math.isfinite(inst["offset_s"]) else onset
+        t0, t1 = onset - pad, offset + pad
+        tb = self.app_state.trial_bounds
+        if tb is not None:
+            t0, t1 = max(t0, tb.start_s), min(t1, tb.end_s)
+        return TimeRange(t0, t1)
+
+    def _on_context_changed(self, value: float) -> None:
+        self.app_state.segment_context_s = value
+        if not (self._session_active and self._session_mode == "segment" and self.nav is not None):
+            return
+        target = self._targets[self._idx]
+        view = self._segment_view_rel(target.inst)
+        if view is not None:
+            self.nav.set_view_range(target.inst["trial"], view)
+
     def _on_lock_toggled(self, checked: bool) -> None:
         if not self._session_active:
             return
@@ -1921,7 +1967,8 @@ class CurationPanel(QGroupBox):
     # ------------------------------------------------------------------
 
     def _jump_segment(self, inst: dict) -> None:
-        """Show the whole label with the navigation padding, play it, and arm it."""
+        """Show the whole label with its context (or the navigation padding),
+        play it, and arm it."""
         if self.nav is not None:
             self._jumping = True
             try:
@@ -1929,6 +1976,7 @@ class CurationPanel(QGroupBox):
                     {**inst, "row_idx": self._global_row_idx(inst)},
                     seek_rel=inst["onset_s"],
                     play=math.isfinite(inst["offset_s"]),
+                    view_rel=self._segment_view_rel(inst),
                 )
             finally:
                 self._jumping = False

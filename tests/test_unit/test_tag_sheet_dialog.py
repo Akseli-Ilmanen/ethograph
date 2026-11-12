@@ -15,7 +15,7 @@ from qtpy.QtWidgets import QApplication  # noqa: E402
 
 from ethograph.gui.app_state import ObservableAppState  # noqa: E402
 from ethograph.gui.dialog_tag_sheet import TagSheetDialog  # noqa: E402
-from ethograph.gui.pose_tagsheet import MIN_QUIET_MM, default_quiet_mm, dictionary_info  # noqa: E402
+from ethograph.gui.pose_tagsheet import DEFAULT_QUIET_MIN_MM, default_quiet_mm, dictionary_info  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -95,17 +95,17 @@ def test_it_lays_out_a_page_and_says_how_much_fits(dialog):
 
 
 def test_the_quiet_zone_is_computed_rather_than_asked(dialog):
-    """One module of white, derived — there is no control for it."""
+    """Two modules of white, derived — there is no control for it."""
     modules = dictionary_info().modules
     dialog._rows[0].tag_mm.setValue(16.0)
-    assert dialog.spec().rows[0].quiet_mm == pytest.approx(16.0 / modules)
+    assert dialog.spec().rows[0].quiet_mm == pytest.approx(2 * 16.0 / modules)
     assert not hasattr(dialog._rows[0], "quiet_mm")
 
 
 def test_a_small_tag_still_gets_a_usable_quiet_zone(dialog):
     dialog._rows[0].tag_mm.setValue(2.0)
-    assert dialog.spec().rows[0].quiet_mm == pytest.approx(MIN_QUIET_MM)
-    assert default_quiet_mm(2.0, dictionary_info().modules) == MIN_QUIET_MM
+    assert dialog.spec().rows[0].quiet_mm == pytest.approx(DEFAULT_QUIET_MIN_MM)
+    assert default_quiet_mm(2.0, dictionary_info().modules) == DEFAULT_QUIET_MIN_MM
 
 
 def test_the_id_range_is_capped_by_the_family(dialog):

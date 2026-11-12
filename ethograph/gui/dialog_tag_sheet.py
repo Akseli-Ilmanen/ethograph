@@ -17,8 +17,8 @@ appears.
 
 **Everything it can compute, it computes rather than asks**, which is what keeps
 the dialog down to a handful of controls: modules per side and ID count come
-from OpenCV, the quiet zone is always one module (floored at
-:data:`~ethograph.gui.pose_tagsheet.MIN_QUIET_MM`) and never appears, the scale
+from OpenCV, the quiet zone is always two modules (floored at
+:data:`~ethograph.gui.pose_tagsheet.DEFAULT_QUIET_MIN_MM`), boxed by a grey cut line, and never appears, the scale
 bar is always printed, and the camera's pixel width is read off the loaded video
 — or, with no video, **picked as a resolution** (``1920 × 1200``) rather than
 typed as a bare width, since a resolution is what anyone knows about their
@@ -94,7 +94,7 @@ _COLUMN_TOOLTIPS = (
     "The first ID printed in this row.",
     "How many consecutive IDs to print. Capped at what the family holds:\nthere is no wraparound.",
     "Printed side of the tag itself, black border included — NOT the white\n"
-    "margin around it, which is one module wide and set for you.",
+    "margin around it, which is two modules wide and set for you.",
     f"Smallest size that still gives {MIN_PX_PER_MODULE:g} px per module in the camera\n"
     "below. '—' means the scene width has not been given.",
 )
@@ -148,9 +148,9 @@ class _RowWidgets:
     def to_row(self) -> TagRow:
         """The row, with its quiet zone computed rather than asked.
 
-        One module of white is what the quad finder needs and what every
-        reference sheet prints; there is no reading of the tag that a different
-        value improves, so it is derived from the family and the tag size.
+        Two modules of white: one is what the quad finder needs, the second is
+        slack for a cut that wanders off the grey line. Derived from the family
+        and the tag size, so there is nothing to set.
         """
         tag_mm = float(self.tag_mm.value())
         family = self.family.currentText()
