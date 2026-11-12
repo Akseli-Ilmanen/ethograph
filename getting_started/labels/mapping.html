@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/labels/mapping';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -486,8 +486,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="label-mapping-mapping-txt">
-<span id="target-label-mapping"></span><h1>Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)<a class="headerlink" href="#label-mapping-mapping-txt" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-label-mapping">
+<span id="label-mapping-mapping-txt"></span><span id="label-mapping-mappingtxt"></span><h1>Label mapping (<code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>)<a class="headerlink" href="#target-label-mapping" title="Link to this heading">#</a></h1>
 <p>Ethograph uses <strong>integer label IDs</strong> , e.g. in the TSV file (<code class="docutils literal notranslate"><span class="pre">labels</span></code>
 column). The <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> contains a mapping from these integers to the label names. This is the same format as used in the <a class="reference external" href="https://github.com/nus-cvml/awesome-temporal-action-segmentation">action-segmentation literature</a> where models predict a per-frame class index and a dataset-level <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> lists the corresponding action names.</p>
 <p>One major benefit of this format is that if you rename a behaviour once in <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>, it propagates everywhere (old backups, predictions, exports).</p>
@@ -527,7 +527,7 @@ default branch explicitly, because the columns are positional:
 </section>
 <hr class="docutils" />
 <section id="where-mapping-txt-lives">
-<h2>Where <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> lives<a class="headerlink" href="#where-mapping-txt-lives" title="Link to this heading">#</a></h2>
+<span id="where-mappingtxt-lives"></span><h2>Where <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> lives<a class="headerlink" href="#where-mapping-txt-lives" title="Link to this heading">#</a></h2>
 <p>Define the label vocabulary once per research project: put <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> at the
 root of your <strong>project folder</strong> (chosen on the start page), and every session
 you open uses it.</p>
@@ -559,8 +559,8 @@ once — the branch sections, the plots and the label table.</p>
 imported file names, below); it is not a second place to define it.</p>
 <hr class="docutils" />
 </section>
-<section id="importing-labels-from-other-formats">
-<span id="target-auto-mapping"></span><h2>Importing labels from other formats<a class="headerlink" href="#importing-labels-from-other-formats" title="Link to this heading">#</a></h2>
+<section id="target-auto-mapping">
+<span id="importing-labels-from-other-formats"></span><h2>Importing labels from other formats<a class="headerlink" href="#target-auto-mapping" title="Link to this heading">#</a></h2>
 <p>You can also import labels from Crowsetta or pynapple / NWB <code class="docutils literal notranslate"><span class="pre">IntervalSet</span></code>
 files. These carry a label string (e.g. <code class="docutils literal notranslate"><span class="pre">grasp</span></code>) instead of Ethograph’s integer
 ID. On import, names already in <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> keep their ID; new names are
@@ -568,8 +568,8 @@ appended to the project’s <code class="docutils literal notranslate"><span cla
 which classes it added.</p>
 <hr class="docutils" />
 </section>
-<section id="state-vs-point-events">
-<span id="target-point-events"></span><h2>State vs point events<a class="headerlink" href="#state-vs-point-events" title="Link to this heading">#</a></h2>
+<section id="target-point-events">
+<span id="state-vs-point-events"></span><h2>State vs point events<a class="headerlink" href="#target-point-events" title="Link to this heading">#</a></h2>
 <p>Every label is one of two kinds:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -704,8 +704,8 @@ ordinary pandas.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#format">Format</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-mapping-txt-lives">Where <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code> lives</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#editing-it-from-the-gui">Editing it from the GUI</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#importing-labels-from-other-formats">Importing labels from other formats</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-vs-point-events">State vs point events</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-auto-mapping">Importing labels from other formats</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-point-events">State vs point events</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-it-programmatically">Reading it programmatically</a></li>
 </ul>
   </nav></div>

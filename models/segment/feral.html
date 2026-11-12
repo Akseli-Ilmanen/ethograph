@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/segment/feral';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -494,8 +494,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="feral">
-<span id="target-segment-feral"></span><h1>FERAL<a class="headerlink" href="#feral" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-segment-feral">
+<span id="feral"></span><h1>FERAL<a class="headerlink" href="#target-segment-feral" title="Link to this heading">#</a></h1>
 <p>FERAL <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id245" title="Peter Skovorodnikov, Jacopo Razzauti, Blair R. Costelloe, Friederike Buck, Vikram Chandra, Dominic D. Frank, Tomas Kay, Benjamin Koger, Orli Snir, Janet Zhao, Iain D. Couzin, Daniel J. C. Kronauer, and Leslie B. Vosshall. FERAL: a supervised video-understanding system for direct video-to-behavior mapping. bioRxiv, 2025. URL: https://www.biorxiv.org/content/10.1101/2025.11.16.688666v2, doi:10.1101/2025.11.16.688666.">Skovorodnikov <em>et al.</em>, 2025</a>]</span> fine-tunes a video foundation model
 (V-JEPA 2) to predict a class per frame from the pixels alone: no pose, no
 features. There are two ways to use it from ethograph, and both start the
@@ -543,8 +543,8 @@ pip<span class="w"> </span>install<span class="w"> </span>feral
 <p><strong>ethograph’s</strong> is where everything else happens: the config, the export,
 the import, the GUI — and, for the second workflow, the segmentation model.</p>
 </section>
-<section id="workflow-1-ferals-labels">
-<span id="target-feral-labels"></span><h2>Workflow 1: FERAL’s labels<a class="headerlink" href="#workflow-1-ferals-labels" title="Link to this heading">#</a></h2>
+<section id="target-feral-labels">
+<span id="workflow-1-ferals-labels"></span><h2>Workflow 1: FERAL’s labels<a class="headerlink" href="#target-feral-labels" title="Link to this heading">#</a></h2>
 <p><strong>1. A config</strong>, naming the sessions, the labels and the camera:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sessions</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">D:\data\ses-01\behav</span>
@@ -624,8 +624,8 @@ dotted until you accept or edit them
 (<a class="reference internal" href="../../getting_started/labels/importing.html"><span class="doc">Importing labels</span></a>). Curated labels are training
 targets for the next export.</p>
 </section>
-<section id="workflow-2-feral-as-a-video-feature">
-<span id="target-feral-feature"></span><h2>Workflow 2: FERAL as a video feature<a class="headerlink" href="#workflow-2-feral-as-a-video-feature" title="Link to this heading">#</a></h2>
+<section id="target-feral-feature">
+<span id="workflow-2-feral-as-a-video-feature"></span><h2>Workflow 2: FERAL as a video feature<a class="headerlink" href="#target-feral-feature" title="Link to this heading">#</a></h2>
 <p>Here FERAL is a video feature like S3D or DINOv2 in <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>:
 its per-frame embedding becomes the variable <code class="docutils literal notranslate"><span class="pre">feral</span></code> on every trial, and a
 segmentation model reads it.</p>
@@ -710,8 +710,8 @@ feature sets on the same inflated footing, but it is not a held-out score
 does not do for you).</p>
 </section>
 </section>
-<section id="tuning-feral">
-<span id="target-feral-tuning"></span><h2>Tuning FERAL<a class="headerlink" href="#tuning-feral" title="Link to this heading">#</a></h2>
+<section id="target-feral-tuning">
+<span id="tuning-feral"></span><h2>Tuning FERAL<a class="headerlink" href="#target-feral-tuning" title="Link to this heading">#</a></h2>
 <p>FERAL’s parameters are FERAL’s, and
 <a class="reference external" href="https://www.getferal.ai/#config-docs">its config documentation</a> is where
 they are explained. <code class="docutils literal notranslate"><span class="pre">export_feral()</span></code> writes <code class="docutils literal notranslate"><span class="pre">feral/config.yaml</span></code> as a complete FERAL
@@ -781,12 +781,12 @@ the chunk shifts by the same stride; <code class="docutils literal notranslate">
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-environments">The two environments</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#workflow-1-ferals-labels">Workflow 1: FERAL’s labels</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#workflow-2-feral-as-a-video-feature">Workflow 2: FERAL as a video feature</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-feral-labels">Workflow 1: FERAL’s labels</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-feral-feature">Workflow 2: FERAL as a video feature</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#leakage-which-sessions-feral-may-see">Leakage: which sessions FERAL may see</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning-feral">Tuning FERAL</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-feral-tuning">Tuning FERAL</a></li>
 </ul>
   </nav></div>
 

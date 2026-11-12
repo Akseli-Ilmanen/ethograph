@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'community/roadmap';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -499,7 +499,7 @@
 </section>
 <hr class="docutils" />
 <section id="interop-with-segmentation-models">
-<h2>1. Interop with segmentation models<a class="headerlink" href="#interop-with-segmentation-models" title="Link to this heading">#</a></h2>
+<span id="1-interop-with-segmentation-models"></span><h2>1. Interop with segmentation models<a class="headerlink" href="#interop-with-segmentation-models" title="Link to this heading">#</a></h2>
 <ul class="contains-task-list simple">
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Import predictions from action segmentation models (DLC2Action, ASFormer, MS-TCN): <strong>File → Import predictions…</strong> turns per-trial <code class="docutils literal notranslate"><span class="pre">(T,</span> <span class="pre">n_classes)</span></code> or <code class="docutils literal notranslate"><span class="pre">(T,)</span></code> arrays into labels with a confidence overlay (1 − normalised entropy)</p></li>
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Scripted segmentation pipeline (<code class="docutils literal notranslate"><span class="pre">ethograph.segment</span></code>): materialise → search → cross-validate, predictions written as GUI label files</p></li>
@@ -510,14 +510,14 @@
 </ul>
 </section>
 <section id="aligning-video-and-data-streams-via-nwb">
-<h2>2. Aligning video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code><a class="headerlink" href="#aligning-video-and-data-streams-via-nwb" title="Link to this heading">#</a></h2>
+<span id="2-aligning-video-and-data-streams-via-nwb"></span><h2>2. Aligning video and data streams via <code class="docutils literal notranslate"><span class="pre">.nwb</span></code><a class="headerlink" href="#aligning-video-and-data-streams-via-nwb" title="Link to this heading">#</a></h2>
 <ul class="contains-task-list simple">
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Read and edit alignment directly in <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> sources; <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> sidecars for everything else</p></li>
 <li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">🚧 Video alignment in NWB tooling upstream (<a class="reference external" href="https://github.com/catalystneuro/nwb-video-widgets/issues/34">nwb-video-widgets#34</a>, <a class="reference external" href="https://github.com/NeurodataWithoutBorders/nwb-schema/issues/677">nwb-schema#677</a>)</p></li>
 </ul>
 </section>
 <section id="changepoints">
-<h2>3. Changepoints<a class="headerlink" href="#changepoints" title="Link to this heading">#</a></h2>
+<span id="3-changepoints"></span><h2>3. Changepoints<a class="headerlink" href="#changepoints" title="Link to this heading">#</a></h2>
 <ul class="contains-task-list simple">
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Fast changepoint detection (gradient-, RMS-based, …) and changepoint correction of label boundaries</p></li>
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Changepoint features (<a class="reference internal" href="../api/ethograph.features.changepoints.more_changepoint_features.html#ethograph.features.changepoints.more_changepoint_features" title="ethograph.features.changepoints.more_changepoint_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">more_changepoint_features()</span></code></a>), which massively improved fine-grained accuracy for <a class="reference external" href="https://github.com/ChinaYi/ASFormer">ASFormer</a></p></li>
@@ -528,7 +528,7 @@
 </ul>
 </section>
 <section id="neural-data">
-<h2>4. Neural data<a class="headerlink" href="#neural-data" title="Link to this heading">#</a></h2>
+<span id="4-neural-data"></span><h2>4. Neural data<a class="headerlink" href="#neural-data" title="Link to this heading">#</a></h2>
 <ul class="contains-task-list simple">
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Interactive PSTH (<code class="docutils literal notranslate"><span class="pre">ethograph.gui.widgets_psth</span></code>)</p></li>
 <li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">Burst detection module to find behavioural periods of interest from neural data (<a class="reference external" href="https://github.com/pynapple-org/pynapple/issues/668">pynapple#668</a>)</p></li>
@@ -536,7 +536,7 @@
 </ul>
 </section>
 <section id="make-ethograph-fast">
-<h2>5. Make ethograph fast<a class="headerlink" href="#make-ethograph-fast" title="Link to this heading">#</a></h2>
+<span id="5-make-ethograph-fast"></span><h2>5. Make ethograph fast<a class="headerlink" href="#make-ethograph-fast" title="Link to this heading">#</a></h2>
 <ul class="contains-task-list simple">
 <li class="task-list-item"><p><input class="task-list-item-checkbox" checked="checked" disabled="disabled" type="checkbox">Much faster trial navigation: pynaviz’s video teardown no longer blocks the GUI (<a class="reference external" href="https://github.com/pynapple-org/pynaviz/issues/120">pynaviz#120</a>)</p></li>
 <li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox">Migrate video decoding to <a class="reference external" href="https://github.com/BalzaniEdoardo/asyncvideo">asyncvideo</a> for full-rate playback at high resolution (<a class="reference external" href="https://github.com/BalzaniEdoardo/asyncvideo/issues/26">asyncvideo#26</a>, <a class="reference external" href="https://github.com/pynapple-org/pynaviz/issues/128">pynaviz#128</a>)</p></li>

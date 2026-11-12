@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
 
 
@@ -852,8 +852,8 @@ window.runMermaid = runMermaid;</script>
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="full-guide">
-<span id="target-curation-guide"></span><h1>Full guide<a class="headerlink" href="#full-guide" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-curation-guide">
+<span id="full-guide"></span><h1>Full guide<a class="headerlink" href="#target-curation-guide" title="Link to this heading">#</a></h1>
 <p><strong>Curation</strong> is overseeing a model’s predictions: confirming the ones it got
 right and fixing the ones it got wrong. Ethograph makes curation faster by telling you
 <em>where</em> to look. Within single trials, you can see the <strong>model confidence</strong> per frame
@@ -911,7 +911,7 @@ wrong moment. Trial by trial is for the first, segment review for the second,
 frame by frame for the third. Every routine can end after its bulk pass:
 <strong>Done</strong> in a grid curates what was seen, and a rough pass beats no pass.</p>
 <section id="state-events-trial-by-trial">
-<h3>1. State events, trial by trial<a class="headerlink" href="#state-events-trial-by-trial" title="Link to this heading">#</a></h3>
+<span id="1-state-events-trial-by-trial"></span><h3>1. State events, trial by trial<a class="headerlink" href="#state-events-trial-by-trial" title="Link to this heading">#</a></h3>
 <pre  class="mermaid">
         flowchart LR
     import[&lt;b&gt;Import predictions&lt;/b&gt;] --&gt; conf[&lt;b&gt;Confidence curves…&lt;/b&gt;&lt;br/&gt;one number per trial]
@@ -945,7 +945,7 @@ out too loose or too tight, the <strong>Purge short labels</strong> and <strong>
 <a class="reference internal" href="workflows.html"><span class="doc">workflow steps</span></a> redo them here.</p>
 </section>
 <section id="state-events-label-by-label">
-<h3>2. State events, label by label<a class="headerlink" href="#state-events-label-by-label" title="Link to this heading">#</a></h3>
+<span id="2-state-events-label-by-label"></span><h3>2. State events, label by label<a class="headerlink" href="#state-events-label-by-label" title="Link to this heading">#</a></h3>
 <pre  class="mermaid">
         flowchart LR
     scope[&lt;b&gt;Scope&lt;/b&gt;&lt;br/&gt;drag the class in] --&gt; grid{&lt;b&gt;Bulk review&lt;/b&gt;}
@@ -976,7 +976,7 @@ two clicks re-place its start and end, <code class="docutils literal notranslate
 and save; the tagged labels wait, still dotted, for the next session.</p>
 </section>
 <section id="point-events">
-<h3>3. Point events<a class="headerlink" href="#point-events" title="Link to this heading">#</a></h3>
+<span id="3-point-events"></span><h3>3. Point events<a class="headerlink" href="#point-events" title="Link to this heading">#</a></h3>
 <pre  class="mermaid">
         flowchart LR
     scope[&lt;b&gt;Scope&lt;/b&gt;&lt;br/&gt;drag the class in] --&gt; grid{&lt;b&gt;Bulk review&lt;/b&gt;}

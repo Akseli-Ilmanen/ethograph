@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/curation/modes';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -494,15 +494,15 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="ways-to-curate">
-<span id="target-curation-modes"></span><h1>Ways to curate<a class="headerlink" href="#ways-to-curate" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-curation-modes">
+<span id="ways-to-curate"></span><h1>Ways to curate<a class="headerlink" href="#target-curation-modes" title="Link to this heading">#</a></h1>
 <p>Two choices in the <strong>Curation</strong> section of the <strong>Labels</strong> tab decide
 everything else: the <strong>scope</strong> says <em>which</em> labels are up for review, and
 the <strong>mode</strong> says <em>how</em> a label gets curated. Every mode, both
 <a class="reference internal" href="grids.html"><span class="doc">grids</span></a> and every <a class="reference internal" href="workflows.html"><span class="doc">workflow step</span></a> act on the
 scope and on nothing else.</p>
-<section id="scope-which-labels">
-<span id="target-curation-scope"></span><h2>Scope: which labels<a class="headerlink" href="#scope-which-labels" title="Link to this heading">#</a></h2>
+<section id="target-curation-scope">
+<span id="scope-which-labels"></span><h2>Scope: which labels<a class="headerlink" href="#target-curation-scope" title="Link to this heading">#</a></h2>
 <figure class="align-default" id="id2">
 <a class="reference internal image-reference" href="../../_images/curation_dragdrop.png"><img alt="A label row dragged from the label table into the &quot;Labels to curate&quot; box of the Curation section." src="../../_images/curation_dragdrop.png" style="width: 80%;" />
 </a>
@@ -540,8 +540,8 @@ not as a way to skip looking.</p>
 automated labels in scope. Use it when a model is good enough that looking at
 the trial is the review. The mode is per dataset, so it never follows you
 silently into another one.</p>
-<section id="segment-review">
-<span id="target-curation-segment"></span><h3>Segment review<a class="headerlink" href="#segment-review" title="Link to this heading">#</a></h3>
+<section id="target-curation-segment">
+<span id="segment-review"></span><h3>Segment review<a class="headerlink" href="#target-curation-segment" title="Link to this heading">#</a></h3>
 <p>For state events. The labels in scope become a queue of whole labels, walked
 one at a time in the <strong>Order</strong> the dropdown says; each stop jumps to the label,
 shows it with the Navigation section’s before/after padding around it, plays
@@ -584,8 +584,8 @@ segment review is that same walk with <code class="docutils literal notranslate"
 added, so it lives with the other curation modes and not in the Navigation
 section.</p>
 </section>
-<section id="frame-by-frame-review">
-<span id="target-curation-frame"></span><h3>Frame-by-frame review<a class="headerlink" href="#frame-by-frame-review" title="Link to this heading">#</a></h3>
+<section id="target-curation-frame">
+<span id="frame-by-frame-review"></span><h3>Frame-by-frame review<a class="headerlink" href="#target-curation-frame" title="Link to this heading">#</a></h3>
 <p>For point events, and for a boundary the label grid singled out. The labels
 in scope become a queue of boundaries
 (one per point event, a start then an end per state event, in time order)
@@ -700,10 +700,10 @@ them and replays them in one press.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope-which-labels">Scope: which labels</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-curation-scope">Scope: which labels</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#modes-how-a-label-gets-curated">Modes: how a label gets curated</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segment-review">Segment review</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#frame-by-frame-review">Frame-by-frame review</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-curation-segment">Segment review</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-curation-frame">Frame-by-frame review</a></li>
 </ul>
 </li>
 </ul>

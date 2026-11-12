@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/your_data/media_alignment';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -486,8 +486,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="media-alignment-w-neuroconv">
-<span id="target-nwb-alignment"></span><h1>Media alignment (w. neuroconv)<a class="headerlink" href="#media-alignment-w-neuroconv" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-nwb-alignment">
+<span id="media-alignment-w-neuroconv"></span><h1>Media alignment (w. neuroconv)<a class="headerlink" href="#target-nwb-alignment" title="Link to this heading">#</a></h1>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The <strong>Data wizard</strong> on the GUI start page walks you through this. Make a few
@@ -512,8 +512,8 @@ notebook tailored to your setup.</p>
 </div>
 <p>An <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> source is read and edited directly and needs no sidecar.</p>
 <hr class="docutils" />
-<section id="pair-media-files">
-<span id="target-pair-media"></span><h2>Pair media files<a class="headerlink" href="#pair-media-files" title="Link to this heading">#</a></h2>
+<section id="target-pair-media">
+<span id="pair-media-files"></span><h2>Pair media files<a class="headerlink" href="#target-pair-media" title="Link to this heading">#</a></h2>
 <p>On the start page, click <strong>Data wizard, prepare my data</strong> and choose
 <strong>1 Pair my media files</strong>. Tell it how many cameras and microphones you have
 and where the files are. It shows the pairing table, then writes a notebook
@@ -579,8 +579,8 @@ flow through to label TSV exports.</p></li>
 <li><p><strong>Multi-camera NWB files</strong> need no table: each camera is already its own
 <a class="reference external" href="https://pynwb.readthedocs.io/en/stable/pynwb.image.html#pynwb.image.ImageSeries" title="(in PyNWB v4.2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageSeries</span></code></a> in <code class="docutils literal notranslate"><span class="pre">nwb.acquisition</span></code>.</p></li>
 </ul>
-<section id="trial-times">
-<span id="target-omitting-trial-times"></span><h3>Trial times<a class="headerlink" href="#trial-times" title="Link to this heading">#</a></h3>
+<section id="target-omitting-trial-times">
+<span id="trial-times"></span><h3>Trial times<a class="headerlink" href="#target-omitting-trial-times" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">start_time</span></code> and <code class="docutils literal notranslate"><span class="pre">stop_time</span></code> columns are optional. Without them each trial’s
 duration is probed from its own media (video first, then audio, then pose) and
 the trials are laid <strong>end to end</strong> from <code class="docutils literal notranslate"><span class="pre">0.0</span></code>. Three things follow:</p>
@@ -596,8 +596,8 @@ ephys, session-wide media or session-mode navigation to support.</p></li>
 <p>With real <code class="docutils literal notranslate"><span class="pre">start_time</span></code> / <code class="docutils literal notranslate"><span class="pre">stop_time</span></code> the GUI can also navigate in session mode
 and restrict neural data to trial windows.</p>
 </section>
-<section id="session-wide-streams">
-<span id="target-session-wide-streams"></span><h3>Session-wide streams<a class="headerlink" href="#session-wide-streams" title="Link to this heading">#</a></h3>
+<section id="target-session-wide-streams">
+<span id="session-wide-streams"></span><h3>Session-wide streams<a class="headerlink" href="#target-session-wide-streams" title="Link to this heading">#</a></h3>
 <p>A file that spans every trial (one continuous audio recording, a probe on its
 own clock) goes in <code class="docutils literal notranslate"><span class="pre">session_wide</span></code>, keyed by stream name, with its rate and the
 session time at which its first sample was taken:</p>
@@ -629,8 +629,8 @@ setup and channel mapping.</p>
 <hr class="docutils" />
 </section>
 </section>
-<section id="align-video-to-a-recording-system-with-neuroconv">
-<span id="target-video-and-ephys"></span><h2>Align video to a recording system (with neuroconv)<a class="headerlink" href="#align-video-to-a-recording-system-with-neuroconv" title="Link to this heading">#</a></h2>
+<section id="target-video-and-ephys">
+<span id="align-video-to-a-recording-system-with-neuroconv"></span><h2>Align video to a recording system (with neuroconv)<a class="headerlink" href="#target-video-and-ephys" title="Link to this heading">#</a></h2>
 <p>When a recording system (Intan, Open Ephys, SpikeGLX, …) logged the camera,
 its clock is the session clock and the video should sit on it frame by frame.
 That is what <a class="reference external" href="https://neuroconv.readthedocs.io">neuroconv</a> does. A
@@ -775,8 +775,8 @@ camera.</p>
 triggered camera the how-to’s recipe reads the duration of each trial off its
 own file instead of a constant.</p>
 </section>
-<section id="pair-the-rest-over-the-nwb">
-<span id="target-neuroconv-pair-rest"></span><h4>6. Pair the rest over the <code class="docutils literal notranslate"><span class="pre">.nwb</span></code><a class="headerlink" href="#pair-the-rest-over-the-nwb" title="Link to this heading">#</a></h4>
+<section id="target-neuroconv-pair-rest">
+<span id="pair-the-rest-over-the-nwb"></span><h4>6. Pair the rest over the <code class="docutils literal notranslate"><span class="pre">.nwb</span></code><a class="headerlink" href="#target-neuroconv-pair-rest" title="Link to this heading">#</a></h4>
 <p>Pose and audio share the camera’s clock, so they need no pulses. Pass the
 neuroconv file as <code class="docutils literal notranslate"><span class="pre">output_path</span></code> and <code class="xref py py-func docutils literal notranslate"><span class="pre">pair_media()</span></code> adds the
 streams to it in place, next to the trials it already holds:</p>
@@ -926,19 +926,19 @@ selected in the GUI.</p></li>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pair-media-files">Pair media files</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#trial-times">Trial times</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#session-wide-streams">Session-wide streams</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-pair-media">Pair media files</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-omitting-trial-times">Trial times</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-session-wide-streams">Session-wide streams</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#align-video-to-a-recording-system-with-neuroconv">Align video to a recording system (with neuroconv)</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-video-and-ephys">Align video to a recording system (with neuroconv)</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-rig-end-to-end">One rig, end to end</a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#parameters">1. Parameters</a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#find-the-media">2. Find the media</a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#read-the-pulses-off-the-recorder">3. Read the pulses off the recorder</a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#place-the-frames">4. Place the frames</a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#write-session-nwb">5. Write <code class="docutils literal notranslate"><span class="pre">session.nwb</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pair-the-rest-over-the-nwb">6. Pair the rest over the <code class="docutils literal notranslate"><span class="pre">.nwb</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#target-neuroconv-pair-rest">6. Pair the rest over the <code class="docutils literal notranslate"><span class="pre">.nwb</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#open-it">7. Open it</a></li>
 </ul>
 </li>

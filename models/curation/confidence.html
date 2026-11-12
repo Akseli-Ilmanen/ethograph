@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/curation/confidence';</script>
@@ -496,8 +496,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="model-confidence">
-<span id="target-confidence"></span><h1>Model confidence<a class="headerlink" href="#model-confidence" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-confidence">
+<span id="model-confidence"></span><h1>Model confidence<a class="headerlink" href="#target-confidence" title="Link to this heading">#</a></h1>
 <p>Every predicted label carries a <code class="docutils literal notranslate"><span class="pre">confidence</span></code> in the labels TSV (a hand-placed
 label is <code class="docutils literal notranslate"><span class="pre">1.0</span></code>). The review tools threshold on it: the label grid outlines
 tiles below <strong>Flag confidence below</strong>, <strong>Histogram…</strong> shows where the scores
@@ -506,7 +506,7 @@ number is computed by the model that made the prediction, and <em>how</em> depen
 on the question that model answered — <em>which class is this frame?</em> for a
 state event, <em>when did it happen?</em> for a point event.</p>
 <section id="confidence-state-events">
-<h2>Confidence - State events<a class="headerlink" href="#confidence-state-events" title="Link to this heading">#</a></h2>
+<span id="confidence---state-events"></span><h2>Confidence - State events<a class="headerlink" href="#confidence-state-events" title="Link to this heading">#</a></h2>
 <figure class="align-default" id="id3">
 <a class="reference internal image-reference" href="../../_images/curation_stateevents.png"><img alt="The segmentation model's per-frame softmax is turned into a confidence curve by normalised entropy; predictions are purged and stitched, then reviewed in bulk in the video grid, and the low-confidence trials inspected in depth." src="../../_images/curation_stateevents.png" style="width: 100%;" />
 </a>
@@ -525,17 +525,13 @@ come out of it:</p>
 <li><p><strong>A segment’s <code class="docutils literal notranslate"><span class="pre">confidence</span></code></strong> in the TSV is the mean probability of its own
 class <span class="math notranslate nohighlight">\(c\)</span> over its frames <span class="math notranslate nohighlight">\(S\)</span>:</p>
 <div class="math notranslate nohighlight">
-\[
-  \text{confidence} = \frac{1}{|S|} \sum_{t \in S} p_{c}(t).
-  \]</div>
+\[  \text{confidence} = \frac{1}{|S|} \sum_{t \in S} p_{c}(t).\]</div>
 </li>
 <li><p><strong>The confidence curve</strong> drawn under the labels during review is
 per-frame: one minus the normalised entropy of the distribution.</p>
 <div class="math notranslate nohighlight">
-\[
-  \text{confidence}(t) = 1 - \frac{H(t)}{\log C}, \qquad
-  H(t) = -\sum_{c=1}^{C} p_c(t)\,\log p_c(t).
-  \]</div>
+\[  \text{confidence}(t) = 1 - \frac{H(t)}{\log C}, \qquad
+  H(t) = -\sum_{c=1}^{C} p_c(t)\,\log p_c(t).\]</div>
 <p><code class="docutils literal notranslate"><span class="pre">1</span></code> means all the mass sits on one class, <code class="docutils literal notranslate"><span class="pre">0</span></code> that every class is equally
 likely. Its mean over a trial is the <code class="docutils literal notranslate"><span class="pre">model_confidence</span></code> column
 <strong>Confidence curves…</strong> writes to the metadata table.</p>
@@ -569,7 +565,7 @@ tags them, and <strong>Done</strong> curates every label above it in one press
 </section>
 </section>
 <section id="confidence-point-events">
-<h2>Confidence - Point events<a class="headerlink" href="#confidence-point-events" title="Link to this heading">#</a></h2>
+<span id="confidence---point-events"></span><h2>Confidence - Point events<a class="headerlink" href="#confidence-point-events" title="Link to this heading">#</a></h2>
 <figure class="align-default" id="id4">
 <a class="reference internal image-reference" href="../../_images/curation_pointevents.png"><img alt="E2E-Spot's output layer gives one probability curve per class; the tallest peak is the point event, and its confidence is the curve's ratio times its focus; low-confidence events are reviewed frame by frame." src="../../_images/curation_pointevents.png" style="width: 100%;" />
 </a>
@@ -587,11 +583,9 @@ trial’s edge is not a peak). Entropy across classes says nothing useful here:
 the alternatives are other <em>moments</em>, not other classes. So the confidence is
 read off the curve’s shape around its peak, within a window <span class="math notranslate nohighlight">\(w\)</span>:</p>
 <div class="math notranslate nohighlight">
-\[
-\text{focus} = \frac{\sum_{|t - t^\ast| \le w} p(t)}{\sum_t p(t)}, \qquad
+\[\text{focus} = \frac{\sum_{|t - t^\ast| \le w} p(t)}{\sum_t p(t)}, \qquad
 \text{ratio} = 1 - \frac{\max_{t' \in \text{peaks},\; |t' - t^\ast| &gt; w} p(t')}{p(t^\ast)}, \qquad
-\text{confidence} = \text{focus} \times \text{ratio}.
-\]</div>
+\text{confidence} = \text{focus} \times \text{ratio}.\]</div>
 <ul class="simple">
 <li><p><strong>focus</strong> — the share of the curve’s mass within <span class="math notranslate nohighlight">\(w\)</span> of the peak: <code class="docutils literal notranslate"><span class="pre">1</span></code> is one
 clean bump, lower a broad bump or belief spread elsewhere.</p></li>
@@ -620,8 +614,8 @@ rather than dropped. A curve that never rises above <code class="docutils litera
 no label at all — the class is absent from that trial. Why a model places one
 event per class per trial, where that floor sits and how several events per
 trial change what a rival is, are on <a class="reference internal" href="../spot/peaks.html"><span class="doc">From probabilities to events</span></a>.</p>
-<section id="focus-vs-ratio">
-<span id="target-confidence-rule"></span><h3>Focus vs ratio<a class="headerlink" href="#focus-vs-ratio" title="Link to this heading">#</a></h3>
+<section id="target-confidence-rule">
+<span id="focus-vs-ratio"></span><h3>Focus vs ratio<a class="headerlink" href="#target-confidence-rule" title="Link to this heading">#</a></h3>
 <p>Which reading is the confidence is a review preference, so it is set where
 its effect is seen: the <strong>Histogram…</strong> popup of the label grid and the video
 grid carries a <em>Confidence rule</em> panel above the bars whenever the session
@@ -711,7 +705,7 @@ disagree about what the number means (<code class="docutils literal notranslate"
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#confidence-point-events">Confidence - Point events</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#focus-vs-ratio">Focus vs ratio</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-confidence-rule">Focus vs ratio</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reviewing-by-confidence">Reviewing by confidence</a></li>

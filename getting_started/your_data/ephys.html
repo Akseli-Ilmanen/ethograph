@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/your_data/ephys';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -486,14 +486,14 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="ephys-recordings">
-<span id="target-loading-ephys"></span><h1>Ephys recordings<a class="headerlink" href="#ephys-recordings" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-loading-ephys">
+<span id="ephys-recordings"></span><h1>Ephys recordings<a class="headerlink" href="#target-loading-ephys" title="Link to this heading">#</a></h1>
 <p>Use this path for extracellular electrophysiology data, with optional Kilosort spike-sorting output.</p>
 <p>At least one of: an ephys file <strong>or</strong> a Kilosort folder is required.</p>
 <p>Ephys is a <strong>session-wide stream</strong> — the raw recording file is selected in the GUI rather than embedded in the <code class="docutils literal notranslate"><span class="pre">session.nc</span></code>. For datasets with multiple behavioural trials alongside ephys, see <a class="reference internal" href="#target-ephys-multi-trial"><span class="std std-ref">Ephys with multiple trials</span></a>.</p>
 <hr class="docutils" />
 <section id="load-it-drag-drop">
-<h2>Load it — drag &amp; drop<a class="headerlink" href="#load-it-drag-drop" title="Link to this heading">#</a></h2>
+<span id="load-it--drag--drop"></span><h2>Load it — drag &amp; drop<a class="headerlink" href="#load-it-drag-drop" title="Link to this heading">#</a></h2>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p><a class="reference internal" href="../installation.html"><span class="doc">Install Ethograph</span></a> if you haven’t already, then launch via shortcut or:
@@ -506,8 +506,8 @@
 <p>Ethograph recognises a Kilosort folder by the <code class="docutils literal notranslate"><span class="pre">spike_times.npy</span></code> inside it, and reads the sample rate and channel count from the file header or <code class="docutils literal notranslate"><span class="pre">params.py</span></code> automatically — no output path and no questions for known formats. Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>) has no header; drop it together with its Kilosort folder so the metadata comes from <code class="docutils literal notranslate"><span class="pre">params.py</span></code> (see below).</p>
 <hr class="docutils" />
 </section>
-<section id="two-ephys-trace-viewers">
-<span id="target-ephys-viewers"></span><h2>Two ephys trace viewers<a class="headerlink" href="#two-ephys-trace-viewers" title="Link to this heading">#</a></h2>
+<section id="target-ephys-viewers">
+<span id="two-ephys-trace-viewers"></span><h2>Two ephys trace viewers<a class="headerlink" href="#target-ephys-viewers" title="Link to this heading">#</a></h2>
 <p>Raw traces can be shown in either of two panels, added from <strong>➕ Add panel</strong> (<code class="docutils literal notranslate"><span class="pre">Shift+N</span></code>) under the <strong>Ephys: raw traces</strong> header.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -531,8 +531,8 @@
 <p>The Phy-like viewer is inspired by <a class="reference external" href="https://github.com/cortex-lab/phy">phy</a>.</p>
 <hr class="docutils" />
 </section>
-<section id="spikes-raster-and-firing-rate">
-<span id="target-ephys-spikes"></span><h2>Spikes: raster and firing rate<a class="headerlink" href="#spikes-raster-and-firing-rate" title="Link to this heading">#</a></h2>
+<section id="target-ephys-spikes">
+<span id="spikes-raster-and-firing-rate"></span><h2>Spikes: raster and firing rate<a class="headerlink" href="#target-ephys-spikes" title="Link to this heading">#</a></h2>
 <p>Once spike-sorted units are loaded (a Kilosort folder or a pynapple file with a <code class="docutils literal notranslate"><span class="pre">units</span></code> group), <strong>➕ Add panel</strong> offers two panels under the <strong>Ephys: spikes</strong> header. Both show the units that pass the neuron table’s filters.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -587,8 +587,8 @@
 <hr class="docutils" />
 </section>
 </section>
-<section id="supported-formats">
-<span id="target-ephys-formats"></span><h2>Supported formats<a class="headerlink" href="#supported-formats" title="Link to this heading">#</a></h2>
+<section id="target-ephys-formats">
+<span id="supported-formats"></span><h2>Supported formats<a class="headerlink" href="#target-ephys-formats" title="Link to this heading">#</a></h2>
 <p>Ethograph uses <a class="reference external" href="https://neo.readthedocs.io">Neo</a> to read files with recognised headers — sample rate, channel count, and dtype are extracted automatically. Raw binary files have no header, so they are handled via phylib and require a Kilosort folder.</p>
 <section id="known-formats-headers-auto-detected">
 <h3>Known formats (headers auto-detected)<a class="headerlink" href="#known-formats-headers-auto-detected" title="Link to this heading">#</a></h3>
@@ -653,7 +653,7 @@
 <p>When a format carries multiple signal streams (e.g. amplifier vs auxiliary channels in Intan), each stream appears as its own <code class="docutils literal notranslate"><span class="pre">Neo</span> <span class="pre">(stream)</span></code> entry in the <strong>➕ Add panel</strong> popup, so you can open them side by side in separate panels.</p>
 </section>
 <section id="raw-binary-dat-bin-raw">
-<h3>Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>)<a class="headerlink" href="#raw-binary-dat-bin-raw" title="Link to this heading">#</a></h3>
+<span id="raw-binary-dat--bin--raw"></span><h3>Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>)<a class="headerlink" href="#raw-binary-dat-bin-raw" title="Link to this heading">#</a></h3>
 <p>Raw binary files produced by Kilosort carry no metadata. They are loaded via <a class="reference external" href="https://github.com/cortex-lab/phylib">phylib</a> using <code class="docutils literal notranslate"><span class="pre">n_channels</span></code> and <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code> read from <code class="docutils literal notranslate"><span class="pre">params.py</span></code>. Use the <strong>Kilosort folder</strong> picker rather than the ephys file browser — Ethograph resolves the <code class="docutils literal notranslate"><span class="pre">.dat</span></code> path from <code class="docutils literal notranslate"><span class="pre">params.py</span></code> internally. This is what backs the <a class="reference internal" href="#target-ephys-viewers"><span class="std std-ref">Phy-like viewer</span></a>.</p>
 </section>
 </section>
@@ -701,7 +701,7 @@
 </div>
 </section>
 <section id="params-py">
-<h3><code class="docutils literal notranslate"><span class="pre">params.py</span></code><a class="headerlink" href="#params-py" title="Link to this heading">#</a></h3>
+<span id="paramspy"></span><h3><code class="docutils literal notranslate"><span class="pre">params.py</span></code><a class="headerlink" href="#params-py" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">params.py</span></code> is a plain Python file written by Kilosort:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dat_path</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"C:\data\recording.dat"</span>
 <span class="n">n_channels_dat</span> <span class="o">=</span> <span class="mi">385</span>
@@ -722,8 +722,8 @@
 <hr class="docutils" />
 </section>
 </section>
-<section id="ephys-with-multiple-trials">
-<span id="target-ephys-multi-trial"></span><h2>Ephys with multiple trials<a class="headerlink" href="#ephys-with-multiple-trials" title="Link to this heading">#</a></h2>
+<section id="target-ephys-multi-trial">
+<span id="ephys-with-multiple-trials"></span><h2>Ephys with multiple trials<a class="headerlink" href="#target-ephys-multi-trial" title="Link to this heading">#</a></h2>
 <p>The native route is to <a class="reference internal" href="media_alignment.html#target-video-and-ephys"><span class="std std-ref">align video to the recording system</span></a>: neuroconv puts the video on the recorder’s clock and writes a <code class="docutils literal notranslate"><span class="pre">session.nwb</span></code> with trials. Without a sync line, <a class="reference internal" href="media_alignment.html#target-nwb-alignment"><span class="std std-ref">pair the files</span></a> into a <code class="docutils literal notranslate"><span class="pre">session.nc</span></code> instead and select the ephys file in the GUI as above.</p>
 </section>
 </section>
@@ -776,15 +776,15 @@
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#load-it-drag-drop">Load it — drag &amp; drop</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-ephys-trace-viewers">Two ephys trace viewers</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spikes-raster-and-firing-rate">Spikes: raster and firing rate</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-ephys-viewers">Two ephys trace viewers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-ephys-spikes">Spikes: raster and firing rate</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#only-the-bursting-spikes">Only the bursting spikes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#raster-rendering">Raster rendering</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#row-order">Row order</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#selecting-units">Selecting units</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supported-formats">Supported formats</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-ephys-formats">Supported formats</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#known-formats-headers-auto-detected">Known formats (headers auto-detected)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#raw-binary-dat-bin-raw">Raw binary (<code class="docutils literal notranslate"><span class="pre">.dat</span></code> / <code class="docutils literal notranslate"><span class="pre">.bin</span></code> / <code class="docutils literal notranslate"><span class="pre">.raw</span></code>)</a></li>
 </ul>
@@ -795,7 +795,7 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-gets-loaded">What gets loaded</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ephys-with-multiple-trials">Ephys with multiple trials</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-ephys-multi-trial">Ephys with multiple trials</a></li>
 </ul>
   </nav></div>
 

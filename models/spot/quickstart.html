@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/spot/quickstart';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -494,8 +494,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
-<span id="target-spot-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-spot-quickstart">
+<span id="quickstart"></span><h1>Quickstart<a class="headerlink" href="#target-spot-quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimal setup for spotting point events from video: three sessions
 with curated point labels, one camera, and plain E2E-Spot <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id146" title="James Hong, Haotian Zhang, Michaël Gharbi, Matthew Fisher, and Kayvon Fatahalian. Spotting temporally precise, fine-grained events in video. In European Conference on Computer Vision (ECCV). 2022. URL: https://arxiv.org/abs/2207.10213, arXiv:2207.10213.">Hong <em>et al.</em>, 2022</a>]</span>
 on pixels only. It trains on two sessions, is scored on the third, and writes
@@ -511,7 +511,7 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 <p>The trainer is upstream’s own E2E-Spot code, shipped inside ethograph; there
 is nothing else to clone.</p>
 <section id="what-a-session-needs">
-<h2>1. What a session needs<a class="headerlink" href="#what-a-session-needs" title="Link to this heading">#</a></h2>
+<span id="1-what-a-session-needs"></span><h2>1. What a session needs<a class="headerlink" href="#what-a-session-needs" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p><strong>Point labels.</strong> Label the events in the GUI as usual. You get
 <code class="docutils literal notranslate"><span class="pre">{name}_labels.tsv</span></code> beside the session file, with the label ids in
@@ -524,7 +524,7 @@ machine, add <code class="docutils literal notranslate"><span class="pre">video_
 <p>No features, and no preprocessing. The model reads the frames.</p>
 </section>
 <section id="spot-yaml">
-<h2>2. <code class="docutils literal notranslate"><span class="pre">spot.yaml</span></code><a class="headerlink" href="#spot-yaml" title="Link to this heading">#</a></h2>
+<span id="2-spotyaml"></span><h2>2. <code class="docutils literal notranslate"><span class="pre">spot.yaml</span></code><a class="headerlink" href="#spot-yaml" title="Link to this heading">#</a></h2>
 <p>Put this in a folder of its own, <code class="docutils literal notranslate"><span class="pre">spot/</span></code> in your project folder: the file’s folder
 is the pipeline’s <code class="docutils literal notranslate"><span class="pre">root</span></code>, where <code class="docutils literal notranslate"><span class="pre">dataset/</span></code>, <code class="docutils literal notranslate"><span class="pre">features/</span></code> and <code class="docutils literal notranslate"><span class="pre">runs/</span></code> land. It is the
 whole config:</p>
@@ -564,7 +564,7 @@ names, and inference stops with an error rather than guess.</p></li>
 </ul>
 </section>
 <section id="train-and-score">
-<h2>3. Train and score<a class="headerlink" href="#train-and-score" title="Link to this heading">#</a></h2>
+<span id="3-train-and-score"></span><h2>3. Train and score<a class="headerlink" href="#train-and-score" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">spot</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"spot.yaml"</span><span class="p">)</span>
@@ -587,7 +587,7 @@ error if it does not, naming the duration to shorten. On a small card, try
 </div>
 </section>
 <section id="look-at-the-mistakes-in-the-gui">
-<h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
+<span id="4-look-at-the-mistakes-in-the-gui"></span><h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03"</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="c1"># labels/predictions_spot_ctx2s_res…ms_20260914_151203/ses-03_predictions.tsv</span>

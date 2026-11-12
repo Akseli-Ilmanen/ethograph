@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/your_data/trials';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -530,8 +530,8 @@ features rather than separate objects:</p>
 </pre></div>
 </div>
 </section>
-<section id="splitting-a-continuous-recording-into-trials">
-<span id="target-from-continuous"></span><h2>Splitting a continuous recording into trials<a class="headerlink" href="#splitting-a-continuous-recording-into-trials" title="Link to this heading">#</a></h2>
+<section id="target-from-continuous">
+<span id="splitting-a-continuous-recording-into-trials"></span><h2>Splitting a continuous recording into trials<a class="headerlink" href="#target-from-continuous" title="Link to this heading">#</a></h2>
 <p>If you have a single session-long <code class="docutils literal notranslate"><span class="pre">xr.Dataset</span></code> and want to parcelate it into a
 trial structure, use <code class="xref py py-func docutils literal notranslate"><span class="pre">eto.from_continuous()</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -620,7 +620,7 @@ long to make them and why they don’t overlap.</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-dataset-per-trial">One dataset per trial</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#splitting-a-continuous-recording-into-trials">Splitting a continuous recording into trials</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-from-continuous">Splitting a continuous recording into trials</a></li>
 </ul>
   </nav></div>
 

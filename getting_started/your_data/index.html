@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/your_data/index';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -483,8 +483,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="bring-your-own-data">
-<span id="target-multi-trial"></span><span id="target-data-requirements"></span><h1>Bring your own data<a class="headerlink" href="#bring-your-own-data" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-multi-trial">
+<span id="bring-your-own-data"></span><span id="target-data-requirements"></span><h1>Bring your own data<a class="headerlink" href="#target-multi-trial" title="Link to this heading">#</a></h1>
 <p><a class="reference internal" href="../user_manual.html#target-data-loading"><span class="std std-ref">Drag &amp; drop</span></a> handles one recording session whose
 files all start together. Everything else — trials split across files, media on
 separate clocks — needs a <strong>session file</strong> plus an <strong>alignment file</strong>, built
@@ -586,8 +586,8 @@ note where behaviour differs.</p>
 for step 1, <a class="reference internal" href="media_alignment.html"><span class="doc">Media alignment (w. neuroconv)</span></a> for step 2.</p>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-0">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-0-content" class="sd-tab-label" for="sd-tab-item-0">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-0-content">
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
@@ -644,8 +644,8 @@ Xarray</label><div class="sd-tab-content docutils">
 at your video and pose directories.</p>
 </div>
 <input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-1">
-NWB</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-1-content" class="sd-tab-label" for="sd-tab-item-1">
+NWB</label><div class="sd-tab-content docutils" id="sd-tab-item-1-content">
 <p>NWB stores trials, media references and features together, so there is no
 separate alignment step. For DANDI datasets, select the <code class="docutils literal notranslate"><span class="pre">.nwb</span></code> URL or
 downloaded file in the GUI and click <strong>Load</strong>. To build one yourself with

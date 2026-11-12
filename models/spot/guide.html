@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/spot/guide';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -494,8 +494,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="full-guide">
-<span id="target-spot-guide"></span><h1>Full guide<a class="headerlink" href="#full-guide" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-spot-guide">
+<span id="full-guide"></span><h1>Full guide<a class="headerlink" href="#target-spot-guide" title="Link to this heading">#</a></h1>
 <p>Every stage of pixel event spotting with the choices put back in: the three
 ways to spot a point event, what this shares with the segmentation pipeline,
 the config you write, why every temporal setting is a duration, the stages
@@ -695,8 +695,8 @@ of the class’s curve, a curve below <code class="docutils literal notranslate"
 absent, and a second peak is doubt, not a second event. A recording in which
 the event repeats is either cut into trials at the alignment or spotted with
 <code class="docutils literal notranslate"><span class="pre">infer.max_events_per_trial</span></code> raised; <a class="reference internal" href="peaks.html"><span class="doc">From probabilities to events</span></a> has the whole rule.</p>
-<section id="the-session-lines">
-<span id="target-spot-session-lines"></span><h3>The session lines<a class="headerlink" href="#the-session-lines" title="Link to this heading">#</a></h3>
+<section id="target-spot-session-lines">
+<span id="the-session-lines"></span><h3>The session lines<a class="headerlink" href="#target-spot-session-lines" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">sessions:</span></code> is read the same way by both pipelines (<code class="docutils literal notranslate"><span class="pre">SessionSpec</span></code>, shared
 with <a class="reference internal" href="../segment/index.html"><span class="doc">the segmentation pipeline</span></a>): a session is a
 <code class="docutils literal notranslate"><span class="pre">source</span></code> plus whatever the stage you run needs from it.</p>
@@ -757,8 +757,8 @@ drift from what can actually be trained:</p>
 </div>
 </section>
 </section>
-<section id="every-temporal-setting-is-a-duration">
-<span id="target-spot-seconds"></span><h2>Every temporal setting is a duration<a class="headerlink" href="#every-temporal-setting-is-a-duration" title="Link to this heading">#</a></h2>
+<section id="target-spot-seconds">
+<span id="every-temporal-setting-is-a-duration"></span><h2>Every temporal setting is a duration<a class="headerlink" href="#target-spot-seconds" title="Link to this heading">#</a></h2>
 <p>Upstream expresses every temporal hyperparameter in <strong>frames</strong>, tuned at
 25 fps. The same numbers at 200 fps give the model an eighth of the context
 in real time. So this config takes <strong><code class="docutils literal notranslate"><span class="pre">context_s</span></code>, <code class="docutils literal notranslate"><span class="pre">resolution_ms</span></code> and
@@ -952,10 +952,10 @@ are the paper’s (<code class="docutils literal notranslate"><span class="pre">
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-shares-the-segmentation-pipelines-workflow">Why this shares the segmentation pipeline’s workflow</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-write">What you write</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-session-lines">The session lines</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-spot-session-lines">The session lines</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#every-temporal-setting-is-a-duration">Every temporal setting is a duration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-spot-seconds">Every temporal setting is a duration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-stages">The stages</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#frames-on-disk-are-for-training-only">Frames on disk are for training only</a></li>
 </ul>

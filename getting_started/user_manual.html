@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/user_manual';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -570,8 +570,8 @@ sampling rates and modalities (video, audio &amp; electrophysiology).</p>
 rate of each timestamp (T), and it is converted internally into a timestamped object.</p>
 </div>
 </section>
-<section id="loading-your-data">
-<span id="target-data-loading"></span><h2>Loading your data<a class="headerlink" href="#loading-your-data" title="Link to this heading">#</a></h2>
+<section id="target-data-loading">
+<span id="loading-your-data"></span><h2>Loading your data<a class="headerlink" href="#target-data-loading" title="Link to this heading">#</a></h2>
 <p>Launching opens the start page. It lists the supported file types along the
 bottom and offers three ways in, coloured below as in the screenshot:</p>
 <p><img alt="The Ethograph start page" src="../_images/cover_page.png" /></p>
@@ -603,7 +603,7 @@ takes many — but how they are arranged across devices and trials.</p>
 </div>
 </section>
 <section id="drag-drop">
-<h3><b style="color:#ffa726">Drag &amp; drop</b><a class="headerlink" href="#drag-drop" title="Link to this heading">#</a></h3>
+<span id="drag--drop"></span><h3><b style="color:#ffa726">Drag &amp; drop</b><a class="headerlink" href="#drag-drop" title="Link to this heading">#</a></h3>
 <p>Pick a layout in the drop card’s dropdown, drop the files, click <b style="color:#26c6da">Load</b>.
 Frame rates, sample rates and durations are read from the files themselves.
 You are only asked for what cannot be inferred: the source software of an
@@ -716,8 +716,8 @@ a panel shows the settings for <em>that</em> panel, and the panel gets a green e
 <p><span class="caption-text">Click the speed plot, the space plot, the video: the <strong>Data</strong> section follows.</span><a class="headerlink" href="#id6" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
-<section id="where-things-are">
-<span id="target-where-things-are"></span><h3>Where things are<a class="headerlink" href="#where-things-are" title="Link to this heading">#</a></h3>
+<section id="target-where-things-are">
+<span id="where-things-are"></span><h3>Where things are<a class="headerlink" href="#target-where-things-are" title="Link to this heading">#</a></h3>
 <p>The right sidebar has three <b style="color:#29b6f6">section buttons</b>: <strong>Data</strong>, <strong>Labels</strong> and
 <strong>Trials</strong>. Click one to open it (the other closes). The crops below are those
 sections, taken from the window above.</p>
@@ -774,8 +774,8 @@ feature’s troughs or turning points, are in the top bar under
 <strong>Changepoints</strong> (the feature itself is the one picked in <strong>Data</strong>). See
 <a class="reference internal" href="../advanced/changepoints/index.html"><span class="doc">Changepoints</span></a>.</p>
 </section>
-<section id="which-individual-a-panel-shows">
-<span id="target-panel-individual"></span><h3>Which individual a panel shows<a class="headerlink" href="#which-individual-a-panel-shows" title="Link to this heading">#</a></h3>
+<section id="target-panel-individual">
+<span id="which-individual-a-panel-shows"></span><h3>Which individual a panel shows<a class="headerlink" href="#target-panel-individual" title="Link to this heading">#</a></h3>
 <p>With more than one individual in the dataset, every panel is in one of two
 modes, shown in its title:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>speed — bird_1 (sidebar)    follows the Individual dropdown
@@ -797,8 +797,8 @@ space or radial plot’s own <strong>Individual</strong> dropdown <em>is</em> it
 now moves only the original.</p>
 </section>
 </section>
-<section id="trial-metadata">
-<span id="target-user-manual-metadata"></span><h2>Trial metadata<a class="headerlink" href="#trial-metadata" title="Link to this heading">#</a></h2>
+<section id="target-user-manual-metadata">
+<span id="trial-metadata"></span><h2>Trial metadata<a class="headerlink" href="#target-user-manual-metadata" title="Link to this heading">#</a></h2>
 <p>Per-trial conditions (stimulus, reward, pellet count, …) live in a small
 table — a <code class="docutils literal notranslate"><span class="pre">{stem}_metadata.tsv</span></code> next to your data, or the NWB trials table —
 and show up as the <strong>trials table</strong> in the sidebar’s <strong>Trials</strong> section (the
@@ -819,7 +819,7 @@ table itself (<code class="docutils literal notranslate"><span class="pre">yes</
 <a class="reference internal" href="../models/curation/index.html"><span class="doc">Curating labels</span></a>), and metadata edits saved automatically.</p>
 </section>
 <section id="video-audio-playback">
-<h2>Video &amp; audio playback<a class="headerlink" href="#video-audio-playback" title="Link to this heading">#</a></h2>
+<span id="video--audio-playback"></span><h2>Video &amp; audio playback<a class="headerlink" href="#video-audio-playback" title="Link to this heading">#</a></h2>
 <p>Two things are easy to miss when you first play back a recording:</p>
 <ul class="simple">
 <li><p><strong>The red timeline marker tracks exact time, not the video frame.</strong> Video is
@@ -1659,8 +1659,8 @@ alignment — and <a class="reference internal" href="../api/trialtree.html"><sp
 <p>If a model will learn from your trials, see <a class="reference internal" href="../models/trial_windows.html"><span class="doc">Trial windows</span></a> for
 how long to make them.</p>
 </section>
-<section id="editing-the-dataset-while-the-gui-is-open">
-<span id="target-reload-data"></span><h2>Editing the dataset while the GUI is open<a class="headerlink" href="#editing-the-dataset-while-the-gui-is-open" title="Link to this heading">#</a></h2>
+<section id="target-reload-data">
+<span id="editing-the-dataset-while-the-gui-is-open"></span><h2>Editing the dataset while the GUI is open<a class="headerlink" href="#target-reload-data" title="Link to this heading">#</a></h2>
 <p>There are two ways to change the data the GUI shows without restarting it:
 compute something on the fly in the <strong>console panel</strong>, or rewrite the file on
 disk and <strong>reload</strong> it.</p>
@@ -1695,8 +1695,8 @@ on the plot you clicked and hand you the code once you like what you see:
 <a class="reference internal" href="../advanced/changepoints/kinematic.html"><span class="doc">Changepoints ▸ Detect changepoints…</span></a>.</p>
 </div>
 </section>
-<section id="template-datasets">
-<span id="target-templates"></span><h2>Template datasets<a class="headerlink" href="#template-datasets" title="Link to this heading">#</a></h2>
+<section id="target-templates">
+<span id="template-datasets"></span><h2>Template datasets<a class="headerlink" href="#target-templates" title="Link to this heading">#</a></h2>
 <p>Ready-made datasets with video, features and labels already in place, downloaded
 from the start page. The notebooks that built them are in the
 <a class="reference internal" href="../examples/index.html#target-examples-gallery"><span class="std std-ref">examples gallery</span></a>.</p>
@@ -1756,7 +1756,7 @@ from the start page. The notebooks that built them are in the
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#install">Install</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multimodal-visualization">Multimodal visualization</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-your-data">Loading your data</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-data-loading">Loading your data</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-entry-point">Which entry point?</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#drag-drop"><b style="color:#ffa726">Drag &amp; drop</b></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#project-folder"><b style="color:#ab47bc">Project folder</b></a></li>
@@ -1767,17 +1767,17 @@ from the start page. The notebooks that built them are in the
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#labelling">Labelling</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#where-things-are">Where things are</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-individual-a-panel-shows">Which individual a panel shows</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-where-things-are">Where things are</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-panel-individual">Which individual a panel shows</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#trial-metadata">Trial metadata</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-user-manual-metadata">Trial metadata</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#video-audio-playback">Video &amp; audio playback</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-dropdowns">Feature dropdowns</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#changepoints">Changepoints</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#storing-trials-dataset-vs-trialtree">Storing trials: Dataset vs TrialTree</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#editing-the-dataset-while-the-gui-is-open">Editing the dataset while the GUI is open</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-datasets">Template datasets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-reload-data">Editing the dataset while the GUI is open</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-templates">Template datasets</a></li>
 </ul>
   </nav></div>
 

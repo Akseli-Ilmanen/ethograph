@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/your_data/dataset_schema';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -492,8 +492,8 @@
 <h2>Minimal working example<a class="headerlink" href="#minimal-working-example" title="Link to this heading">#</a></h2>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-0">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-0-content" class="sd-tab-label" for="sd-tab-item-0">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-0-content">
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
@@ -517,8 +517,8 @@ Xarray</label><div class="sd-tab-content docutils">
 </div>
 </div>
 <input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-1">
-Pynapple</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-1-content" class="sd-tab-label" for="sd-tab-item-1">
+Pynapple</label><div class="sd-tab-content docutils" id="sd-tab-item-1-content">
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pynapple</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nap</span>
 
@@ -532,8 +532,8 @@ Pynapple</label><div class="sd-tab-content docutils">
 </div>
 </div>
 <input id="sd-tab-item-2" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-2">
-NWB</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-2-content" class="sd-tab-label" for="sd-tab-item-2">
+NWB</label><div class="sd-tab-content docutils" id="sd-tab-item-2-content">
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Loaded directly — no conversion needed. In the GUI: select the .nwb file</span>
 <span class="c1"># in the I/O widget and click Load.</span>
 <span class="c1">#</span>
@@ -548,8 +548,8 @@ NWB</label><div class="sd-tab-content docutils">
 <h2>Required attributes<a class="headerlink" href="#required-attributes" title="Link to this heading">#</a></h2>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-3" name="sd-tab-set-1" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-3">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-3-content" class="sd-tab-label" for="sd-tab-item-3">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-3-content">
 <p>Every trial’s <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> <strong>must</strong> have:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -576,8 +576,8 @@ Xarray</label><div class="sd-tab-content docutils">
 </div>
 </div>
 <input id="sd-tab-item-4" name="sd-tab-set-1" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-4">
-Pynapple</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-4-content" class="sd-tab-label" for="sd-tab-item-4">
+Pynapple</label><div class="sd-tab-content docutils" id="sd-tab-item-4-content">
 <p>Pynapple objects carry timestamps natively — no <code class="docutils literal notranslate"><span class="pre">fps</span></code> or <code class="docutils literal notranslate"><span class="pre">trial</span></code> attribute is needed.</p>
 <ul class="simple">
 <li><p><strong>Timestamps</strong>: every <a class="reference external" href="https://pynapple.org/generated/pynapple.Tsd.html#pynapple.Tsd" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tsd</span></code></a> / <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a> / <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdTensor.html#pynapple.TsdTensor" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdTensor</span></code></a> stores its own time axis.</p></li>
@@ -595,8 +595,8 @@ Pynapple</label><div class="sd-tab-content docutils">
 </div>
 </div>
 <input id="sd-tab-item-5" name="sd-tab-set-1" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-5">
-NWB</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-5-content" class="sd-tab-label" for="sd-tab-item-5">
+NWB</label><div class="sd-tab-content docutils" id="sd-tab-item-5-content">
 <p>NWB files follow the <a class="reference external" href="https://www.nwb.org/">NWB standard</a>. Ethograph reads:</p>
 <ul class="simple">
 <li><p><strong>Trials</strong>: <code class="docutils literal notranslate"><span class="pre">nwb.trials</span></code> table (<code class="docutils literal notranslate"><span class="pre">start_time</span></code>, <code class="docutils literal notranslate"><span class="pre">stop_time</span></code>, plus custom columns).</p></li>
@@ -611,8 +611,8 @@ NWB</label><div class="sd-tab-content docutils">
 <h2>Features (plottable variables)<a class="headerlink" href="#features-plottable-variables" title="Link to this heading">#</a></h2>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-6" name="sd-tab-set-2" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-6">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-6-content" class="sd-tab-label" for="sd-tab-item-6">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-6-content">
 <p>Any <code class="docutils literal notranslate"><span class="pre">data_var</span></code> with at least one dimension whose name contains <code class="docutils literal notranslate"><span class="pre">&quot;time&quot;</span></code> appears
 in the GUI’s <strong>Feature</strong> dropdown:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
@@ -625,8 +625,8 @@ in the GUI’s <strong>Feature</strong> dropdown:</p>
 rates (e.g. <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">time_accelerometer</span></code>, <code class="docutils literal notranslate"><span class="pre">time_video</span></code>).</p>
 </div>
 <input id="sd-tab-item-7" name="sd-tab-set-2" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-7">
-Pynapple</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-7-content" class="sd-tab-label" for="sd-tab-item-7">
+Pynapple</label><div class="sd-tab-content docutils" id="sd-tab-item-7-content">
 <p>All <a class="reference external" href="https://pynapple.org/generated/pynapple.Tsd.html#pynapple.Tsd" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tsd</span></code></a>, <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a>, and
 <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdTensor.html#pynapple.TsdTensor" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdTensor</span></code></a> objects in the loaded data dict are detected
 automatically. Column names become selectable dimensions.</p>
@@ -641,8 +641,8 @@ automatically. Column names become selectable dimensions.</p>
 </div>
 </div>
 <input id="sd-tab-item-8" name="sd-tab-set-2" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-8">
-NWB</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-8-content" class="sd-tab-label" for="sd-tab-item-8">
+NWB</label><div class="sd-tab-content docutils" id="sd-tab-item-8-content">
 <p>Features are discovered automatically from NWB processing modules (excluding
 <code class="docutils literal notranslate"><span class="pre">ecephys</span></code>, <code class="docutils literal notranslate"><span class="pre">ophys</span></code>, <code class="docutils literal notranslate"><span class="pre">ogen</span></code>). NWB data is loaded via pynapple, so all
 <code class="xref py py-class docutils literal notranslate"><span class="pre">TimeSeries</span></code> become pynapple objects internally.</p>
@@ -653,8 +653,8 @@ NWB</label><div class="sd-tab-content docutils">
 <h2>Specifying individuals<a class="headerlink" href="#specifying-individuals" title="Link to this heading">#</a></h2>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-9" name="sd-tab-set-3" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-9">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-9-content" class="sd-tab-label" for="sd-tab-item-9">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-9-content">
 <p>Individuals are stored as a <strong>coordinate</strong>, not an attribute. With multi-animal
 data, this allows the GUI to store separate labels and feature data for
 different individuals.</p>
@@ -676,8 +676,8 @@ different individuals.</p>
 created.</p>
 </div>
 <input id="sd-tab-item-10" name="sd-tab-set-3" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-10">
-Pynapple</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-10-content" class="sd-tab-label" for="sd-tab-item-10">
+Pynapple</label><div class="sd-tab-content docutils" id="sd-tab-item-10-content">
 <p>Pynapple has no built-in concept of “individuals”. Multi-subject data is
 typically stored as separate objects:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
@@ -692,8 +692,8 @@ or added as <code class="docutils literal notranslate"><span class="pre">extra_i
 placeholder <code class="docutils literal notranslate"><span class="pre">individual_0</span></code>. See <a class="reference internal" href="../labels/labelling_gui.html#target-individual-names"><span class="std std-ref">How to define individual name</span></a>.</p>
 </div>
 <input id="sd-tab-item-11" name="sd-tab-set-3" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-11">
-NWB</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-11-content" class="sd-tab-label" for="sd-tab-item-11">
+NWB</label><div class="sd-tab-content docutils" id="sd-tab-item-11-content">
 <p>NWB files represent a single subject per file —
 <a class="reference external" href="https://pynwb.readthedocs.io/en/stable/pynwb.file.html#pynwb.file.NWBFile.subject" title="(in PyNWB v4.2.0)"><code class="xref py py-attr docutils literal notranslate"><span class="pre">subject</span></code></a> is a singular
 <a class="reference external" href="https://pynwb.readthedocs.io/en/stable/pynwb.file.html#pynwb.file.Subject" title="(in PyNWB v4.2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Subject</span></code></a> object
@@ -710,8 +710,8 @@ variable is automatically discovered and gets a selection
 <a class="reference external" href="https://www.pythonguis.com/docs/qcombobox/">dropdown</a> in the GUI.</p>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-12" name="sd-tab-set-4" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-12">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-12-content" class="sd-tab-label" for="sd-tab-item-12">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-12-content">
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s2">"emg"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
     <span class="n">emg_data</span><span class="p">,</span>  <span class="c1"># shape: (time, channels)</span>
     <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"channels"</span><span class="p">],</span>
@@ -736,8 +736,8 @@ that selection is silently ignored via
 </div>
 </div>
 <input id="sd-tab-item-13" name="sd-tab-set-4" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-13">
-Pynapple</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-13-content" class="sd-tab-label" for="sd-tab-item-13">
+Pynapple</label><div class="sd-tab-content docutils" id="sd-tab-item-13-content">
 <p>Column names in a <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a> become a selectable dimension.
 Objects with identical column names share a single dropdown in the GUI.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">position</span> <span class="o">=</span> <span class="n">nap</span><span class="o">.</span><span class="n">TsdFrame</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="n">time_s</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">])</span>
@@ -754,8 +754,8 @@ name (case-insensitive) is automatically offered in the GUI’s <strong>Colors</
 Values should lie in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code> (float) or <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">255]</span></code> (int).</p>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-14" name="sd-tab-set-5" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-14">
-Xarray</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-14-content" class="sd-tab-label" for="sd-tab-item-14">
+Xarray</label><div class="sd-tab-content docutils" id="sd-tab-item-14-content">
 <p>The variable should have an <code class="docutils literal notranslate"><span class="pre">RGB</span></code> dimension of size 3:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="p">[</span><span class="s2">"angle_rgb"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
     <span class="n">rgb_values</span><span class="p">,</span>  <span class="c1"># shape: (time, keypoint, individual, 3)</span>
@@ -772,8 +772,8 @@ Xarray</label><div class="sd-tab-content docutils">
 </div>
 </div>
 <input id="sd-tab-item-15" name="sd-tab-set-5" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-15">
-Pynapple</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-15-content" class="sd-tab-label" for="sd-tab-item-15">
+Pynapple</label><div class="sd-tab-content docutils" id="sd-tab-item-15-content">
 <p>Store RGB as a <a class="reference external" href="https://pynapple.org/generated/pynapple.TsdFrame.html#pynapple.TsdFrame" title="(in pynapple v0.11.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TsdFrame</span></code></a> with columns <code class="docutils literal notranslate"><span class="pre">[&quot;R&quot;,</span> <span class="pre">&quot;G&quot;,</span> <span class="pre">&quot;B&quot;]</span></code> (or
 any 3-column frame whose name contains <code class="docutils literal notranslate"><span class="pre">&quot;rgb&quot;</span></code>):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pynapple</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nap</span>

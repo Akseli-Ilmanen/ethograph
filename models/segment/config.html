@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/segment/config';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -599,7 +599,7 @@ track’s on/off sequence then goes through the same post-processing as an
 exclusive run. So a prediction set can hold A’s <code class="docutils literal notranslate"><span class="pre">flap</span></code> (branch 0) under A’s
 <code class="docutils literal notranslate"><span class="pre">peck</span></code> (branch 1), and never two branch-0 labels of A at once.</p>
 <section id="features-sin-cos">
-<h3><code class="docutils literal notranslate"><span class="pre">features.sin_cos</span></code><a class="headerlink" href="#features-sin-cos" title="Link to this heading">#</a></h3>
+<span id="featuressin_cos"></span><h3><code class="docutils literal notranslate"><span class="pre">features.sin_cos</span></code><a class="headerlink" href="#features-sin-cos" title="Link to this heading">#</a></h3>
 <p>An angle read as a plain number lies about its own geometry: 359° and 1° are
 two degrees apart and the column says they are the furthest apart it ever
 gets, and no amount of z-scoring repairs that jump. Name the feature here and
@@ -623,7 +623,7 @@ never z-scored or percentile-clipped, exactly like a column carrying
 an error.</p>
 </section>
 <section id="features-changepoint-features">
-<h3><code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code><a class="headerlink" href="#features-changepoint-features" title="Link to this heading">#</a></h3>
+<span id="featureschangepoint_features"></span><h3><code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code><a class="headerlink" href="#features-changepoint-features" title="Link to this heading">#</a></h3>
 <p>Optional. Expands named raw changepoint masks into
 <a class="reference internal" href="../../api/ethograph.features.changepoints.more_changepoint_features.html#ethograph.features.changepoints.more_changepoint_features" title="ethograph.features.changepoints.more_changepoint_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">more_changepoint_features()</span></code></a> once per
 session, at <code class="docutils literal notranslate"><span class="pre">materialise</span></code>/<code class="docutils literal notranslate"><span class="pre">infer</span></code> time, and <strong>merges the generated columns
@@ -722,7 +722,7 @@ in <code class="docutils literal notranslate"><span class="pre">features.columns
 it to <code class="docutils literal notranslate"><span class="pre">zscore_exclude</span></code>.</p>
 </section>
 <section id="features-neural">
-<h3><code class="docutils literal notranslate"><span class="pre">features.neural</span></code><a class="headerlink" href="#features-neural" title="Link to this heading">#</a></h3>
+<span id="featuresneural"></span><h3><code class="docutils literal notranslate"><span class="pre">features.neural</span></code><a class="headerlink" href="#features-neural" title="Link to this heading">#</a></h3>
 <p>Optional. Bins a pynapple session’s <strong>spike trains</strong> into one dense feature
 at session-open time — single-trial neural decoding with the same models,
 split, metrics and prediction sets as behaviour. A session’s units arrive as
@@ -792,8 +792,8 @@ and <code class="docutils literal notranslate"><span class="pre">train.drop_kind
 land in the session’s own <code class="docutils literal notranslate"><span class="pre">labels/predictions_{run}_{timestamp}/</span></code> like any
 other run’s, so they open in the GUI against the curated labels.</p>
 </section>
-<section id="features-label-inputs">
-<span id="segment-config-label-inputs"></span><h3><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code><a class="headerlink" href="#features-label-inputs" title="Link to this heading">#</a></h3>
+<section id="segment-config-label-inputs">
+<span id="features-label-inputs"></span><span id="featureslabel_inputs"></span><h3><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code><a class="headerlink" href="#segment-config-label-inputs" title="Link to this heading">#</a></h3>
 <p>Optional. Feeds the <strong>labels of other branches</strong> to the model as input
 columns. Labelling is expensive, and the labels of an earlier question often
 say a great deal about <em>when</em> the answer to a new one can happen — a peck
@@ -870,7 +870,7 @@ anyone has labelled its old branch, reads as. The log says how many trials
 carried them. Xarray sessions only.</p>
 </section>
 <section id="features-preprocess">
-<h3><code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code><a class="headerlink" href="#features-preprocess" title="Link to this heading">#</a></h3>
+<span id="featurespreprocess"></span><h3><code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code><a class="headerlink" href="#features-preprocess" title="Link to this heading">#</a></h3>
 <p>All five keys live under <code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code> in the YAML, but they run at
 two different stages — the first four bake into the materialised <code class="docutils literal notranslate"><span class="pre">.npy</span></code>
 files at <code class="docutils literal notranslate"><span class="pre">materialise</span></code> time; <code class="docutils literal notranslate"><span class="pre">zscore</span></code>/<code class="docutils literal notranslate"><span class="pre">zscore_exclude</span></code> are deferred to
@@ -954,8 +954,8 @@ be un-z-scored</strong> — that normalisation happens later, per run, and lands
 <span class="w">  </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">num_f_maps</span><span class="p">:</span><span class="w"> </span><span class="nv">64</span><span class="p p-Indicator">}</span><span class="w">     </span><span class="c1"># only this one changes; the rest keep their defaults</span>
 </pre></div>
 </div>
-<section id="what-you-can-put-in-params">
-<span id="segment-config-model-params"></span><h3>What you can put in <code class="docutils literal notranslate"><span class="pre">params</span></code><a class="headerlink" href="#what-you-can-put-in-params" title="Link to this heading">#</a></h3>
+<section id="segment-config-model-params">
+<span id="what-you-can-put-in-params"></span><h3>What you can put in <code class="docutils literal notranslate"><span class="pre">params</span></code><a class="headerlink" href="#segment-config-model-params" title="Link to this heading">#</a></h3>
 <p>Anything the architecture accepts. To see the full list of keys for a given
 architecture, with a comment on each and its default value, open its file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ethograph</span><span class="o">/</span><span class="n">segment</span><span class="o">/</span><span class="n">dlc2action</span><span class="o">/</span><span class="n">config</span><span class="o">/</span><span class="n">model</span><span class="o">/</span><span class="p">{</span><span class="n">architecture</span><span class="p">}</span><span class="o">.</span><span class="n">yaml</span>
@@ -1086,8 +1086,8 @@ can be traced to the term that stopped moving.</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">frame_weight:</span> <span class="pre">0</span></code> is a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> (“nothing to train on”).</p>
 </section>
-<section id="train-loss">
-<span id="segment-config-train-loss"></span><h3><code class="docutils literal notranslate"><span class="pre">train.loss</span></code><a class="headerlink" href="#train-loss" title="Link to this heading">#</a></h3>
+<section id="segment-config-train-loss">
+<span id="train-loss"></span><span id="trainloss"></span><h3><code class="docutils literal notranslate"><span class="pre">train.loss</span></code><a class="headerlink" href="#segment-config-train-loss" title="Link to this heading">#</a></h3>
 <p>Cross-entropy per frame, plus a consistency term that penalises the
 prediction changing from one frame to the next — that second term is what
 stops the output flickering between classes mid-behaviour.</p>
@@ -1246,7 +1246,7 @@ dataset is built once, before the study starts, and every trial reads it — so
 </div>
 </section>
 <section id="video-features">
-<h2><code class="docutils literal notranslate"><span class="pre">video_features</span></code><a class="headerlink" href="#video-features" title="Link to this heading">#</a></h2>
+<span id="video_features"></span><h2><code class="docutils literal notranslate"><span class="pre">video_features</span></code><a class="headerlink" href="#video-features" title="Link to this heading">#</a></h2>
 <p>Which extractor, the settings that change its <em>features</em>, and the camera. In
 seconds — frame counts come from each video’s own rate. See <a class="reference internal" href="video_features.html"><span class="doc">Video features</span></a>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -1331,7 +1331,7 @@ embeddings to <code class="docutils literal notranslate"><span class="pre">{root
 </table>
 </div>
 <section id="infer-postprocess">
-<h3><code class="docutils literal notranslate"><span class="pre">infer.postprocess</span></code><a class="headerlink" href="#infer-postprocess" title="Link to this heading">#</a></h3>
+<span id="inferpostprocess"></span><h3><code class="docutils literal notranslate"><span class="pre">infer.postprocess</span></code><a class="headerlink" href="#infer-postprocess" title="Link to this heading">#</a></h3>
 <p>Purge → stitch → snap → purge, through the same functions as the GUI’s
 changepoint correction. Also used for the <em>post-processed</em> numbers in
 <code class="docutils literal notranslate"><span class="pre">test_metrics.yaml</span></code>.</p>
@@ -1481,17 +1481,17 @@ cross_validation/{name}/
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-sin-cos"><code class="docutils literal notranslate"><span class="pre">features.sin_cos</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-changepoint-features"><code class="docutils literal notranslate"><span class="pre">features.changepoint_features</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-neural"><code class="docutils literal notranslate"><span class="pre">features.neural</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-label-inputs"><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segment-config-label-inputs"><code class="docutils literal notranslate"><span class="pre">features.label_inputs</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features-preprocess"><code class="docutils literal notranslate"><span class="pre">features.preprocess</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model"><code class="docutils literal notranslate"><span class="pre">model</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-can-put-in-params">What you can put in <code class="docutils literal notranslate"><span class="pre">params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segment-config-model-params">What you can put in <code class="docutils literal notranslate"><span class="pre">params</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train"><code class="docutils literal notranslate"><span class="pre">train</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#losses">Losses</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-loss"><code class="docutils literal notranslate"><span class="pre">train.loss</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segment-config-train-loss"><code class="docutils literal notranslate"><span class="pre">train.loss</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#search"><code class="docutils literal notranslate"><span class="pre">search</span></code></a></li>

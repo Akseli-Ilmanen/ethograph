@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/metadata';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -478,8 +478,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="trial-metadata">
-<span id="target-metadata"></span><h1>Trial metadata<a class="headerlink" href="#trial-metadata" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-metadata">
+<span id="trial-metadata"></span><h1>Trial metadata<a class="headerlink" href="#target-metadata" title="Link to this heading">#</a></h1>
 <p>Attach per-trial conditions (e.g. stimulus, reward outcome) via a TSV file. The
 trials table in the GUI turns those columns into filters, restricting navigation
 and analysis to a subset of trials.</p>
@@ -570,8 +570,8 @@ filtered or hidden), still read off the table.</p>
 </div>
 <hr class="docutils" />
 </section>
-<section id="filtering-by-what-the-labels-do">
-<span id="target-label-filter"></span><h3>Filtering by what the labels do<a class="headerlink" href="#filtering-by-what-the-labels-do" title="Link to this heading">#</a></h3>
+<section id="target-label-filter">
+<span id="filtering-by-what-the-labels-do"></span><h3>Filtering by what the labels do<a class="headerlink" href="#target-label-filter" title="Link to this heading">#</a></h3>
 <p>The column filters ask about metadata. <strong>Tools ▸ Labels: Find label inconsistencies…</strong>
 asks about the labels themselves — which trials have an event without its
 partner, which carry a label twice, which ran the classes in an order they
@@ -639,7 +639,7 @@ double-click</strong>, above the trials table, and the table becomes editable.</
 value; the editor offers the values that column already uses, and accepts
 anything else you type. <strong>Add column…</strong> starts a new column to fill in.</p>
 <section id="saving-is-automatic-ctrl-s-is-only-for-labels">
-<h3>Saving is automatic — Ctrl+S is only for labels<a class="headerlink" href="#saving-is-automatic-ctrl-s-is-only-for-labels" title="Link to this heading">#</a></h3>
+<span id="saving-is-automatic--ctrls-is-only-for-labels"></span><h3>Saving is automatic — Ctrl+S is only for labels<a class="headerlink" href="#saving-is-automatic-ctrl-s-is-only-for-labels" title="Link to this heading">#</a></h3>
 <p>Every edit is written to disk on its own: about a second after you stop typing,
 and again whenever you change trial or close the app. <strong>There is no save button
 and no Ctrl+S for metadata</strong> — <code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code> / <em>Save labels</em> writes the label TSV and
@@ -724,7 +724,7 @@ every label row carries its trial’s condition columns.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-metadata">Loading metadata</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-trials-table">The trials table</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#filtering">Filtering</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#filtering-by-what-the-labels-do">Filtering by what the labels do</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-label-filter">Filtering by what the labels do</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-curated-column">The <code class="docutils literal notranslate"><span class="pre">curated</span></code> column</a></li>
 </ul>
 </li>

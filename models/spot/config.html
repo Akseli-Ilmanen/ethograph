@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/spot/config';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -630,8 +630,8 @@ session has no role; <code class="docutils literal notranslate"><span class="pre
 </table>
 </div>
 </section>
-<section id="clip">
-<span id="spot-config-clip"></span><h2><code class="docutils literal notranslate"><span class="pre">clip</span></code><a class="headerlink" href="#clip" title="Link to this heading">#</a></h2>
+<section id="spot-config-clip">
+<span id="clip"></span><h2><code class="docutils literal notranslate"><span class="pre">clip</span></code><a class="headerlink" href="#spot-config-clip" title="Link to this heading">#</a></h2>
 <p>The three durations everything else is derived from
 (<code class="docutils literal notranslate"><span class="pre">ClipConfig.resolve(fps)</span></code>):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">stride</span>     <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">resolution_ms</span> <span class="o">/</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">fps</span><span class="p">)</span>
@@ -747,7 +747,7 @@ session has no role; <code class="docutils literal notranslate"><span class="pre
 </table>
 </div>
 <section id="train-split">
-<h3><code class="docutils literal notranslate"><span class="pre">train.split</span></code><a class="headerlink" href="#train-split" title="Link to this heading">#</a></h3>
+<span id="trainsplit"></span><h3><code class="docutils literal notranslate"><span class="pre">train.split</span></code><a class="headerlink" href="#train-split" title="Link to this heading">#</a></h3>
 <p>The segmentation pipeline’s: three ratios drawn by whole trial over every
 trial of every session, and <code class="docutils literal notranslate"><span class="pre">holdout_sessions</span></code> for a cross-validation fold
 (written per fold by <code class="docutils literal notranslate"><span class="pre">project.cross_validate()</span></code>, not by hand).</p>
@@ -786,8 +786,8 @@ trial of every session, and <code class="docutils literal notranslate"><span cla
 trials, same seed or not; a fold pins the split instead.</p>
 </section>
 </section>
-<section id="features">
-<span id="spot-config-features"></span><h2><code class="docutils literal notranslate"><span class="pre">features</span></code><a class="headerlink" href="#features" title="Link to this heading">#</a></h2>
+<section id="spot-config-features">
+<span id="features"></span><h2><code class="docutils literal notranslate"><span class="pre">features</span></code><a class="headerlink" href="#spot-config-features" title="Link to this heading">#</a></h2>
 <p>The pose side, <strong>optional</strong>, and the whole of it: session variables in the
 segmentation pipeline’s <em>column</em> spelling — <code class="docutils literal notranslate"><span class="pre">feature</span> <span class="pre">→</span> <span class="pre">dim</span> <span class="pre">→</span> <span class="pre">values</span></code>, every
 dim pinned except the individual’s — on the pose’s own rate.</p>
@@ -803,8 +803,8 @@ fed to the pixel model beside the frames (z-scored on the training split
 under <code class="docutils literal notranslate"><span class="pre">features/block/</span></code>). Absent,
 the model is E2E-Spot on pixels alone. See <a class="reference internal" href="multimodal.html"><span class="doc">Pixels + Pose (extra features)</span></a>.</p>
 </section>
-<section id="label-inputs">
-<span id="spot-config-label-inputs"></span><h2><code class="docutils literal notranslate"><span class="pre">label_inputs</span></code><a class="headerlink" href="#label-inputs" title="Link to this heading">#</a></h2>
+<section id="spot-config-label-inputs">
+<span id="label-inputs"></span><span id="label_inputs"></span><h2><code class="docutils literal notranslate"><span class="pre">label_inputs</span></code><a class="headerlink" href="#spot-config-label-inputs" title="Link to this heading">#</a></h2>
 <p>Optional. The <strong>labels of other branches</strong> as input columns, appended to
 <code class="docutils literal notranslate"><span class="pre">features:</span></code> so they ride into the GRU beside the pose — the segmentation
 pipeline’s <a class="reference internal" href="../segment/config.html#segment-config-label-inputs"><span class="std std-ref">features.label_inputs</span></a>, same
@@ -983,14 +983,14 @@ draws.</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#labels"><code class="docutils literal notranslate"><span class="pre">labels</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#clip"><code class="docutils literal notranslate"><span class="pre">clip</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spot-config-clip"><code class="docutils literal notranslate"><span class="pre">clip</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model"><code class="docutils literal notranslate"><span class="pre">model</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train"><code class="docutils literal notranslate"><span class="pre">train</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#train-split"><code class="docutils literal notranslate"><span class="pre">train.split</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features"><code class="docutils literal notranslate"><span class="pre">features</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#label-inputs"><code class="docutils literal notranslate"><span class="pre">label_inputs</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spot-config-features"><code class="docutils literal notranslate"><span class="pre">features</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spot-config-label-inputs"><code class="docutils literal notranslate"><span class="pre">label_inputs</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#infer"><code class="docutils literal notranslate"><span class="pre">infer</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-run-writes">What a run writes</a></li>
 </ul>

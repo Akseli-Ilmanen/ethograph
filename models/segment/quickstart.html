@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'models/segment/quickstart';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -494,8 +494,8 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="quickstart">
-<span id="target-segment-quickstart"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="target-segment-quickstart">
+<span id="quickstart"></span><h1>Quickstart<a class="headerlink" href="#target-segment-quickstart" title="Link to this heading">#</a></h1>
 <p>Here is a minimalistic setup for training an action segmentation model: Three curated sessions, a few kinematic
 features, one <code class="docutils literal notranslate"><span class="pre">c2f_tcn</span></code> <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../../community/references.html#id195" title="Dipika Singhania, Rahul Rahaman, and Angela Yao. Coarse to fine multi-resolution temporal convolutional network. 2021. URL: https://arxiv.org/abs/2105.10859, arXiv:2105.10859.">Singhania <em>et al.</em>, 2021</a>]</span> trained on two of them and judged on the third — whose
 predictions you then open in the GUI beside the labels you drew.</p>
@@ -508,7 +508,7 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 </pre></div>
 </div>
 <section id="put-the-features-in-the-session-file">
-<h2>1. Put the features in the session file<a class="headerlink" href="#put-the-features-in-the-session-file" title="Link to this heading">#</a></h2>
+<span id="1-put-the-features-in-the-session-file"></span><h2>1. Put the features in the session file<a class="headerlink" href="#put-the-features-in-the-session-file" title="Link to this heading">#</a></h2>
 <p>The pipeline never computes features; it selects variables that are already in
 your <code class="docutils literal notranslate"><span class="pre">.nc</span></code>. Which basic kinematic features to add depends on the animal:</p>
 <ul class="simple">
@@ -546,7 +546,7 @@ is this, end to end, with video and audio alignment).</p>
 <code class="docutils literal notranslate"><span class="pre">.nc</span></code>, with the label ids described in a <code class="docutils literal notranslate"><span class="pre">mapping.txt</span></code>.</p>
 </section>
 <section id="segment-yaml">
-<h2>2. <code class="docutils literal notranslate"><span class="pre">segment.yaml</span></code><a class="headerlink" href="#segment-yaml" title="Link to this heading">#</a></h2>
+<span id="2-segmentyaml"></span><h2>2. <code class="docutils literal notranslate"><span class="pre">segment.yaml</span></code><a class="headerlink" href="#segment-yaml" title="Link to this heading">#</a></h2>
 <p>Put this in a folder of its own, <code class="docutils literal notranslate"><span class="pre">segment/</span></code> in your project folder: the file’s
 folder is the pipeline’s <code class="docutils literal notranslate"><span class="pre">root</span></code>, where <code class="docutils literal notranslate"><span class="pre">data/</span></code> and <code class="docutils literal notranslate"><span class="pre">runs/</span></code> land. It is the whole
 config — every key not written here has a default that is fine for a first run.</p>
@@ -597,7 +597,7 @@ events are skipped — they belong to the <a class="reference internal" href="..
 </ul>
 </section>
 <section id="train">
-<h2>3. Train<a class="headerlink" href="#train" title="Link to this heading">#</a></h2>
+<span id="3-train"></span><h2>3. Train<a class="headerlink" href="#train" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ethograph</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eto</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">segment</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"project.yaml"</span><span class="p">)</span>
@@ -617,7 +617,7 @@ length and is the usual baseline; nothing else in the config changes.</p>
 </div>
 </section>
 <section id="look-at-the-mistakes-in-the-gui">
-<h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
+<span id="4-look-at-the-mistakes-in-the-gui"></span><h2>4. Look at the mistakes in the GUI<a class="headerlink" href="#look-at-the-mistakes-in-the-gui" title="Link to this heading">#</a></h2>
 <p>The number tells you how well it did; the predictions tell you <em>where</em> it went
 wrong. Write them out for the held-out session:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">paths</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">sessions</span><span class="o">=</span><span class="p">[</span><span class="s2">"ses-03"</span><span class="p">])</span>

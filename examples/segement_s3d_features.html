@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
     <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'examples/segement_s3d_features';</script>
@@ -458,7 +458,7 @@ GUI and to name in a segmentation config.</p>
 <li><p>Write <code class="docutils literal notranslate"><span class="pre">s3d</span></code> (all 1024) <strong>and</strong> <code class="docutils literal notranslate"><span class="pre">s3d_top</span></code> (the subset) into one file</p></li>
 </ol>
 <section id="you-need-an-alignment-nwb">
-<h2>You need an <code class="docutils literal notranslate"><span class="pre">alignment.nwb</span></code><a class="headerlink" href="#you-need-an-alignment-nwb" title="Link to this heading">#</a></h2>
+<span id="you-need-an-alignmentnwb"></span><h2>You need an <code class="docutils literal notranslate"><span class="pre">alignment.nwb</span></code><a class="headerlink" href="#you-need-an-alignment-nwb" title="Link to this heading">#</a></h2>
 <p>There is no filename guessing here. Which video belongs to which trial, and <strong>where in
 that video the trial starts</strong>, both come from <code class="docutils literal notranslate"><span class="pre">.ethograph/alignment.nwb</span></code> beside your
 <code class="docutils literal notranslate"><span class="pre">.nc</span></code> — the same file the GUI reads.</p>
@@ -562,7 +562,7 @@ and <strong>nothing in this notebook changes</strong>.</p>
 </div>
 </section>
 <section id="extract-and-merge">
-<h2>1. Extract and merge<a class="headerlink" href="#extract-and-merge" title="Link to this heading">#</a></h2>
+<span id="1-extract-and-merge"></span><h2>1. Extract and merge<a class="headerlink" href="#extract-and-merge" title="Link to this heading">#</a></h2>
 <p>One call does all of it: resolve each trial’s video from the alignment, run S3D once per
 <strong>video file</strong> (ten trials cut from one recording extract once, not ten times), then
 sample each sidecar onto its trial’s own time axis applying that trial’s offset.</p>
@@ -593,7 +593,7 @@ Extracting S3D video features into c:\Users\aksel\Documents\Code\ethograph\examp
 </div>
 </section>
 <section id="dense-per-frame-labels">
-<h2>2. Dense per-frame labels<a class="headerlink" href="#dense-per-frame-labels" title="Link to this heading">#</a></h2>
+<span id="2-dense-per-frame-labels"></span><h2>2. Dense per-frame labels<a class="headerlink" href="#dense-per-frame-labels" title="Link to this heading">#</a></h2>
 <p>The ranking is supervised, so it needs one class id per frame. Two rules, both
 deliberate:</p>
 <ul class="simple">
@@ -643,7 +643,7 @@ left out; the cell reports how many.</p>
 </div>
 </section>
 <section id="rank-by-cohens-d">
-<h2>3. Rank by Cohen’s d<a class="headerlink" href="#rank-by-cohens-d" title="Link to this heading">#</a></h2>
+<span id="3-rank-by-cohens-d"></span><h2>3. Rank by Cohen’s d<a class="headerlink" href="#rank-by-cohens-d" title="Link to this heading">#</a></h2>
 <p>For each dimension <em>f</em> and class label <em>c</em>: how far apart is <em>f</em>’s distribution <strong>during</strong> label vs outside. How much is the activation function of this artificial unit (in S3D network) different during vs rest?</p>
 <div class="math notranslate nohighlight">
 \[d_{f,c} = \frac{|\bar{x}_{f,c} - \bar{x}_{f,\lnot c}|}{\sqrt{(s^2_{f,c} + s^2_{f,\lnot c})/2}}\]</div>
@@ -668,7 +668,7 @@ left out; the cell reports how many.</p>
 </div>
 </section>
 <section id="classes-top-k-heatmap">
-<h2>4. Classes × top-k heatmap<a class="headerlink" href="#classes-top-k-heatmap" title="Link to this heading">#</a></h2>
+<span id="4-classes--top-k-heatmap"></span><h2>4. Classes × top-k heatmap<a class="headerlink" href="#classes-top-k-heatmap" title="Link to this heading">#</a></h2>
 <p>The ranking collapses each dimension to its best class; the heatmap does not. It shows
 which behaviours each dimension actually separates — how you spot one that is mediocre
 on average but the <em>only</em> one catching a rare class.</p>
@@ -700,7 +700,7 @@ on average but the <em>only</em> one catching a rare class.</p>
 </div>
 </section>
 <section id="write-the-subset-alongside-the-full-set">
-<h2>5. Write the subset alongside the full set<a class="headerlink" href="#write-the-subset-alongside-the-full-set" title="Link to this heading">#</a></h2>
+<span id="5-write-the-subset-alongside-the-full-set"></span><h2>5. Write the subset alongside the full set<a class="headerlink" href="#write-the-subset-alongside-the-full-set" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">s3d</span></code> is already in the merged file. This adds <code class="docutils literal notranslate"><span class="pre">s3d_top</span></code> next to it, so you can switch
 between them in the GUI and in a config without re-running anything.</p>
 <div class="admonition important">
@@ -741,7 +741,7 @@ saves back over the same path rather than leaving you with a third file.</p>
 </div>
 </section>
 <section id="inspect-in-the-gui-then-use-it">
-<h2>6. Inspect in the GUI, then use it<a class="headerlink" href="#inspect-in-the-gui-then-use-it" title="Link to this heading">#</a></h2>
+<span id="6-inspect-in-the-gui-then-use-it"></span><h2>6. Inspect in the GUI, then use it<a class="headerlink" href="#inspect-in-the-gui-then-use-it" title="Link to this heading">#</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ethograph<span class="w"> </span>launch
 </pre></div>
 </div>

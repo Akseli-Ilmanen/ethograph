@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=75dc17f5" />
   
   <!-- So that users can add custom icons -->
@@ -43,7 +43,7 @@
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'examples/convert_dataset_birdpark';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/js/mermaid_zoom.js?v=2bf1778e"></script>
@@ -470,7 +470,7 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="flying-singing-zebra-finches-birdpark">
-<h1>Flying &amp; singing zebra finches - Birdpark<a class="headerlink" href="#flying-singing-zebra-finches-birdpark" title="Link to this heading">#</a></h1>
+<span id="flying--singing-zebra-finches---birdpark"></span><h1>Flying &amp; singing zebra finches - Birdpark<a class="headerlink" href="#flying-singing-zebra-finches-birdpark" title="Link to this heading">#</a></h1>
 <p>Data from <span class="bibtex-citation" id="id1">Rüttimann <em>et al.</em> [<a class="reference internal" href="../community/references.html#id51" title="Linus Rüttimann, Yuhang Wang, Jörg Rychen, Tomas Tomka, Heiko Hörster, and Richard H. R. Hahnloser. Multimodal system for recording individual-level behaviors in songbird groups. PeerJ, 13:e20203, 2025. doi:10.7717/peerj.20203.">2025</a>]</span> (<a class="reference external" href="https://peerj.com/articles/20203">paper</a>, <a class="reference external" href="https://zenodo.org/records/13144875">zenodo</a>), a multimodal dataset of zebra finch groups with synchronized video, microphone arrays, and backpack-mounted vibration transducer (accelerometers).</p>
 <p>The code below shows how one can convert that existing dataset into the <code class="docutils literal notranslate"><span class="pre">Trials.nc</span></code> format. The sampling rate of the vibration transducer is very high (24kHz), so the raw <code class="docutils literal notranslate"><span class="pre">vibration</span></code> trace loads slowly; plot the downsampled <code class="docutils literal notranslate"><span class="pre">vibration_env</span></code> envelope instead (built below, together with candidate changepoints on its bursts), or use the <strong>Downsample</strong> option next to <strong>Load</strong>.</p>
 <a class="reference internal image-reference" href="../_images/birdpark1.png"><img alt="../_images/birdpark1.png" src="../_images/birdpark1.png" style="width: 1200px;" />
