@@ -197,7 +197,9 @@ def test_a_burst_detector_replaces_the_threshold_and_reads_the_spikes_of_every_t
         "firing_rate",
         "instantaneous_rate",
     ]
-    assert dialog.method() == THRESHOLD and dialog.burst_group.isHidden()
+    # It opens on the logISI detector; thresholding a rate is the last method offered.
+    assert dialog.method() == LOG_ISI and not dialog.burst_group.isHidden()
+    assert dialog.method_combo.itemData(dialog.method_combo.count() - 1) == THRESHOLD
     dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(MAX_INTERVAL))
     # The form is now the detector's: its parameters at their defaults, no threshold to set.
     assert dialog.rule_group.isHidden() and dialog.feature_group.isHidden() and not dialog.burst_group.isHidden()
@@ -256,6 +258,28 @@ def test_a_burst_detector_replaces_the_threshold_and_reads_the_spikes_of_every_t
     assert dialog.create_labels().labels_df["labels"].tolist() == [1]
     dialog._burst_inputs["fallback"].setChecked(False)
     assert dialog.create_labels() is None
+
+    # Shown under the raster: no panel of its own, and a newer set replaces the older one's bands.
+    dialog._burst_inputs["fallback"].setChecked(True)
+    dialog.show_combo.setCurrentIndex(dialog.show_combo.findData("raster"))
+    assert state.unit_events_display == "raster", "the choice is remembered"
+    n_panels = len(meta.plot_container.prediction_panels())
+    dialog.name_edit.setText("first under raster")
+    first = dialog.create_labels()
+    assert len(meta.plot_container.prediction_panels()) == n_panels
+    assert ew._raster_interval_set() is first and "first under raster" in meta.plot_container.raster_plot.base_title
+    dialog.name_edit.setText("second under raster")
+    second = dialog.create_labels()
+    assert (
+        ew._raster_interval_set() is second and "first under raster" not in meta.plot_container.raster_plot.base_title
+    )
+    # Left-click on a unit's row selects its period there like a click in a prediction panel, so V plays it.
+    raster = meta.plot_container.raster_plot
+    row_of_unit = next(key for key, units in ew._raster_row_units.items() if 5 in units)
+    lane = ew.raster_period_lane(raster._y_lookup[row_of_unit])
+    assert lane is not None and lane[0] == second.path
+    assert second.mappings[lane[1]]["name"] == "unit_5"
+    state.unit_events_display = "panel"
 
 
 def test_every_burst_parameter_has_a_row_to_show_it_in():

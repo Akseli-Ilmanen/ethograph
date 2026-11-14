@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
+import pyqtgraph as pg
 import pytest
 from qtpy.QtCore import Qt
 from qtpy.QtTest import QTest
-from qtpy.QtWidgets import QApplication, QWidget
+from qtpy.QtWidgets import QApplication, QComboBox, QWidget
 
+from ethograph.gui import dialog_burst_scatter as scatter
 from ethograph.gui.app_state import ObservableAppState
 from ethograph.gui.dialog_label_gridview import entry_inst, entry_key, methods_for_filter
 from ethograph.gui.dialog_video_grid import (
@@ -17,9 +21,11 @@ from ethograph.gui.dialog_video_grid import (
     VideoGridPlayer,
     build_clip_entries,
     clip_note,
+    duration_groups,
     frame_index,
     group_clips,
     marker_visible,
+    nearest_window_start,
     page_duration,
     page_fps,
     paginate,
@@ -163,6 +169,23 @@ class TestFrames:
         assert not marker_visible(_clip(1, "1", 0, 1.0, n_frames=5), 0.5)  # state event: no marker
 
 
+class TestDurationPick:
+    def test_nearest_window_is_the_run_closest_to_the_duration(self):
+        group = [_clip(2, str(i), 0, d) for i, d in enumerate([0.1, 0.2, 0.5, 0.6, 0.7, 2.0])]
+        assert nearest_window_start(group, 0.6, 3) == 2  # 0.5, 0.6, 0.7
+        assert nearest_window_start(group, 0.0, 3) == 0
+        assert nearest_window_start(group, 9.0, 3) == 3
+        assert nearest_window_start(list(reversed(group)), 0.15, 2) == 4  # long-to-short works too
+        assert nearest_window_start(group, 0.6, 10) == 0
+
+    def test_duration_groups_count_each_label_once_and_skip_point_events(self):
+        a = _clip(2, "1", 0, 1.0)
+        b = _clip(2, "1", 0, 1.0)
+        b.camera = "cam2"  # same label, second camera
+        groups = duration_groups([a, b, _clip(2, "2", 0, 0.5), _clip(1, "1", 0, 1.0, event_type="point", onset=0.5)])
+        assert [(g.label_id, sorted(g.values)) for g in groups] == [(2, [0.5, 1.0])]
+
+
 class TestClipNote:
     def test_a_window_inside_the_video_has_no_note(self):
         assert clip_note(10, 40, 100) is None
@@ -270,6 +293,168 @@ class TestPlayer:
             assert player.prev_clips_btn.isEnabled() and not player.next_clips_btn.isEnabled()
         finally:
             player.close()
+
+    def test_the_label_box_jumps_straight_to_a_class(self, player):
+        assert player.label_combo.count() == 2
+        player.label_combo.setCurrentIndex(1)
+        assert [t.entry.label_id for t in player._tiles] == [2]
+        player._step_label(-1)
+        assert player.label_combo.currentIndex() == 0
+
+    def test_a_duration_pick_shows_the_nearest_clips_under_a_duration_sort(self, player):
+        player.sort_combo.setCurrentIndex(player.sort_combo.findData("confidence_asc"))
+        player.show_duration(1, 1.0)
+        assert player._sort_order == "duration"
+        assert player.sort_combo.currentData() == "duration"
+        assert [t.entry.label_id for t in player._tiles] == [1, 1]
+
+    def test_a_scatter_selection_limits_the_grid_until_show_all(self, player):
+        hop = entry_key(player._groups[1][0])
+        player.set_subset({hop}, "1 burst picked")
+        assert [t.entry.label_id for t in player._tiles] == [2]
+        assert player.label_combo.count() == 1 and "1 burst picked" in player.header.text()
+        assert not player.next_label_btn.isEnabled()
+        player.set_subset(None)
+        assert player.label_combo.count() == 2 and "picked" not in player.header.text()
+
+    def test_a_scatter_click_selects_the_nearest_bursts_of_the_clicked_class(self, player):
+        player._show_scatter()
+        dialog = player._scatter_dialog
+        try:
+            # State labels only: the one hop (2 s long, at t=0) is the only point.
+            assert [b.label_id for b in dialog.bursts] == [2]
+            dialog.select_nearest(2.0, 0.0)
+            assert [t.entry.label_id for t in player._tiles] == [2]
+            assert player.playing  # a pick plays straight away
+            assert player._subset == {entry_key(dialog.bursts[0])}
+            dialog._clear()
+            assert player._subset is None
+            # A rectangle drawn on the plot is the region; a second one replaces it.
+            dialog.draw_region(50.0, 60.0, 50.0, 60.0)  # around nothing: the grid is left alone
+            assert dialog.region_check.isChecked() and player._subset is None and not player.playing
+            dialog.draw_region(1.0, 3.0, -1.0, 1.0)
+            assert player._subset == {entry_key(dialog.bursts[0])} and player.playing
+            assert sum(isinstance(i, pg.RectROI) for i in dialog.plot.getPlotItem().items) == 1
+            # Kept, the region outlives its axes: other features then show only its bursts.
+            dialog.columns["elsewhere"] = np.array([99.0])
+            dialog._fill_axis_combos()
+            dialog.keep_region()
+            dialog.x_combo.setCurrentText("elsewhere")
+            assert list(dialog._shown) == [0] and player._subset == {entry_key(dialog.bursts[0])}
+            assert not dialog.region_check.isChecked() and "kept" in dialog.count_label.text()
+            dialog._clear()
+            assert dialog._kept is None
+            # The baseline: the same bursts shifted in their trial, drawn on any axis that can be re-read.
+            assert dialog.baseline_points(None) is None
+            dialog.app_state.source_collection = SimpleNamespace(
+                trial_index=lambda trial: 0, trial_range=lambda idx: SimpleNamespace(duration=10.0)
+            )
+            dialog.x_combo.setCurrentIndex(0)  # duration: an axis the baseline can be read on
+            dialog.baseline_check.setChecked(True)
+            cloud_x, _cloud_y = dialog.baseline_points(None)
+            assert len(cloud_x) <= 5 and np.allclose(cloud_x, 2.0)  # x is the duration: a shift keeps it
+            dialog.baseline_check.setChecked(False)
+            assert dialog.baseline_points(None) is None
+            # A log axis places the points at their log10 and drops what has none.
+            dialog.x_combo.setCurrentIndex(0)  # duration, 2 s
+            dialog.log_checks[0].setChecked(True)
+            assert dialog._xy()[0] == pytest.approx([np.log10(2.0)])
+            assert dialog.plot.getPlotItem().getAxis("bottom").logMode
+            dialog.log_checks[1].setChecked(True)  # y is the time from trial start: 0, no log
+            assert list(dialog._shown) == [] and "without a value" in dialog.count_label.text()
+            for check in dialog.log_checks:
+                check.setChecked(False)
+            assert list(dialog._shown) == [0]
+            # Colouring: the unit's own colour, the label covering it (none here: grey), or nothing.
+            assert dialog.point_colours() == [(None, dialog.bursts[0].color_hex)]
+            dialog.colour_combo.setCurrentIndex(dialog.colour_combo.findData("label"))
+            assert dialog.point_colours() == [("no label", None)]  # drawn hollow
+            # A value on a colour scale: the box beside it is greyed out until that mode is picked.
+            assert not dialog.colour_feature_combo.isEnabled()
+            dialog.colour_combo.setCurrentIndex(dialog.colour_combo.findData("feature"))
+            assert dialog.colour_feature_combo.isEnabled()
+            dialog.colour_feature_combo.setCurrentText("Duration (s)")
+            # Its percentiles open at 0–95 (a duration is never negative) and are the user's to move.
+            assert [s.value() for s in dialog.percentile_spins] == [0.0, 95.0]
+            assert all(s.isEnabled() for s in dialog.percentile_spins)
+            ((name, colour),) = dialog.point_colours()
+            assert name is None and colour.startswith("#") and "Duration (s) from 2" in dialog.count_label.text()
+            # A precomputed colour: the same box then lists the dataset's colour features (none here).
+            dialog.colour_combo.setCurrentIndex(dialog.colour_combo.findData("rgb"))
+            assert dialog.colour_feature_combo.isEnabled() and dialog.colour_feature_combo.count() == 0
+            assert dialog.point_colours() == [("no value", None)]
+            dialog.colour_combo.setCurrentIndex(dialog.colour_combo.findData("none"))
+            assert dialog.point_colours() == [(None, "#c8ccd2")]
+            # The label box beside an axis is greyed out until the axis measures from a label.
+            assert not dialog.x_label_combo.isEnabled()
+            player.app_state._all_labels_df = pd.DataFrame(
+                {"trial": ["1"], "labels": [7], "onset_s": [0.5], "offset_s": [0.75]}
+            )
+        finally:
+            dialog.close()
+        player._scatter_dialog = None
+        player._show_scatter()
+        dialog = player._scatter_dialog
+        try:
+            dialog.x_combo.setCurrentText("Time from a label's nearest offset (s)")
+            assert dialog.x_label_combo.isEnabled() and not dialog.y_label_combo.isEnabled()
+            title, values = dialog._axis(dialog.x_combo, dialog.x_label_combo)
+            assert "7" in title and values == pytest.approx([-0.75])  # the hop starts at 0, label 7 ends at 0.75
+        finally:
+            dialog.close()
+
+    def test_map_puts_a_features_x_and_y_on_the_axes_to_scale(self, player, monkeypatch):
+        asked = []
+
+        def fake_column(app_state, bursts, feature, selections, how):
+            asked.append((feature, selections, how))
+            return np.array([3.0 if selections["space"] == "x" else 7.0])
+
+        monkeypatch.setattr(scatter, "feature_column", fake_column)
+        player.app_state.burst_pca_window_s = 0.75
+        player.app_state.burst_pca_components = 5
+        player._show_scatter()
+        dialog = player._scatter_dialog
+        try:
+            assert not dialog.map_btn.isEnabled()  # no feature with an x and a y picked
+            # The PCA's settings follow the user: opened at the saved values, written back on a change.
+            assert dialog.pca_window_spin.value() == pytest.approx(0.75) and dialog.pca_components_spin.value() == 5
+            dialog.pca_step_spin.setValue(0.05)
+            assert player.app_state.burst_pca_step_s == pytest.approx(0.05)
+            dialog.feature_combo.addItem("position")
+            for dim, values in {"keypoint": ["beak", "tail"], "space": ["x", "y"]}.items():
+                combo = QComboBox()
+                combo.addItems(values)
+                dialog._dim_combos[dim] = combo
+            dialog.add_map()
+            assert asked == [
+                ("position", {"keypoint": "beak", "space": "x"}, "mean"),
+                ("position", {"keypoint": "beak", "space": "y"}, "mean"),
+            ]
+            assert dialog.x_combo.currentText() == "position [beak] x · mean"
+            # Center fits the view around the one point (x=3, y=7), wherever it was left.
+            dialog.plot.getPlotItem().getViewBox().setRange(xRange=(100, 200), yRange=(100, 200))
+            dialog.center()
+            (x0, x1), (y0, y1) = dialog.plot.getPlotItem().getViewBox().viewRange()
+            assert x0 < 3.0 < x1 and y0 < 7.0 < y1
+            assert dialog.y_combo.currentText() == "position [beak] y · mean"
+            view = dialog.plot.getPlotItem().getViewBox()
+            assert view.state["aspectLocked"] is not False
+            # An arena geometry is drawn on the map, against the coordinate each axis holds.
+            box = scatter.ReferenceGeometry("box", np.array([[0.0, 0.0, 0.0], [4.0, 9.0, 2.0]]), [(0, 1)])
+            dialog._geometries["box"] = [box]
+            dialog.geometry_combo.addItem("box", "box")
+            dialog.geometry_combo.setCurrentIndex(dialog.geometry_combo.findData("box"))
+            x_title, y_title = dialog.x_combo.currentText(), dialog.y_combo.currentText()
+            ((xs, ys),) = dialog.geometry_segments(x_title, y_title)
+            assert list(xs) == [0.0, 4.0] and list(ys) == [0.0, 9.0]
+            ((xs, ys),) = dialog.geometry_segments(y_title, x_title)  # axes swapped: so is the geometry
+            assert list(xs) == [0.0, 9.0] and list(ys) == [0.0, 4.0]
+            assert dialog.geometry_segments(x_title, "Duration (s)") == []  # not a map: nothing to draw against
+            dialog.x_combo.setCurrentIndex(0)  # any other axis: no longer a map
+            assert view.state["aspectLocked"] is False
+        finally:
+            dialog.close()
 
     def test_seek_renders_and_play_toggles(self, player):
         player.seek(0.5)

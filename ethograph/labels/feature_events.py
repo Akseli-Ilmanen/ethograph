@@ -36,7 +36,6 @@ unit. Which detector, and with what parameters, is a :class:`BurstRule`.
 from __future__ import annotations
 
 import inspect
-import warnings
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -49,6 +48,7 @@ from ethograph.features.bursts import (
     detect_bursts_instantaneous_rate,
     detect_bursts_log_isi,
     detect_bursts_max_interval,
+    detect_bursts_poisson_surprise,
 )
 from ethograph.io.catalog import INDIVIDUAL_DIMS
 from ethograph.labels.intervals import (
@@ -70,10 +70,14 @@ _SYMBOL = {ABOVE: ">", BELOW: "<"}
 #: What the threshold is measured in.
 RAW = "raw"
 ZSCORE = "zscore"
+ROBUST_ZSCORE = "robust_zscore"
 PERCENTILE = "percentile"
-SCALES = (RAW, ZSCORE, PERCENTILE)
+SCALES = (RAW, ZSCORE, ROBUST_ZSCORE, PERCENTILE)
 
-_SCALE_SUFFIX = {RAW: "", ZSCORE: "z", PERCENTILE: "%"}
+_SCALE_SUFFIX = {RAW: "", ZSCORE: "z", ROBUST_ZSCORE: "rz", PERCENTILE: "%"}
+
+#: Scales MAD to a standard deviation for normal data.
+_MAD_TO_STD = 1.4826
 
 #: The columns of an events table: a labels table, trial first.
 EVENT_COLUMNS = ["trial", *INTERVAL_COLUMNS]
@@ -90,7 +94,8 @@ class ThresholdRule:
     #: A period shorter than this (after stitching) is dropped.
     min_duration_s: float = 0.0
     #: What *threshold* is measured in: the feature's units (:data:`RAW`),
-    #: standard deviations from each series' own mean (:data:`ZSCORE`), or a
+    #: standard deviations from each series' own mean (:data:`ZSCORE`),
+    #: scaled MADs from its median (:data:`ROBUST_ZSCORE`), or a
     #: percentile of each series' own values (:data:`PERCENTILE`) — the last
     #: two taken across the trials read.
     scale: str = RAW
@@ -318,6 +323,9 @@ class SeriesSample:
         n_classes = len(self.mean)
         if rule.scale == ZSCORE:
             return self.mean + rule.threshold * np.where(self.std > 0, self.std, np.nan)
+        if rule.scale == ROBUST_ZSCORE:
+            median, spread = self.robust_stats()
+            return median + rule.threshold * spread
         if rule.scale == PERCENTILE:
             cuts = np.full(n_classes, np.nan)
             for i in range(n_classes):
@@ -331,6 +339,25 @@ class SeriesSample:
     def zscored_values(self) -> np.ndarray:
         """The sample in standard deviations from each class's mean; a flat series is all NaN."""
         return (self.values - self.mean) / np.where(self.std > 0, self.std, np.nan)
+
+    def robust_stats(self) -> tuple[np.ndarray, np.ndarray]:
+        """Each class's median and ``1.4826 × MAD`` over the sample; NaN spread for a flat series."""
+        n_classes = self.values.shape[1]
+        median = np.full(n_classes, np.nan)
+        spread = np.full(n_classes, np.nan)
+        for i in range(n_classes):
+            column = self.values[:, i]
+            column = column[np.isfinite(column)]
+            if column.size:
+                median[i] = np.median(column)
+                mad = _MAD_TO_STD * np.median(np.abs(column - median[i]))
+                spread[i] = mad if mad > 0 else np.nan
+        return median, spread
+
+    def robust_zscored_values(self) -> np.ndarray:
+        """The sample in scaled MADs from each class's median; a flat series is all NaN."""
+        median, spread = self.robust_stats()
+        return (self.values - median) / spread
 
 
 def sample_series(windows: Iterable[TrialWindow], query: FeatureQuery, max_values: int = 2_000_000) -> SeriesSample:
@@ -383,7 +410,7 @@ def feature_events(
     cuts = None
     if rule.scale == ZSCORE:
         cuts = sample_series(windows, query, max_values=0).cuts(rule)
-    elif rule.scale == PERCENTILE:
+    elif rule.scale in (ROBUST_ZSCORE, PERCENTILE):
         cuts = sample_series(windows, query).cuts(rule)
     parts = []
     for trial, time, columns, label_ids in _trial_series(windows, query):
@@ -411,12 +438,14 @@ def feature_events(
 MAX_INTERVAL = "max_interval"
 LOG_ISI = "log_isi"
 INSTANTANEOUS_RATE = "instantaneous_rate"
+POISSON_SURPRISE = "poisson_surprise"
 
 #: The burst detectors a rule can name: each takes a spike train and its own keyword parameters.
 BURST_DETECTORS: dict[str, Callable[..., nap.IntervalSet]] = {
     MAX_INTERVAL: detect_bursts_max_interval,
     LOG_ISI: detect_bursts_log_isi,
     INSTANTANEOUS_RATE: detect_bursts_instantaneous_rate,
+    POISSON_SURPRISE: detect_bursts_poisson_surprise,
 }
 
 #: One trial of a spike train: ``(trial, t0, t1, shift)`` — the trial's window on
@@ -477,15 +506,16 @@ class BurstRule:
 def burst_spike_times(train: nap.Ts | nap.Tsd, epochs: nap.IntervalSet, rule: BurstRule) -> np.ndarray:
     """The spikes of *train* inside *epochs* that belong to a burst, as the detector of *rule* finds them.
 
-    The train is cut to *epochs* first, so a detector that adapts to the
-    train (logISI's threshold) reads the spikes of those epochs only — the
-    same reading :func:`burst_events` gives the same epochs.
+    The detector reads the whole train (the session): whatever it estimates
+    from the train — logISI's threshold, Poisson surprise's mean ISI — is the
+    unit's, whichever trials are shown. Only then are the burst spikes cut to
+    *epochs*, as :func:`burst_events` keeps only the bursts inside its trials.
     """
-    spikes = nap.Ts(t=train.t, time_support=train.time_support).restrict(epochs)
+    spikes = nap.Ts(t=train.t, time_support=train.time_support)
     bursts = rule.detect(spikes)
     if len(bursts) == 0:
         return np.empty(0, dtype=np.float64)
-    return np.asarray(spikes.restrict(bursts).t, dtype=np.float64)
+    return np.asarray(spikes.restrict(bursts).restrict(epochs).t, dtype=np.float64)
 
 
 def burst_events(
@@ -493,28 +523,32 @@ def burst_events(
 ) -> pd.DataFrame:
     """Every trial's bursts, as one table in trial then onset order: class ``i + 1`` is the ``i``-th of *trains*.
 
-    Each train is cut to the trials before it is read, so a burst never
-    spans two trials, and a detector that adapts to the train (logISI's
-    threshold) adapts to the spikes of the trials read — as a z-score reads
-    its mean across them, not trial by trial.
+    The detector reads each whole train (the session), so what it estimates
+    from it — logISI's threshold, Poisson surprise's mean ISI — is the unit's
+    own, the same whichever trials are shown. Each trial keeps its part of a
+    burst (first to last spike inside it), so none spans two trials or an
+    inter-trial gap.
     """
     spans = sorted(spans, key=lambda span: span[1])
     if not spans:
         return empty_events()
-    with warnings.catch_warnings():
-        # Trials that touch are still two epochs; pynapple says so every time.
-        warnings.simplefilter("ignore", UserWarning)
-        epochs = nap.IntervalSet(start=[t0 for _, t0, _, _ in spans], end=[t1 for _, _, t1, _ in spans])
     parts = []
     for label_id, train in enumerate(trains.values(), start=1):
         # A unit that carries values (a Tsd) is read for its spike times alone.
-        spikes = nap.Ts(t=train.t, time_support=train.time_support).restrict(epochs)
-        bursts = rule.detect(spikes)
+        times = np.asarray(train.t, dtype=np.float64)
+        bursts = rule.detect(nap.Ts(t=times, time_support=train.time_support))
+        starts, ends = np.asarray(bursts.start), np.asarray(bursts.end)
         for trial, t0, t1, shift in spans:
-            inside = (bursts.start >= t0) & (bursts.end <= t1)
-            if inside.any():
-                intervals = np.column_stack([bursts.start[inside], bursts.end[inside]]) - shift
-                parts.append(_event_rows(trial, intervals, label_id, individual))
+            overlapping = (starts < t1) & (ends > t0)
+            pieces = []
+            for start, end in zip(starts[overlapping], ends[overlapping], strict=True):
+                # A burst running past the trial's edge keeps its part inside, first spike to last.
+                lo = np.searchsorted(times, max(start, t0), side="left")
+                hi = np.searchsorted(times, min(end, t1), side="right")
+                if hi - lo >= 2:
+                    pieces.append((times[lo], times[hi - 1]))
+            if pieces:
+                parts.append(_event_rows(trial, np.array(pieces) - shift, label_id, individual))
     if not parts:
         return empty_events()
     out = pd.concat(parts, ignore_index=True)

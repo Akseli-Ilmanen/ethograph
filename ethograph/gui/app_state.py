@@ -272,6 +272,16 @@ class AppStateSpec:
         # disturb the main GUI's speed) but, like the rest of the grid
         # layout, sticky across sessions rather than resetting on every open.
         "video_grid_speed_pct": (float, 100.0, True),
+        # The burst scatter's behaviour PCA: how finely behaviour is windowed
+        # is the user's question, not the dataset's, so it follows them.
+        "burst_pca_window_s": (float, 0.2, True),
+        "burst_pca_step_s": (float, 0.1, True),
+        "burst_pca_components": (int, 3, True),
+        # The burst detectors' parameters as the user last set them:
+        # {method: {parameter: value}}, holding only what differs from the
+        # detector's default. Global: a lab's burst definition is a habit
+        # carried from one recording to the next.
+        "burst_detector_params": (dict[str, Any], {}, True),
         # "Flag confidence below" — shared by the frame grid and the video
         # grid, so a threshold picked while reviewing one still applies when
         # switching to the other. Typed in full rather than stepped, so a
@@ -636,6 +646,10 @@ class AppStateSpec:
         # source in the add-panel popup; and the one the raster draws now ({} = every spike).
         "raster_burst_filters": (list, [], True, SCOPE_LOCAL),
         "raster_burst_filter": (dict, {}, True, SCOPE_LOCAL),
+        # Where a new set of per-unit periods (bursts, firing above a threshold) is shown: "panel"
+        # (a prediction panel of its own) or "raster" (bands under each unit's spikes; the raster
+        # shows one set at a time, the newest). A viewing habit, so it follows the user.
+        "unit_events_display": (str, "panel", True),
         # Changepoint correction
         "cp_min_label_length_s": (float, 0.05, True),
         "cp_stitch_gap_len_s": (float, 0.015, True),

@@ -1143,18 +1143,20 @@ class LabelsWidget(QWidget):
             return
         self.show_prediction_set(PredictionSet(path, labels_df, store))
 
-    def show_prediction_set(self, prediction_set: PredictionSet) -> None:
-        """Load *prediction_set* as a read-only overlay with a panel of its own.
+    def show_prediction_set(self, prediction_set: PredictionSet, *, panel: bool = True) -> None:
+        """Load *prediction_set* as a read-only overlay, with a panel of its own unless *panel* is False.
 
         The one way a set joins ``app_state.prediction_sets`` — an imported
         file, or a table made in memory (labels created from a feature). A
-        set of the same path replaces the one already loaded.
+        set of the same path replaces the one already loaded. Without a panel
+        (its periods drawn under the raster instead) it is still a label source
+        the grids and navigation read.
         """
         path = prediction_set.path
         self.app_state.prediction_sets = add_prediction_set(self.app_state.prediction_sets, prediction_set)
         self._set_current_prediction_set(path)
 
-        if self.plot_container is not None and self.plot_container.prediction_panel_for(path) is None:
+        if panel and self.plot_container is not None and self.plot_container.prediction_panel_for(path) is None:
             self.plot_container.add_panel("predictions", prediction_path=path)
         if self.data_widget:
             self.data_widget.refresh_trials_confidence()
@@ -1630,7 +1632,7 @@ class LabelsWidget(QWidget):
 
         A click on a prediction panel selects among that panel's predictions
         instead (:meth:`_check_predictions_click`), so V plays back *that*
-        segment.
+        segment; so does a click on a raster row with periods laid under it.
 
         Args:
             t_clicked: Time in seconds of the click
@@ -1641,6 +1643,11 @@ class LabelsWidget(QWidget):
         if getattr(panel, "panel_type", None) == "predictions":
             lane = panel.lane_label_at(y) if y is not None else None
             return self._check_predictions_click(t_clicked, individual, panel.prediction_path, lane)
+        ephys = getattr(self.meta_widget, "ephys_widget", None)
+        if ephys is not None and self.plot_container is not None and panel is self.plot_container.raster_plot:
+            # Periods drawn under the raster select like a prediction panel's: the clicked row's unit.
+            hit = ephys.raster_period_lane(y) if y is not None else None
+            return hit is not None and self._check_predictions_click(t_clicked, individual, *hit)
         df = self.app_state.label_intervals
         if df is not None and not df.empty:
             active_ids = self.app_state.active_label_ids

@@ -497,6 +497,17 @@ _COLOR_ROLE = Qt.UserRole + 2
 
 #: Raster dots of a unit that passes the neuron table's filters but is not selected.
 _UNSELECTED_DOT_COLOR = (0, 0, 0)
+#: How opaque a period under the raster is: its class's colour, light enough that the spikes on it read.
+_BAND_ALPHA = 90
+
+
+def _band_color(mapping: dict) -> tuple[int, int, int, int]:
+    """A class's colour (0-1 RGB in its mapping) as the RGBA a band under the raster takes; grey without one."""
+    color = mapping.get("color")
+    if color is None:
+        return (128, 128, 128, _BAND_ALPHA)
+    r, g, b = (int(round(float(c) * 255)) for c in list(color)[:3])
+    return (r, g, b, _BAND_ALPHA)
 
 
 class _ChannelFilterProxy(MultiColumnFilterProxy):
@@ -789,8 +800,12 @@ class EphysWidget(QWidget):
         self._multi_cluster_colors: dict[int, tuple] = {}
         # Unit ids by when their rate peaks, as last sorted (the PEAK_ORDERS row orders).
         self._peak_units: list[int] | None = None
-        # The units drawn on each raster row, by row key (see _raster_rows).
+        # The units drawn on each raster row, by row key (see _raster_rows), and each unit's row key.
         self._raster_row_units: dict[int, list[int]] = {}
+        self._raster_unit_rows: dict[int, int] = {}
+        # The loaded per-unit set whose periods lie under the raster's rows (show_raster_intervals).
+        self._raster_interval_path: Path | None = None
+        self.app_state.prediction_sets_changed.connect(self._on_prediction_sets_changed)
         # True while a click on a plot row changes the table's selection: the view stays where it is.
         self._selecting_from_plot = False
 
@@ -1582,6 +1597,7 @@ class EphysWidget(QWidget):
                 on_channel.setdefault(channels[cid], []).append(cid)
             self._raster_row_units = on_channel
             raster.set_row_labels({hw: ", ".join(map(str, ids)) for hw, ids in on_channel.items()})
+            self._raster_unit_rows = channels
             return channels
         raster.follows_trace_y = False
         rows = {cid: i for i, cid in enumerate(unit_ids)}
@@ -1590,6 +1606,7 @@ class EphysWidget(QWidget):
         raster.set_row_labels({i: str(cid) for cid, i in rows.items()})
         self._raster_row_units = {i: [cid] for cid, i in rows.items()}
         self._pynapple_cid_to_row = rows
+        self._raster_unit_rows = rows
         return rows
 
     def _draw_raster(self) -> None:
@@ -1612,6 +1629,70 @@ class EphysWidget(QWidget):
             times - self._ephys_offset(), units, rows, self._multi_cluster_colors, _UNSELECTED_DOT_COLOR
         )
         self.plot_container.raster_plot.set_multi_cluster_spike_data(entries)
+        self._draw_raster_intervals()
+
+    # ------------------------------------------------------------------
+    # Periods under the raster: one set of per-unit periods at a time
+    # ------------------------------------------------------------------
+
+    def show_raster_intervals(self, path: Path | None) -> None:
+        """Lay the periods of the loaded set at *path* under the raster's rows, replacing any shown (``None``: none)."""
+        self._raster_interval_path = path
+        self._sync_raster_title(self.burst_rule())
+        self._draw_raster_intervals()
+
+    def raster_period_lane(self, y: float) -> tuple[Path, int] | None:
+        """The set shown under the raster and the class of the unit on the row at *y*, or ``None``.
+
+        What a left click on the raster selects among, so V plays back that unit's period there.
+        """
+        shown = self._raster_interval_set()
+        if shown is None or not self.plot_container:
+            return None
+        units = self._raster_row_units.get(self.plot_container.raster_plot.row_at(y), [])
+        classes = classes_along(shown.mappings or {}, FIRING_RATE_UNIT_DIM)
+        lanes = [classes[str(cid)] for cid in units if str(cid) in classes]
+        return (shown.path, lanes[0]) if lanes else None
+
+    def _on_prediction_sets_changed(self, *_args) -> None:
+        """A set left: if its periods lay under the raster, they go too."""
+        if self._raster_interval_path is not None and self._raster_interval_set() is None:
+            self.show_raster_intervals(None)
+
+    def _raster_interval_set(self):
+        """The loaded set the raster shows periods of, or ``None`` (none chosen, or since removed)."""
+        if self._raster_interval_path is None:
+            return None
+        return next((s for s in self.app_state.prediction_sets if s.path == self._raster_interval_path), None)
+
+    def _draw_raster_intervals(self) -> None:
+        """Each period of the shown set under its unit's row, on the axis's clock; in a unit's colour once selected."""
+        if not self.plot_container:
+            return
+        raster = self.plot_container.raster_plot
+        shown = self._raster_interval_set()
+        rows = self._raster_unit_rows
+        if shown is None or not rows:
+            raster.clear_intervals()
+            return
+        mappings = shown.mappings or {}
+        unit_of = {label_id: unit for unit, label_id in classes_along(mappings, FIRING_RATE_UNIT_DIM).items()}
+        df = shown.labels_df
+        if self.app_state.display_basis != "session":
+            df = df[df["trial"].astype(str) == str(self.app_state.trials_sel)]
+        starts, ends, keys, colors = [], [], [], []
+        for trial, part in df.groupby("trial", sort=False):
+            shift = self.app_state.to_display(trial, 0.0)
+            for onset, offset, label_id in zip(part["onset_s"], part["offset_s"], part["labels"], strict=True):
+                unit = unit_of.get(int(label_id))
+                if unit is None or not np.isfinite(offset) or int(unit) not in rows:
+                    continue
+                cid = int(unit)
+                starts.append(onset + shift)
+                ends.append(offset + shift)
+                keys.append(rows[cid])
+                colors.append(_band_color(mappings.get(int(label_id), {})))
+        raster.set_intervals(np.array(starts), np.array(ends), np.array(keys, dtype=int), colors)
 
     # ------------------------------------------------------------------
     # Burst filter: the raster of the bursting spikes alone
@@ -1630,16 +1711,21 @@ class EphysWidget(QWidget):
     def _sync_raster_title(self, rule: BurstRule | None) -> None:
         """The raster's title says which spikes it draws; ``base_title`` so a retitle keeps it."""
         pc = self.plot_container
-        pc.raster_plot.base_title = "raster" if rule is None else f"raster — {rule.label()}"
+        title = "raster" if rule is None else f"raster — {rule.label()}"
+        shown = self._raster_interval_set()
+        if shown is not None:
+            title += f"  ·  periods: {shown.path.name}"
+        pc.raster_plot.base_title = title
         pc.set_panel_title(pc.raster_plot, pc.panel_title(pc.raster_plot))
 
     def _burst_epochs(self, trial_ep: nap.IntervalSet) -> nap.IntervalSet:
-        """What a detector reads, on the spike clock.
+        """Where burst spikes are drawn, on the spike clock.
 
-        On the session clock the raster draws the inter-trial periods too, so
-        the whole recording (every unit's time support) is read; on the trial
-        clock, the trials shown — the same reading the burst labels get.
-        Without an alignment, the window on screen.
+        The detector always reads each unit's whole recording (so its threshold
+        or mean rate is the unit's own); this only says which of the burst
+        spikes are kept. On the session clock the raster draws the inter-trial
+        periods too, so the whole recording; on the trial clock, the trials
+        shown — as the burst labels. Without an alignment, the window on screen.
         """
         if self.app_state.display_basis == "session":
             return self._tsgroup.time_support

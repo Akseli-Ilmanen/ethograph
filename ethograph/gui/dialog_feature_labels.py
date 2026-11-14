@@ -70,6 +70,7 @@ from ethograph.labels.feature_events import (
     BELOW,
     PERCENTILE,
     RAW,
+    ROBUST_ZSCORE,
     ZSCORE,
     BurstRule,
     FeatureQuery,
@@ -89,11 +90,12 @@ logger = logging.getLogger(__name__)
 _EVERY_VALUE = None
 
 #: The scales a threshold can be read on: key → (combo text, spin suffix, value it opens at).
-#: A raw threshold has no sensible default; the other two are the usual starting points.
+#: A raw threshold has no sensible default; the others are the usual starting points.
 _SCALES: dict[str, tuple[str, str, float | None]] = {
-    RAW: ("the feature's own units", "", None),
-    ZSCORE: ("standard deviations from each series' mean (z-score)", " z", 2.0),
-    PERCENTILE: ("a percentile of each series' own values", " %", 95.0),
+    RAW: ("raw units", "", None),
+    ZSCORE: ("z-score (mean, SD)", " z", 2.0),
+    ROBUST_ZSCORE: ("robust z-score (median, MAD)", " rz", 2.0),
+    PERCENTILE: ("percentile", " %", 95.0),
 }
 
 #: Combo data of the method that thresholds a feature; every other method is a burst detector.
@@ -101,11 +103,11 @@ THRESHOLD = "threshold"
 
 #: The methods in the order they are offered: key → (combo text, tooltip).
 _METHODS: dict[str, tuple[str, str]] = {
+    **BURST_METHODS,
     THRESHOLD: (
         "Threshold: a firing rate above or below a value",
         "The periods a unit's rate spends past a value. Right for activity lasting\nhundreds of milliseconds or more.",
     ),
-    **BURST_METHODS,
 }
 
 #: The burst parameters' rows, as the shared form shows them.
@@ -217,16 +219,26 @@ def create_burst_labels(meta, units: list[str], rule: BurstRule, name: str) -> P
     return _load_events(meta, events, [f"{FIRING_RATE_UNIT_DIM}_{unit}" for unit in trains], name)
 
 
+#: Where a new per-unit set is shown (``app_state.unit_events_display``): key → combo text.
+UNDER_RASTER = "raster"
+SHOW_AS = {"panel": "Separate panel", UNDER_RASTER: "Below the raster"}
+
+
 def _load_events(meta, events, class_names: list[str], name: str) -> PredictionSet:
     """Show *events* as a read-only label source in a panel of its own, and make the tools read it."""
     app_state = meta.app_state
     prediction_set = PredictionSet(Path(name.translate(_NAME_FORBIDDEN)), events, mappings=event_mappings(class_names))
-    meta.labels_widget.show_prediction_set(prediction_set)
+    per_unit = bool(classes_along(prediction_set.mappings or {}, FIRING_RATE_UNIT_DIM))
+    under_raster = per_unit and app_state.get_with_default("unit_events_display") == UNDER_RASTER
+    meta.labels_widget.show_prediction_set(prediction_set, panel=not under_raster)
+    if under_raster:
+        meta.ephys_widget.show_raster_intervals(prediction_set.path)
     app_state.label_source_path = str(prediction_set.path)
     n_classes = events["labels"].nunique()
     notify(
         f"{len(events)} periods in {events['trial'].nunique()} trial(s), {n_classes} class(es) — read-only, "
-        "in a panel of their own. Label navigation and the grids now read them: open the grids from the "
+        + ("under the raster, replacing any shown there. " if under_raster else "in a panel of their own. ")
+        + "Label navigation and the grids now read them: open the grids from the "
         + (
             "area under the neuron table, where units can be dragged in to narrow them."
             if classes_along(prediction_set.mappings or {}, FIRING_RATE_UNIT_DIM)
@@ -338,7 +350,7 @@ class FeatureLabelsDialog(QDialog):
         self.threshold_spin.setDecimals(4)
         self.threshold_spin.valueChanged.connect(self._sync_name)
         threshold_row.addWidget(self.threshold_spin, stretch=1)
-        rule_form.addRow("Feature is:", threshold_row)
+        rule_form.addRow("Feature:", threshold_row)
         self.scale_combo = QComboBox()
         for key, (text, _suffix, _default) in _SCALES.items():
             self.scale_combo.addItem(text, key)
@@ -348,11 +360,11 @@ class FeatureLabelsDialog(QDialog):
             "Z-score: how unusual a value is for its series, over every trial the trials table shows.\n"
             "Percentile: a fixed share of each series' own time (95 = its top 5 %), whatever its\n"
             "distribution — so a series that never does much gets periods too.\n"
-            "Use one of the last two when reading a dim value by value: units with different\n"
+            "Use any but raw units when reading a dim value by value: units with different\n"
             "baseline rates, or keypoints that move at different speeds, share no raw threshold."
         )
         self.scale_combo.currentIndexChanged.connect(self._on_scale_changed)
-        rule_form.addRow("Measured in:", self.scale_combo)
+        rule_form.addRow("Scale:", self.scale_combo)
         self.range_label = QLabel("")
         self.range_label.setWordWrap(True)
         self.range_label.setStyleSheet("color: grey; font-size: 10px;")
@@ -373,6 +385,24 @@ class FeatureLabelsDialog(QDialog):
         )
         clean_form.addRow("Drop periods shorter than:", self.min_duration_spin)
         lay.addWidget(clean_group)
+
+        if self.neural:
+            show_row = QHBoxLayout()
+            show_row.addWidget(QLabel("Show as:"))
+            self.show_combo = QComboBox()
+            for key, text in SHOW_AS.items():
+                self.show_combo.addItem(text, key)
+            self.show_combo.setCurrentIndex(
+                max(0, self.show_combo.findData(self.app_state.get_with_default("unit_events_display")))
+            )
+            self.show_combo.setToolTip(
+                "Where the new periods are drawn. Under the raster: a pale band under each unit's spikes;\n"
+                "the raster shows one set at a time, so a new detection replaces the bands there.\n"
+                "Separate panel: a panel of their own, one per set. Remembered for next time."
+            )
+            self.show_combo.currentIndexChanged.connect(self._on_show_as_changed)
+            show_row.addWidget(self.show_combo, stretch=1)
+            lay.addLayout(show_row)
 
         name_row = QHBoxLayout()
         name_row.addWidget(QLabel("Name:"))
@@ -473,10 +503,10 @@ class FeatureLabelsDialog(QDialog):
         self._sync_name()
 
     def _rebuild_burst_parameters(self) -> None:
-        """One row per parameter of the picked detector, opening at the detector's own default."""
+        """One row per parameter of the picked detector, opening at the user's last choice for it."""
         for stale in self._burst_inputs.values():
             self._burst_form.removeRow(stale)
-        self._burst_inputs = build_burst_inputs(self._burst_form, self.method())
+        self._burst_inputs = build_burst_inputs(self._burst_form, self.method(), self.app_state)
 
     def burst_rule(self) -> BurstRule:
         """The detector and parameters the form selects."""
@@ -606,7 +636,13 @@ class FeatureLabelsDialog(QDialog):
         percentile has no axis of its own to pool series on.
         """
         assert self._sample is not None
-        values = self._sample.zscored_values() if self.scale() == ZSCORE else self._sample.values
+        scale = self.scale()
+        if scale == ZSCORE:
+            values = self._sample.zscored_values()
+        elif scale == ROBUST_ZSCORE:
+            values = self._sample.robust_zscored_values()
+        else:
+            values = self._sample.values
         return values[np.isfinite(values)]
 
     def _draw_distribution(self) -> None:
@@ -621,7 +657,7 @@ class FeatureLabelsDialog(QDialog):
         self._histogram_bars.setOpts(
             x=(edges[:-1] + edges[1:]) / 2, height=np.log10(counts + 1.0), width=edges[1] - edges[0]
         )
-        unit = "standard deviations from each series' mean" if self.scale() == ZSCORE else "feature units"
+        unit = {ZSCORE: "z-score", ROBUST_ZSCORE: "robust z-score"}.get(self.scale(), "feature units")
         self.histogram.setLabel("bottom", f"value ({unit})")
         self.histogram.setXRange(float(edges[0]), float(edges[-1]), padding=0.02)
         self.histogram.enableAutoRange(axis="y")
@@ -732,6 +768,9 @@ class FeatureLabelsDialog(QDialog):
     # ------------------------------------------------------------------
     # Create
     # ------------------------------------------------------------------
+
+    def _on_show_as_changed(self, *_args) -> None:
+        self.app_state.unit_events_display = self.show_combo.currentData()
 
     def create_labels(self) -> PredictionSet | None:
         """Build the set as if *Create labels* were pressed."""

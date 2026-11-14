@@ -8,6 +8,7 @@ from ethograph.features.bursts import (
     detect_bursts_instantaneous_rate,
     detect_bursts_log_isi,
     detect_bursts_max_interval,
+    detect_bursts_poisson_surprise,
 )
 
 
@@ -39,7 +40,8 @@ def test_log_isi_without_a_valley_falls_back_only_when_asked():
     # One interval length: a within-burst peak, and nothing to separate it from.
     spikes = nap.Ts(t=np.arange(50) * 0.02)
     assert len(detect_bursts_log_isi(spikes)) == 1
-    assert len(detect_bursts_log_isi(spikes, fallback=False)) == 0
+    with pytest.warns(UserWarning, match="No clear minimum"):  # pynapple says why it found nothing
+        assert len(detect_bursts_log_isi(spikes, fallback=False)) == 0
 
 
 def test_a_group_is_read_unit_by_unit():
@@ -54,3 +56,27 @@ def test_a_series_that_is_not_spikes_is_refused():
         detect_bursts_max_interval(np.arange(5.0))
     with pytest.raises(ValueError, match="at least two spikes"):
         detect_bursts_max_interval(nap.Ts(t=[0.0, 1.0]), min_spikes_in_burst=1)
+
+
+def test_poisson_surprise_finds_dense_runs_against_the_trains_own_rate():
+    """Five spikes 10 ms apart in 1 Hz background are improbable; the background alone is not."""
+    rng = np.random.default_rng(0)
+    background = rng.uniform(0, 600, 600)
+    starts = np.arange(20) * 30.0 + 5.0
+    runs = np.concatenate([s + np.arange(5) * 0.01 for s in starts])
+    bursts = detect_bursts_poisson_surprise(nap.Ts(t=np.sort(np.concatenate([background, runs]))))
+    found = [np.any((bursts.start <= s + 0.001) & (bursts.end >= s + 0.039)) for s in starts]
+    assert np.mean(found) >= 0.9
+    assert len(detect_bursts_poisson_surprise(nap.Ts(t=np.sort(background)), min_surprise=10.0)) == 0
+
+
+def test_poisson_surprise_max_isi_burst_0_means_twice_the_mean_isi():
+    rng = np.random.default_rng(1)
+    spikes = nap.Ts(
+        t=np.sort(np.concatenate([rng.uniform(0, 300, 300), *[s + np.arange(6) * 0.008 for s in np.arange(10) * 25.0]]))
+    )
+    mean_isi = float(np.mean(np.diff(spikes.t)))
+    auto = detect_bursts_poisson_surprise(spikes, max_isi_burst=0.0)
+    explicit = detect_bursts_poisson_surprise(spikes, max_isi_burst=2 * mean_isi)
+    assert np.allclose(auto.start, explicit.start)
+    assert np.allclose(auto.end, explicit.end)

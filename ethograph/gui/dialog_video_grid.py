@@ -15,7 +15,16 @@ The clips are arranged for comparison, not for browsing:
   default — clips of a similar length share a screen and end around the same
   time) or by *confidence*, which puts the doubtful ones on the first page.
   **Previous / Next clips** page through the class a screenful at a time
-  (greyed out when it fits on one).
+  (greyed out when it fits on one). The **Label** box lists every class with
+  its clip count, to go straight to one (a particular unit, say).
+* **Durations…** opens one duration histogram per state-event class. A click
+  on a histogram shows that class, from the screenful of clips nearest in
+  length to the duration clicked (switching to a duration sort if another
+  was chosen); the span on screen is shaded on the histogram.
+* **Scatter…** opens the burst scatter
+  (:mod:`~ethograph.gui.dialog_burst_scatter`): a click or a region on it
+  **limits the grid** to those bursts — and plays them at once — until **Show all** — paging, sorting
+  and the label box then run over that selection only.
 * A screenful is **not scrollable** — every tile is always visible, because
   playback starts and stops for all of them at once: one Play button, one
   slider spanning the **longest clip on screen** (shorter clips hold their
@@ -44,7 +53,8 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from qtpy.QtCore import Qt, QTimer, Signal
+import pyqtgraph as pg
+from qtpy.QtCore import QPointF, Qt, QTimer, Signal
 from qtpy.QtGui import QBrush, QColor, QImage, QKeySequence, QPainter, QPixmap, QShortcut
 from qtpy.QtWidgets import (
     QApplication,
@@ -66,7 +76,9 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from ethograph.gui.dialog_burst_scatter import BurstScatterDialog, scrolling_combo
 from ethograph.gui.dialog_label_gridview import (
+    DURATION_SORT_ORDERS,
     LOW_CONFIDENCE_COLOR,
     TAGGED_COLOR,
     VIDEO_GRID_SORT_ORDERS,
@@ -83,6 +95,7 @@ from ethograph.gui.dialog_label_gridview import (
     confidence_text,
     curation_panel_of,
     entry_inst,
+    entry_key,
     is_low_confidence,
     keep_method,
     resolve_video_jobs,
@@ -102,6 +115,11 @@ CLIP_MAX_SIDE = 320
 #: Radius of the point-event marker as a fraction of the tile's shorter side.
 MARKER_RADIUS_FRACTION = 0.06
 MARKER_COLOR = "#e53935"
+
+_DUR_BG = "#1a1d21"
+_DUR_COLUMNS = 3
+_DUR_MIN_SIZE = (300, 260)
+_DUR_BINS = 20
 
 _GRID_MIN_WIDTH = 1100
 _GRID_MIN_HEIGHT = 760
@@ -241,6 +259,48 @@ def group_clips(entries: list[ClipEntry], order: str = "duration") -> list[list[
 def paginate(group: list[ClipEntry], per_page: int) -> list[list[ClipEntry]]:
     per_page = max(1, int(per_page))
     return [group[i : i + per_page] for i in range(0, len(group), per_page)] or [[]]
+
+
+def nearest_window_start(group: list[ClipEntry], duration: float, per_page: int) -> int:
+    """Where the screenful of *per_page* clips nearest in length to *duration* starts.
+
+    *group* must be in a duration order (either direction): the nearest clips
+    are then a contiguous run, and the run whose farthest clip is closest wins.
+    """
+    per_page = max(1, int(per_page))
+    if len(group) <= per_page:
+        return 0
+    durations = [e.duration for e in group]
+
+    def spread(start: int) -> float:
+        return max(abs(durations[start] - duration), abs(durations[start + per_page - 1] - duration))
+
+    return min(range(len(group) - per_page + 1), key=spread)
+
+
+@dataclass
+class DurationGroup:
+    """One duration histogram: a state-event class, each label counted once."""
+
+    label_id: int
+    name: str
+    color_hex: str
+    values: list[float]
+
+
+def duration_groups(entries: list[ClipEntry]) -> list[DurationGroup]:
+    """The durations of every state-event class, one label once whatever
+    camera saw it. Point events are left out — their clip length is the
+    window setting, not the behaviour."""
+    rows: dict[tuple, ClipEntry] = {}
+    for entry in entries:
+        if not entry.is_point:
+            rows.setdefault(entry_key(entry), entry)
+    groups: dict[int, DurationGroup] = {}
+    for entry in rows.values():
+        group = groups.setdefault(entry.label_id, DurationGroup(entry.label_id, entry.name, entry.color_hex, []))
+        group.values.append(entry.duration)
+    return [groups[label_id] for label_id in sorted(groups)]
 
 
 def page_duration(page: list[ClipEntry]) -> float:
@@ -531,6 +591,10 @@ class VideoGridPlayer(QWidget):
         #: The clips come from a read-only label source: the grid only plays
         #: and navigates — no verdicts, no rescoring.
         self._read_only = read_only
+        #: Entry keys the grid is limited to (a scatter selection), with the
+        #: text that says so in the header; ``None`` shows every clip.
+        self._subset: set[tuple] | None = None
+        self._subset_text = ""
         self._sort_order = str(self.app_state.get_with_default("video_grid_sort"))
         self._groups = group_clips(entries, self._sort_order)
         self._columns = max(1, columns)
@@ -540,7 +604,9 @@ class VideoGridPlayer(QWidget):
         #: so it decodes ahead and the step there is quick.
         self._prefetch_fn = prefetch_fn
         self._group_idx = 0
-        self._page_idx = 0
+        #: Index in the group of the first clip on screen. Not a page number:
+        #: a duration pick starts a screenful wherever its nearest clips are.
+        self._start = 0
         self._t = 0.0
         self._tiles: list[_ClipTile] = []
         self._timer = QTimer(self)
@@ -548,11 +614,45 @@ class VideoGridPlayer(QWidget):
         self._slider_from_timer = False
         #: The confidence-histogram popup while it is open.
         self._hist_dialog: ConfidenceHistogramsDialog | None = None
+        #: The duration-histogram popup while it is open.
+        self._dur_dialog: DurationHistogramsDialog | None = None
+        #: The burst-scatter popup while it is open.
+        self._scatter_dialog: BurstScatterDialog | None = None
 
         layout = QVBoxLayout(self)
+        head = QHBoxLayout()
         self.header = QLabel("")
         self.header.setStyleSheet("font-weight: bold; font-size: 13px;")
-        layout.addWidget(self.header)
+        head.addWidget(self.header, stretch=1)
+        head.addWidget(QLabel("Label:"))
+        # Every class at a glance, to go straight to one instead of stepping.
+        self.label_combo = scrolling_combo()
+        self.label_combo.setToolTip("Every label class in scope, with its clip count — pick one to show it")
+        self.label_combo.currentIndexChanged.connect(self._on_label_picked)
+        head.addWidget(self.label_combo)
+        self.durations_btn = QPushButton("Durations…")
+        self.durations_btn.setAutoDefault(False)
+        self.durations_btn.setToolTip(
+            "One duration histogram per state-event class. Click a histogram to show\n"
+            "that class's clips nearest in length to the duration clicked."
+        )
+        self.durations_btn.clicked.connect(self._show_durations)
+        head.addWidget(self.durations_btn)
+        self.scatter_btn = QPushButton("Scatter…")
+        self.scatter_btn.setAutoDefault(False)
+        self.scatter_btn.setToolTip(
+            "Every state label as a point, two features of your choice as axes (timing, spikes,\n"
+            "behaviour). Click or draw a region there to limit the grid to those labels."
+        )
+        self.scatter_btn.clicked.connect(self._show_scatter)
+        head.addWidget(self.scatter_btn)
+        self.show_all_btn = QPushButton("Show all")
+        self.show_all_btn.setAutoDefault(False)
+        self.show_all_btn.setToolTip("Drop the scatter selection: show every clip again")
+        self.show_all_btn.clicked.connect(lambda: self.set_subset(None))
+        self.show_all_btn.hide()
+        head.addWidget(self.show_all_btn)
+        layout.addLayout(head)
 
         top = QHBoxLayout()
         # The threshold box exists before the verdict bar: the bar restyles the
@@ -563,7 +663,7 @@ class VideoGridPlayer(QWidget):
         self.threshold_edit.valueChanged.connect(self._on_threshold_changed)
         self.verdict_bar = GridVerdictBar(
             meta,
-            entries_fn=lambda: self._all_entries,
+            entries_fn=self.visible_entries,
             restyle_fn=self._apply_styles,
             flagged_fn=self._flagged_entries,
             read_only=read_only,
@@ -688,6 +788,7 @@ class VideoGridPlayer(QWidget):
             shortcut.setContext(Qt.WidgetWithChildrenShortcut)
             shortcut.activated.connect(lambda d=direction: self.step_frame(d))
 
+        self._fill_label_combo()
         self._sync_hint()
         self.show_page(0, 0)
 
@@ -700,20 +801,15 @@ class VideoGridPlayer(QWidget):
         return self._groups[self._group_idx] if self._groups else []
 
     @property
-    def pages(self) -> list[list[ClipEntry]]:
-        return paginate(self.group, self._per_page)
-
-    @property
     def page(self) -> list[ClipEntry]:
-        pages = self.pages
-        return pages[min(self._page_idx, len(pages) - 1)] if pages else []
+        return self.group[self._start : self._start + self._per_page]
 
     def next_page(self) -> list[ClipEntry]:
         """The page **Next clips** (else **Next label**) would show — what is
         worth decoding ahead. Empty at the very end."""
-        pages = self.pages
-        if self._page_idx + 1 < len(pages):
-            return pages[self._page_idx + 1]
+        ahead = self._start + self._per_page
+        if ahead < len(self.group):
+            return self.group[ahead : ahead + self._per_page]
         if self._group_idx + 1 < len(self._groups):
             return paginate(self._groups[self._group_idx + 1], self._per_page)[0]
         return []
@@ -726,15 +822,76 @@ class VideoGridPlayer(QWidget):
 
     def _step_clips(self, direction: int) -> None:
         """The previous / next screenful of the current label's clips."""
-        target = self._page_idx + direction
-        if 0 <= target < len(self.pages):
-            self.show_page(self._group_idx, target)
+        if direction < 0 and self._start > 0:
+            self.show_page(self._group_idx, max(0, self._start - self._per_page))
+        elif direction > 0 and self._start + self._per_page < len(self.group):
+            self.show_page(self._group_idx, self._start + self._per_page)
 
-    def show_page(self, group_idx: int, page_idx: int) -> None:
-        """Decode (if needed) and lay out one page, rewound to its start."""
+    def visible_entries(self) -> list[ClipEntry]:
+        """The clips the grid runs over: all of them, or the scatter selection."""
+        if self._subset is None:
+            return self._all_entries
+        return [e for e in self._all_entries if entry_key(e) in self._subset]
+
+    def set_subset(self, keys: set[tuple] | None, text: str = "") -> None:
+        """Limit the grid to the labels in *keys* (``None`` shows all again).
+
+        The class on screen stays on screen when the selection still holds
+        clips of it; an empty selection is refused rather than shown.
+        """
+        if keys is not None and not any(entry_key(e) in keys for e in self._all_entries):
+            notify("That selection holds no clips.", severity="warning")
+            return
+        on_screen = self.group[0].label_id if self.group else None
+        self._subset = None if keys is None else set(keys)
+        self._subset_text = text if keys is not None else ""
+        self._groups = group_clips(self.visible_entries(), self._sort_order)
+        self._fill_label_combo()
+        self.show_all_btn.setVisible(self._subset is not None)
+        group_idx = self._group_index_of(on_screen) if on_screen is not None else None
+        self.show_page(group_idx or 0, 0)
+
+    def _fill_label_combo(self) -> None:
+        self.label_combo.blockSignals(True)
+        self.label_combo.clear()
+        for group in self._groups:
+            lead = group[0]
+            self.label_combo.addItem(f"{lead.name} ({lead.label_id}) · {len(group)} clips", lead.label_id)
+        self.label_combo.blockSignals(False)
+        self.label_combo.setEnabled(len(self._groups) > 1)
+
+    def _on_label_picked(self, index: int) -> None:
+        if 0 <= index < len(self._groups) and index != self._group_idx:
+            self.show_page(index, 0)
+
+    def _group_index_of(self, label_id: int) -> int | None:
+        for i, group in enumerate(self._groups):
+            if group[0].label_id == label_id:
+                return i
+        return None
+
+    def show_duration(self, label_id: int, duration: float) -> None:
+        """Show *label_id*'s screenful of clips nearest in length to *duration*.
+
+        Nearest-in-length is only a screenful under a duration order, so any
+        other order gives way to short-to-long; a chosen direction is kept.
+        """
+        if self._sort_order not in DURATION_SORT_ORDERS:
+            self.sort_combo.blockSignals(True)
+            self.sort_combo.setCurrentIndex(self.sort_combo.findData("duration"))
+            self.sort_combo.blockSignals(False)
+            self._set_sort("duration")
+        group_idx = self._group_index_of(label_id)
+        if group_idx is None:
+            return
+        start = nearest_window_start(self._groups[group_idx], duration, self._per_page)
+        self.show_page(group_idx, start)
+
+    def show_page(self, group_idx: int, start: int) -> None:
+        """Decode (if needed) and lay out the clips from *start* on, rewound."""
         self.stop()
         self._group_idx = group_idx
-        self._page_idx = page_idx
+        self._start = max(0, min(start, max(0, len(self.group) - 1)))
         page = self.page
         self._decode_fn(page)
         while self._grid.count():
@@ -761,6 +918,9 @@ class VideoGridPlayer(QWidget):
         self._apply_styles()
         self._sync_header()
         self._sync_nav_buttons()
+        self._sync_durations()
+        if self._scatter_dialog is not None:
+            self._scatter_dialog.mark({entry_key(e) for e in page})
         if self._prefetch_fn is not None:
             ahead = self.next_page()
             if ahead:
@@ -772,7 +932,7 @@ class VideoGridPlayer(QWidget):
             return
         lead = self.group[0]
         kind = "point" if lead.is_point else "state"
-        first = self._page_idx * self._per_page + 1
+        first = self._start + 1
         last = min(len(self.group), first + len(self.page) - 1)
         parts = [f"{lead.name} ({lead.label_id}, {kind})"]
         if len(self._groups) > 1:
@@ -781,6 +941,8 @@ class VideoGridPlayer(QWidget):
             parts.append(f"clips {first}–{last} of {len(self.group)}")
         else:
             parts.append(f"{len(self.group)} clips")
+        if self._subset is not None:
+            parts.append(self._subset_text)
         self.header.setText("  ·  ".join(parts))
         self.header.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {lead.color_hex};")
 
@@ -788,14 +950,16 @@ class VideoGridPlayer(QWidget):
         """Grey out whatever has nowhere to go — one label class, one screenful."""
         self.prev_label_btn.setEnabled(self._group_idx > 0)
         self.next_label_btn.setEnabled(self._group_idx < len(self._groups) - 1)
-        self.prev_clips_btn.setEnabled(self._page_idx > 0)
-        self.next_clips_btn.setEnabled(self._page_idx < len(self.pages) - 1)
+        self.prev_clips_btn.setEnabled(self._start > 0)
+        self.next_clips_btn.setEnabled(self._start + self._per_page < len(self.group))
+        self.label_combo.blockSignals(True)
+        self.label_combo.setCurrentIndex(self._group_idx)
+        self.label_combo.blockSignals(False)
 
     def _sync_hint(self, *_args) -> None:
         click = "Click the clips that are wrong, then Done curates every other label."
         self.hint.setText(
-            f"Clips of one label class, shortest first · ←/→ step a frame · {click}"
-            " Double-click a clip to jump the GUI there."
+            f"Clips of one label class · ←/→ step a frame · {click} Double-click a clip to jump the GUI there."
         )
 
     # ------------------------------------------------------------------
@@ -941,7 +1105,7 @@ class VideoGridPlayer(QWidget):
 
     def _flagged_entries(self) -> list[ClipEntry]:
         threshold = self.threshold_edit.value()
-        return [e for e in self._all_entries if is_low_confidence(e, threshold)]
+        return [e for e in self.visible_entries() if is_low_confidence(e, threshold)]
 
     def _on_threshold_changed(self, value: float) -> None:
         self.app_state.grid_confidence_threshold = float(value)
@@ -953,10 +1117,13 @@ class VideoGridPlayer(QWidget):
         land somewhere arbitrary; the class is what the user was looking at,
         so that is what is kept.
         """
-        self._sort_order = self.sort_combo.currentData()
-        self.app_state.video_grid_sort = self._sort_order
-        self._groups = group_clips(self._all_entries, self._sort_order)
+        self._set_sort(self.sort_combo.currentData())
         self.show_page(min(self._group_idx, max(0, len(self._groups) - 1)), 0)
+
+    def _set_sort(self, order: str) -> None:
+        self._sort_order = order
+        self.app_state.video_grid_sort = order
+        self._groups = group_clips(self.visible_entries(), order)
 
     def _apply_styles(self, *_args) -> None:
         threshold = self.threshold_edit.value()
@@ -1000,6 +1167,63 @@ class VideoGridPlayer(QWidget):
     def _on_histograms_closed(self, *_args) -> None:
         self._hist_dialog = None
 
+    def _show_durations(self) -> None:
+        """Open (or raise) the per-class duration histograms."""
+        if self._dur_dialog is not None:
+            self._dur_dialog.show()
+            self._dur_dialog.raise_()
+            return
+        groups = duration_groups(self._all_entries)
+        if not groups:
+            notify("No state events in scope — point events have no duration to plot.", severity="warning")
+            return
+        self._dur_dialog = DurationHistogramsDialog(groups, parent=self)
+        self._dur_dialog.picked.connect(self.show_duration)
+        self._dur_dialog.destroyed.connect(self._on_durations_closed)
+        self._sync_durations()
+        self._dur_dialog.show()
+
+    def _on_durations_closed(self, *_args) -> None:
+        self._dur_dialog = None
+
+    def _sync_durations(self) -> None:
+        """Shade the span of lengths on screen on the duration histograms."""
+        if self._dur_dialog is None:
+            return
+        page = self.page
+        if not page or page[0].is_point:
+            self._dur_dialog.mark(None, 0.0, 0.0)
+            return
+        lengths = [e.duration for e in page]
+        self._dur_dialog.mark(page[0].label_id, min(lengths), max(lengths))
+
+    def _show_scatter(self) -> None:
+        """Open (or raise) the burst scatter over every state label in the grid."""
+        if self._scatter_dialog is not None:
+            self._scatter_dialog.show()
+            self._scatter_dialog.raise_()
+            return
+        if all(e.is_point for e in self._all_entries):
+            notify("No state events in scope — the scatter plots labels that last.", severity="warning")
+            return
+        self._scatter_dialog = BurstScatterDialog(
+            self.meta, self._all_entries, n_nearest_fn=lambda: self._per_page, parent=self
+        )
+        self._scatter_dialog.selected.connect(self._on_scatter_selected)
+        self._scatter_dialog.cleared.connect(lambda: self.set_subset(None))
+        self._scatter_dialog.destroyed.connect(self._on_scatter_closed)
+        self._scatter_dialog.mark({entry_key(e) for e in self.page})
+        self._scatter_dialog.show()
+
+    def _on_scatter_selected(self, keys: set[tuple], text: str) -> None:
+        """A pick on the scatter shows its clips and plays them at once — picking is asking to watch."""
+        self.set_subset(keys, text)
+        if self._subset == keys:
+            self.play()
+
+    def _on_scatter_closed(self, *_args) -> None:
+        self._scatter_dialog = None
+
     def _on_tile_clicked(self, entry: ClipEntry) -> None:
         """A single click tags the clip's label for review."""
         self.verdict_bar.click(entry)
@@ -1021,6 +1245,111 @@ class VideoGridPlayer(QWidget):
         if nav is None:
             return
         nav.jump_to_label_instance(entry_inst(entry), seek_rel=entry.onset_s, play=False)
+
+
+class DurationHistogramsDialog(QDialog):
+    """How long each state-event class's labels last, one histogram per class.
+
+    Clicking a histogram emits :attr:`picked` with its class and the duration
+    under the cursor; the player answers by showing the clips nearest it and
+    calls :meth:`mark` to shade what is on screen.
+    """
+
+    picked = Signal(int, float)
+
+    def __init__(self, groups: list[DurationGroup], parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Duration histograms")
+        self.setModal(False)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self._groups = list(groups)
+        self._plots: dict[int, pg.PlotWidget] = {}
+        self._regions: dict[int, pg.LinearRegionItem] = {}
+
+        layout = QVBoxLayout(self)
+        bar = QHBoxLayout()
+        bar.addWidget(QLabel("Bins:"))
+        self.bins_spin = QSpinBox()
+        self.bins_spin.setRange(5, 100)
+        self.bins_spin.setValue(_DUR_BINS)
+        self.bins_spin.valueChanged.connect(self._redraw)
+        bar.addWidget(self.bins_spin)
+        bar.addStretch()
+        layout.addLayout(bar)
+        hint = QLabel(
+            "Each label counts once, whatever camera saw it · click a histogram to show that class's "
+            "clips nearest in length to where you clicked · shaded: the lengths on screen."
+        )
+        hint.setStyleSheet("color: grey; font-size: 10px;")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        grid = QGridLayout(container)
+        grid.setSpacing(8)
+        for i, group in enumerate(self._groups):
+            plot = pg.PlotWidget()
+            plot.setBackground(_DUR_BG)
+            plot.setTitle(f"{group.name} ({group.label_id})   n={len(group.values)}", color=group.color_hex)
+            plot.setLabel("bottom", "duration (s)")
+            plot.setLabel("left", "labels")
+            plot.setMinimumSize(*_DUR_MIN_SIZE)
+            plot.setMouseEnabled(x=False, y=False)
+            plot.setMenuEnabled(False)
+            plot.scene().sigMouseClicked.connect(lambda ev, g=group, p=plot: self._on_click(ev, g, p))
+            grid.addWidget(plot, i // _DUR_COLUMNS, i % _DUR_COLUMNS)
+            self._plots[group.label_id] = plot
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
+        self._redraw()
+
+        columns = min(_DUR_COLUMNS, max(1, len(self._groups)))
+        rows = math.ceil(len(self._groups) / _DUR_COLUMNS) if self._groups else 1
+        width = columns * (_DUR_MIN_SIZE[0] + 20) + 40
+        height = rows * (_DUR_MIN_SIZE[1] + 20) + 100
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            width, height = min(width, int(avail.width() * 0.95)), min(height, int(avail.height() * 0.9))
+        self.resize(width, height)
+
+    def _redraw(self, *_args) -> None:
+        bins = self.bins_spin.value()
+        for group in self._groups:
+            plot = self._plots[group.label_id]
+            plot.clear()
+            counts, edges = np.histogram(np.asarray(group.values, dtype=float), bins=bins)
+            centers = (edges[:-1] + edges[1:]) / 2.0
+            plot.addItem(
+                pg.BarGraphItem(
+                    x=centers,
+                    height=counts,
+                    width=(edges[1] - edges[0]) * 0.9,
+                    brush=pg.mkBrush(group.color_hex),
+                    pen=pg.mkPen(None),
+                )
+            )
+            region = pg.LinearRegionItem(movable=False, brush=pg.mkBrush(255, 255, 255, 50))
+            region.setZValue(10)
+            region.hide()
+            plot.addItem(region)
+            self._regions[group.label_id] = region
+
+    def _on_click(self, event, group: DurationGroup, plot: pg.PlotWidget) -> None:
+        point: QPointF = plot.getPlotItem().getViewBox().mapSceneToView(event.scenePos())
+        self.picked.emit(group.label_id, max(0.0, float(point.x())))
+
+    def mark(self, label_id: int | None, lo: float, hi: float) -> None:
+        """Shade ``lo``–``hi`` on *label_id*'s histogram (the lengths on
+        screen) and clear every other; ``None`` clears them all."""
+        for gid, region in self._regions.items():
+            if gid == label_id:
+                region.setRegion((lo, max(hi, lo + 1e-3)))
+                region.show()
+            else:
+                region.hide()
 
 
 # ----------------------------------------------------------------------

@@ -94,10 +94,10 @@ class BurstRasterDialog(QDialog):
         return self.method_combo.currentData()
 
     def _on_method_changed(self, *_args) -> None:
-        """One row per parameter of the picked detector, opening at the detector's own default."""
+        """One row per parameter of the picked detector, opening at the user's last choice for it."""
         for stale in self._burst_inputs.values():
             self._burst_form.removeRow(stale)
-        self._burst_inputs = build_burst_inputs(self._burst_form, self.method())
+        self._burst_inputs = build_burst_inputs(self._burst_form, self.method(), self.app_state)
 
     def burst_rule(self) -> BurstRule:
         """The detector and parameters the form selects."""

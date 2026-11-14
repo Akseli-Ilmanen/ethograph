@@ -74,6 +74,7 @@ class _Labels:
         self._mappings = MAPPINGS
         self.plot_container = None
         self.data_widget = None
+        self.meta_widget = None
         self.selected_labels = 1
         self.current_labels = None
         self.current_labels_pos = None

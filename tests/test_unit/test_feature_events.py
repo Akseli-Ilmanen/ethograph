@@ -12,6 +12,7 @@ from ethograph.labels.feature_events import (
     LOG_ISI,
     MAX_INTERVAL,
     PERCENTILE,
+    POISSON_SURPRISE,
     ZSCORE,
     BurstRule,
     FeatureQuery,
@@ -221,12 +222,13 @@ def test_a_burst_is_cut_where_one_trial_ends_and_the_next_begins():
 def test_a_burst_rule_takes_only_its_detectors_own_parameters():
     rule = BurstRule(LOG_ISI, {"fallback": False})
     # One interval length has no valley: without the fallback there is nothing to find.
-    assert burst_events({"0": nap.Ts(t=100.0 + np.arange(50) * 0.02)}, _SPANS, rule, "crow").empty
+    with pytest.warns(UserWarning, match="No clear minimum"):
+        assert burst_events({"0": nap.Ts(t=100.0 + np.arange(50) * 0.02)}, _SPANS, rule, "crow").empty
 
     with pytest.raises(ValueError, match="no parameter"):
         BurstRule(LOG_ISI, {"max_isi_start": 0.1})
     with pytest.raises(ValueError, match="method must be one of"):
-        BurstRule("poisson_surprise")
+        BurstRule("no_such_detector")
     assert all(burst_parameters(method) for method in BURST_DETECTORS)
 
 
@@ -234,6 +236,24 @@ def test_a_burst_rule_takes_only_its_detectors_own_parameters():
 def test_a_unit_with_no_spikes_in_the_trials_read_has_no_bursts(method):
     burst = np.arange(5) * 0.005
     # Unit "away" fires only outside the trials: cut to them, its train is empty.
-    trains = {"away": nap.Ts(t=50.0 + burst), "here": nap.Ts(t=101.0 + burst)}
+    # Sparse firing around the burst: a detector that reads a burst against the train's own rate
+    # (Poisson surprise) finds none in a train that is nothing but one.
+    background = np.array([103.0, 105.0, 107.0, 109.0, 112.0, 115.0, 118.0])
+    trains = {"away": nap.Ts(t=50.0 + burst), "here": nap.Ts(t=np.sort(np.concatenate([101.0 + burst, background])))}
     events = burst_events(trains, _SPANS, BurstRule(method), "crow")
     assert events["labels"].tolist() == [2]
+
+
+def test_a_detector_estimates_from_the_whole_session_not_the_trials_read():
+    """Steady 20 Hz firing in a trial: ordinary for that trial, but a burst against the unit's sparse session.
+
+    Poisson surprise reads the mean ISI of the train it is given; read over the
+    trial alone the steady firing is the norm and nothing is found.
+    """
+    in_trial = 101.0 + np.arange(100) * 0.05  # 20 Hz for 5 s inside trial "a" (100-110 s)
+    elsewhere = np.arange(300.0, 1300.0, 10.0)  # 0.1 Hz over the rest of the session
+    train = nap.Ts(t=np.sort(np.concatenate([in_trial, elsewhere])), time_support=nap.IntervalSet(0.0, 1400.0))
+    events = burst_events({"0": train}, _SPANS, BurstRule(POISSON_SURPRISE), "crow")
+    assert set(events["trial"]) == {"a"}, "estimated over the session, the 20 Hz stretch is a burst"
+    alone = nap.Ts(t=in_trial, time_support=nap.IntervalSet(100.0, 110.0))
+    assert len(BurstRule(POISSON_SURPRISE).detect(alone)) == 0, "estimated over the trial, it is not"

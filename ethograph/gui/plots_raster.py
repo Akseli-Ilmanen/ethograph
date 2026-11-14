@@ -4,7 +4,8 @@ A tick per spike while the view is sparse, spike counts per pixel once it is
 crowded (``raster_render.choose_render``). Either way only what the viewport
 needs is drawn, rebuilt on a debounce so zoom/pan never floods the Qt event
 queue. Spikes are black on white; units selected in the cluster table are
-drawn in their colours.
+drawn in their colours. Periods of a unit (its bursts, say) can be laid under
+its row as pale bands (``set_intervals``), always behind the spikes.
 """
 
 from __future__ import annotations
@@ -105,6 +106,12 @@ class RasterPlot(BasePlot):
         self._render_label.setPos(4, 2)
         self._render_label.hide()
         self._drawn: _Drawn | None = None
+        # Periods under the rows: one bar item, behind the density image and the ticks.
+        self._interval_item = pg.BarGraphItem(x0=[], x1=[], y0=[], y1=[], pen=pg.mkPen(None))
+        self._interval_item.setZValue(Z_INDEX_TIME_MARKER - 3)
+        self.vb.addItem(self._interval_item, ignoreBounds=True)
+        self._interval_data: tuple[NDArray, NDArray, NDArray, list[tuple]] | None = None
+        self._n_intervals = 0
         #: Pixel width of the ticks last drawn: the user's, or the one picked for the view.
         self.tick_width: int = 1
 
@@ -159,6 +166,7 @@ class RasterPlot(BasePlot):
         self._y_lookup = np.full(max(hw_to_global_y, default=-1) + 1, np.nan, dtype=np.float64)
         for key, y in hw_to_global_y.items():
             self._y_lookup[key] = y
+        self._draw_intervals()
 
         if total_channels > 0:
             margin = spacing * 1.0
@@ -215,6 +223,41 @@ class RasterPlot(BasePlot):
             sorted_entries.append((times[order], rows[order], color))
         self._multi_entries = sorted_entries
         self.refresh()
+
+    def set_intervals(self, starts: NDArray, ends: NDArray, rows: NDArray, colors: list[tuple]) -> None:
+        """Lay a band under row ``rows[i]`` from ``starts[i]`` to ``ends[i]`` (display clock), RGBA ``colors[i]``.
+
+        Replaces whatever bands were there: the raster shows one set of periods at a time.
+        """
+        self._interval_data = (np.asarray(starts, float), np.asarray(ends, float), np.asarray(rows, int), list(colors))
+        self._draw_intervals()
+
+    def clear_intervals(self) -> None:
+        self._interval_data = None
+        self._draw_intervals()
+
+    @property
+    def n_intervals(self) -> int:
+        """How many bands are drawn now (rows the raster does not show have none)."""
+        return self._n_intervals
+
+    def _draw_intervals(self) -> None:
+        if self._interval_data is None:
+            self._interval_item.setOpts(x0=[], x1=[], y0=[], y1=[], brushes=[])
+            self._n_intervals = 0
+            return
+        starts, ends, rows, colors = self._interval_data
+        y, has_row = self._rows_to_y(rows)
+        half = self._channel_spacing * 0.45
+        keep = np.flatnonzero(has_row)
+        self._interval_item.setOpts(
+            x0=starts[keep],
+            x1=ends[keep],
+            y0=y[keep] - half,
+            y1=y[keep] + half,
+            brushes=[pg.mkBrush(*colors[i]) for i in keep],
+        )
+        self._n_intervals = len(keep)
 
     def clear_spike_data(self):
         self._multi_entries = []

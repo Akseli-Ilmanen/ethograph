@@ -505,7 +505,15 @@ GRID_SORT_ORDERS = {
 
 #: The video grid's own list — its clips play together, so their length is an
 #: order in its own right (clips of a similar length end around the same time).
-VIDEO_GRID_SORT_ORDERS = {"duration": "Duration: shortest first", **GRID_SORT_ORDERS}
+VIDEO_GRID_SORT_ORDERS = {
+    "duration": "Duration: short to long",
+    "duration_desc": "Duration: long to short",
+    **GRID_SORT_ORDERS,
+}
+
+#: The sort orders that order by clip length — the ones under which a
+#: duration's nearest clips are a contiguous run of the class.
+DURATION_SORT_ORDERS = ("duration", "duration_desc")
 
 
 def _trial_key(entry):
@@ -533,8 +541,9 @@ def sort_entries(entries: list, order: str) -> list:
 
     if order == "trial":
         return sorted(entries, key=fallback)
-    if order == "duration":
-        return sorted(entries, key=lambda e: (float(getattr(e, "duration", 0.0)), fallback(e)))
+    if order in DURATION_SORT_ORDERS:
+        sign = 1.0 if order == "duration" else -1.0
+        return sorted(entries, key=lambda e: (sign * float(getattr(e, "duration", 0.0)), fallback(e)))
     signed = 1.0 if order == "confidence_asc" else -1.0
     return sorted(entries, key=lambda e: (signed * float(e.confidence), fallback(e)))
 
