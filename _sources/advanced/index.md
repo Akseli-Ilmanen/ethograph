@@ -31,7 +31,7 @@ Detection methods (kinematic, audio, ruptures) and label-boundary correction.
 :link: refinement
 :link-type: doc
 
-Reviewing a DeepLabCut / LightningPose training set, or editing a pose file.
+Training a better pose model with more frames, or editing a pose file.
 :::
 
 :::{grid-item-card} {fas}`play` Video & Audio playback

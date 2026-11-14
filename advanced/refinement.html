@@ -481,9 +481,19 @@
   <section class="tex2jax_ignore mathjax_ignore" id="target-refinement">
 <span id="refinement"></span><h1>Refinement<a class="headerlink" href="#target-refinement" title="Link to this heading">#</a></h1>
 <p>You end up here in one of two situations: you want a <strong>better DeepLabCut or
-LightningPose model</strong>, or you have a pose file and want to <strong>edit it</strong>. The
-first is what Ethograph’s pose-project mode is for, below. For the second,
-Ethograph does not carry an editor of its own — use the movement GUI, which
+LightningPose model</strong>, or you have a pose file and want to <strong>edit it</strong>.</p>
+<section id="a-better-model-label-more-frames">
+<h2>A better model: label more frames<a class="headerlink" href="#a-better-model-label-more-frames" title="Link to this heading">#</a></h2>
+<p>Often the best refinement is not editing predictions frame by frame but
+training a better model on more labelled frames. For that we recommend the
+<a class="reference external" href="https://lightning-pose.readthedocs.io/en/latest/source/user_guide_app/index.html">LightningPose labelling GUI</a>:
+we find it very convenient to use, especially for multi-camera setups, where
+it extracts the same frame from every view and keeps each view’s labels
+paired.</p>
+</section>
+<section id="editing-a-pose-file">
+<h2>Editing a pose file<a class="headerlink" href="#editing-a-pose-file" title="Link to this heading">#</a></h2>
+<p>Ethograph does not carry an editor of its own — use the movement GUI, which
 does it well:</p>
 <ul class="simple">
 <li><p>the <a class="reference external" href="https://movement.neuroinformatics.dev/latest/user_guide/gui.html">movement napari GUI</a>
@@ -493,129 +503,6 @@ built for it, with drag-to-correct and per-keypoint editing;</p></li>
 <li><p><a class="reference external" href="https://github.com/Akseli-Ilmanen/movement/tree/napari-interpolate-edit">this fork</a>
 adds interpolation and bulk editing across a stretch of frames.</p></li>
 </ul>
-<section id="refining-a-deeplabcut-lightningpose-project">
-<span id="refining-a-deeplabcut--lightningpose-project"></span><h2>Refining a DeepLabCut / LightningPose project<a class="headerlink" href="#refining-a-deeplabcut-lightningpose-project" title="Link to this heading">#</a></h2>
-<p><strong>Start page ▸ More tools ▸ Refine DLC / LightningPose training data…</strong> opens a pose
-project <em>folder</em> — the one with <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code> — and turns it
-into two views of the same training set: pick frames worth labelling off the
-model’s own prediction curves, then review the poses on those frames. It works
-on the project the way the pose tool itself lays it out, and writes back only
-what the tool reads: PNGs under <code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code> and the labels table
-beside them.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>The mode is not tied to a model you trained with DeepLabCut: any project
-folder in this layout works. A custom model with no labelling GUI of its own
-can be trained from a DeepLabCut <code class="docutils literal notranslate"><span class="pre">CollectedData</span></code> table you review here — the
-<code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code> folder is the training set, whatever consumes it.</p>
-</div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my_project/
-├── config.yaml                  DeepLabCut: scorer, bodyparts, individuals
-├── CollectedData.csv            LightningPose: one labels table for every video
-├── labeled-data/
-│   └── &lt;video&gt;/                 the training frames of one video
-│       ├── img00012.png
-│       └── CollectedData_&lt;scorer&gt;.csv / .h5      DeepLabCut: one table per video
-└── videos/
-    ├── &lt;video&gt;.mp4
-    └── &lt;video&gt;DLC_&lt;model&gt;.h5    the model's predictions on the whole video
-</pre></div>
-</div>
-<p>The folder must hold both <code class="docutils literal notranslate"><span class="pre">videos/</span></code> and <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>; anything else is
-refused with the missing name. A DeepLabCut config fixes the <strong>scorer</strong> (the
-table has to be <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;</span></code> for <code class="docutils literal notranslate"><span class="pre">create_training_dataset</span></code> to
-find it); a project without one — LightningPose — asks who is labelling, and
-remembers the name.</p>
-<p>The top bar is reduced to the two stages, <strong>Docs</strong> and <strong>Help</strong>. Everything
-about sessions and models is gone because there is no session here: each
-stage is its own folder under <code class="docutils literal notranslate"><span class="pre">&lt;project&gt;/.ethograph/</span></code>, with its own
-alignment, labels and layout, so navigation, the trials table and the
-green/red curated colouring work exactly as in any session.</p>
-<section id="extract-frames">
-<h3>Extract Frames<a class="headerlink" href="#extract-frames" title="Link to this heading">#</a></h3>
-<p>One trial per video in <code class="docutils literal notranslate"><span class="pre">videos/</span></code>, named after the file. A video with
-predictions beside it (<code class="docutils literal notranslate"><span class="pre">&lt;video&gt;DLC_*.h5</span></code>, or <code class="docutils literal notranslate"><span class="pre">video_preds/&lt;video&gt;.csv</span></code>)
-brings them in as features — <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity</span></code>, <code class="docutils literal notranslate"><span class="pre">speed</span></code> —
-and opens with one keypoint’s position (x and y) and speed as line plots
-and every keypoint’s confidence as a heatmap. A video without predictions is still a trial —
-its panels are simply empty.</p>
-<p>The point is to choose frames off those curves rather than by scrubbing.
-The Labels section holds two classes:</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Key</p></th>
-<th class="head"><p>Class</p></th>
-<th class="head"><p>What it marks</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
-<td><p><strong>ExtractSegment</strong> (state)</p></td>
-<td><p>a stretch worth sampling from: two clicks on a plot</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
-<td><p><strong>ExtractFrame</strong> (point)</p></td>
-<td><p>the frame on screen, taken as it is</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Below them, how a segment is sampled — <strong>Uniform</strong> (evenly spaced) or
-<strong>Diverse</strong> (one frame per k-means cluster of thumbnails, DeepLabCut’s
-method) — and the <strong>coverage</strong>, the share of a segment’s frames to take.
-Point events are always taken.</p>
-<p><strong>Extract frames from this video</strong> writes them as <code class="docutils literal notranslate"><span class="pre">img&lt;frame&gt;.png</span></code> into
-<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;/</span></code>, numbered by their index on the video so a second
-extraction from the same video adds to the folder, and adds a row per frame
-to the labels table <strong>prefilled with the model’s prediction</strong> — the frame is
-reviewed, not labelled from nothing. Rows already in the table are kept.</p>
-</section>
-<section id="refine-pose">
-<h3>Refine Pose<a class="headerlink" href="#refine-pose" title="Link to this heading">#</a></h3>
-<p>One trial per folder in <code class="docutils literal notranslate"><span class="pre">labeled-data/</span></code>, the folder standing in for a video:
-its images in natural order, one frame per image, on an image-sequence clock
-(one image per second, so the time axis reads as the image index). No
-features are shown — the selection was made in the other stage, and every
-frame here is to be reviewed.</p>
-<p>The Labels section is the <a class="reference internal" href="../teaching/classroom_pose_estimation/labelling.html"><span class="doc">Label &amp; Edit tab</span></a> of the
-pose estimation dialog with Sequential already armed: every row of the
-table is a solid, draggable label; <code class="docutils literal notranslate"><span class="pre">Tab</span></code> cycles keypoints, <code class="docutils literal notranslate"><span class="pre">1</span></code>–<code class="docutils literal notranslate"><span class="pre">9</span></code> pick the
-individual, <code class="docutils literal notranslate"><span class="pre">Backspace</span></code> deletes, <code class="docutils literal notranslate"><span class="pre">Ctrl+Z</span></code> undoes. There is no fill, no
-detect and no export tab — the table <em>is</em> the export.</p>
-<p><strong>Static keypoints</strong> sit in the panel between the mode buttons and the
-table. Tick a
-landmark that never moves (a table corner, a fixed marker); it turns bold
-and pinned in the list. Label every static keypoint once on any frame, then
-<strong>Propagate static landmarks from this frame to all frames</strong> copies their
-positions on the frame on screen to every frame of the folder, so only the
-moving keypoints are left to place elsewhere. Static keypoints are
-remembered per project: the next folder starts with them in place.</p>
-<section id="saving">
-<h4>Saving<a class="headerlink" href="#saving" title="Link to this heading">#</a></h4>
-<p>Edits go back to <code class="docutils literal notranslate"><span class="pre">CollectedData_&lt;scorer&gt;.csv</span></code> and its <code class="docutils literal notranslate"><span class="pre">.h5</span></code> twin (or the
-root <code class="docutils literal notranslate"><span class="pre">CollectedData.csv</span></code> of a LightningPose project) a few seconds after the
-last change, when you move to another folder, on <strong>Save labels now</strong>, when
-you switch stage and when the window closes — never per drag, since the
-<code class="docutils literal notranslate"><span class="pre">.h5</span></code> rewrite is not free and a half-written table is worse than a stale one.
-The line under the button says whether the table holds unsaved edits.</p>
-</section>
-<section id="checking-a-folder">
-<h4>Checking a folder<a class="headerlink" href="#checking-a-folder" title="Link to this heading">#</a></h4>
-<p><strong>Check labels</strong> writes every frame of the folder with its labels drawn on
-— one colour per keypoint, the config’s skeleton and dot size — into
-<code class="docutils literal notranslate"><span class="pre">labeled-data/&lt;video&gt;_labeled/</span></code>, the folder DeepLabCut’s own <code class="docutils literal notranslate"><span class="pre">check_labels</span></code>
-produces, so the reviewed poses can be looked over in any image viewer. A
-<code class="docutils literal notranslate"><span class="pre">_labeled</span></code> folder is never a trial.</p>
-</section>
-<section id="curation">
-<h4>Curation<a class="headerlink" href="#curation" title="Link to this heading">#</a></h4>
-<p>A folder is a trial, and a trial is curated when every frame of it has been
-reviewed. <strong>Going to the next folder marks this one curated</strong> is on by
-default; <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> curates by hand. The verdict lives in the stage’s
-<code class="docutils literal notranslate"><span class="pre">metadata.tsv</span></code> <code class="docutils literal notranslate"><span class="pre">curated</span></code> column and colours the trial green in the
-navigation, exactly like a curated session trial.</p>
-</section>
-</section>
 </section>
 </section>
 
@@ -666,16 +553,8 @@ navigation, exactly like a curated session trial.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#refining-a-deeplabcut-lightningpose-project">Refining a DeepLabCut / LightningPose project</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#extract-frames">Extract Frames</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#refine-pose">Refine Pose</a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#saving">Saving</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-a-folder">Checking a folder</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#curation">Curation</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-better-model-label-more-frames">A better model: label more frames</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#editing-a-pose-file">Editing a pose file</a></li>
 </ul>
   </nav></div>
 
