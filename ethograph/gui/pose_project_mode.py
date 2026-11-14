@@ -299,6 +299,9 @@ class PoseProjectMode(QObject):
             return
         method = str(self.app_state.pose_extract_method)
         coverage = float(self.app_state.pose_extract_coverage) / 100.0
+        if self.project.multiview:
+            self._extract_multiview(video, segments, points, fps, n_frames, method, coverage)
+            return
         project, table = self.project, self.project.labels_table(video.stem)
         existing = {f for f in (pp.frame_index_of(name) for name in table.read()) if f is not None}
         dialog = BusyProgressDialog("Extracting frames…", parent=self.meta.shell)
@@ -337,6 +340,77 @@ class PoseProjectMode(QObject):
         notify(
             f"{len(outcome.images)} frame(s) in {outcome.folder.parent.name}/{outcome.folder.name}/ — "
             f"labels in {outcome.table.name}. Open Refine Pose to review them.",
+            "info",
+        )
+
+    def _extract_multiview(
+        self,
+        video: pp.TrackedVideo,
+        segments: list[tuple[int, int]],
+        points: list[int],
+        fps: float,
+        n_frames: int,
+        method: str,
+        coverage: float,
+    ) -> None:
+        """The marked frames of this view, taken from every view of its session at once."""
+        from ethograph.gui.dialog_busy_progress import BusyProgressDialog
+        from ethograph.gui.pose_fill import VideoFrameSource
+        from ethograph.io.video_probe import probe_video
+
+        project = self.project
+        assert project is not None
+        try:
+            videos = project.view_videos(video.stem)
+        except pp.PoseProjectError as e:
+            notify_dialog(str(e), "warning", "Extract frames", self.meta.shell)
+            return
+        split = project.view_of(video.stem)
+        assert split is not None
+        probes = {view: probe_video(str(v.video)) for view, v in videos.items()}
+        # A frame index exists in every view only up to the shortest video.
+        shared = min(int(p.nframes) for p in probes.values())
+        existing = pp.multiview_existing(project, split[0])
+        dialog = BusyProgressDialog("Extracting frames from every view…", parent=self.meta.shell)
+
+        def _run() -> pp.MultiviewExtractOutcome:
+            thumbnails = (
+                VideoFrameSource(video.video, fps, n_frames, max_side=64) if method == pp.METHOD_DIVERSE else None
+            )
+            frames = pp.plan_frames(shared, segments, points, method, coverage, frames=thumbnails, exclude=existing)
+            if not frames:
+                raise pp.PoseProjectError("Every marked frame is already in the folders.")
+            predictions: dict[str, dict | None] = {}
+            decoders = {}
+            for view, v in videos.items():
+                rate, count = float(probes[view].fps), int(probes[view].nframes)
+                table = project.labels_table(v.stem)
+                keypoints, individuals, _scorer = table.schema()
+                predictions[view] = (
+                    pp.predictions_by_frame(pp.tracking_dataset(v, rate), keypoints, individuals)
+                    if v.tracking is not None
+                    else None
+                )
+                decoders[view] = VideoFrameSource(v.video, rate, count).__getitem__
+
+            def _progress(fraction: float) -> bool:
+                dialog.setLabelText(f"Writing frames… {int(fraction * 100)}%")
+                dialog.pump_events()
+                return True
+
+            return pp.extract_multiview_frames(project, videos, frames, decoders, shared, predictions, _progress)
+
+        outcome, error = dialog.execute_blocking(_run)
+        if isinstance(error, pp.PoseProjectError):
+            notify(str(error), "warning")
+            return
+        if error is not None:
+            notify_dialog(str(error), "error", "Extract frames", self.meta.shell)
+            return
+        pp.build_refine_session(project)
+        notify(
+            f"{len(outcome.frames)} frame(s) from each of {len(videos)} views of {split[0]} — "
+            f"one row each in {', '.join(p.name for p in outcome.tables.values())}. Open Refine Pose to review them.",
             "info",
         )
 

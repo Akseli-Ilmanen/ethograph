@@ -667,8 +667,7 @@ class CoverPage(QDialog):
 
         Each entry is reachable only from here, yet none is what a visit to the
         start page is for: tags are printed once per rig (and must be, before a
-        single frame exists); a DeepLabCut / LightningPose project is neither a
-        session nor a drop; the exclusion list is a setting that matters only
+        single frame exists); the exclusion list is a setting that matters only
         when a folder holds two ``.nc`` files, and the dialog refusing that
         folder opens it too. So they share a menu at the edge of the project
         bar rather than a row of buttons above the cards.
@@ -676,7 +675,7 @@ class CoverPage(QDialog):
         tools = QToolButton()
         tools.setText("🛠  More tools")
         tools.setPopupMode(QToolButton.InstantPopup)
-        tools.setToolTip("Print tags before recording, refine a pose project, migrate from BORIS, or exclude old files")
+        tools.setToolTip("Print tags before recording, migrate from BORIS, or exclude old files")
         menu = QMenu(tools)
         menu.addSection("Before recording")
         menu.addAction("Print tag sheet…", self._open_tag_sheet)
@@ -695,14 +694,6 @@ class CoverPage(QDialog):
             self._record_action = record
         menu.addAction(record)
         menu.addSection("GUI tools")
-        refine = QAction("Refine DLC / LightningPose training data…", menu)
-        refine.triggered.connect(self._open_pose_project)
-        refine.setToolTip(
-            "Open a DeepLabCut or LightningPose project folder (the one with videos/ and\n"
-            "labeled-data/): pick training frames off the model's curves, then correct\n"
-            "every extracted frame with draggable keypoints."
-        )
-        menu.addAction(refine)
         boris = QAction("Import BORIS projects…", menu)
         boris.triggered.connect(self._open_boris_import)
         boris.setToolTip(
@@ -730,19 +721,6 @@ class CoverPage(QDialog):
         tools.setMenu(menu)
         self._tools_button = tools
         return tools
-
-    def _open_pose_project(self) -> None:
-        """Refine a DeepLabCut / LightningPose project: its root folder becomes the mode."""
-        from ethograph.gui.file_dialogs import browse_open_dir
-
-        root = browse_open_dir(self, self.app_state, "Choose the DeepLabCut / LightningPose project folder")
-        if not root:
-            return
-        mode = getattr(self.shell.meta_widget, "pose_project", None)
-        if mode is None:
-            return
-        if mode.enter(root, parent=self):
-            self._close_if_loaded()
 
     def _open_live_recorder(self) -> None:
         """Record audio live; the window stays open beside this page until it is closed."""

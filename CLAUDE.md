@@ -65,7 +65,6 @@ ethograph/gui/
     pose_two_view.py, pose_second_view.py, triangulation.py                    # a second camera view → 3D
     box_annotate.py, box_overlay.py, dialog_box_labelling.py                    # box labelling (OCTRON)
     dialog_{pose_labelling,skeleton_editor,tag_sheet}.py
-    pose_project_mode.py, widgets_frame_extract.py, dialog_collected_data.py, pose_static_group.py   # pose-project mode
     dialog_{label_gridview,video_grid,label_table,onset_model,curation_workflow}.py
     right_context.py, main_window.py, top_bar.py, cover_page.py, table_filter.py, file_dialogs.py
     nwb_alignment.py, shortcuts.py
@@ -77,7 +76,6 @@ ethograph/labels/
     curation.py, workflow.py  # labeling_method transitions + curation workflows (Qt-free)
     review_metrics.py         # Curated labels vs a run's predictions → per-trial F1, the `difficulty` column (Qt-free)
     octron_project.py         # The OCTRON project folder in OCTRON's own layout
-    pose_project.py           # A DeepLabCut/LightningPose project folder as two sessions (extract frames, refine pose)
     confidence.py             # Every confidence a model writes: frame entropy, segment mean, curve shape
     ml.py, tsv_store.py, predictions.py, crowsetta_format.py, converters.py, export.py
 
@@ -168,7 +166,7 @@ ethograph_launcher.py         # The console scripts' entry, stdlib only: compile
 - **Drag & drop = single-trial loading** (`cover_page.classify_files()`). A dropped `.nc` is always features; a pose overlay only in its video's pixels.
 - **Video features from files attach in memory, matched by video name** (`io/video_feature_files.py`), sampled onto the trial clock through the alignment; never written back by `TrialTree.save`.
 - **Video-container audio is decoded once to a cached WAV** (`io/audio_extract.py`). Never add a video extension to `AUDIO_EXTENSIONS`.
-- **A folder of images is a video** (`io/image_sequence.py`): media existence is `media_exists`, never a bare `isfile`. A pose project is never a backend of its own — it is two ordinary sessions under `<project>/.ethograph/` (`labels/pose_project.py`).
+- **A folder of images is a video** (`io/image_sequence.py`): media existence is `media_exists`, never a bare `isfile`.
 
 ### Pose rendering + keypoint labelling
 

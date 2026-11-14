@@ -13,6 +13,13 @@ The folder the two tools share::
         ├── <video>.mp4
         └── <video>DLC_<model>.h5    (the model's predictions on the whole video)
 
+A LightningPose **multiview** project films each session from several views:
+``project.yaml`` names them (``view_names``), every video is
+``<session>_<view>.mp4``, and each view has its own root
+``CollectedData_<view>.csv``. Row *i* of every view's table is the same frame
+of the same session, so frames are always extracted from every view at once
+(:func:`extract_multiview_frames`) and a table's rows are never reordered.
+
 Ethograph refines such a project in two stages, each an ordinary session
 folder under ``<root>/.ethograph/`` (:func:`session_dir`), so nothing in the
 tool's own layout is touched except ``labeled-data/`` and its labels tables:
@@ -35,10 +42,13 @@ Everything here is Qt-free; the GUI mode lives in ``gui/pose_project_mode.py``.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
+import os
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import natsort
@@ -74,6 +84,10 @@ CONFIG_FILE = "config.yaml"
 #: ``labeled-data/<video>_labeled/`` is a rendering of the labels (``check_labels``), never a trial.
 LABELED_SUFFIX = "_labeled"
 LP_COLLECTED_DATA = "CollectedData.csv"
+#: LightningPose's project file: ``view_names`` makes the project multiview.
+LP_PROJECT_FILE = "project.yaml"
+#: LightningPose pads ``img<frame>.png`` to at least this many digits.
+LP_IMAGE_DIGITS = 4
 DLC_H5_KEY = "df_with_missing"
 
 #: The two label classes of the extract stage, in the session's ``mapping.txt``.
@@ -143,6 +157,37 @@ class PoseProject:
     #: Whether the scorer came from ``config.yaml`` (DeepLabCut fixes it there:
     #: the table has to be ``CollectedData_<scorer>`` for training to find it).
     scorer_from_config: bool = False
+    #: The camera views of a LightningPose multiview project; ``[]`` for a single view.
+    views: list[str] = field(default_factory=list)
+
+    @property
+    def multiview(self) -> bool:
+        return bool(self.views)
+
+    def view_of(self, stem: str) -> tuple[str, str] | None:
+        """``(session, view)`` a ``<session>_<view>`` name splits into, or ``None``."""
+        for view in sorted(self.views, key=len, reverse=True):
+            if stem.endswith(f"_{view}") and len(stem) > len(view) + 1:
+                return stem[: -len(view) - 1], view
+        return None
+
+    def view_table_path(self, view: str) -> Path:
+        return self.root / f"CollectedData_{view}.csv"
+
+    def view_videos(self, stem: str) -> dict[str, TrackedVideo]:
+        """Every view's video of the session *stem* belongs to, in view order; refused when one is missing."""
+        split = self.view_of(stem)
+        if split is None:
+            raise PoseProjectError(f"{stem} ends in none of the views {', '.join(self.views)}")
+        session = split[0]
+        by_stem = {v.stem: v for v in self.videos()}
+        missing = [view for view in self.views if f"{session}_{view}" not in by_stem]
+        if missing:
+            raise PoseProjectError(
+                f"{session} has no video for view(s) {', '.join(missing)} in {self.videos_dir}: "
+                "a multiview frame is extracted from every view"
+            )
+        return {view: by_stem[f"{session}_{view}"] for view in self.views}
 
     @classmethod
     def scorer_of(cls, root: str | Path) -> str | None:
@@ -152,8 +197,9 @@ class PoseProject:
         scorer, _keypoints, _individuals = _schema_from_config(config)
         if scorer:
             return scorer
-        layout = LAYOUT_LIGHTNINGPOSE if (root / LP_COLLECTED_DATA).is_file() else _layout_of_config(config)
-        table = _first_labels_table(root, layout)
+        views = _views_of(root)
+        layout = _layout_of(root, config, views)
+        table = _first_labels_table(root, layout, views)
         return table_scorer(table) or None if table is not None else None
 
     @classmethod
@@ -173,10 +219,13 @@ class PoseProject:
                 f"{root} is not a DeepLabCut / LightningPose project: it has no {' or '.join(missing)} folder"
             )
         config = _read_config(root / CONFIG_FILE)
-        layout = LAYOUT_LIGHTNINGPOSE if (root / LP_COLLECTED_DATA).is_file() else _layout_of_config(config)
+        views = _views_of(root)
+        layout = _layout_of(root, config, views)
         scorer_named, keypoints, individuals = _schema_from_config(config)
         if not keypoints:
-            table = _first_labels_table(root, layout)
+            keypoints = [str(k) for k in (_read_config(root / LP_PROJECT_FILE).get("keypoint_names") or [])]
+        if not keypoints:
+            table = _first_labels_table(root, layout, views)
             if table is not None:
                 scorer_named = scorer_named or table_scorer(table)
                 keypoints, individuals = table_schema(table)
@@ -199,6 +248,7 @@ class PoseProject:
             keypoints=keypoints,
             individuals=individuals,
             scorer_from_config=from_config,
+            views=views,
         )
 
     def videos(self) -> list[TrackedVideo]:
@@ -230,6 +280,21 @@ def _read_config(path: Path) -> dict:
     with open(path, encoding="utf-8") as fh:
         data = yaml.safe_load(fh)
     return data if isinstance(data, dict) else {}
+
+
+def _views_of(root: Path) -> list[str]:
+    """A multiview project's views: ``project.yaml``'s ``view_names``, else the ``CollectedData_<view>.csv`` names."""
+    named = _read_config(root / LP_PROJECT_FILE).get("view_names")
+    if named:
+        return [str(v) for v in named]
+    prefix = "CollectedData_"
+    return natsort.natsorted(p.stem[len(prefix) :] for p in root.glob(f"{prefix}*.csv") if p.is_file())
+
+
+def _layout_of(root: Path, config: dict, views: Sequence[str]) -> str:
+    if views or (root / LP_COLLECTED_DATA).is_file():
+        return LAYOUT_LIGHTNINGPOSE
+    return _layout_of_config(config)
 
 
 def _layout_of_config(config: dict) -> str:
@@ -265,7 +330,11 @@ def _schema_from_tracking(video: TrackedVideo) -> tuple[list[str], list[str]]:
     return keypoints, individuals
 
 
-def _first_labels_table(root: Path, layout: str) -> pd.DataFrame | None:
+def _first_labels_table(root: Path, layout: str, views: Sequence[str] = ()) -> pd.DataFrame | None:
+    for view in views:
+        path = root / f"CollectedData_{view}.csv"
+        if path.is_file():
+            return read_labels_table(path)
     if layout == LAYOUT_LIGHTNINGPOSE:
         path = root / LP_COLLECTED_DATA
         return read_labels_table(path) if path.is_file() else None
@@ -351,9 +420,10 @@ def read_labels_table(path: Path) -> pd.DataFrame:
 
     DeepLabCut's csv and h5 carry the three-level path index; LightningPose's
     single csv keys rows by the relative path string, split here so both read
-    the same. The csv is read without an index column and split afterwards:
-    pandas misreads a row whose every value is empty (a frame not yet
-    labelled) when asked for the index up front.
+    the same. The csv is read with no header at all and the header rows are
+    attached here: asked for a multi-row header, pandas takes a first data
+    row whose every value is empty (a frame not yet labelled) for index
+    names and drops it.
     """
     path = Path(path)
     if path.suffix.lower() == ".h5":
@@ -361,19 +431,24 @@ def read_labels_table(path: Path) -> pd.DataFrame:
         rows = [tuple(str(x) for x in row) if isinstance(row, tuple) else _split_image_path(row) for row in df.index]
     else:
         header_rows = 4 if _is_multi_animal_csv(path) else 3
-        raw = pd.read_csv(path, header=list(range(header_rows)))
-        is_index = [str(col[-1]) not in ("x", "y", "likelihood") for col in raw.columns]
-        index_cols = [col for col, flag in zip(raw.columns, is_index) if flag]
+        raw = pd.read_csv(path, header=None, dtype=str, keep_default_na=False)
+        n_data = sum(1 for line in path.read_text(encoding="utf-8").splitlines()[header_rows:] if line.strip())
+        body = raw.iloc[header_rows:]
+        if len(body) != n_data:
+            raise PoseProjectError(f"{path} has {n_data} data rows but {len(body)} were read")
+        columns = [tuple(str(raw.iat[r, c]) for r in range(header_rows)) for c in range(raw.shape[1])]
+        is_index = [col[-1] not in ("x", "y", "likelihood") for col in columns]
+        index_at = [c for c, flag in enumerate(is_index) if flag]
+        value_at = [c for c, flag in enumerate(is_index) if not flag]
         rows = [
-            tuple(str(x) for x in row) if len(index_cols) == 3 else _split_image_path("/".join(str(x) for x in row))
-            for row in raw[index_cols].itertuples(index=False, name=None)
+            tuple(str(x) for x in row) if len(index_at) == 3 else _split_image_path("/".join(str(x) for x in row))
+            for row in body.iloc[:, index_at].itertuples(index=False, name=None)
         ]
-        df = raw[[col for col, flag in zip(raw.columns, is_index) if not flag]]
-        # The level names sit in the first header cells, which pandas read as a column.
+        values = body.iloc[:, value_at].replace("", np.nan).to_numpy(dtype=np.float64)
         names = (
             ["scorer", "individuals", "bodyparts", "coords"] if header_rows == 4 else ["scorer", "bodyparts", "coords"]
         )
-        df.columns = pd.MultiIndex.from_tuples(list(df.columns), names=names)
+        df = pd.DataFrame(values, columns=pd.MultiIndex.from_tuples([columns[c] for c in value_at], names=names))
     df = df.copy()
     df.index = pd.MultiIndex.from_tuples(rows) if rows else pd.MultiIndex(levels=[[], [], []], codes=[[], [], []])
     df.columns = pd.MultiIndex.from_tuples(
@@ -426,7 +501,9 @@ def labels_rows(
                 columns.append((scorer, individual, keypoint, coord) if multi else (scorer, keypoint, coord))
     level_names = ["scorer", "individuals", "bodyparts", "coords"] if multi else ["scorer", "bodyparts", "coords"]
     images = natsort.natsorted(frames)
-    index = pd.MultiIndex.from_tuples([(LABELED_DATA_DIR, video_stem, image) for image in images])
+    index = pd.MultiIndex.from_tuples(
+        [(LABELED_DATA_DIR, video_stem, image) for image in images], names=[None, None, None]
+    )
     if images:
         values = np.stack([np.asarray(frames[image], dtype=np.float64).reshape(-1) for image in images])
     else:
@@ -453,6 +530,11 @@ class LabelsTable:
 
     @property
     def path(self) -> Path:
+        if self.project.multiview:
+            split = self.project.view_of(self.video_stem)
+            if split is None:
+                raise PoseProjectError(f"{self.video_stem} ends in none of the views {', '.join(self.project.views)}")
+            return self.project.view_table_path(split[1])
         if self.project.layout == LAYOUT_LIGHTNINGPOSE:
             return self.project.root / LP_COLLECTED_DATA
         existing = find_dlc_table(self.folder) if self.folder.is_dir() else None
@@ -535,7 +617,13 @@ class LabelsTable:
             )
         else:
             merged = new
-        merged = merged.loc[natsort.natsorted(merged.index, key=lambda row: "/".join(row))]
+        if self.project.multiview and existing is not None:
+            # Row i of every view's table is one frame: rows keep their place, new ones go last.
+            kept = [row for row in existing.index if row[1] != self.video_stem or row in new.index]
+            known = set(kept)
+            merged = merged.loc[kept + [row for row in new.index if row not in known]]
+        else:
+            merged = merged.loc[natsort.natsorted(merged.index, key=lambda row: "/".join(row))]
         return write_labels_table(merged, self.path, self.project.layout)
 
 
@@ -546,7 +634,7 @@ def write_labels_table(df: pd.DataFrame, path: Path, layout: str) -> list[Path]:
     if layout == LAYOUT_LIGHTNINGPOSE:
         flat = df.copy()
         flat.index = pd.Index(["/".join(row) for row in df.index])
-        flat.to_csv(path)
+        _replace_text(path, flat.to_csv(lineterminator="\n"))
         return [path]
     df.to_csv(path)
     written = [path]
@@ -558,6 +646,14 @@ def write_labels_table(df: pd.DataFrame, path: Path, layout: str) -> list[Path]:
         return written
     written.append(h5)
     return written
+
+
+def _replace_text(path: Path, text: str) -> None:
+    """Write *text* to a temporary file beside *path*, then rename it into place."""
+    tmp = path.with_name(f".{path.name}.tmp")
+    with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
+    os.replace(tmp, path)
 
 
 # ----------------------------------------------------------------------
@@ -935,3 +1031,124 @@ def predictions_by_frame(ds: xr.Dataset, keypoints: Sequence[str], individuals: 
                 continue
             out[:, i, k, :] = values[:, ind_index[individual], kp_index[keypoint], :2]
     return {frame: out[frame] for frame in range(out.shape[0])}
+
+
+def multiview_digits(project: PoseProject, session: str, n_video_frames: int) -> int:
+    """Zero-padding shared by every view: what a view folder already uses, else LightningPose's four."""
+    from ethograph.gui.pose_training_export import frame_digits
+
+    for view in project.views:
+        names = [p.name for p in image_files(project.labeled_dir / f"{session}_{view}")]
+        if any(frame_index_of(name) is not None for name in names):
+            return frame_digits(names, n_video_frames)
+    return max(LP_IMAGE_DIGITS, frame_digits([], n_video_frames))
+
+
+def multiview_existing(project: PoseProject, session: str) -> set[int]:
+    """Frames of *session* any view's table already holds: never extracted twice."""
+    found: set[int] = set()
+    for view in project.views:
+        names = project.labels_table(f"{session}_{view}").read()
+        found.update(f for f in (frame_index_of(name) for name in names) if f is not None)
+    return found
+
+
+@dataclass
+class MultiviewExtractOutcome:
+    folders: dict[str, Path]
+    #: The frames whose rows were appended to every view's table, in row order.
+    frames: list[int]
+    tables: dict[str, Path]
+
+
+def extract_multiview_frames(
+    project: PoseProject,
+    videos: dict[str, TrackedVideo],
+    frames: Sequence[int],
+    decoders: dict[str, Callable[[int], np.ndarray]],
+    n_video_frames: int,
+    predictions: dict[str, dict[int, np.ndarray] | None] | None = None,
+    progress: Callable[[float], bool] | None = None,
+) -> MultiviewExtractOutcome:
+    """Write *frames* from every view's video and append one paired row to every view's table.
+
+    A frame any view already holds is skipped in all of them, and existing
+    rows are left exactly as they are on disk: the new rows are appended as
+    text, so every table gains the same frames in the same order.
+    """
+    from ethograph.gui.pose_training_export import image_name, write_frame_image
+
+    if set(videos) != set(project.views):
+        raise ValueError(f"videos must name every view {project.views}, got {sorted(videos)}")
+    splits = [project.view_of(v.stem) for v in videos.values()]
+    sessions = {split[0] for split in splits if split is not None}
+    if len(sessions) != 1 or None in splits:
+        raise ValueError(f"videos must be one session's views, got {[v.stem for v in videos.values()]}")
+    session = sessions.pop()
+    exclude = multiview_existing(project, session)
+    todo = list(dict.fromkeys(int(f) for f in frames if int(f) not in exclude))
+    digits = multiview_digits(project, session, n_video_frames)
+    folders = {view: project.labeled_dir / videos[view].stem for view in project.views}
+    total = max(1, len(todo) * len(project.views))
+    for v, view in enumerate(project.views):
+        folders[view].mkdir(parents=True, exist_ok=True)
+        for i, frame in enumerate(todo):
+            path = folders[view] / image_name(frame, digits)
+            if not path.is_file():
+                write_frame_image(decoders[view](frame), path)
+            if progress is not None and not progress((v * len(todo) + i + 1) / total):
+                raise InterruptedError("Extraction cancelled")
+    tables: dict[str, Path] = {}
+    for view in project.views:
+        table = project.labels_table(videos[view].stem)
+        by_frame = (predictions or {}).get(view)
+        rows = [(image_name(frame, digits), by_frame.get(frame) if by_frame else None) for frame in todo]
+        if rows:
+            _append_rows(table, rows)
+        tables[view] = table.path
+    return MultiviewExtractOutcome(folders=folders, frames=todo, tables=tables)
+
+
+def _append_rows(table: LabelsTable, rows: Sequence[tuple[str, np.ndarray | None]]) -> None:
+    """Append *rows* (``(image name, pose or None)``) to a LightningPose table as text, the rest untouched."""
+    path = table.path
+    keypoints, individuals, scorer = table.schema()
+    if path.is_file():
+        text = path.read_text(encoding="utf-8")
+        header_rows = 4 if _is_multi_animal_csv(path) else 3
+        header = list(csv.reader(io.StringIO("\n".join(text.splitlines()[:header_rows]))))
+        columns = [tuple(line[c] for line in header) for c in range(1, len(header[0]))]
+        newline = "\r\n" if "\r\n" in text else "\n"
+        if not text.endswith(("\n", "\r")):
+            text += newline
+        before = len(read_labels_table(path))
+    else:
+        template = labels_rows({}, table.video_stem, keypoints, individuals, scorer)
+        columns = [tuple(str(x) for x in col) for col in template.columns]
+        newline = "\n"
+        head = io.StringIO()
+        head_writer = csv.writer(head, lineterminator=newline)
+        for level, name in enumerate(template.columns.names):
+            head_writer.writerow([name, *[col[level] for col in columns]])
+        text = head.getvalue()
+        before = 0
+    names = list(individuals) or [SINGLE_INDIVIDUAL]
+    body = io.StringIO()
+    writer = csv.writer(body, lineterminator=newline)
+    for image, pose in rows:
+        values: list[str] = []
+        for col in columns:
+            individual = col[1] if len(col) == 4 else names[0]
+            keypoint, coord = col[-2], col[-1]
+            value = np.nan
+            if pose is not None and coord in ("x", "y") and keypoint in keypoints and individual in names:
+                value = float(
+                    np.asarray(pose)[names.index(individual), keypoints.index(keypoint), ("x", "y").index(coord)]
+                )
+            values.append("" if np.isnan(value) else repr(value))
+        writer.writerow([f"{LABELED_DATA_DIR}/{table.video_stem}/{image}", *values])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _replace_text(path, text + body.getvalue())
+    after = len(read_labels_table(path))
+    if after != before + len(rows):
+        raise PoseProjectError(f"{path} should hold {before + len(rows)} rows after the append, holds {after}")
