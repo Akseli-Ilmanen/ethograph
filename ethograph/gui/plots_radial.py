@@ -141,18 +141,15 @@ def probe_angular_unit(app_state, feature: str, selections: dict[str, str]) -> s
         if plot_data is None or plot_data.data is None:
             continue
         data = np.asarray(plot_data.data, dtype=float)
-        if data.ndim > 1 and data.shape[1] != 1:
-            # A compass shows ONE heading. Every dim the catalog knows about is
-            # already pinned, so anything still wider than a column has no
-            # single direction to point in.
-            logger.debug("radial: %s selects as %s, not one column", feature, data.shape)
-            return None
-        values = data.ravel()
-        unit = angular_unit(values)
-        if unit is not None:
-            return unit
-        finite = values[np.isfinite(values)]
-        spans.append(float(np.max(finite) - np.min(finite)) if finite.size >= 2 else float("nan"))
+        columns = data.reshape(data.shape[0], -1).T if data.ndim > 1 else data[None, :]
+        # A free dim draws one arrow per value: any column that turns a full
+        # circle makes the whole selection angular.
+        for values in columns:
+            unit = angular_unit(values)
+            if unit is not None:
+                return unit
+            finite = values[np.isfinite(values)]
+            spans.append(float(np.max(finite) - np.min(finite)) if finite.size >= 2 else float("nan"))
     logger.debug("radial: %s spans %s — neither a full 360 nor 2*pi", feature, spans)
     return None
 
@@ -162,11 +159,20 @@ def feature_angular_unit(app_state, feature: str, selections: dict[str, str] | N
 
     Used to gate the "Radial" entry in the add-panel popup, so it is only
     offered for variables that actually carry a direction. With no
-    *selections*, the first value of every dim stands for the feature.
+    *selections*, the feature is angular if any value of any dim is.
     """
-    if selections is None:
-        selections = default_selections(app_state, feature)
-    return probe_angular_unit(app_state, feature, selections)
+    if selections is not None:
+        return probe_angular_unit(app_state, feature, selections)
+    pinned = default_selections(app_state, feature)
+    if not pinned:
+        return probe_angular_unit(app_state, feature, {})
+    # Free each dim in turn (at most one free dim per select), so every value
+    # of every dim is judged, not just the first.
+    for dim in pinned:
+        unit = probe_angular_unit(app_state, feature, {d: v for d, v in pinned.items() if d != dim})
+        if unit is not None:
+            return unit
+    return None
 
 
 class RadialPlot(IndividualPinMixin, QWidget):
@@ -483,7 +489,12 @@ class RadialPlot(IndividualPinMixin, QWidget):
         # The individual is never one of the panel's own selections: it is
         # the pin, or the sidebar's individual for a panel that follows it.
         individual = self.app_state.panel_individual(self)
-        for dim, values in self._feature_dims().items():
+        feature_dims = self._feature_dims()
+        default_free = next(
+            (d for d, v in feature_dims.items() if len(v) > 1 and d not in INDIVIDUAL_DIMS),
+            None,
+        )
+        for dim, values in feature_dims.items():
             if not values:
                 continue
             row = QWidget()
@@ -507,7 +518,12 @@ class RadialPlot(IndividualPinMixin, QWidget):
 
             all_check = QCheckBox("All")
             all_check.setToolTip(f"One arrow per {dim}, colour-coded")
-            is_free = preset is not None and dim not in preset
+            # A new panel shows every arrow of its first multi-value dim; the
+            # individual follows the sidebar/pin unless the user frees it.
+            if preset is None:
+                is_free = dim == default_free
+            else:
+                is_free = dim not in preset
             all_check.setChecked(is_free)
             combo.setEnabled(not is_free)
             all_check.toggled.connect(lambda checked, d=dim: self._on_all_toggled(d, checked))
@@ -730,12 +746,16 @@ class RadialPlot(IndividualPinMixin, QWidget):
         is pinned. Columns whose value is not finite are dropped rather than
         drawn pointing nowhere.
         """
-        if not self._ensure_data() or self._t is None:
+        return self.values_at(self._t) if self._t is not None else []
+
+    def values_at(self, t: float) -> list[tuple[str, float]]:
+        """``(label, degrees)`` per arrow at display time *t* — what :meth:`current_values` reads at the marker."""
+        if not self._ensure_data():
             return []
         time, values = self._time, self._values
         if time is None or values is None or len(time) == 0:
             return []
-        index = int(np.clip(np.searchsorted(time, self._t), 0, len(time) - 1))
+        index = int(np.clip(np.searchsorted(time, t), 0, len(time) - 1))
         row = np.atleast_1d(np.asarray(values)[index])
         labels = self._labels or [""] * row.size
         return [(labels[i], float(v)) for i, v in enumerate(row) if np.isfinite(v)]

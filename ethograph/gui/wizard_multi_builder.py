@@ -68,7 +68,7 @@ def _build_single_trial_ds(
             pose_path = resolve_media_path(state.pose, pose_name)
             if pose_path is None:
                 raise ValueError(f"Trial {trial_id}: pose file {pose_name!r} is not in the pose folder")
-            ds = _load_pose_into_ds(ds, str(pose_path), state.pose)
+            ds = _load_pose_into_ds(ds, str(pose_path), state.pose, fps)
 
     return ds
 
@@ -86,15 +86,24 @@ def _load_pose_into_ds(
     ds: xr.Dataset,
     pose_path: str,
     cfg: ModalityConfig,
+    fps: float | None,
 ) -> xr.Dataset:
+    if not fps:
+        raise ValueError(f"{Path(pose_path).name}: pose needs a frame rate to put its time axis in seconds")
+    # Without fps movement's time coord is the frame index, not seconds.
     pose_ds = load_dataset(
         pose_path,
         source_software=cfg.source_software,
+        fps=fps,
     )
 
     ds.attrs["source_software"] = cfg.source_software
 
     if "position" in pose_ds:
+        # The pose names its own individual dim; the seeded placeholder would
+        # leave the trial with two.
+        if any(d in pose_ds.dims for d in ("individual", "individuals")):
+            ds = ds.drop_vars("individuals", errors="ignore")
         time_coord = pose_ds["position"].coords[next(c for c in pose_ds["position"].coords if "time" in str(c))]
 
         ds.coords["time"] = time_coord

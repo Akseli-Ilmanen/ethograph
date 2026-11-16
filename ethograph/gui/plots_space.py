@@ -8,7 +8,7 @@ the DataLoader so xarray, pynapple, and NWB sources all work.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 import numpy as np
 import pyqtgraph as pg
@@ -27,7 +27,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
+from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH, MULTIDIM_COLORS
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_lineplot import MultiColoredLineItem
 from ethograph.gui.project import project_dir_of
@@ -445,6 +445,21 @@ def _render_3d(gl_widget, X, Y, Z, color_data=None):
     return line
 
 
+def heading_arrow(origin: np.ndarray, angle_deg: float, length: float) -> np.ndarray:
+    """Line-segment pairs ``(6, 3)`` for an arrow from *origin* along *angle_deg* in the x-y plane.
+
+    The angle is counter-clockwise from +x. Shaft, then two barbs at the tip.
+    """
+    theta = np.radians(angle_deg)
+    direction = np.array([np.cos(theta), np.sin(theta), 0.0])
+    tip = origin + length * direction
+    barbs = []
+    for turn in (np.radians(150.0), -np.radians(150.0)):
+        c, s = np.cos(theta + turn), np.sin(theta + turn)
+        barbs.extend((tip, tip + 0.3 * length * np.array([c, s, 0.0])))
+    return np.array([origin, tip, *barbs], dtype=np.float32)
+
+
 def make_space_widget(view_3d: bool) -> tuple[QWidget, bool]:
     """A white-background canvas for spatial data: ``(widget, is_3d)``.
 
@@ -663,6 +678,10 @@ class SpacePlot(IndividualPinMixin, QWidget):
         self._live_points: np.ndarray | None = None
         self._live_colors: list[str] = []
         self._time_marker_item = None
+        # The open radial (heading) panels, set by the owner: each of their
+        # arrows is drawn from the time marker, in the trajectory's x-y plane.
+        self.heading_sources: Callable[[], list] | None = None
+        self._heading_items: list = []
         self._locked_ranges: dict | None = None  # saved axis ranges when lock is on
         # Sliding time window: last marker time + the range last fetched, so
         # playback re-fetches only when the marker leaves the middle half.
@@ -1310,6 +1329,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
             return False
         self._rebuild_plot_widget(view_3d)
         self._time_marker_item = None
+        self._heading_items = []
         return True
 
     def _clear_dynamic_items(self):
@@ -1674,8 +1694,50 @@ class SpacePlot(IndividualPinMixin, QWidget):
                 self._time_marker_item.setZValue(1000)
                 plot_item = self.space_widget.getPlotItem()
                 plot_item.addItem(self._time_marker_item)
+        self._draw_heading_arrows(np.array([x, y, z]), float(time_position))
+
+    def _draw_heading_arrows(self, origin: np.ndarray, t: float) -> None:
+        """One arrow per heading the open radial panels show, from the time marker.
+
+        The angle is read as counter-clockwise from +x in the x-y plane (the
+        ``heading_angle`` convention); in 3D the arrow lies flat at the
+        marker's height. Its length is a fixed share of the trajectory's extent.
+        """
+        self._remove_heading_arrows()
+        sources = self.heading_sources() if self.heading_sources is not None else []
+        angles = [value for radial in sources for _label, value in radial.values_at(t)]
+        if not angles or self._trajectory_pos is None:
+            return
+        X, Y, _Z = self._trajectory_pos
+        extent = max(np.nanmax(X) - np.nanmin(X), np.nanmax(Y) - np.nanmin(Y))
+        if not np.isfinite(extent) or extent <= 0:
+            return
+        is_gl = isinstance(self.space_widget, gl.GLViewWidget)
+        for i, angle in enumerate(angles):
+            shaft = heading_arrow(origin, angle, 0.15 * extent)
+            colour = MULTIDIM_COLORS[i % len(MULTIDIM_COLORS)]
+            if is_gl:
+                rgba = pg.mkColor(colour).getRgbF()
+                item = gl.GLLinePlotItem(pos=shaft, color=rgba, width=3, mode="lines", antialias=True)
+                self.space_widget.addItem(item)
+            else:
+                item = pg.PlotCurveItem(shaft[:, 0], shaft[:, 1], connect="pairs", pen=pg.mkPen(colour, width=3))
+                item.setZValue(1001)
+                self.space_widget.getPlotItem().addItem(item)
+            self._heading_items.append(item)
+
+    def _remove_heading_arrows(self) -> None:
+        if self.space_widget is not None:
+            is_gl = isinstance(self.space_widget, gl.GLViewWidget)
+            for item in self._heading_items:
+                if is_gl:
+                    self.space_widget.removeItem(item)
+                else:
+                    self.space_widget.getPlotItem().removeItem(item)
+        self._heading_items = []
 
     def _remove_time_marker(self):
+        self._remove_heading_arrows()
         if self._time_marker_item is not None and self.space_widget is not None:
             is_gl = isinstance(self.space_widget, gl.GLViewWidget)
             if is_gl:

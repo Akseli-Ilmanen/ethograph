@@ -666,6 +666,9 @@ class TopBarBuilder:
         pose_mgr = getattr(data_widget, "pose_mgr", None)
         if pose_mgr is not None:
             pose_mgr.refresh_skeleton()
+        # Re-saving under the same name fires no skeleton_name change, so the panels re-resolve here.
+        for plot in getattr(data_widget, "skeleton_plots", []):
+            plot._on_skeleton_changed()
 
     def _open_ethograph_home(self):
         """Open the global ``.ethograph`` settings/cache folder in the OS file browser."""

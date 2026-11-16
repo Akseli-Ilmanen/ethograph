@@ -200,7 +200,7 @@ def add_changepoints_to_ds(ds, target_feature, changepoint_name, changepoint_fun
     return ds
 
 
-def add_angle_rgb_to_ds(ds: xr.Dataset, smoothing_params: dict) -> xr.Dataset:
+def add_angle_rgb_to_ds(ds: xr.Dataset, smoothing_params: dict | None) -> xr.Dataset:
     """Compute heading angles and RGB color-coding from 2-D position data.
 
     For each individual/keypoint combination, calculates the heading angle
@@ -218,9 +218,10 @@ def add_angle_rgb_to_ds(ds: xr.Dataset, smoothing_params: dict) -> xr.Dataset:
     ds : xarray.Dataset
         Dataset containing a ``position`` variable with at least
         ``space=["x", "y"]`` and a time dimension.
-    smoothing_params : dict
+    smoothing_params : dict or None
         Keyword arguments forwarded to
-        :func:`scipy.ndimage.gaussian_filter1d` (e.g. ``{"sigma": 3}``).
+        :func:`scipy.ndimage.gaussian_filter1d` (e.g. ``{"sigma": 3}``);
+        ``None`` computes the angles from the positions as they are, without smoothing.
 
     Returns
     -------
@@ -229,9 +230,10 @@ def add_angle_rgb_to_ds(ds: xr.Dataset, smoothing_params: dict) -> xr.Dataset:
     """
     xy_pos = ds.position.sel(space=["x", "y"])
     time_dim = get_time_coord(xy_pos).dims[0]
+    smooth_func = gaussian_filter1d if smoothing_params is not None else None
 
     def process_angles(xy):
-        _, angles = get_angle_rgb(xy, smooth_func=gaussian_filter1d, smoothing_params=smoothing_params)
+        _, angles = get_angle_rgb(xy, smooth_func=smooth_func, smoothing_params=smoothing_params)
         return angles
 
     angles = xr.apply_ufunc(
@@ -248,7 +250,7 @@ def add_angle_rgb_to_ds(ds: xr.Dataset, smoothing_params: dict) -> xr.Dataset:
     ds["angles_cos"] = np.cos(np.deg2rad(angles))
 
     def process_rgb(xy):
-        rgb, _ = get_angle_rgb(xy, smooth_func=gaussian_filter1d, smoothing_params=smoothing_params)
+        rgb, _ = get_angle_rgb(xy, smooth_func=smooth_func, smoothing_params=smoothing_params)
         return rgb
 
     angle_rgb = xr.apply_ufunc(

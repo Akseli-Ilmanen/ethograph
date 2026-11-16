@@ -30,7 +30,7 @@ import json
 import logging
 from pathlib import Path
 
-from qtpy.QtCore import QMimeData, QPoint, Qt
+from qtpy.QtCore import QEvent, QMimeData, QPoint, Qt, QTimer
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -160,8 +160,31 @@ class PlotTypePicker(QDialog):
         self._list.itemActivated.connect(self._accept_item)
         self._list.itemDoubleClicked.connect(self._accept_item)
         layout.addWidget(self._list)
+        self._list.installEventFilter(self)
         self._list.setFocus()
         self.resize(200, 30 + 22 * max(1, len(options)))
+
+    def eventFilter(self, obj, event):
+        """Claim ↑/↓ from the application-wide trial-navigation shortcuts."""
+        if (
+            obj is self._list
+            and event.type() == QEvent.ShortcutOverride
+            and event.key() in (Qt.Key_Up, Qt.Key_Down)
+        ):
+            event.accept()
+            return True
+        return super().eventFilter(obj, event)
+
+    def showEvent(self, event):
+        # Focus set before the dialog is on screen does not stick (the source
+        # popup that opened it has just hidden), so ↑/↓ would go nowhere.
+        super().showEvent(event)
+        QTimer.singleShot(0, self._focus_list)
+
+    def _focus_list(self) -> None:
+        self.raise_()
+        self.activateWindow()
+        self._list.setFocus(Qt.ActiveWindowFocusReason)
 
     def _accept_item(self, item):
         self.choice = item.text()

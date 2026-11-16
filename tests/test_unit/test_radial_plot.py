@@ -212,3 +212,32 @@ def test_screen_angle_places_up_where_the_user_asked(qtbot, up, clockwise, value
     plot.up_spin.setValue(up)
     plot.cw_check.setChecked(clockwise)
     assert plot._screen_angle(value) == pytest.approx(expected)
+
+
+def test_a_heading_only_in_a_later_dim_value_is_still_offered():
+    """Every value of a dim is judged, not just the first."""
+    import xarray as xr
+
+    import ethograph as eto
+    from ethograph.gui.plots_radial import feature_angular_unit
+    from ethograph.io.catalog import XarrayLoader, catalog_from_xarray
+    from ethograph.io.derived import DerivedLoader
+    from ethograph.io.time_model import TimeRange
+
+    time = np.linspace(0.0, 10.0, 1001)
+    still = np.full(1001, 40.0)
+    turning = np.linspace(0.0, 359.0, 1001)
+    ds = xr.Dataset(
+        {"hd": (("time", "keypoints", "individuals"), np.column_stack([still, turning])[:, :, None])},
+        coords={"time": time, "keypoints": ["a", "b"], "individuals": ["x"]},
+        attrs={"trial": 1},
+    )
+    catalog = catalog_from_xarray(ds, eto.from_datasets([ds]))
+
+    class _State:
+        data_loader = DerivedLoader(XarrayLoader(ds, catalog))
+        window_bounds = TimeRange(0.0, 10.0)
+        source_collection = None
+
+    assert feature_angular_unit(_State(), "hd") == "deg"
+    assert feature_angular_unit(_State(), "hd", {"keypoints": "a", "individuals": "x"}) is None

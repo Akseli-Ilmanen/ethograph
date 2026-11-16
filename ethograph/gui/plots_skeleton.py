@@ -23,19 +23,18 @@ its own dock; the individual combo is the panel's pin.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 from qtpy.QtCore import QEvent, Qt, QTimer, Signal
+from qtpy.QtGui import QFont
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -45,9 +44,11 @@ from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WI
 from ethograph.gui.individual_colors import decorate_individual_combo
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_space import auto_camera_3d, draw_reference_geometry, make_space_widget
+from ethograph.gui.pose_controls import PoseControls
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT
 from ethograph.gui.pose_render import pose_color_map, resolve_skeleton_config
 from ethograph.io.catalog import INDIVIDUAL_DIMS, KEYPOINT_DIMS, SPACE_DIM
+from ethograph.skeleton.config import hex_to_rgba
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,12 @@ _STYLE_SETTINGS = (
     "pose_points_use_base",
     "pose_points_base_color",
     "pose_individual_colors",
+    "pose_show_keypoints",
+    "pose_show_skeleton",
+    "pose_show_text",
+    "pose_text_size",
+    "pose_color_by",
+    "pose_hidden_keypoints",
 )
 #: Variables that change the reference geometry drawn behind the pose.
 _REFERENCE_SETTINGS = (
@@ -181,6 +188,8 @@ class PoseFrame:
     point_colors: np.ndarray
     edges: np.ndarray
     edge_colors: np.ndarray
+    #: One text per point: the axis the colours are not saying (the overlay's rule).
+    labels: list[str] = field(default_factory=list)
 
     @property
     def empty(self) -> bool:
@@ -196,6 +205,7 @@ def pose_frame(
     color_by: str,
     color_map: dict[str, tuple],
     connections: list[tuple[str, str]],
+    bone_colors: dict[tuple[str, str], tuple] | None = None,
 ) -> PoseFrame:
     """Build the vertex arrays for one instant.
 
@@ -204,7 +214,9 @@ def pose_frame(
     An edge is drawn when both of its keypoints are drawn, for each individual.
     *connections* are ``(start, end)`` by keypoint name. Bones are black when
     colour encodes the keypoint, and the animal's colour when it encodes the
-    individual — the bones then say whose body it is.
+    individual — the bones then say whose body it is. *bone_colors*, when
+    given, colours a bone by its ``(start, end)`` instead — the skeleton
+    config's colours, exactly as the video overlay draws them.
     """
     n_ind, n_kp, n_dim = coords.shape
     xyz = np.zeros((n_ind, n_kp, 3), dtype=np.float32)
@@ -215,6 +227,7 @@ def pose_frame(
 
     points: list[np.ndarray] = []
     point_colors: list[tuple] = []
+    labels: list[str] = []
     edges: list[np.ndarray] = []
     edge_colors: list[tuple] = []
     by_keypoint = color_by == COLOR_BY_KEYPOINT
@@ -226,18 +239,21 @@ def pose_frame(
             key = keypoint if by_keypoint else individual
             points.append(xyz[i, k])
             point_colors.append(tuple(color_map.get(key, _FALLBACK_RGBA)))
+            labels.append(individual if by_keypoint else keypoint)
         for start, end in connections:
             a, b = kp_index.get(start), kp_index.get(end)
             if a is None or b is None or not (visible[i, a] and visible[i, b]):
                 continue
+            colour = bone_colors.get((start, end), bone) if bone_colors else bone
             edges.extend((xyz[i, a], xyz[i, b]))
-            edge_colors.extend((bone, bone))
+            edge_colors.extend((colour, colour))
 
     return PoseFrame(
         points=np.array(points, dtype=np.float32).reshape(-1, 3),
         point_colors=np.array(point_colors, dtype=np.float32).reshape(-1, 4),
         edges=np.array(edges, dtype=np.float32).reshape(-1, 3),
         edge_colors=np.array(edge_colors, dtype=np.float32).reshape(-1, 4),
+        labels=labels,
     )
 
 
@@ -264,6 +280,49 @@ def skeleton_connections(config: dict | None) -> list[tuple[str, str]]:
     if not config:
         return []
     return [(conn["start"], conn["end"]) for conn in config.get("connections") or []]
+
+
+def skeleton_bone_colors(config: dict | None) -> dict[tuple[str, str], tuple]:
+    """RGBA per ``(start, end)`` bone of a resolved config — the overlay's own edge colours."""
+    if not config:
+        return {}
+    return {
+        (conn["start"], conn["end"]): hex_to_rgba(conn["color"])
+        for conn in config.get("connections") or []
+        if conn.get("color")
+    }
+
+
+def pose_for_editor(app_state) -> tuple[list[str], np.ndarray] | None:
+    """``(keypoints, positions (T, K, 2))`` from the dataset's ``position``, for the skeleton editor.
+
+    The editor is a 2D canvas, so a 3D pose is shown in the projection with the
+    widest spread — the view that separates the keypoints best. The first
+    individual is drawn, at the first value of any extra dim, over the current window.
+    Returns ``None`` when the dataset has no pose variable.
+    """
+    store = getattr(app_state, "data_loader", None)
+    dims = pose_dims(store, POSE_FEATURE)
+    bounds = getattr(app_state, "window_bounds", None)
+    if store is None or dims is None or bounds is None:
+        return None
+    selection = {dim: values[0] for dim, values in dims.extra}
+    if dims.individual_dim:
+        selection[dims.individual_dim] = dims.individuals[0]
+    columns = []
+    for axis in dims.axes:
+        plot_data = store.select(POSE_FEATURE, {**selection, dims.space_dim: axis}, t0=bounds.start_s, t1=bounds.end_s)
+        if plot_data is None or plot_data.data is None:
+            return None
+        columns.append(_keypoint_columns(plot_data, dims))
+    n = min(len(c) for c in columns)
+    cube = np.stack([c[:n] for c in columns], axis=2)  # (T, K, D)
+    if cube.shape[2] > 2:
+        spread = np.nanmax(cube, axis=(0, 1)) - np.nanmin(cube, axis=(0, 1))
+        spread = np.nan_to_num(spread, nan=0.0)
+        pair = sorted(np.argsort(spread)[-2:])
+        cube = cube[:, :, pair]
+    return list(dims.keypoints), cube
 
 
 # ---------------------------------------------------------------------------
@@ -309,6 +368,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._cache_key: tuple | None = None
         self._t: float | None = None
         self._connections: list[tuple[str, str]] | None = None
+        self._bone_colors: dict[tuple[str, str], tuple] = {}
 
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 0)
@@ -353,40 +413,10 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         controls.addLayout(self._extra_rows)
         self._extra_combos: dict[str, QComboBox] = {}
 
-        color_row = QHBoxLayout()
-        color_row.setContentsMargins(0, 0, 0, 0)
-        color_row.setSpacing(6)
-        color_row.addWidget(QLabel("Colour by"))
-        self.color_by_combo = QComboBox()
-        self.color_by_combo.addItem("Keypoint", COLOR_BY_KEYPOINT)
-        self.color_by_combo.addItem("Individual", COLOR_BY_INDIVIDUAL)
-        self.color_by_combo.setToolTip(
-            "Keypoint: one colour per body part, the same on every animal.\n"
-            "Individual: one colour per animal, the same for all its keypoints."
-        )
-        index = self.color_by_combo.findData(getattr(app_state, "pose_color_by", COLOR_BY_KEYPOINT))
-        self.color_by_combo.setCurrentIndex(index if index >= 0 else 0)
-        color_row.addWidget(self.color_by_combo, 1)
-        controls.addLayout(color_row)
-
-        show_row = QHBoxLayout()
-        show_row.setContentsMargins(0, 0, 0, 0)
-        show_row.setSpacing(6)
-        self.cb_points = QCheckBox("Points")
-        self.cb_points.setChecked(True)
-        show_row.addWidget(self.cb_points)
-        self.cb_skeleton = QCheckBox("Skeleton")
-        self.cb_skeleton.setChecked(True)
-        self.cb_skeleton.setToolTip("Draw the bones: the skeleton editor's, the project library's or the NWB Skeleton")
-        show_row.addWidget(self.cb_skeleton)
-        show_row.addStretch()
-        controls.addLayout(show_row)
-
-        controls.addWidget(QLabel("Keypoints"))
-        self.keypoint_list = QListWidget()
-        self.keypoint_list.setMaximumHeight(140)
-        self.keypoint_list.setToolTip("Untick a keypoint to hide it and every bone touching it")
-        controls.addWidget(self.keypoint_list)
+        # The video's own pose controls, synced through app_state: what is
+        # hidden, sized or coloured here is so on the video and every panel.
+        self.pose_controls = PoseControls(app_state, keypoints=lambda: list(self._dims.keypoints) if self._dims else [])
+        controls.addWidget(self.pose_controls)
 
         # --- Canvas: a stable holder; the 2D/3D widget is swapped inside it ---
         self._canvas_holder = QWidget()
@@ -399,6 +429,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._points_item = None
         self._edge_items: dict[tuple, pg.PlotCurveItem] = {}
         self._gl_edges_item = None
+        self._text_items: list = []
 
         self._restyle_timer = QTimer(self)
         self._restyle_timer.setSingleShot(True)
@@ -409,10 +440,6 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self.cb_flip_y.toggled.connect(self._on_view_changed)
         self.individual_combo.currentIndexChanged.connect(self._on_individual_combo)
         self.cb_all_individuals.toggled.connect(self._on_all_individuals)
-        self.color_by_combo.currentIndexChanged.connect(self._draw)
-        self.cb_points.toggled.connect(self._draw)
-        self.cb_skeleton.toggled.connect(self._draw)
-        self.keypoint_list.itemChanged.connect(self._draw)
 
         if app_state is not None:
             for name in _STYLE_SETTINGS:
@@ -552,16 +579,6 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
     def _rebuild_controls(self) -> None:
         """Keypoint list and individual combo from the dims, keeping the user's choices by name."""
         dims = self._dims
-        hidden = self.hidden_keypoints()
-        self.keypoint_list.blockSignals(True)
-        self.keypoint_list.clear()
-        for name in dims.keypoints if dims else ():
-            item = QListWidgetItem(name)
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Unchecked if name in hidden else Qt.CheckState.Checked)
-            self.keypoint_list.addItem(item)
-        self.keypoint_list.blockSignals(False)
-
         current = self.individual_combo.currentText()
         self.individual_combo.blockSignals(True)
         self.individual_combo.clear()
@@ -614,29 +631,15 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         return {name: combo.currentText() for name, combo in self._extra_combos.items() if combo.currentText()}
 
     def hidden_keypoints(self) -> set[str]:
-        return {
-            self.keypoint_list.item(i).text()
-            for i in range(self.keypoint_list.count())
-            if self.keypoint_list.item(i).checkState() == Qt.CheckState.Unchecked
-        }
+        """This pose's keypoints hidden anywhere — the one list every view shares."""
+        hidden = set(self.app_state.pose_hidden_keypoints)
+        return {k for k in self._dims.keypoints if k in hidden} if self._dims else set()
 
     def shown_keypoints(self) -> set[str]:
-        return {
-            self.keypoint_list.item(i).text()
-            for i in range(self.keypoint_list.count())
-            if self.keypoint_list.item(i).checkState() == Qt.CheckState.Checked
-        }
-
-    def set_hidden_keypoints(self, hidden: set[str]) -> None:
-        self.keypoint_list.blockSignals(True)
-        for i in range(self.keypoint_list.count()):
-            item = self.keypoint_list.item(i)
-            item.setCheckState(Qt.CheckState.Unchecked if item.text() in hidden else Qt.CheckState.Checked)
-        self.keypoint_list.blockSignals(False)
-        self._draw()
+        return set(self._dims.keypoints) - self.hidden_keypoints() if self._dims else set()
 
     def color_by(self) -> str:
-        return str(self.color_by_combo.currentData() or COLOR_BY_KEYPOINT)
+        return str(self.app_state.pose_color_by or COLOR_BY_KEYPOINT)
 
     def configure(self, view_3d: bool | None = None) -> None:
         if view_3d is not None:
@@ -731,8 +734,14 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
 
     def _connections_now(self) -> list[tuple[str, str]]:
         if self._connections is None:
-            self._connections = skeleton_connections(resolve_skeleton_config(self.app_state, None))
+            config = resolve_skeleton_config(self.app_state, None)
+            self._connections = skeleton_connections(config)
+            self._bone_colors = skeleton_bone_colors(config)
         return self._connections
+
+    def _bone_colors_now(self) -> dict[tuple[str, str], tuple]:
+        self._connections_now()
+        return self._bone_colors
 
     def _marker_time(self) -> float:
         """The time marker's position on the display clock.
@@ -771,7 +780,9 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         else:
             values = list(dims.keypoints)
         color_map = pose_color_map(self.app_state, color_by, values)
-        anything = self.cb_points.isChecked() or self.cb_skeleton.isChecked()
+        show_points = bool(self.app_state.pose_show_keypoints)
+        show_skeleton = bool(self.app_state.pose_show_skeleton)
+        anything = show_points or show_skeleton or bool(self.app_state.pose_show_text)
         return pose_frame(
             coords[index],
             dims.keypoints,
@@ -779,7 +790,8 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             shown_keypoints=self.shown_keypoints() if anything else set(),
             color_by=color_by,
             color_map=color_map,
-            connections=self._connections_now() if self.cb_skeleton.isChecked() else [],
+            connections=self._connections_now() if show_skeleton else [],
+            bone_colors=self._bone_colors_now(),
         )
 
     def set_time(self, t: float) -> None:
@@ -821,6 +833,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._points_item = None
         self._gl_edges_item = None
         self._edge_items = {}
+        self._text_items = []
         self._canvas_layout.addWidget(self.canvas)
         self.canvas.installEventFilter(self)
         for child in self.canvas.findChildren(QWidget):
@@ -850,19 +863,47 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         if frame is None:
             empty3, empty4 = np.zeros((0, 3), np.float32), np.zeros((0, 4), np.float32)
             frame = PoseFrame(empty3, empty4, empty3, empty4)
-        if not self.cb_points.isChecked():
+        labelled = (frame.points, frame.labels)
+        if not self.app_state.pose_show_keypoints:
             frame.points = frame.points[:0]
             frame.point_colors = frame.point_colors[:0]
         if self.is_3d:
             self._draw_gl(frame)
         else:
             self._draw_2d(frame)
+        points, labels = labelled
+        self._draw_text(points, labels if self.app_state.pose_show_text else [])
 
     def _point_size(self) -> float:
         return float(getattr(self.app_state, "pose_point_size", 10.0) or 10.0)
 
     def _edge_width(self) -> float:
         return float(getattr(self.app_state, "pose_skeleton_width", 2.0) or 2.0)
+
+    def _draw_text(self, points: np.ndarray, labels: list[str]) -> None:
+        """A label beside each point, sized by the shared text size."""
+        for item in self._text_items:
+            if self.is_3d:
+                self.canvas.removeItem(item)
+            else:
+                self.canvas.getPlotItem().removeItem(item)
+        self._text_items = []
+        size = int(getattr(self.app_state, "pose_text_size", 12.0) or 12.0)
+        for point, label in zip(points, labels):
+            if not label:
+                continue
+            if self.is_3d:
+                font = QFont()
+                font.setPointSize(size)
+                item = gl.GLTextItem(pos=point, text=label, color=(255, 255, 255, 255), font=font)
+                self.canvas.addItem(item)
+            else:
+                item = pg.TextItem(label, color=(230, 230, 230), anchor=(0, 1))
+                item.setFont(QFont("", size))
+                item.setPos(float(point[0]), float(point[1]))
+                item.setZValue(20)
+                self.canvas.getPlotItem().addItem(item)
+            self._text_items.append(item)
 
     def _draw_gl(self, frame: PoseFrame) -> None:
         if self._points_item is None:
@@ -921,10 +962,6 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             "view_3d": self.cb_3d.isChecked(),
             "flip_y": self.cb_flip_y.isChecked(),
             "all_individuals": self.cb_all_individuals.isChecked(),
-            "color_by": self.color_by(),
-            "show_points": self.cb_points.isChecked(),
-            "show_skeleton": self.cb_skeleton.isChecked(),
-            "hidden_keypoints": sorted(self.hidden_keypoints()),
             "dims": self.extra_selections(),
             **({"individual": self.pinned_individual} if self.pinned_individual else {}),
         }
@@ -933,21 +970,12 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         for widget, value in (
             (self.cb_flip_y, settings.get("flip_y")),
             (self.cb_all_individuals, settings.get("all_individuals")),
-            (self.cb_points, settings.get("show_points")),
-            (self.cb_skeleton, settings.get("show_skeleton")),
         ):
             if value is not None:
                 widget.blockSignals(True)
                 widget.setChecked(bool(value))
                 widget.blockSignals(False)
         self.individual_combo.setEnabled(not self.cb_all_individuals.isChecked())
-        color_by = settings.get("color_by")
-        if color_by is not None:
-            index = self.color_by_combo.findData(color_by)
-            if index >= 0:
-                self.color_by_combo.blockSignals(True)
-                self.color_by_combo.setCurrentIndex(index)
-                self.color_by_combo.blockSignals(False)
         # Before the combo: the individual combo is built from the pin.
         IndividualPinMixin.set_pinned_individual(self, settings.get("individual"))
         self._rebuild_controls()
@@ -960,5 +988,4 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
                 combo.blockSignals(True)
                 combo.setCurrentIndex(index)
                 combo.blockSignals(False)
-        self.set_hidden_keypoints(set(settings.get("hidden_keypoints") or ()))
         self.configure(view_3d=settings.get("view_3d"))

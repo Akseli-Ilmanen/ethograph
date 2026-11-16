@@ -34,7 +34,7 @@ from qtpy.QtWidgets import (
 import ethograph as eto
 from ethograph.gui.file_dialogs import browse_open_dir
 from ethograph.gui.notify import notify, notify_dialog
-from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT, individual_color_map
+from ethograph.gui.pose_convert import individual_color_map
 from ethograph.io.catalog import INDIVIDUAL_DIMS, ComboSpec, XarrayLoader, catalog_from_xarray
 from ethograph.io.data_loader import AmbiguousSessionError, load_features_dataset
 from ethograph.io.derived import DerivedLoader
@@ -60,13 +60,13 @@ from .app_constants import (
     SESSION_LABELS_MAX_DRAWN,
     SIDEBAR_AFTER_LOAD_WIDTH_RATIO,
 )
-from .dialog_keypoint_filter import KeypointFilterDialog
 from .individual_colors import decorate_individual_combo
 from .make_pretty import clean_display_labels
 from .plots_radial import RadialPlot
 from .plots_skeleton import SkeletonPlot
 from .plots_space import SpacePlot
 from .plots_spectrogram import SharedAudioCache
+from .pose_controls import PoseControls
 from .pose_render import (
     PoseDisplayManager,
     strip_common_prefix,
@@ -425,149 +425,23 @@ class DataPanel(QWidget):
         pose_layout.setContentsMargins(4, 4, 4, 4)
         self.pose_groupbox.setLayout(pose_layout)
 
-        # ── Filter keypoints ──
-        filter_box = QGroupBox("Filter keypoints")
-        filter_row = QHBoxLayout()
-        filter_row.setSpacing(5)
-        filter_row.setContentsMargins(4, 4, 4, 4)
-        filter_row.addWidget(QLabel("Filter below confidence:"))
-        self.pose_hide_threshold_spin = QDoubleSpinBox()
-        self.pose_hide_threshold_spin.setObjectName("pose_hide_threshold_spin")
-        self.pose_hide_threshold_spin.setRange(0.0, 1.0)
-        self.pose_hide_threshold_spin.setSingleStep(0.1)
-        self.pose_hide_threshold_spin.setDecimals(1)
-        self.pose_hide_threshold_spin.setFixedWidth(60)
-        self.pose_hide_threshold_spin.setToolTip(
-            "Hide pose markers below this confidence (0.0-1.0). A skeleton edge "
-            "is also hidden on any frame where one of its two keypoints is hidden."
-        )
-        self.pose_hide_threshold_spin.setValue(self.app_state.pose_hide_threshold)
-        filter_row.addWidget(self.pose_hide_threshold_spin)
-        self.filter_keypoints_btn = QPushButton("Filter individual keypoints…")
-        self.filter_keypoints_btn.setToolTip(
-            "Open a popup to show/hide individual keypoints. Hidden keypoints "
-            "also drop any skeleton edge touching them."
-        )
-        filter_row.addWidget(self.filter_keypoints_btn)
-        filter_row.addStretch()
-        filter_box.setLayout(filter_row)
-        pose_layout.addWidget(filter_box)
-
-        # ── Design ──
-        design_box = QGroupBox("Design")
-        design_vbox = QVBoxLayout()
-        design_vbox.setSpacing(4)
-        design_vbox.setContentsMargins(4, 4, 4, 4)
-        grid = QGridLayout()
-        grid.setSpacing(5)
-        for col, header in enumerate(["", "Show", "Show text", "Size / width", "Base colour"]):
-            grid.addWidget(QLabel(f"<b>{header}</b>" if header else ""), 0, col)
-
-        # Points row
-        grid.addWidget(QLabel("Points"), 1, 0)
-        self.pose_show_keypoints_checkbox = QCheckBox()
-        self.pose_show_keypoints_checkbox.setChecked(self.app_state.pose_show_keypoints)
-        self.pose_show_keypoints_checkbox.setToolTip("Show/hide keypoint markers (skeleton edges are unaffected)")
-        grid.addWidget(self.pose_show_keypoints_checkbox, 1, 1)
-        self.pose_show_text_checkbox = QCheckBox()
-        self.pose_show_text_checkbox.setChecked(self.app_state.pose_show_text)
-        self.pose_show_text_checkbox.setToolTip("Show keypoint/individual labels on pose markers")
-        grid.addWidget(self.pose_show_text_checkbox, 1, 2)
-        self.pose_point_size_spin = QDoubleSpinBox()
-        self.pose_point_size_spin.setObjectName("pose_point_size_spin")
-        self.pose_point_size_spin.setRange(1.0, 50.0)
-        self.pose_point_size_spin.setSingleStep(1.0)
-        self.pose_point_size_spin.setDecimals(0)
-        self.pose_point_size_spin.setFixedWidth(55)
-        self.pose_point_size_spin.setValue(self.app_state.pose_point_size)
-        grid.addWidget(self.pose_point_size_spin, 1, 3)
-        points_color_cell = QHBoxLayout()
-        points_color_cell.setSpacing(2)
-        self.pose_points_color_btn = QPushButton()
-        self.pose_points_color_btn.setObjectName("pose_points_color_btn")
-        self.pose_points_color_btn.setFixedWidth(40)
-        self.pose_points_color_btn.setToolTip("Uniform colour for all pose points")
-        self.pose_points_color_btn.setIcon(_color_swatch_icon(self.app_state.pose_points_base_color or "#FF3333"))
-        points_color_cell.addWidget(self.pose_points_color_btn)
-        self.pose_points_use_base_checkbox = QCheckBox()
-        self.pose_points_use_base_checkbox.setChecked(self.app_state.pose_points_use_base)
-        self.pose_points_use_base_checkbox.setToolTip(
-            "Checked: all points use the base colour.\nUnchecked: per-keypoint colours (turbo colormap)."
-        )
-        points_color_cell.addWidget(self.pose_points_use_base_checkbox)
-        grid.addLayout(points_color_cell, 1, 4)
-
-        # Skeleton row
-        grid.addWidget(QLabel("Skeleton"), 2, 0)
-        self.pose_show_skeleton_checkbox = QCheckBox()
-        self.pose_show_skeleton_checkbox.setChecked(self.app_state.pose_show_skeleton)
-        self.pose_show_skeleton_checkbox.setToolTip(
-            "Draw skeleton edges (from the NWB ndx-pose Skeleton or the skeleton editor)"
-        )
-        grid.addWidget(self.pose_show_skeleton_checkbox, 2, 1)
-        self.pose_skeleton_width_spin = QDoubleSpinBox()
-        self.pose_skeleton_width_spin.setObjectName("pose_skeleton_width_spin")
-        self.pose_skeleton_width_spin.setRange(0.5, 20.0)
-        self.pose_skeleton_width_spin.setSingleStep(0.5)
-        self.pose_skeleton_width_spin.setDecimals(1)
-        self.pose_skeleton_width_spin.setFixedWidth(55)
-        self.pose_skeleton_width_spin.setValue(self.app_state.pose_skeleton_width)
-        grid.addWidget(self.pose_skeleton_width_spin, 2, 3)
-        skeleton_color_cell = QHBoxLayout()
-        skeleton_color_cell.setSpacing(2)
-        self.pose_skeleton_color_btn = QPushButton()
-        self.pose_skeleton_color_btn.setObjectName("pose_skeleton_color_btn")
-        self.pose_skeleton_color_btn.setFixedWidth(40)
-        self.pose_skeleton_color_btn.setToolTip("Uniform colour for all skeleton edges")
-        self.pose_skeleton_color_btn.setIcon(_color_swatch_icon(self.app_state.skeleton_base_color or "#00CC66"))
-        skeleton_color_cell.addWidget(self.pose_skeleton_color_btn)
-        self.pose_skeleton_use_base_checkbox = QCheckBox()
-        self.pose_skeleton_use_base_checkbox.setChecked(self.app_state.skeleton_use_base)
-        self.pose_skeleton_use_base_checkbox.setToolTip(
-            "Checked: all edges use the base colour.\n"
-            "Unchecked: per-edge custom colours from the skeleton editor / NWB."
-        )
-        skeleton_color_cell.addWidget(self.pose_skeleton_use_base_checkbox)
-        grid.addLayout(skeleton_color_cell, 2, 4)
-        grid.setColumnStretch(5, 1)
-        design_vbox.addLayout(grid)
-        speed_hint = QLabel("Tip: navigating between trials is faster with points and skeleton hidden.")
-        speed_hint.setStyleSheet("color: grey; font-size: 10px;")
-        speed_hint.setWordWrap(True)
-        design_vbox.addWidget(speed_hint)
-
-        color_by_row = QHBoxLayout()
-        color_by_row.addWidget(QLabel("Colour by"))
-        self.pose_color_by_combo = QComboBox()
-        self.pose_color_by_combo.setObjectName("pose_color_by_combo")
-        self.pose_color_by_combo.addItem("Keypoint", COLOR_BY_KEYPOINT)
-        self.pose_color_by_combo.addItem("Individual", COLOR_BY_INDIVIDUAL)
-        self.pose_color_by_combo.setToolTip(
-            "Keypoint: one colour per body part, the same on every animal.\n"
-            "Individual: one colour per animal, the same for all its keypoints.\n\n"
-            "Text labels carry whichever axis the colours are not saying.\n"
-            "Also styles the keypoint labelling canvas."
-        )
-        index = self.pose_color_by_combo.findData(self.app_state.pose_color_by)
-        self.pose_color_by_combo.setCurrentIndex(index if index >= 0 else 0)
-        color_by_row.addWidget(self.pose_color_by_combo)
-        color_by_row.addStretch()
-        design_vbox.addLayout(color_by_row)
-
-        text_size_row = QHBoxLayout()
-        text_size_row.addWidget(QLabel("Text size"))
-        self.pose_text_size_spin = QDoubleSpinBox()
-        self.pose_text_size_spin.setObjectName("pose_text_size_spin")
-        self.pose_text_size_spin.setRange(4.0, 72.0)
-        self.pose_text_size_spin.setSingleStep(1.0)
-        self.pose_text_size_spin.setDecimals(0)
-        self.pose_text_size_spin.setFixedWidth(55)
-        self.pose_text_size_spin.setValue(self.app_state.pose_text_size)
-        text_size_row.addWidget(self.pose_text_size_spin)
-        text_size_row.addStretch()
-        design_vbox.addLayout(text_size_row)
-        design_box.setLayout(design_vbox)
-        pose_layout.addWidget(design_box)
+        # Filter + Design: the one pose-controls widget every pose surface shows.
+        self.pose_controls = PoseControls(self.app_state, keypoints=list)
+        pose_layout.addWidget(self.pose_controls)
+        controls = self.pose_controls
+        self.pose_hide_threshold_spin = controls.pose_hide_threshold_spin
+        self.filter_keypoints_btn = controls.filter_keypoints_btn
+        self.pose_show_keypoints_checkbox = controls.pose_show_keypoints_checkbox
+        self.pose_show_text_checkbox = controls.pose_show_text_checkbox
+        self.pose_point_size_spin = controls.pose_point_size_spin
+        self.pose_points_color_btn = controls.pose_points_color_btn
+        self.pose_points_use_base_checkbox = controls.pose_points_use_base_checkbox
+        self.pose_show_skeleton_checkbox = controls.pose_show_skeleton_checkbox
+        self.pose_skeleton_width_spin = controls.pose_skeleton_width_spin
+        self.pose_skeleton_color_btn = controls.pose_skeleton_color_btn
+        self.pose_skeleton_use_base_checkbox = controls.pose_skeleton_use_base_checkbox
+        self.pose_color_by_combo = controls.pose_color_by_combo
+        self.pose_text_size_spin = controls.pose_text_size_spin
 
         # ── Actions ── (the skeleton itself is the project's: Settings ▸ Edit skeleton)
 
@@ -859,21 +733,25 @@ class DataWidget(QWidget):
         self.pose_mgr = PoseDisplayManager(self.shell.video_area, self.app_state, self.video_mgr, self)
         self.app_state.keypoints_changed.connect(self.populate_keypoints)
 
-        panel.pose_hide_threshold_spin.valueChanged.connect(self._on_pose_hide_threshold_changed)
+        # The pose controls write app_state from whichever view they sit in; the
+        # video overlay follows the variables, not any one copy's widgets.
+        panel.pose_controls.set_keypoints_source(
+            lambda: self._keypoint_names or (self.pose_mgr.all_keypoints if self.pose_mgr else [])
+        )
+        state = self.app_state
+        state.pose_hide_threshold_changed.connect(self._on_pose_hide_threshold_changed)
+        state.pose_hidden_keypoints_changed.connect(lambda _v: self.update_pose())
+        state.pose_show_keypoints_changed.connect(lambda _v: self.pose_mgr.apply_pose_style())
+        state.pose_show_text_changed.connect(self._on_pose_text_toggled)
+        state.pose_point_size_changed.connect(lambda _v: self.pose_mgr.apply_pose_style())
+        state.pose_text_size_changed.connect(self._on_pose_text_size_changed)
+        state.pose_show_skeleton_changed.connect(lambda _v: self.update_pose())
+        state.pose_skeleton_width_changed.connect(self._on_pose_skeleton_width_changed)
+        state.pose_color_by_changed.connect(self._on_pose_color_by_changed)
+        for name in ("skeleton_base_color", "skeleton_use_base", "pose_points_base_color", "pose_points_use_base"):
+            getattr(state, f"{name}_changed").connect(lambda _v: self.pose_mgr.refresh_skeleton())
         self.overlay_feature_combo = panel.overlay_feature_combo
         self.overlay_feature_combo.currentTextChanged.connect(self._on_overlay_feature_changed)
-        panel.pose_show_keypoints_checkbox.stateChanged.connect(self._on_pose_show_keypoints_toggled)
-        panel.filter_keypoints_btn.clicked.connect(self._on_filter_keypoints_clicked)
-        panel.pose_show_text_checkbox.stateChanged.connect(self._on_pose_text_toggled)
-        panel.pose_point_size_spin.valueChanged.connect(self._on_pose_point_size_changed)
-        panel.pose_text_size_spin.valueChanged.connect(self._on_pose_text_size_changed)
-        panel.pose_show_skeleton_checkbox.stateChanged.connect(self._on_pose_show_skeleton_toggled)
-        panel.pose_skeleton_width_spin.valueChanged.connect(self._on_pose_skeleton_width_changed)
-        panel.pose_skeleton_color_btn.clicked.connect(self._on_skeleton_color_clicked)
-        panel.pose_skeleton_use_base_checkbox.stateChanged.connect(self._on_skeleton_use_base_toggled)
-        panel.pose_points_color_btn.clicked.connect(self._on_points_color_clicked)
-        panel.pose_points_use_base_checkbox.stateChanged.connect(self._on_points_use_base_toggled)
-        panel.pose_color_by_combo.currentIndexChanged.connect(self._on_pose_color_by_changed)
         panel.label_keypoints_btn.clicked.connect(self.open_keypoint_labelling)
         panel.bbox_hide_threshold_spin.valueChanged.connect(self._on_bbox_hide_threshold_changed)
         panel.bbox_show_text_checkbox.stateChanged.connect(self._on_bbox_text_toggled)
@@ -944,50 +822,44 @@ class DataWidget(QWidget):
     def get_hidden_keypoints(self) -> set[str]:
         return set(self.app_state.pose_hidden_keypoints)
 
-    def _on_pose_show_keypoints_toggled(self, state: int):
-        self.app_state.pose_show_keypoints = self.pose_show_keypoints_checkbox.isChecked()
-        self.pose_mgr.apply_pose_style()
-
-    def _on_filter_keypoints_clicked(self):
-        names = self._keypoint_names or (self.pose_mgr.all_keypoints if self.pose_mgr else [])
-        if not names:
-            notify("No pose keypoints loaded yet.", "warning")
-            return
-        dialog = KeypointFilterDialog(names, self.get_hidden_keypoints(), parent=self)
-        dialog.hidden_changed.connect(self._on_hidden_keypoints_changed)
-        dialog.exec_()
-
-    def _on_hidden_keypoints_changed(self, hidden: set):
-        self.app_state.pose_hidden_keypoints = sorted(str(n) for n in hidden)
-        self.update_pose()
+    # ── app_state → the video overlay (and the bounding-box twins of the pose widgets) ──
 
     def _on_pose_hide_threshold_changed(self, value: float):
-        self.app_state.pose_hide_threshold = value
         _sync_spin(self.bbox_hide_threshold_spin, value)
         self.update_pose()
 
-    # ── Bounding boxes section: the same state as the Pose section's widgets ──
+    def _on_pose_text_toggled(self, value: bool):
+        _sync_check(self.bbox_show_text_checkbox, bool(value))
+        self.pose_mgr.apply_pose_style()
+
+    def _on_pose_text_size_changed(self, value: float):
+        _sync_spin(self.bbox_text_size_spin, value)
+        self.pose_mgr.apply_pose_style()
+
+    def _on_pose_skeleton_width_changed(self, value: float):
+        _sync_spin(self.bbox_line_width_spin, value)
+        self.pose_mgr.apply_skeleton_style()
+
+    def _on_pose_color_by_changed(self, _value: str):
+        """Switch the colour axis — for the overlay and any open labelling canvas."""
+        self.update_pose()
+        dialog = getattr(self, "_keypoint_labelling_dialog", None)
+        if dialog is not None:
+            dialog.apply_color_by()
+
+    # ── Bounding boxes section: writes the same variables as the pose controls ──
 
     def _on_bbox_hide_threshold_changed(self, value: float):
         self.app_state.pose_hide_threshold = value
-        _sync_spin(self.pose_hide_threshold_spin, value)
-        self.update_pose()
 
     def _on_bbox_text_toggled(self, state: int):
-        checked = self.bbox_show_text_checkbox.isChecked()
-        self.app_state.pose_show_text = checked
-        _sync_check(self.pose_show_text_checkbox, checked)
-        self.pose_mgr.apply_pose_style()
+        self.app_state.pose_show_text = self.bbox_show_text_checkbox.isChecked()
 
     def _on_bbox_text_size_changed(self, value: float):
         self.app_state.pose_text_size = value
-        _sync_spin(self.pose_text_size_spin, value)
-        self.pose_mgr.apply_pose_style()
 
     def _on_bbox_line_width_changed(self, value: float):
         self.app_state.pose_skeleton_width = value
-        _sync_spin(self.pose_skeleton_width_spin, value)
-        self.pose_mgr.apply_skeleton_style()
 
     def populate_bbox_colors(self, individuals: list[str]) -> None:
         """One swatch per individual, in the dataset's order, showing the
@@ -1024,67 +896,6 @@ class DataWidget(QWidget):
         if actor is not None:
             decorate_individual_combo(actor, self.app_state)
         self._populate_receiver_combo()
-
-    def _on_pose_text_toggled(self, state: int):
-        self.app_state.pose_show_text = self.pose_show_text_checkbox.isChecked()
-        _sync_check(self.bbox_show_text_checkbox, self.app_state.pose_show_text)
-        self.pose_mgr.apply_pose_style()
-
-    def _on_pose_color_by_changed(self, _index: int):
-        """Switch the colour axis — for the overlay and any open labelling canvas.
-
-        One setting styles both, so the animal that is blue on the canvas is the
-        animal that is blue on the pose overlay.
-        """
-        self.app_state.pose_color_by = self.pose_color_by_combo.currentData()
-        self.update_pose()
-        dialog = getattr(self, "_keypoint_labelling_dialog", None)
-        if dialog is not None:
-            dialog.apply_color_by()
-
-    def _on_pose_point_size_changed(self, value: float):
-        self.app_state.pose_point_size = value
-        self.pose_mgr.apply_pose_style()
-
-    def _on_pose_text_size_changed(self, value: float):
-        self.app_state.pose_text_size = value
-        _sync_spin(self.bbox_text_size_spin, value)
-        self.pose_mgr.apply_pose_style()
-
-    def _on_pose_show_skeleton_toggled(self, state: int):
-        self.app_state.pose_show_skeleton = self.pose_show_skeleton_checkbox.isChecked()
-        self.update_pose()
-
-    def _on_pose_skeleton_width_changed(self, value: float):
-        self.app_state.pose_skeleton_width = value
-        _sync_spin(self.bbox_line_width_spin, value)
-        self.pose_mgr.apply_skeleton_style()
-
-    def _on_skeleton_color_clicked(self):
-        current = self.app_state.skeleton_base_color or "#00CC66"
-        color = QColorDialog.getColor(QColor(current), self, "Skeleton base colour")
-        if not color.isValid():
-            return
-        self.app_state.skeleton_base_color = color.name().upper()
-        self.pose_skeleton_color_btn.setIcon(_color_swatch_icon(self.app_state.skeleton_base_color))
-        self.pose_mgr.refresh_skeleton()
-
-    def _on_skeleton_use_base_toggled(self, state: int):
-        self.app_state.skeleton_use_base = self.pose_skeleton_use_base_checkbox.isChecked()
-        self.pose_mgr.refresh_skeleton()
-
-    def _on_points_color_clicked(self):
-        current = self.app_state.pose_points_base_color or "#FF3333"
-        color = QColorDialog.getColor(QColor(current), self, "Points base colour")
-        if not color.isValid():
-            return
-        self.app_state.pose_points_base_color = color.name().upper()
-        self.pose_points_color_btn.setIcon(_color_swatch_icon(self.app_state.pose_points_base_color))
-        self.pose_mgr.refresh_skeleton()
-
-    def _on_points_use_base_toggled(self, state: int):
-        self.app_state.pose_points_use_base = self.pose_points_use_base_checkbox.isChecked()
-        self.pose_mgr.refresh_skeleton()
 
     def open_keypoint_labelling(self):
         """Open (or raise) the keypoint labelling dialog.
@@ -3938,6 +3749,7 @@ class DataWidget(QWidget):
         sp.closed.connect(self.remove_space_plot)
         sp.view_changed.connect(self._on_space_plot_view_changed)
         sp.pin_changed.connect(self._on_panel_pinned_itself)
+        sp.heading_sources = lambda: self.radial_plots
         self.space_plots.append(sp)
         # Canonical objectName BEFORE the dock exists: dock creation tries
         # shell.restoreDockWidget() with it, so a saved window state places

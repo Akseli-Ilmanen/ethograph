@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -46,6 +47,7 @@ from qtpy.QtWidgets import (
 from ethograph.gui.app_constants import MAX_LABEL_BRANCHES
 from ethograph.gui.file_dialogs import browse_open_file
 from ethograph.gui.notify import notify
+from ethograph.gui.plots_skeleton import pose_for_editor
 from ethograph.gui.project import project_dir_of
 from ethograph.io.session_layout import session_dir_of
 from ethograph.labels.intervals import EVENT_TYPE_POINT, EVENT_TYPE_STATE, load_label_mapping, save_label_mapping
@@ -407,7 +409,10 @@ class SkeletonSettingsDialog(QDialog):
 
         data = self.pose_mgr.primary_pose_for_editor() if self.pose_mgr is not None else None
         if data is None:
-            notify("No pose data available for the current camera/trial to draw a skeleton on.", "warning")
+            # No video overlay: the dataset's own position (2D or 3D) is drawn on.
+            data = pose_for_editor(self.app_state)
+        if data is None:
+            notify("No pose data in the video overlay or the dataset's position to draw a skeleton on.", "warning")
             return
         keypoints, positions = data
         if positions.shape[0] == 0:
@@ -424,7 +429,7 @@ class SkeletonSettingsDialog(QDialog):
             return
         try:
             path = save_skeleton(name.strip(), dialog.get_config(), self._project())
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, yaml.YAMLError) as exc:
             notify(f"Could not save the skeleton: {exc}", "warning")
             return
         # The drawing is now a library file; a stale per-session override would

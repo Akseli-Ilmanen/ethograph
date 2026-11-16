@@ -178,10 +178,11 @@ def test_a_stored_heading_with_a_keypoint_dim_is_offered(moll2025_gui):
     rp = meta.data_widget.radial_plots[-1]
 
     assert rp._unit == "deg"
-    # One combo per dim, each pinned — the compass shows one column.
+    # A new panel starts with its first multi-value dim on "All".
     assert "keypoint" in rp._dim_combos
-    assert rp.selections()["keypoint"] == rp._dim_combos["keypoint"].itemText(0)
+    assert "keypoint" not in rp.selections()
 
+    rp._dim_all_checks["keypoint"].setChecked(False)
     other = rp._dim_combos["keypoint"].itemText(1)
     rp._dim_combos["keypoint"].setCurrentText(other)
     QApplication.processEvents()
@@ -201,6 +202,9 @@ def test_all_draws_one_arrow_per_value_with_a_legend(moll2025_gui):
 
     n_values = rp._dim_combos["keypoint"].count()
     assert n_values >= 2
+    assert rp._dim_all_checks["keypoint"].isChecked(), "a new panel shows every arrow"
+    rp._dim_all_checks["keypoint"].setChecked(False)
+    QApplication.processEvents()
 
     t = next(t for t, v in _sampled(rp) if v is not None)
     assert len(rp.current_values()) == 1, "a pinned dim must draw one arrow"

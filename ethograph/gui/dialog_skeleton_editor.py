@@ -94,6 +94,7 @@ class _SkeletonCanvas(pg.PlotWidget):
         self._drag_from: int | None = None
         self._press_view: tuple[float, float] | None = None
         self._rubber_origin: tuple[float, float] | None = None
+        self._pan_last: tuple[float, float] | None = None
 
         self._fit_view()
         self.redraw()
@@ -150,7 +151,28 @@ class _SkeletonCanvas(pg.PlotWidget):
 
     # ── mouse handling ──
 
+    def wheelEvent(self, ev):
+        """Zoom about the cursor; the view box's own handling is off, so this is the only zoom."""
+        steps = ev.angleDelta().y() / 120.0
+        if not steps:
+            return
+        factor = 0.85**steps
+        pt = self._vb.mapSceneToView(self.mapToScene(ev.position().toPoint()))
+        self._vb.scaleBy((factor, factor), center=pt)
+        ev.accept()
+
+    def mouseDoubleClickEvent(self, ev):
+        if ev.button() == Qt.RightButton:
+            self._fit_view()
+            ev.accept()
+            return
+        super().mouseDoubleClickEvent(ev)
+
     def mousePressEvent(self, ev):
+        if ev.button() in (Qt.RightButton, Qt.MiddleButton):
+            self._pan_last = self._event_view(ev)
+            ev.accept()
+            return
         if ev.button() != Qt.LeftButton:
             return
         vx, vy = self._event_view(ev)
@@ -168,6 +190,12 @@ class _SkeletonCanvas(pg.PlotWidget):
 
     def mouseMoveEvent(self, ev):
         vx, vy = self._event_view(ev)
+        if self._pan_last is not None:
+            px, py = self._pan_last
+            self._vb.translateBy(x=px - vx, y=py - vy)
+            # After the shift the cursor maps back onto the grabbed point.
+            ev.accept()
+            return
         if self._drag_from is not None and self._temp_line is not None:
             xy = self._frame_xy()[self._drag_from]
             self._temp_line.setData([xy[0], vx], [xy[1], vy])
@@ -177,6 +205,10 @@ class _SkeletonCanvas(pg.PlotWidget):
         ev.accept()
 
     def mouseReleaseEvent(self, ev):
+        if ev.button() in (Qt.RightButton, Qt.MiddleButton):
+            self._pan_last = None
+            ev.accept()
+            return
         if ev.button() != Qt.LeftButton:
             return
         vx, vy = self._event_view(ev)
@@ -536,6 +568,7 @@ class SkeletonEditorDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Create / edit skeleton")
         self.setMinimumSize(900, 600)
+        self.resize(1400, 950)
 
         self.canvas = _SkeletonCanvas(keypoints, positions)
         self.canvas.on_selection_changed = self._sync_assign_enabled
@@ -557,13 +590,14 @@ class SkeletonEditorDialog(QDialog):
         slider_row.addWidget(self.frame_label)
         left.addLayout(slider_row)
         hint = QLabel(
-            "Drag between two keypoints to connect • click or rubber-band drag "
+            "Scroll to zoom • right/middle-drag to pan • double right-click to fit • "
+            "drag between two keypoints to connect • click or rubber-band drag "
             "to select edges (Shift to add) • assign a color category • "
             "add anchored shapes that follow the pose (2 anchors keep angles, 3+ deform)"
         )
         hint.setWordWrap(True)
         left.addWidget(hint)
-        body.addLayout(left, stretch=3)
+        body.addLayout(left, stretch=5)
 
         # Right: color categories.
         right = QVBoxLayout()
@@ -758,20 +792,21 @@ class SkeletonEditorDialog(QDialog):
 
     def get_config(self) -> dict:
         """Return a skeleton config dict from the current edges/colors/shapes."""
-        names = self.canvas.keypoints
+        # Plain str: keypoint names often arrive as numpy strings, which yaml.safe_dump refuses.
+        names = [str(k) for k in self.canvas.keypoints]
         connections = []
         for (a, b), color, segment in zip(self.canvas.edges, self.canvas.edge_colors, self.canvas.edge_segments):
             connections.append(
                 {
                     "start": names[a],
                     "end": names[b],
-                    "color": color,
+                    "color": str(color),
                     "width": 2.0,
-                    "segment": segment,
+                    "segment": str(segment),
                 }
             )
         return {
-            "keypoints": list(names),
+            "keypoints": names,
             "connections": connections,
             "shapes": list(self._shapes),
         }
