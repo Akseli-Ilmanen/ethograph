@@ -1,0 +1,6 @@
+# The cotton swab, in mm along +x; measured from a photo against a ruler.
+# stickTip is the bare beige end; stickStripeProx the centre of the black band nearer the cotton.
+# Two landmarks: the swab is symmetric about its axis, so its roll is never needed.
+landmarks:
+  stickTip: [0.0, 0.0, 0.0]
+  stickStripeProx: [31.0, 0.0, 0.0]

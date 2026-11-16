@@ -1,0 +1,7 @@
+# The back as a sheet rebuilt from its keypoints every frame, so it bends as they do:
+# from the shoulder line, arching through the back point, narrowing to the tail base.
+surface:
+  left: leftShoulder
+  right: rightShoulder
+  spine: back
+  apex: tailBase

@@ -1,5 +1,10 @@
 
-/projects/
+/projects/*
+!/projects/crowlab/
+/projects/crowlab/*
+!/projects/crowlab/meshes/
+/projects/crowlab/meshes/crow_skull_*.ply
+!/projects/crowlab/meshes/*_lowres.ply
 !/projects/defaults/*
 spot_frames/
 *pynapple_burst_r_to_python.html

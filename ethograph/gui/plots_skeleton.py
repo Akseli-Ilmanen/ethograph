@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 import pyqtgraph as pg
@@ -35,7 +36,9 @@ from qtpy.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -47,8 +50,16 @@ from ethograph.gui.plots_space import auto_camera_3d, draw_reference_geometry, m
 from ethograph.gui.pose_controls import PoseControls
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT
 from ethograph.gui.pose_render import pose_color_map, resolve_skeleton_config
+from ethograph.gui.project import project_dir_of
 from ethograph.io.catalog import INDIVIDUAL_DIMS, KEYPOINT_DIMS, SPACE_DIM
 from ethograph.skeleton.config import hex_to_rgba
+from ethograph.skeleton.mesh import (
+    MeshModel,
+    available_meshes,
+    fit_scale,
+    load_mesh,
+    place_mesh,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +79,8 @@ _FALLBACK_RGBA = (1.0, 0.2, 0.2, 1.0)
 #: Bone colour when the points already say the body part: neutral, so twelve
 #: keypoint hues are not fighting twelve more on the bones.
 _BONE_RGBA = (0.0, 0.0, 0.0, 1.0)
+#: A bone-ivory skull, so the mesh reads as bone against any background.
+_MESH_RGBA = (0.93, 0.9, 0.82, 1.0)
 
 #: ``app_state`` variables that restyle the pose without changing the data.
 _STYLE_SETTINGS = (
@@ -392,6 +405,30 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         view_row.addStretch()
         controls.addLayout(view_row)
 
+        mesh_row = QHBoxLayout()
+        mesh_row.setContentsMargins(0, 0, 0, 0)
+        mesh_row.setSpacing(6)
+        mesh_row.addWidget(QLabel("Meshes"))
+        self.mesh_button = QToolButton()
+        self.mesh_button.setPopupMode(QToolButton.InstantPopup)
+        self.mesh_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.mesh_menu = QMenu(self.mesh_button)
+        # Read the folder each time the menu opens, so added or renamed files show at once.
+        self.mesh_menu.aboutToShow.connect(self._refill_mesh_menu)
+        self.mesh_button.setMenu(self.mesh_menu)
+        self.mesh_button.setToolTip(
+            "Draw parts from the project's meshes/ folder on their keypoints, "
+            "instead of the bones between them (3D only)"
+        )
+        mesh_row.addWidget(self.mesh_button)
+        controls.addLayout(mesh_row)
+        self._parts: dict[str, MeshModel] = {}
+        #: One scale per (part, animal) for the loaded window, so a rigid mesh keeps its size.
+        self._scales: dict[tuple[str, int], float | None] = {}
+        self._scales_for: object = None
+        self._mesh_items: list[gl.GLMeshItem] = []
+        self._update_mesh_button()
+
         individual_row = QHBoxLayout()
         individual_row.setContentsMargins(0, 0, 0, 0)
         individual_row.setSpacing(6)
@@ -576,6 +613,48 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._cache_key = None
         self._connections = None
 
+    def _refill_mesh_menu(self) -> None:
+        """The project's parts as checkable entries, the checked ones by name."""
+        project = project_dir_of(self.app_state) if self.app_state is not None else None
+        self.mesh_menu.clear()
+        paths = available_meshes(project)
+        if not paths:
+            self.mesh_menu.addAction("No meshes in the project's meshes/ folder").setEnabled(False)
+        for path in paths:
+            action = self.mesh_menu.addAction(path.stem)
+            action.setCheckable(True)
+            action.setChecked(path.stem in self._parts)
+            action.toggled.connect(lambda on, path=path: self._toggle_part(path, on))
+
+    def _toggle_part(self, path: Path, on: bool) -> None:
+        if on:
+            self._parts[path.stem] = load_mesh(path)
+        else:
+            self._parts.pop(path.stem, None)
+        self._scales.clear()
+        self._connections = None
+        self._update_mesh_button()
+        self._draw()
+
+    def set_parts(self, names: list[str]) -> None:
+        """Check *names* (those still in the project's folder)."""
+        project = project_dir_of(self.app_state) if self.app_state is not None else None
+        by_name = {p.stem: p for p in available_meshes(project)}
+        self._parts = {n: load_mesh(by_name[n]) for n in names if n in by_name}
+        self._scales.clear()
+        self._connections = None
+        self._update_mesh_button()
+
+    def _update_mesh_button(self) -> None:
+        self.mesh_button.setText(", ".join(self._parts) or "None")
+
+    def _part_keypoints(self) -> set[str]:
+        """The keypoints the checked parts stand on: the bones among them are not drawn."""
+        names: set[str] = set()
+        for part in self._parts.values():
+            names |= set(part.landmarks)
+        return names
+
     def _rebuild_controls(self) -> None:
         """Keypoint list and individual combo from the dims, keeping the user's choices by name."""
         dims = self._dims
@@ -736,6 +815,10 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         if self._connections is None:
             config = resolve_skeleton_config(self.app_state, None)
             self._connections = skeleton_connections(config)
+            if self._parts and self.is_3d:
+                # A part stands in for the bones it spans.
+                covered = self._part_keypoints()
+                self._connections = [(a, b) for a, b in self._connections if not (a in covered and b in covered)]
             self._bone_colors = skeleton_bone_colors(config)
         return self._connections
 
@@ -761,6 +844,9 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         t_rel = frame / fps if fps else 0.0
         return float(state.to_display(getattr(state, "trials_sel", None), t_rel))
 
+    def _frame_index(self, time: np.ndarray) -> int:
+        return int(np.clip(np.searchsorted(time, self._marker_time(), side="right") - 1, 0, len(time) - 1))
+
     def current_frame(self) -> PoseFrame | None:
         """The vertex arrays under the time marker, or ``None`` without data."""
         if not self._ensure_data():
@@ -768,8 +854,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         dims, coords, time = self._dims, self._coords, self._time
         if dims is None or coords is None or time is None or len(time) == 0:
             return None
-        t = self._marker_time()
-        index = int(np.clip(np.searchsorted(time, t, side="right") - 1, 0, len(time) - 1))
+        index = self._frame_index(time)
         individuals = tuple(name or "" for name in self._shown)
         color_by = self.color_by()
         if color_by == COLOR_BY_INDIVIDUAL:
@@ -822,6 +907,8 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             self.canvas.hide()
             self.canvas.deleteLater()
         self.canvas, self.is_3d = make_space_widget(view_3d)
+        self._mesh_items = []
+        self._connections = None
         if view_3d and not self.is_3d:
             self.cb_3d.blockSignals(True)
             self.cb_3d.setChecked(False)
@@ -922,6 +1009,49 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             self._gl_edges_item.setVisible(True)
         else:
             self._gl_edges_item.setVisible(False)
+        self._draw_meshes()
+
+    def _scale(self, name: str, part: MeshModel, animal: int, keypoints: tuple[str, ...]) -> float | None:
+        """The part's size on this animal over the loaded window: one number, so it never breathes."""
+        if self._scales_for is not self._coords:
+            self._scales, self._scales_for = {}, self._coords
+        key = (name, animal)
+        if key not in self._scales and self._coords is not None:
+            self._scales[key] = fit_scale(part, keypoints, self._xyz(self._coords[:, animal]))
+        return self._scales.get(key)
+
+    @staticmethod
+    def _xyz(coords: np.ndarray) -> np.ndarray:
+        xyz = np.zeros(coords.shape[:-1] + (3,))
+        xyz[..., : min(coords.shape[-1], 3)] = coords[..., :3]
+        return xyz
+
+    def _draw_meshes(self) -> None:
+        """Each checked part on each shown animal at the marker; hidden where its keypoints are missing."""
+        placed: list[tuple[np.ndarray, MeshModel, tuple]] = []
+        dims, coords, time = self._dims, self._coords, self._time
+        if self._parts and dims is not None and coords is not None and time is not None and len(time):
+            frame = self._xyz(coords[self._frame_index(time)])
+            for name, part in self._parts.items():
+                for i, animal in enumerate(frame):
+                    scale = self._scale(name, part, i, dims.keypoints)
+                    vertices = place_mesh(part, dims.keypoints, animal, scale)
+                    if vertices is not None:
+                        placed.append((vertices, part, _MESH_RGBA))
+        while len(self._mesh_items) < len(placed):
+            item = gl.GLMeshItem(smooth=True, shader="shaded", glOptions="translucent")
+            self.canvas.addItem(item)
+            self._mesh_items.append(item)
+        for i, item in enumerate(self._mesh_items):
+            if i < len(placed):
+                vertices, part, rgba = placed[i]
+                if part.face_colors is not None:
+                    # Vertex colours: in smooth mode pyqtgraph reads face colours as if per vertex.
+                    item.setMeshData(vertexes=vertices, faces=part.faces, vertexColors=part.vertex_colors)
+                else:
+                    item.setMeshData(vertexes=vertices, faces=part.faces)
+                    item.setColor(rgba)
+            item.setVisible(i < len(placed))
 
     def _draw_2d(self, frame: PoseFrame) -> None:
         plot_item = self.canvas.getPlotItem()
@@ -963,6 +1093,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             "flip_y": self.cb_flip_y.isChecked(),
             "all_individuals": self.cb_all_individuals.isChecked(),
             "dims": self.extra_selections(),
+            "meshes": list(self._parts),
             **({"individual": self.pinned_individual} if self.pinned_individual else {}),
         }
 
@@ -988,4 +1119,5 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
                 combo.blockSignals(True)
                 combo.setCurrentIndex(index)
                 combo.blockSignals(False)
+        self.set_parts(list(settings.get("meshes") or []))
         self.configure(view_3d=settings.get("view_3d"))

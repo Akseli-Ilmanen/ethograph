@@ -1,0 +1,10 @@
+# Keypoints in this mesh's coordinates (mm; beak along +x, dorsal +z, left +y).
+# Estimated by eye from the mesh; refine for a tighter fit. Three or more are needed.
+landmarks:
+  beakTip: [33.5, -0.2, -8.9]
+  beakBase: [-13.5, 0.0, -1.1]
+  leftNostril: [-3.3, 5.1, -6.2]
+  rightNostril: [-3.3, -5.1, -6.2]
+  leye: [-25.7, 12.3, -12.3]
+  reye: [-25.7, -12.3, -12.3]
+  headPost: [-38.0, 0.0, 6.5]
