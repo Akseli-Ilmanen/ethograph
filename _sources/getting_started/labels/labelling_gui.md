@@ -32,6 +32,10 @@ source hides another:
    afterwards with `ethograph.io.nwb_alignment.set_individuals(path, ["crow1"])`.
 3. **`extra_individuals`** from `gui_settings.yaml`, your own additions.
 
+When labels are loaded or imported and the selected individual has none of them,
+the selector moves to the individual with the most labels in the file. A name
+the selector does not offer yet is added to `extra_individuals`.
+
 
 Until both are there, the Labels tab is greyed out and the label keys refuse to
 place anything. The tab says which half is missing and offers the button that
