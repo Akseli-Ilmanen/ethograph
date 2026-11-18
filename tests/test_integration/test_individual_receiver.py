@@ -94,6 +94,34 @@ def test_labels_written_under_other_names_are_not_filtered_away(moll2025_gui):
     assert len(dw._subject_intervals(state.get_display_intervals())) == 1
 
 
+def test_imported_labels_pull_the_selector_to_whoever_they_name(moll2025_gui):
+    """A selection with no labels moves to the most-labelled name, created if unknown; one with labels stays."""
+    _, meta = moll2025_gui
+    state = meta.app_state
+    dw = meta.data_widget
+    combo = dw.combos[dw._individual_actor_key()]
+    before = state.selected_individual()
+
+    state._all_labels_df = None  # the session's own labels name the selected individual
+    df = add_interval(empty_intervals(), 0.5, 1.0, 1, "rare")
+    df = add_interval(df, 2.0, 2.5, 1, "newcomer")
+    df = add_interval(df, 3.0, 3.5, 1, "newcomer")
+    state.set_trial_intervals(state.trials_sel, df)
+    dw.select_labelled_individual()
+
+    assert state.selected_individual() == "newcomer"
+    assert combo.currentData() == "newcomer"
+    assert "newcomer" in state.extra_individuals
+    assert "rare" not in state.extra_individuals
+
+    df = add_interval(df, 4.0, 4.5, 1, before)
+    for onset in (5.0, 6.0, 7.0):
+        df = add_interval(df, onset, onset + 0.5, 1, "rare")
+    state.set_trial_intervals(state.trials_sel, df)
+    dw.select_labelled_individual()
+    assert state.selected_individual() == "newcomer", "a selection that has labels is left alone"
+
+
 def test_the_combo_offers_whoever_you_add(moll2025_gui):
     """Your own list names someone the dataset's dim never had.
 

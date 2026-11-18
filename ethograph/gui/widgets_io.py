@@ -744,6 +744,7 @@ class IOWidget(QWidget):
             # With no individual dimension the selector's names come from the
             # labels, which have just been replaced.
             self.data_widget.refresh_individual_choices()
+            self.data_widget.select_labelled_individual()
         self.app_state._labels_file_path = file_path  # Track which file is active
         # Remember this exact file for future loads of this dataset — an
         # explicit choice must never be re-guessed from the .nc filename.
@@ -815,6 +816,7 @@ class IOWidget(QWidget):
             # With no individual dimension the selector's names come from the
             # labels, which have just gained rows.
             self.data_widget.refresh_individual_choices()
+            self.data_widget.select_labelled_individual()
         self.app_state.label_intervals = self.app_state.get_trial_intervals(self.app_state.trials_sel)
 
         if hasattr(self, "changepoints_widget") and self.changepoints_widget:
@@ -1001,6 +1003,7 @@ class IOWidget(QWidget):
         self.app_state.clear_label_history()
         if self.data_widget:
             self.data_widget.refresh_individual_choices()
+            self.data_widget.select_labelled_individual()
         self.app_state.label_intervals = self.app_state.get_trial_intervals(trial)
 
         # For non-.tsv formats, save the converted TSV and show in output row
@@ -1577,6 +1580,7 @@ class IOWidget(QWidget):
                 self.app_state.clear_label_history()
                 if self.data_widget:
                     self.data_widget.refresh_individual_choices()
+                    self.data_widget.select_labelled_individual()
 
                 self.app_state.label_intervals = self.app_state.get_trial_intervals(self.app_state.trials_sel)
                 self.label_file_path_edit.setText(labels_file_path)

@@ -1191,6 +1191,7 @@ class LabelsWidget(QWidget):
             self.app_state.label_intervals = get_trial_from_tsv(merged, current)
         if self.data_widget:
             self.data_widget.refresh_individual_choices()
+            self.data_widget.select_labelled_individual()
             self.data_widget.update_main_plot(preserve_x_range=True)
             self.data_widget._update_confidence_overlay()
             if self.data_widget.plot_container:

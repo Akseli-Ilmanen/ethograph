@@ -1227,6 +1227,8 @@ class DataWidget(QWidget):
         self.app_state.ready = True
 
         self._restore_or_set_defaults()
+        # The trial load below draws everything, so nothing is redrawn here.
+        self.select_labelled_individual(redraw=False)
         # The restored individual decides who is available as a receiver.
         self._populate_receiver_combo()
 
@@ -2467,6 +2469,40 @@ class DataWidget(QWidget):
             if other != key:
                 self.app_state.set_key_sel(other, None)
         self._populate_receiver_combo()
+
+    def select_labelled_individual(self, *, redraw: bool = True) -> None:
+        """Move the sidebar to an individual the loaded labels name, when the selected one has none.
+
+        Run after a load and after every label import. A selection left over
+        from another session otherwise hides every label of a file that names a
+        different animal. The individual with the most labels wins; one the
+        selector does not offer yet is added to ``extra_individuals``. A
+        selection that already has labels is never moved.
+        """
+        df = self.app_state._all_labels_df
+        if df is None or df.empty:
+            return
+        named = df["individual"].dropna().astype(str)
+        counts = named[named != ""].value_counts()
+        if counts.empty:
+            return
+        key = self._individual_actor_key()
+        combo = self.combos.get(key)
+        if combo is None or get_combo_value(combo) in counts.index:
+            return
+        target = str(counts.idxmax())
+        if target not in self.app_state.label_individuals():
+            self.app_state.extra_individuals = [*self.app_state.get_with_default("extra_individuals"), target]
+            self._individuals_changed()
+        combo.blockSignals(True)
+        combo.setCurrentIndex(find_combo_index(combo, target))
+        combo.blockSignals(False)
+        if redraw:
+            self.apply_panel_control(key, target)
+        else:
+            self.app_state.set_key_sel(key, target)
+            self.app_state.refresh_labelling_subject()
+            self._populate_receiver_combo()
 
     def _populate_receiver_combo(self) -> None:
         """Offer every individual except the actor — nothing is its own receiver."""
