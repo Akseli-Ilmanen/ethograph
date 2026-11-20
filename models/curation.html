@@ -672,21 +672,22 @@ session spends above (or below) a value: a speed, a distance, an angle.</p></li>
 units, on a rate read off their spikes, and adds burst detection.</p></li>
 </ul>
 <p>In the neural one, <strong>Method</strong> picks how. <em>Threshold</em> suits activity lasting
-hundreds of milliseconds or more. The two <em>Bursts</em> methods read the spike
+hundreds of milliseconds or more. The <em>Bursts</em> methods read the spike
 times themselves and find events too short for a rate to resolve:</p>
 <ul class="simple">
+<li><p><strong>Poisson surprise</strong> (the default) keeps a run of spikes too dense to be
+chance for a unit firing at its own mean rate. It is relative to each unit’s
+rate, so one setting serves units that fire very differently.</p></li>
 <li><p><strong>MaxInterval</strong> uses fixed limits on the intervals between spikes: one to
 start a burst, one to stay in it; bursts close together are merged and small
 ones dropped. The same numbers serve every unit.</p></li>
-<li><p><strong>logISI</strong> lets each unit set its own limit: the valley between the
-within-burst and between-burst peaks of its inter-spike-interval histogram,
-taken over the trials shown. A unit whose histogram has no clear valley is
-read with the fixed limit instead, or left without bursts if you untick
-<strong>Units with no clear valley</strong>.</p></li>
+<li><p><strong>Instantaneous rate</strong> keeps a run of spikes whose rate (one over the
+interval between two spikes) stays above a threshold, 125 Hz by default.</p></li>
 </ul>
-<p>Both give one class per unit (<code class="docutils literal notranslate"><span class="pre">unit_12</span></code>), a burst running from its first spike
-to its last, and never across two trials. They are the two detectors that came
-out ahead in <a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4969396/">Cotterill et al. (2016)</a>.</p>
+<p>Each gives one class per unit (<code class="docutils literal notranslate"><span class="pre">unit_12</span></code>), a burst running from its first spike
+to its last, and never across two trials. Poisson surprise and MaxInterval are
+among the detectors compared in
+<a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4969396/">Cotterill et al. (2016)</a>.</p>
 <p>For a threshold, in either one:</p>
 <ul class="simple">
 <li><p>Each dim of the feature is pinned to one value, or one dim is read <strong>value

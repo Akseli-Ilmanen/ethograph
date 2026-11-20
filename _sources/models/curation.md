@@ -215,21 +215,22 @@ same form:
   units, on a rate read off their spikes, and adds burst detection.
 
 In the neural one, **Method** picks how. *Threshold* suits activity lasting
-hundreds of milliseconds or more. The two *Bursts* methods read the spike
+hundreds of milliseconds or more. The *Bursts* methods read the spike
 times themselves and find events too short for a rate to resolve:
 
+- **Poisson surprise** (the default) keeps a run of spikes too dense to be
+  chance for a unit firing at its own mean rate. It is relative to each unit's
+  rate, so one setting serves units that fire very differently.
 - **MaxInterval** uses fixed limits on the intervals between spikes: one to
   start a burst, one to stay in it; bursts close together are merged and small
   ones dropped. The same numbers serve every unit.
-- **logISI** lets each unit set its own limit: the valley between the
-  within-burst and between-burst peaks of its inter-spike-interval histogram,
-  taken over the trials shown. A unit whose histogram has no clear valley is
-  read with the fixed limit instead, or left without bursts if you untick
-  **Units with no clear valley**.
+- **Instantaneous rate** keeps a run of spikes whose rate (one over the
+  interval between two spikes) stays above a threshold, 125 Hz by default.
 
-Both give one class per unit (`unit_12`), a burst running from its first spike
-to its last, and never across two trials. They are the two detectors that came
-out ahead in [Cotterill et al. (2016)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4969396/).
+Each gives one class per unit (`unit_12`), a burst running from its first spike
+to its last, and never across two trials. Poisson surprise and MaxInterval are
+among the detectors compared in
+[Cotterill et al. (2016)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4969396/).
 
 For a threshold, in either one:
 
