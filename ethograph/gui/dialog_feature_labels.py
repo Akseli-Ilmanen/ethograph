@@ -5,7 +5,7 @@ periods it spends above or below a value. **Neural: Neuronal firing / burst
 detection…** (``neural=True``) is the same form for the loaded units: the
 threshold reads a rate off the spikes instead (``firing_rate``,
 ``instantaneous_rate``), and a **Method** row adds the burst detectors
-(MaxInterval, logISI), which read the spike trains themselves — events too
+(Poisson surprise, MaxInterval, instantaneous rate), which read the spike trains themselves — events too
 short for a rate to resolve — and show their own parameters in place of the
 threshold's.
 
@@ -135,7 +135,7 @@ def default_set_name(query: FeatureQuery, rule: ThresholdRule) -> str:
 
 
 def default_burst_name(rule: BurstRule, unit: str | None) -> str:
-    """``"bursts max_interval (per unit)"`` / ``"bursts log_isi [unit=12]"`` — a burst set until renamed."""
+    """``"bursts max_interval (per unit)"`` / ``"bursts poisson_surprise [unit=12]"`` — a burst set until renamed."""
     scope = f"(per {FIRING_RATE_UNIT_DIM})" if unit is None else f"[{FIRING_RATE_UNIT_DIM}={unit}]"
     return f"{rule.describe()} {scope}".translate(_NAME_FORBIDDEN)
 

@@ -1,16 +1,13 @@
 """Burst detection in spike trains, one function per detector, all of them pynapple's.
 
-``nap.detect_spike_bursts`` does the detecting (logISI, MaxInterval, an
-instantaneous-rate threshold and Poisson surprise; Cotterill & Eglen 2018 compare
+``nap.detect_spike_bursts`` does the detecting (Poisson surprise, its default,
+MaxInterval and an instantaneous-rate threshold; Cotterill & Eglen 2018 compare
 the first two, https://arxiv.org/abs/1802.01287). This module only gives each
 detector a function of its own, whose keyword defaults are what the GUI's form
 opens at (``labels.feature_events.burst_parameters`` reads them off the
-signatures), and keeps every parameter a plain number:
-
-* logISI opens with the published fallback on (``fallback=True``), where
-  pynapple's default is off;
-* Poisson surprise's ``max_isi_burst=0`` stands for pynapple's ``None`` (twice the
-  train's mean ISI), as a form row cannot hold ``None``.
+signatures), and keeps every parameter a plain number: Poisson surprise's
+``max_isi_burst=0`` stands for pynapple's ``None`` (twice the train's mean ISI),
+as a form row cannot hold ``None``.
 
 Every detector takes a ``Ts`` or a ``TsGroup`` and returns bursts as an
 ``IntervalSet`` from first to last spike with an ``n_spikes`` metadata column (a
@@ -44,29 +41,6 @@ def detect_bursts_max_interval(
         min_inter_burst_interval=min_inter_burst_interval,
         min_burst_duration=min_burst_duration,
         min_spikes_in_burst=min_spikes_in_burst,
-    )
-
-
-def compute_log_isi_threshold(
-    spikes: nap.Ts | nap.TsGroup, max_cutoff: float = 0.1
-) -> float | None | dict[Any, float | None]:
-    """The logISI threshold (s): the valley after the log-ISI histogram's intra-burst peak; ``None`` without one."""
-    return nap.compute_log_isi_threshold(spikes, max_cutoff=max_cutoff)
-
-
-def detect_bursts_log_isi(
-    spikes: nap.Ts | nap.TsGroup,
-    max_cutoff: float = 0.1,
-    min_spikes_in_burst: int = 3,
-    fallback: bool = True,
-) -> Bursts:
-    """Bursts by the logISI method of Pasquale et al. (2010): a threshold each train reads off its own ISIs.
-
-    *fallback* (on here, off in pynapple) reads a train with no clear valley at
-    *max_cutoff*, as the published method does; off, such a train has no bursts.
-    """
-    return nap.detect_spike_bursts(
-        spikes, method="log_isi", max_cutoff=max_cutoff, min_spikes_in_burst=min_spikes_in_burst, fallback=fallback
     )
 
 

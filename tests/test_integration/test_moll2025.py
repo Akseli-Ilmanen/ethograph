@@ -453,7 +453,6 @@ class TestMollSpacePlot:
         _navigate_to_trial(meta, TRIAL)
 
         meta.app_state.space_plot_type = "Space Plot"
-        meta.app_state.space_show_references = True
         if hasattr(meta.data_widget, "space_view_combo"):
             meta.data_widget.space_view_combo.setCurrentText("Space Plot")
             QApplication.processEvents()

@@ -24,9 +24,15 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
 )
 
-from ethograph.gui.burst_form import BURST_METHODS, BurstInput, build_burst_inputs, read_burst_rule
+from ethograph.gui.burst_form import (
+    BURST_METHODS,
+    DEFAULT_BURST_METHOD,
+    BurstInput,
+    build_burst_inputs,
+    read_burst_rule,
+)
 from ethograph.gui.notify import notify
-from ethograph.labels.feature_events import LOG_ISI, BurstRule
+from ethograph.labels.feature_events import BurstRule
 
 
 class BurstRasterDialog(QDialog):
@@ -61,7 +67,7 @@ class BurstRasterDialog(QDialog):
         for key, (text, tooltip) in BURST_METHODS.items():
             self.method_combo.addItem(text, key)
             self.method_combo.setItemData(self.method_combo.count() - 1, tooltip, 3)  # Qt.ToolTipRole
-        self.method_combo.setCurrentIndex(self.method_combo.findData(LOG_ISI))
+        self.method_combo.setCurrentIndex(self.method_combo.findData(DEFAULT_BURST_METHOD))
         self.method_combo.currentIndexChanged.connect(self._on_method_changed)
         method_row.addWidget(self.method_combo, 1)
         lay.addLayout(method_row)

@@ -159,8 +159,6 @@ class SpaceGeometryDialog(QDialog):
         root.addWidget(buttons)
 
         self.finished.connect(self._drop_preview)
-        # The geometry is what the user came to see.
-        self.app_state.space_show_references = True
         self._reload_library(select=getattr(app_state, "space_library_geometry", None))
         self._sync_panel_hint()
         self.resize(340, 640)

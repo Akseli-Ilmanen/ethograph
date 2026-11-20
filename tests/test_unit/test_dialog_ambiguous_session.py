@@ -10,7 +10,7 @@ from pathlib import Path
 
 from qtpy.QtWidgets import QPushButton
 
-from ethograph.gui.dialog_ambiguous_session import AmbiguousSessionDialog
+from ethograph.gui.dialog_ambiguous_session import AmbiguousSessionDialog, resolve_ambiguous_session
 from ethograph.io.data_loader import AmbiguousSessionError
 
 
@@ -52,3 +52,22 @@ def test_the_button_excludes_the_file_and_moves_nothing(qapp, tmp_path: Path):
 
     dlg._ignore("Trial_data.nc", buttons[0])  # a second click adds nothing
     assert state.ignore_files == ["Trial_data.nc"]
+
+
+def test_open_this_names_one_file_and_excludes_nothing(qapp, tmp_path: Path, monkeypatch):
+    state = _State()
+    error = _error(tmp_path)
+    monkeypatch.setattr(AmbiguousSessionDialog, "exec_", lambda dlg: dlg._open(error.candidates[1]))
+
+    assert resolve_ambiguous_session(error, state) == error.candidates[1]
+    assert state.ignore_files == [], "comparing variants must not grow the exclusion list"
+
+
+def test_excluding_retries_the_folder_and_cancelling_retries_nothing(qapp, tmp_path: Path, monkeypatch):
+    state = _State()
+    error = _error(tmp_path)
+    monkeypatch.setattr(AmbiguousSessionDialog, "exec_", lambda dlg: None)
+    assert resolve_ambiguous_session(error, state) is None
+
+    monkeypatch.setattr(AmbiguousSessionDialog, "exec_", lambda dlg: dlg._ignore("Trial_data.nc", QPushButton()))
+    assert resolve_ambiguous_session(error, state) == error.folder

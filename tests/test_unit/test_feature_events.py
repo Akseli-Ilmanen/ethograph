@@ -9,7 +9,6 @@ import pytest
 from ethograph.labels.feature_events import (
     BELOW,
     BURST_DETECTORS,
-    LOG_ISI,
     MAX_INTERVAL,
     PERCENTILE,
     POISSON_SURPRISE,
@@ -220,13 +219,8 @@ def test_a_burst_is_cut_where_one_trial_ends_and_the_next_begins():
 
 
 def test_a_burst_rule_takes_only_its_detectors_own_parameters():
-    rule = BurstRule(LOG_ISI, {"fallback": False})
-    # One interval length has no valley: without the fallback there is nothing to find.
-    with pytest.warns(UserWarning, match="No clear minimum"):
-        assert burst_events({"0": nap.Ts(t=100.0 + np.arange(50) * 0.02)}, _SPANS, rule, "crow").empty
-
     with pytest.raises(ValueError, match="no parameter"):
-        BurstRule(LOG_ISI, {"max_isi_start": 0.1})
+        BurstRule(POISSON_SURPRISE, {"max_isi_start": 0.1})
     with pytest.raises(ValueError, match="method must be one of"):
         BurstRule("no_such_detector")
     assert all(burst_parameters(method) for method in BURST_DETECTORS)

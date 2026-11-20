@@ -1,19 +1,12 @@
-"""Compare the burst detectors against the R reference implementations.
+"""Compare the MaxInterval burst detector against its R reference implementation.
 
-Two copies are checked, so they cannot drift apart unnoticed: the one the GUI
-uses (``ethograph/features/bursts.py``) and the draft written for pynapple
-(``notes/drafts/pynapple_burst_detection.py``).
-
-Generates synthetic spike trains, runs sjemea's ``mi.find.bursts`` and the
-burstanalysis ``logisi.pasq.method`` on them with Rscript from the ``rcheck``
-conda env, and counts exact agreements. The one known difference is the R
-logISI loop stopping one spike short (``while (n < nspikes)``): mismatches
-that disappear when the Python emulates that are counted separately.
+Generates synthetic spike trains, runs sjemea's ``mi.find.bursts`` on them with
+Rscript from the ``rcheck`` conda env, and counts exact agreements with
+``ethograph.features.bursts.detect_bursts_max_interval`` (pynapple's detector).
 
 Run from the repo root:  python tests/_test_burst_r_reference.py
 """
 
-import importlib.util
 import os
 import subprocess
 import sys
@@ -24,10 +17,9 @@ from pathlib import Path
 import numpy as np
 import pynapple as nap
 
-from ethograph.features import bursts as ethograph_bursts
+from ethograph.features.bursts import detect_bursts_max_interval
 
 ROOT = Path(__file__).resolve().parents[1]
-DRAFT = ROOT / "notes" / "drafts" / "pynapple_burst_detection.py"
 R_ENV = Path(r"C:\Users\aksel\anaconda3\envs\rcheck")
 RSCRIPT = R_ENV / "Lib" / "R" / "bin" / "Rscript.exe"
 
@@ -40,14 +32,12 @@ MI_PARAMS = dict(
     min_burst_duration=0.01,
     min_spikes_in_burst=3,
 )
-LOG_ISI_CUTOFF = 0.1
 
 R_SCRIPT = r"""
 args <- commandArgs(trailingOnly = TRUE)
 repo <- args[1]; input <- args[2]; output <- args[3]
 source(file.path(repo, "repos/sjemea/R/surprise2.R"))
 source(file.path(repo, "repos/sjemea/R/maxinterval.R"))
-source(file.path(repo, "repos/burstanalysis/Burst_detection_methods/logisi_pasq_method.R"))
 mi.par <<- list(beg.isi = 0.17, end.isi = 0.3, min.ibi = 0.2, min.durn = 0.01, min.spikes = 3)
 
 fmt <- function(b) {
@@ -58,19 +48,10 @@ lines <- readLines(input)
 out <- file(output, "w")
 for (line in lines) {
   st <- as.numeric(strsplit(line, " ")[[1]])
-  thr <- logisi.break.calc(st, 0.1)
-  thr <- if (is.null(thr)) "NA" else sprintf("%.17g", thr)
-  writeLines(c(fmt(mi.find.bursts(st)), fmt(logisi.pasq.method(st, 0.1)), thr), out)
+  writeLines(fmt(mi.find.bursts(st)), out)
 }
 close(out)
 """
-
-
-def load_draft():
-    spec = importlib.util.spec_from_file_location("burst_draft", DRAFT)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def bursty_train(rng, isi_mean_range, spikes_range, background_range, burst_rate_range):
@@ -135,12 +116,8 @@ def run_r(trains, workdir):
         env=env,
     )
     lines = output_path.read_text().splitlines()
-    assert len(lines) == 3 * len(trains), (len(lines), len(trains))
-    results = []
-    for i in range(len(trains)):
-        mi, logisi, thr = lines[3 * i : 3 * i + 3]
-        results.append((parse_bursts(mi), parse_bursts(logisi), None if thr == "NA" else float(thr)))
-    return results
+    assert len(lines) == len(trains), (len(lines), len(trains))
+    return [parse_bursts(line) for line in lines]
 
 
 def parse_bursts(line):
@@ -157,31 +134,6 @@ def to_index_pairs(times, bursts):
     return list(zip(starts.tolist(), ends.tolist()))
 
 
-def with_last_isi_quirk(module):
-    """
-    Context manager: `_find_runs` never examines the last interval and, when
-    still in a burst at the end, closes it on the last spike — what the R
-    logISI loop does.
-    """
-
-    class Patch:
-        def __enter__(self):
-            self.original = module._find_runs
-
-            def quirky(times, max_isi_start, max_isi_burst):
-                runs = self.original(times[:-1], max_isi_start, max_isi_burst)
-                if runs and runs[-1][1] == len(times) - 2:
-                    runs[-1] = (runs[-1][0], len(times) - 1)
-                return runs
-
-            module._find_runs = quirky
-
-        def __exit__(self, *exc):
-            module._find_runs = self.original
-
-    return Patch()
-
-
 def main():
     rng = np.random.default_rng(20261004)
     trains = make_trains(rng)
@@ -190,69 +142,24 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         r_results = run_r(trains, Path(tmp))
 
-    implementations = {"ethograph.features.bursts": ethograph_bursts, "pynapple draft": load_draft()}
-    unexplained = 0
-    for name, module in implementations.items():
-        print(f"\n=== {name} ===")
-        unexplained += compare(module, trains, r_results)
-    return 0 if not unexplained else 1
-
-
-def compare(draft, trains, r_results):
-    """Print one implementation's agreement with R; return its number of unexplained mismatches."""
     counts = Counter()
-    branch = Counter()
     unexplained = []
-    for (family, times), (r_mi, r_logisi, r_thr) in zip(trains, r_results):
-        spikes = nap.Ts(t=times)
+    for (family, times), r_mi in zip(trains, r_results):
         counts[family] += 1
-
-        py_mi = to_index_pairs(times, draft.detect_bursts_max_interval(spikes, **MI_PARAMS))
+        py_mi = to_index_pairs(times, detect_bursts_max_interval(nap.Ts(t=times), **MI_PARAMS))
         if py_mi == r_mi:
             counts["mi_exact"] += 1
         else:
-            unexplained.append(("MI", family, times, py_mi, r_mi))
+            unexplained.append((family, times, py_mi, r_mi))
 
-        py_thr = draft.compute_log_isi_threshold(spikes, LOG_ISI_CUTOFF)
-        has_peak, _ = draft._log_isi_valley(np.diff(times), LOG_ISI_CUTOFF)
-        r_no_valley = r_thr is None or r_thr >= 1.0
-        r_no_peak = r_thr is not None and r_thr < 0
-        thr_match = (py_thr is None and (r_thr is None or r_no_peak)) or (
-            py_thr is not None and r_thr is not None and abs(py_thr - r_thr) < 1e-9
-        )
-        counts["threshold_exact" if thr_match else "threshold_mismatch"] += 1
-        if not has_peak:
-            branch["no intra-burst peak -> no bursts"] += 1
-        elif r_no_valley:
-            branch["no clear valley -> fallback to cutoff"] += 1
-        elif py_thr > LOG_ISI_CUTOFF:
-            branch["threshold > cutoff -> cores + related spikes"] += 1
-        else:
-            branch["threshold <= cutoff"] += 1
-
-        py_logisi = to_index_pairs(times, draft.detect_bursts_log_isi(spikes, LOG_ISI_CUTOFF))
-        if py_logisi == r_logisi:
-            counts["logisi_exact"] += 1
-            continue
-        with with_last_isi_quirk(draft):
-            quirky = to_index_pairs(times, draft.detect_bursts_log_isi(spikes, LOG_ISI_CUTOFF))
-        if quirky == r_logisi:
-            counts["logisi_explained_by_last_isi_quirk"] += 1
-        else:
-            unexplained.append(("logISI", family, times, py_logisi, r_logisi))
-
-    print("\nTrains per family:", {k: counts[k] for k in ["bursty", "slow_bursts", "poisson", "gamma"]})
-    print("logISI branches taken:", dict(branch))
-    print(f"\nMaxInterval exact: {counts['mi_exact']} / {len(trains)}")
-    print(f"logISI threshold exact: {counts['threshold_exact']} / {len(trains)}")
-    print(f"logISI bursts exact: {counts['logisi_exact']} / {len(trains)}")
-    print(f"logISI explained by the last-ISI quirk: {counts['logisi_explained_by_last_isi_quirk']}")
+    print("Trains per family:", {k: counts[k] for k in ["bursty", "slow_bursts", "poisson", "gamma"]})
+    print(f"MaxInterval exact: {counts['mi_exact']} / {len(trains)}")
     print(f"Unexplained mismatches: {len(unexplained)}")
-    for method, family, times, py, r in unexplained[:5]:
+    for family, times, py, r in unexplained[:5]:
         only_py = sorted(set(py) - set(r))
         only_r = sorted(set(r) - set(py))
-        print(f"  {method} {family} n={len(times)}: python-only {only_py[:5]}, r-only {only_r[:5]}")
-    return len(unexplained)
+        print(f"  {family} n={len(times)}: python-only {only_py[:5]}, r-only {only_r[:5]}")
+    return 0 if not unexplained else 1
 
 
 if __name__ == "__main__":

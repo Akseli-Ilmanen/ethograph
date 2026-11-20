@@ -46,7 +46,12 @@ from qtpy.QtWidgets import (
 from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WIDTH
 from ethograph.gui.individual_colors import decorate_individual_combo
 from ethograph.gui.plots_base import IndividualPinMixin
-from ethograph.gui.plots_space import auto_camera_3d, draw_reference_geometry, make_space_widget
+from ethograph.gui.plots_space import (
+    LibraryGeometryCombo,
+    auto_camera_3d,
+    draw_reference_geometry,
+    make_space_widget,
+)
 from ethograph.gui.pose_controls import PoseControls
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT
 from ethograph.gui.pose_render import pose_color_map, resolve_skeleton_config
@@ -98,7 +103,6 @@ _STYLE_SETTINGS = (
 )
 #: Variables that change the reference geometry drawn behind the pose.
 _REFERENCE_SETTINGS = (
-    "space_show_references",
     "space_library_geometry",
     "space_geometry_preview",
 )
@@ -404,6 +408,15 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         view_row.addWidget(self.cb_flip_y)
         view_row.addStretch()
         controls.addLayout(view_row)
+
+        geometry_row = QHBoxLayout()
+        geometry_row.setContentsMargins(0, 0, 0, 0)
+        geometry_row.setSpacing(6)
+        geometry_row.addWidget(QLabel("Library geometry"))
+        self.geometry_combo = LibraryGeometryCombo(app_state)
+        self.geometry_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        geometry_row.addWidget(self.geometry_combo)
+        controls.addLayout(geometry_row)
 
         mesh_row = QHBoxLayout()
         mesh_row.setContentsMargins(0, 0, 0, 0)

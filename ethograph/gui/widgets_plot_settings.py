@@ -26,6 +26,7 @@ from .app_state import AppStateSpec
 from .heatmap_sort import SORT_MODES
 from .notify import notify
 from .plots_heatmap import AUTO_COLORMAP
+from .plots_space import LibraryGeometryCombo
 from .plots_spectrogram import auto_levels_db
 
 HEATMAP_COLORMAPS = [
@@ -492,28 +493,8 @@ class PlotSettingsWidget(QWidget):
         group_layout.addWidget(self.space_sync_views_checkbox, row, 0, 1, 4)
 
         row += 1
-        self.space_show_references_checkbox = QCheckBox("Show reference geometry")
-        self.space_show_references_checkbox.setToolTip("Draw the selected library reference geometry")
-        self.space_show_references_checkbox.toggled.connect(self._on_space_show_references_toggled)
-        group_layout.addWidget(self.space_show_references_checkbox, row, 0, 1, 4)
-
-        row += 1
         group_layout.addWidget(QLabel("Library geometry:"), row, 0)
-        self.space_library_combo = QComboBox()
-        self.space_library_combo.setToolTip(
-            "Reference geometry drawn behind the trajectory — one entry per "
-            "YAML file in a space/ folder of the session, the project or ~/.ethograph/defaults"
-        )
-        self.space_library_combo.currentTextChanged.connect(self._on_space_library_changed)
-        # Re-sync when set externally (e.g. a template's library_geometry default)
-        # ...and when the library itself changes with the session or the project.
-        for signal in (
-            self.app_state.space_library_geometry_changed,
-            self.app_state.nc_file_path_changed,
-            self.app_state.nwb_file_path_changed,
-            self.app_state.project_path_changed,
-        ):
-            signal.connect(lambda *_: self.populate_space_library_combo())
+        self.space_library_combo = LibraryGeometryCombo(self.app_state)
         group_layout.addWidget(self.space_library_combo, row, 1, 1, 3)
 
         main_layout.addWidget(self.spaceplot_panel)
@@ -530,25 +511,11 @@ class PlotSettingsWidget(QWidget):
 
         self.space_sync_views_checkbox.setChecked(self.app_state.get_with_default("space_sync_views"))
 
-        self.space_show_references_checkbox.setChecked(self.app_state.get_with_default("space_show_references"))
-
         self.populate_space_library_combo()
 
     def populate_space_library_combo(self):
         """Re-scan the geometry library (session, project, defaults) and restore the saved selection."""
-        from ethograph.gui.plots_space import geometry_dirs_of, load_library_geometries
-
-        combo = self.space_library_combo
-        combo.blockSignals(True)
-        combo.clear()
-        combo.addItem("None")
-        combo.addItems(sorted(load_library_geometries(geometry_dirs_of(self.app_state))))
-        saved = self.app_state.get_with_default("space_library_geometry")
-        if saved:
-            idx = combo.findText(saved)
-            if idx >= 0:
-                combo.setCurrentIndex(idx)
-        combo.blockSignals(False)
+        self.space_library_combo.refresh()
 
     def _on_space_percentile_changed(self, value: float):
         self.app_state.space_percentile_xyzlim = value
@@ -567,12 +534,6 @@ class PlotSettingsWidget(QWidget):
 
     def _on_space_sync_views_toggled(self, checked: bool):
         self.app_state.space_sync_views = checked
-
-    def _on_space_show_references_toggled(self, checked: bool):
-        self.app_state.space_show_references = checked
-
-    def _on_space_library_changed(self, text: str):
-        self.app_state.space_library_geometry = text if text and text != "None" else None
 
     # ------------------------------------------------------------------
     # Shared controls (apply to all plot types)

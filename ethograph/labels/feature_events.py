@@ -46,7 +46,6 @@ import pynapple as nap
 
 from ethograph.features.bursts import (
     detect_bursts_instantaneous_rate,
-    detect_bursts_log_isi,
     detect_bursts_max_interval,
     detect_bursts_poisson_surprise,
 )
@@ -436,16 +435,14 @@ def feature_events(
 # ---------------------------------------------------------------------------
 
 MAX_INTERVAL = "max_interval"
-LOG_ISI = "log_isi"
 INSTANTANEOUS_RATE = "instantaneous_rate"
 POISSON_SURPRISE = "poisson_surprise"
 
 #: The burst detectors a rule can name: each takes a spike train and its own keyword parameters.
 BURST_DETECTORS: dict[str, Callable[..., nap.IntervalSet]] = {
-    MAX_INTERVAL: detect_bursts_max_interval,
-    LOG_ISI: detect_bursts_log_isi,
-    INSTANTANEOUS_RATE: detect_bursts_instantaneous_rate,
     POISSON_SURPRISE: detect_bursts_poisson_surprise,
+    MAX_INTERVAL: detect_bursts_max_interval,
+    INSTANTANEOUS_RATE: detect_bursts_instantaneous_rate,
 }
 
 #: One trial of a spike train: ``(trial, t0, t1, shift)`` — the trial's window on
@@ -478,7 +475,7 @@ class BurstRule:
         return f"bursts {self.method}"
 
     def settings(self) -> str:
-        """``"max_cutoff=0.05, fallback=False"`` — the parameters set away from their defaults, or empty."""
+        """``"min_surprise=3, max_isi_burst=0.1"`` — the parameters set away from their defaults, or empty."""
         defaults = burst_parameters(self.method)
         changed = {name: value for name, value in self.params.items() if value != defaults[name]}
         return ", ".join(
@@ -486,7 +483,7 @@ class BurstRule:
         )
 
     def label(self) -> str:
-        """``"bursts log_isi (max_cutoff=0.05)"`` — the rule, with any parameter set away from its default."""
+        """``"bursts poisson_surprise (min_surprise=3)"`` — the rule, with any parameter set away from its default."""
         settings = self.settings()
         return f"{self.describe()} ({settings})" if settings else self.describe()
 
@@ -507,7 +504,7 @@ def burst_spike_times(train: nap.Ts | nap.Tsd, epochs: nap.IntervalSet, rule: Bu
     """The spikes of *train* inside *epochs* that belong to a burst, as the detector of *rule* finds them.
 
     The detector reads the whole train (the session): whatever it estimates
-    from the train — logISI's threshold, Poisson surprise's mean ISI — is the
+    from the train — Poisson surprise's mean ISI — is the
     unit's, whichever trials are shown. Only then are the burst spikes cut to
     *epochs*, as :func:`burst_events` keeps only the bursts inside its trials.
     """
@@ -524,7 +521,7 @@ def burst_events(
     """Every trial's bursts, as one table in trial then onset order: class ``i + 1`` is the ``i``-th of *trains*.
 
     The detector reads each whole train (the session), so what it estimates
-    from it — logISI's threshold, Poisson surprise's mean ISI — is the unit's
+    from it — Poisson surprise's mean ISI — is the unit's
     own, the same whichever trials are shown. Each trial keeps its part of a
     burst (first to last spike inside it), so none spans two trials or an
     inter-trial gap.

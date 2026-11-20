@@ -282,7 +282,7 @@ def test_a_pasted_unit_order_becomes_every_panel_row_order(moll2025_gui):
 def test_a_burst_filter_draws_only_the_bursting_spikes(gui, units_widget, qtbot):
     """Tools ▸ Neural: Raster of burst spikes only — the filter, its popup source and its title."""
     from ethograph.gui.dialog_burst_raster import BurstRasterDialog
-    from ethograph.labels.feature_events import INSTANTANEOUS_RATE, LOG_ISI, BurstRule
+    from ethograph.labels.feature_events import INSTANTANEOUS_RATE, POISSON_SURPRISE, BurstRule
 
     _, meta = gui
     ew, raster = units_widget
@@ -299,7 +299,7 @@ def test_a_burst_filter_draws_only_the_bursting_spikes(gui, units_widget, qtbot)
 
     dialog = BurstRasterDialog(meta)
     qtbot.addWidget(dialog)
-    assert dialog.method() == LOG_ISI, "logISI is the default detector"
+    assert dialog.method() == POISSON_SURPRISE, "Poisson surprise is the default detector"
     dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(INSTANTANEOUS_RATE))
     dialog._burst_inputs["rate_threshold"].setValue(150.0)
     rule = dialog.show_bursts()

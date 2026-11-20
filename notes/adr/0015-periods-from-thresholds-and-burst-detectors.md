@@ -33,16 +33,14 @@ Two tools, split by timescale. Nothing else.
   serves every unit or keypoint of a dim. Stitching short gaps and dropping
   short periods is the only clean-up. It is one sentence in a methods
   section and needs no citation.
-- **Short events (bursts of tens of milliseconds): the two established
-  detectors, MaxInterval and logISI**, ranked first and second of eight by
-  Cotterill et al. (2016). They are citable, deterministic and have a
-  reference implementation to test against. They belong in pynapple:
-  `notes/drafts/pynapple_burst_detection.py` is the draft,
-  `notes/drafts/pynapple_burst_issue.md` the text of the pynapple issue
-  proposing it (related: #627). Until pynapple ships them they live in
-  `ethograph/features/bursts.py`, the same code typed, and
-  `tests/_test_burst_r_reference.py` checks both copies against the R
-  references. The units' dialog offers them as a method beside the threshold
+- **Short events (bursts of tens of milliseconds): pynapple's burst
+  detectors** (`nap.detect_spike_bursts`): Poisson surprise, the default
+  there and here, MaxInterval and an instantaneous-rate threshold. They are
+  citable and deterministic. `ethograph/features/bursts.py` only gives each
+  a function whose keyword defaults the form opens at. logISI was dropped
+  with pynapple: it was developed for neuronal cultures.
+  `tests/_test_burst_r_reference.py` checks MaxInterval against its R
+  reference. The units' dialog offers them as a method beside the threshold
   (`labels/feature_events.burst_events`, `BurstRule`): the method is
   picked first, and a detector's parameters replace the threshold's. Their
   `IntervalSet` becomes a label source like any other, one class per unit.
@@ -93,10 +91,9 @@ The threshold keeps three scales:
 - One dialog, one rule to explain. A new kind of event is first a new
   *feature* (a population rate, an active-unit count) thresholded the same
   way, not a new method.
-- The detectors exist twice until pynapple takes them: the draft and
-  `ethograph/features/bursts.py`. When it does, the module becomes an
-  import of pynapple's; if it declines, the module simply stays.
-- The automatic per-unit threshold that logISI offers stays out of the
+- The detectors are pynapple's; a detector it removes is removed here, and a
+  raster filter saved for it is dropped on load.
+- The automatic per-unit threshold that logISI offered stays out of the
   threshold dialog. Its valley score ignores how many values are in a bin
   and produced a meaningless threshold on a Poisson train during testing.
 

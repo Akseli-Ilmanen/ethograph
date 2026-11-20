@@ -1020,10 +1020,13 @@ class DataWidget(QWidget):
         except AmbiguousSessionError as e:
             from ethograph.gui.dialog_ambiguous_session import resolve_ambiguous_session
 
-            if resolve_ambiguous_session(e, self.app_state, self):
-                self.on_load_clicked()  # the ignore list changed: try again
-            else:
+            retry = resolve_ambiguous_session(e, self.app_state, self)
+            if retry is None:
                 self._cancel_load(str(e))
+            else:
+                # The folder again (the ignore list changed) or the one file the user opened.
+                self.app_state.nc_file_path = str(retry)
+                self.on_load_clicked()
             return
         except _LoadError as e:
             self._cancel_load(str(e))

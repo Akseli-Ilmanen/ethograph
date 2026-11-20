@@ -184,6 +184,55 @@ def load_library_geometries(dirs: Iterable[Path]) -> dict[str, list["ReferenceGe
     return geometries
 
 
+class LibraryGeometryCombo(QComboBox):
+    """Which library geometry is drawn behind every space and skeleton plot.
+
+    Shown wherever a geometry can be drawn; every copy is bound to
+    ``app_state.space_library_geometry``, so a choice in one shows in all.
+    "None" draws nothing — there is no separate on/off switch.
+    """
+
+    NONE = "None"
+
+    def __init__(self, app_state, parent=None):
+        super().__init__(parent)
+        self.app_state = app_state
+        self.setToolTip(
+            "Reference geometry drawn behind the data — one entry per YAML file in a "
+            "space/ folder of the session, the project or ~/.ethograph/defaults. "
+            "None draws nothing."
+        )
+        self.currentTextChanged.connect(self._on_picked)
+        # Re-sync when set externally (e.g. a template's library_geometry default)
+        # ...and when the library itself changes with the session or the project.
+        for signal in (
+            app_state.space_library_geometry_changed,
+            app_state.nc_file_path_changed,
+            app_state.nwb_file_path_changed,
+            app_state.project_path_changed,
+        ):
+            signal.connect(self.refresh)
+        self.refresh()
+
+    def refresh(self, *_args) -> None:
+        """Re-scan the geometry library (session, project, defaults) and show the saved selection."""
+        self.blockSignals(True)
+        self.clear()
+        self.addItem(self.NONE)
+        self.addItems(sorted(load_library_geometries(geometry_dirs_of(self.app_state))))
+        saved = self.app_state.get_with_default("space_library_geometry")
+        self.setCurrentIndex(max(0, self.findText(saved or "")))
+        self.blockSignals(False)
+
+    def showPopup(self) -> None:
+        # Read the folders each time the list opens, so an added file shows at once.
+        self.refresh()
+        super().showPopup()
+
+    def _on_picked(self, text: str) -> None:
+        self.app_state.space_library_geometry = text if text and text != self.NONE else None
+
+
 def parse_geometry(cfg: dict) -> list[ReferenceGeometry]:
     """Everything a geometry config draws: its raw ``references`` and its parametric ``shapes``."""
     refs = _parse_references(cfg)
@@ -302,11 +351,11 @@ def draw_reference_geometry(widget, app_state) -> None:
     """(Re)draw the library's reference geometry on a 2D or 3D canvas.
 
     Idempotent: old reference items are removed first, so this runs on every
-    render — a library-geometry / show-references change re-renders every
-    open space or skeleton plot without a widget rebuild.
+    render — a library-geometry change re-renders every open space or
+    skeleton plot without a widget rebuild.
     """
     clear_reference_items(widget)
-    if widget is None or not getattr(app_state, "space_show_references", True):
+    if widget is None:
         return
     for ref in load_reference_geometries(app_state):
         try:
@@ -718,7 +767,6 @@ class SpacePlot(IndividualPinMixin, QWidget):
         app_state.space_limit_to_window_changed.connect(self._on_settings_changed)
         app_state.space_window_s_changed.connect(self._on_window_state_changed)
         app_state.space_hide_zeros_changed.connect(self._on_settings_changed)
-        app_state.space_show_references_changed.connect(self._on_settings_changed)
         app_state.space_library_geometry_changed.connect(self._on_settings_changed)
         # A shape being edited redraws only the geometry, per keystroke.
         app_state.space_geometry_preview_changed.connect(self._draw_references)

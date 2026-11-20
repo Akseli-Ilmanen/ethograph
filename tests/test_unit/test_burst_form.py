@@ -7,7 +7,7 @@ from qtpy.QtWidgets import QApplication, QFormLayout, QGroupBox, QPushButton
 
 from ethograph.gui.app_state import ObservableAppState
 from ethograph.gui.burst_form import build_burst_inputs, read_burst_rule, saved_burst_parameters
-from ethograph.labels.feature_events import LOG_ISI, MAX_INTERVAL, POISSON_SURPRISE, burst_parameters
+from ethograph.labels.feature_events import INSTANTANEOUS_RATE, MAX_INTERVAL, POISSON_SURPRISE, burst_parameters
 
 
 @pytest.fixture(scope="module")
@@ -40,26 +40,34 @@ def test_a_change_is_remembered_per_detector_and_a_new_form_opens_at_it(qapp, st
     assert state.burst_detector_params == {MAX_INTERVAL: {"min_spikes_in_burst": 7}}
 
     # Another detector is untouched by it, and coming back finds the choice again.
-    inputs = _rebuild(form, inputs, LOG_ISI, state)
-    assert read_burst_rule(LOG_ISI, inputs).params == burst_parameters(LOG_ISI)
+    inputs = _rebuild(form, inputs, INSTANTANEOUS_RATE, state)
+    assert read_burst_rule(INSTANTANEOUS_RATE, inputs).params == burst_parameters(INSTANTANEOUS_RATE)
     inputs = _rebuild(form, inputs, MAX_INTERVAL, state)
     assert inputs["min_spikes_in_burst"].value() == 7
     assert len(box.findChildren(QPushButton)) == 1  # one revert button, not one per rebuild
 
 
 def test_revert_puts_one_detector_back_and_forgets_its_choices(qapp, state):
-    state.burst_detector_params = {MAX_INTERVAL: {"min_spikes_in_burst": 7}, LOG_ISI: {"fallback": False}}
+    state.burst_detector_params = {MAX_INTERVAL: {"min_spikes_in_burst": 7}, POISSON_SURPRISE: {"min_surprise": 3.0}}
     box, form = _form()
     inputs = build_burst_inputs(form, MAX_INTERVAL, state)
     assert inputs["min_spikes_in_burst"].value() == 7
     box.findChild(QPushButton).click()
     assert read_burst_rule(MAX_INTERVAL, inputs).params == burst_parameters(MAX_INTERVAL)
-    assert state.burst_detector_params == {LOG_ISI: {"fallback": False}}  # the other detector keeps its own
+    assert state.burst_detector_params == {POISSON_SURPRISE: {"min_surprise": 3.0}}  # the other detector keeps its own
 
 
 def test_a_saved_value_of_the_wrong_kind_is_ignored(qapp, state):
     state.burst_detector_params = {MAX_INTERVAL: {"min_spikes_in_burst": "many", "gone": 3, "max_isi_start": True}}
     assert saved_burst_parameters(state, MAX_INTERVAL) == {}
+
+
+def test_a_filter_saved_for_a_detector_that_is_gone_is_dropped_on_load(qapp, state):
+    kept = {"method": MAX_INTERVAL, "params": {}}
+    gone = {"method": "log_isi", "params": {"fallback": False}}
+    state.load_from_dict({"raster_burst_filters": [gone, kept], "raster_burst_filter": gone})
+    assert state.raster_burst_filters == [kept]
+    assert state.raster_burst_filter == {}
 
 
 def test_rows_are_named_by_argument_and_explained_on_hover(qapp, state):

@@ -31,6 +31,7 @@ from ethograph.labels import exporters
 from ethograph.labels import workflow as wf
 from ethograph.labels.curation import trial_curation_status
 from ethograph.labels.export import enrich_labels_df
+from ethograph.labels.feature_events import BURST_DETECTORS
 from ethograph.labels.predictions import LabelSource
 from ethograph.labels.tsv_store import (
     LabelEdit,
@@ -536,7 +537,6 @@ class AppStateSpec:
         "space_lock_axes": (bool, False, False),
         "space_sync_views": (bool, True, True),
         "space_hide_zeros": (bool, False, True),
-        "space_show_references": (bool, True, True),
         "space_library_geometry": (str | None, None, True, SCOPE_LOCAL),
         # Which of the project's calibration/*.toml this dataset was filmed with;
         # only consulted when the project holds several.
@@ -1673,6 +1673,14 @@ class ObservableAppState(QObject):
                 state_dict.setdefault(f"after_s_{suffix}", old_after)
 
         state_dict.pop("window_size", None)
+
+        # A burst filter saved for a detector that no longer exists is dropped, not restored.
+        if "raster_burst_filters" in state_dict:
+            state_dict["raster_burst_filters"] = [
+                rule for rule in state_dict["raster_burst_filters"] or [] if rule.get("method") in BURST_DETECTORS
+            ]
+        if (state_dict.get("raster_burst_filter") or {}).get("method") not in BURST_DETECTORS:
+            state_dict.pop("raster_burst_filter", None)
 
         cleaned = sanitize_path_state(state_dict, AppStateSpec.PATH_VARS)
         self._unavailable_paths.update({k: v for k, v in state_dict.items() if cleaned.get(k) != v})

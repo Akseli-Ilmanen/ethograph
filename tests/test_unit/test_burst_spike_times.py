@@ -7,8 +7,8 @@ import pytest
 from ethograph.labels.feature_events import (
     BURST_DETECTORS,
     INSTANTANEOUS_RATE,
-    LOG_ISI,
     MAX_INTERVAL,
+    POISSON_SURPRISE,
     BurstRule,
     burst_spike_times,
 )
@@ -45,8 +45,9 @@ def test_the_instantaneous_rate_threshold_is_the_rules_own():
 
 
 def test_a_rules_label_names_only_what_was_changed():
-    assert BurstRule(LOG_ISI).label() == "bursts log_isi"
-    assert BurstRule(LOG_ISI, {"max_cutoff": 0.1, "fallback": False}).label() == "bursts log_isi (fallback=False)"
+    assert BurstRule(POISSON_SURPRISE).label() == "bursts poisson_surprise"
+    rule = BurstRule(POISSON_SURPRISE, {"min_surprise": 5.0, "max_isi_burst": 0.1})
+    assert rule.label() == "bursts poisson_surprise (max_isi_burst=0.1)"
     rule = BurstRule(MAX_INTERVAL, {"max_isi_start": 0.05, "min_spikes_in_burst": 4})
     assert rule.label() == "bursts max_interval (max_isi_start=0.05, min_spikes_in_burst=4)"
 
@@ -54,4 +55,4 @@ def test_a_rules_label_names_only_what_was_changed():
 def test_a_rule_survives_the_settings_file():
     rule = BurstRule(INSTANTANEOUS_RATE, {"rate_threshold": 80.0})
     assert BurstRule.from_dict(rule.to_dict()) == rule
-    assert BurstRule.from_dict({"method": LOG_ISI}) == BurstRule(LOG_ISI)
+    assert BurstRule.from_dict({"method": POISSON_SURPRISE}) == BurstRule(POISSON_SURPRISE)

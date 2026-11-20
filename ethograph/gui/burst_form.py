@@ -12,21 +12,23 @@ from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QFormLayout, QPushButton, 
 
 from ethograph.labels.feature_events import (
     INSTANTANEOUS_RATE,
-    LOG_ISI,
     MAX_INTERVAL,
     POISSON_SURPRISE,
     BurstRule,
     burst_parameters,
 )
 
+#: The detector a dialog opens on: pynapple's own default.
+DEFAULT_BURST_METHOD = POISSON_SURPRISE
+
 #: The detectors in the order they are offered: key → (combo text, tooltip).
 BURST_METHODS: dict[str, tuple[str, str]] = {
-    LOG_ISI: (
-        "Bursts: logISI",
-        "Bursts read off the spike times with a limit each unit sets for itself: the valley\n"
-        "between the within-burst and between-burst peaks of its own ISI histogram, over the\n"
-        "trials shown. Units with different firing patterns need no tuning.\n"
-        "Pasquale et al. (2010); ranked second by Cotterill et al. (2016).",
+    POISSON_SURPRISE: (
+        "Bursts: Poisson surprise",
+        "A burst is a run of spikes too dense to be chance for a unit firing at its own mean\n"
+        "rate: grown and trimmed to make that improbability (its surprise) as large as it gets,\n"
+        "and kept above min_surprise. Relative to each unit's rate, so it needs no tuning per unit.\n"
+        "Legendy & Salcman (1985), as implemented by Cotterill & Eglen (2018).",
     ),
     MAX_INTERVAL: (
         "Bursts: MaxInterval",
@@ -41,13 +43,6 @@ BURST_METHODS: dict[str, tuple[str, str]] = {
         "two spikes) stays above a threshold — the birdsong field's definition, 125 Hz in\n"
         "Leonardo & Fee (2005).",
     ),
-    POISSON_SURPRISE: (
-        "Bursts: Poisson surprise",
-        "A burst is a run of spikes too dense to be chance for a unit firing at its own mean\n"
-        "rate: grown and trimmed to make that improbability (its surprise) as large as it gets,\n"
-        "and kept above min_surprise. Relative to each unit's rate, so it needs no tuning per unit.\n"
-        "Legendy & Salcman (1985), as implemented by Cotterill & Eglen (2018).",
-    ),
 }
 
 #: A burst detector's parameters, each with its meaning, worded as in pynapple's user guide
@@ -59,14 +54,6 @@ BURST_PARAMETERS: dict[str, str] = {
     "min_inter_burst_interval": "Bursts closer than this, last spike to first spike, are merged.",
     "min_burst_duration": "Shorter bursts are discarded.",
     "min_spikes_in_burst": "Bursts with fewer spikes are discarded.",
-    "max_cutoff": (
-        "Largest ISI at which the intra-burst peak may lie. Also the threshold used when no clear\n"
-        "minimum between the peaks is found."
-    ),
-    "fallback": (
-        "Whether to use max_cutoff as the threshold when no clear minimum is found, as the published\n"
-        "method does. Unticked, such a train returns no bursts."
-    ),
     "rate_threshold": "A burst is a run of spikes whose instantaneous firing rate (1 / ISI) stays above this.",
     "min_surprise": (
         "The smallest surprise of a burst: -log of the probability of that many spikes in that time\n"

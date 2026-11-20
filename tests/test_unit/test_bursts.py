@@ -6,7 +6,6 @@ import pytest
 
 from ethograph.features.bursts import (
     detect_bursts_instantaneous_rate,
-    detect_bursts_log_isi,
     detect_bursts_max_interval,
     detect_bursts_poisson_surprise,
 )
@@ -34,14 +33,6 @@ def test_spikes_at_one_instant_are_no_burst_and_cost_the_others_nothing():
     bursts = detect_bursts_instantaneous_rate(spikes)
     assert bursts.values.tolist() == [[0.0, 0.002], [2.0, 2.001]]
     assert bursts.n_spikes.tolist() == [3, 2]
-
-
-def test_log_isi_without_a_valley_falls_back_only_when_asked():
-    # One interval length: a within-burst peak, and nothing to separate it from.
-    spikes = nap.Ts(t=np.arange(50) * 0.02)
-    assert len(detect_bursts_log_isi(spikes)) == 1
-    with pytest.warns(UserWarning, match="No clear minimum"):  # pynapple says why it found nothing
-        assert len(detect_bursts_log_isi(spikes, fallback=False)) == 0
 
 
 def test_a_group_is_read_unit_by_unit():

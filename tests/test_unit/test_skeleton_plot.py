@@ -297,17 +297,23 @@ def test_an_extra_dim_combo_picks_which_pose_is_drawn(panel):
 
 def test_settings_round_trip(panel):
     plot, _ = panel
-    plot.set_hidden_keypoints({"tail"})
     plot.cb_flip_y.setChecked(True)
-    plot.color_by_combo.setCurrentIndex(plot.color_by_combo.findData(COLOR_BY_INDIVIDUAL))
+    plot.cb_all_individuals.setChecked(True)
     settings = plot.skeleton_settings()
-    assert settings["hidden_keypoints"] == ["tail"]
     assert settings["flip_y"] is True
-    assert settings["color_by"] == COLOR_BY_INDIVIDUAL
 
-    plot.set_hidden_keypoints(set())
     plot.cb_flip_y.setChecked(False)
+    plot.cb_all_individuals.setChecked(False)
     plot.apply_skeleton_settings(settings)
-    assert plot.hidden_keypoints() == {"tail"}
     assert plot.cb_flip_y.isChecked()
+    assert plot.cb_all_individuals.isChecked()
+
+
+def test_the_shared_pose_controls_drive_the_panel(panel):
+    plot, _ = panel
+    plot.app_state.pose_hidden_keypoints = ["tail"]
+    plot.pose_controls.pose_color_by_combo.setCurrentIndex(
+        plot.pose_controls.pose_color_by_combo.findData(COLOR_BY_INDIVIDUAL)
+    )
+    assert plot.hidden_keypoints() == {"tail"}
     assert plot.color_by() == COLOR_BY_INDIVIDUAL

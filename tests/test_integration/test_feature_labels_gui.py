@@ -5,7 +5,15 @@ import pytest
 from qtpy.QtWidgets import QApplication
 
 from ethograph.gui.dialog_feature_labels import _BURST_PARAMETERS, THRESHOLD, FeatureLabelsDialog
-from ethograph.labels.feature_events import BURST_DETECTORS, LOG_ISI, MAX_INTERVAL, PERCENTILE, ZSCORE, burst_parameters
+from ethograph.labels.feature_events import (
+    BURST_DETECTORS,
+    INSTANTANEOUS_RATE,
+    MAX_INTERVAL,
+    PERCENTILE,
+    POISSON_SURPRISE,
+    ZSCORE,
+    burst_parameters,
+)
 from ethograph.labels.tsv_store import labels_equal
 
 pytestmark = pytest.mark.usefixtures("gui")
@@ -79,6 +87,7 @@ def test_firing_rates_are_thresholded_in_every_trial_not_just_the_one_on_screen(
 
     dialog = FeatureLabelsDialog(meta, neural=True)
     qtbot.addWidget(dialog)
+    dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(THRESHOLD))
     assert dialog.feature_combo.currentText() == "firing_rate"
     assert dialog.query().dim == "unit"
     dialog.threshold_spin.setValue(100.0)
@@ -153,6 +162,7 @@ def test_the_instantaneous_rate_finds_a_burst_from_its_first_spike_to_its_last(m
 
     dialog = FeatureLabelsDialog(meta, neural=True)
     qtbot.addWidget(dialog)
+    dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(THRESHOLD))
     dialog.scale_combo.setCurrentIndex(dialog.scale_combo.findData(ZSCORE))
     dialog.feature_combo.setCurrentText("instantaneous_rate")
     # It opens at the birdsong burst criterion: above 125 Hz, in the rate's own units.
@@ -197,8 +207,8 @@ def test_a_burst_detector_replaces_the_threshold_and_reads_the_spikes_of_every_t
         "firing_rate",
         "instantaneous_rate",
     ]
-    # It opens on the logISI detector; thresholding a rate is the last method offered.
-    assert dialog.method() == LOG_ISI and not dialog.burst_group.isHidden()
+    # It opens on Poisson surprise; thresholding a rate is the last method offered.
+    assert dialog.method() == POISSON_SURPRISE and not dialog.burst_group.isHidden()
     assert dialog.method_combo.itemData(dialog.method_combo.count() - 1) == THRESHOLD
     dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(MAX_INTERVAL))
     # The form is now the detector's: its parameters at their defaults, no threshold to set.
@@ -251,16 +261,16 @@ def test_a_burst_detector_replaces_the_threshold_and_reads_the_spikes_of_every_t
     ew._cluster_proxy.set_numeric_filter(spikes_col, None, None)
     ew._on_unit_filter_changed()
 
-    # logISI on one unit: a single interval length has no valley, so the fallback decides.
-    dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(LOG_ISI))
+    # One unit, by its instantaneous rate: 200 Hz is a burst above 125 Hz, none above 250 Hz.
+    dialog.method_combo.setCurrentIndex(dialog.method_combo.findData(INSTANTANEOUS_RATE))
     dialog.unit_combo.setCurrentIndex(dialog.unit_combo.findData("5"))
-    assert dialog.name_edit.text() == "bursts log_isi [unit=5]"
+    assert dialog.name_edit.text() == "bursts instantaneous_rate [unit=5]"
     assert dialog.create_labels().labels_df["labels"].tolist() == [1]
-    dialog._burst_inputs["fallback"].setChecked(False)
+    dialog._burst_inputs["rate_threshold"].setValue(250.0)
     assert dialog.create_labels() is None
 
     # Shown under the raster: no panel of its own, and a newer set replaces the older one's bands.
-    dialog._burst_inputs["fallback"].setChecked(True)
+    dialog._burst_inputs["rate_threshold"].setValue(125.0)
     dialog.show_combo.setCurrentIndex(dialog.show_combo.findData("raster"))
     assert state.unit_events_display == "raster", "the choice is remembered"
     n_panels = len(meta.plot_container.prediction_panels())
