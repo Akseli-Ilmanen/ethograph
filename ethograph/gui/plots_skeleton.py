@@ -1,11 +1,12 @@
 """Skeleton plot — the pose at the time marker, drawn in the data's own space.
 
 A space plot draws where a point *went*; this panel draws where the animal
-*is*: every keypoint of the dataset's ``position`` at the current instant, with
+*is*: every keypoint of a pose variable at the current instant, with
 the skeleton's bones between them, on the same 2D / 3D canvas the space plot
-uses (:func:`~ethograph.gui.plots_space.make_space_widget`). It is offered only
-for ``position`` — a variable with a ``space`` dim holding x/y(/z) and a
-keypoint dim — because that is the one variable whose columns *are* a body.
+uses (:func:`~ethograph.gui.plots_space.make_space_widget`). It is offered for
+any variable shaped like a pose — a ``space`` dim holding x/y(/z) and a
+keypoint dim — whatever it is called: the shape, not the name, makes its
+columns a body.
 
 Nothing here is a trajectory: no window, no colour-by-feature, no highlight.
 The controls are what a pose needs and nothing else — which individuals, which
@@ -47,10 +48,15 @@ from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WI
 from ethograph.gui.individual_colors import decorate_individual_combo
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_space import (
+    GridControls,
     LibraryGeometryCombo,
     auto_camera_3d,
+    capture_view,
+    data_box,
+    draw_grid,
     draw_reference_geometry,
     make_space_widget,
+    restore_view,
 )
 from ethograph.gui.pose_controls import PoseControls
 from ethograph.gui.pose_convert import COLOR_BY_INDIVIDUAL, COLOR_BY_KEYPOINT
@@ -68,8 +74,8 @@ from ethograph.skeleton.mesh import (
 
 logger = logging.getLogger(__name__)
 
-#: The one variable a skeleton plot draws. Any other variable is a trajectory
-#: for the space plot, however it is shaped.
+#: The variable a skeleton plot draws unless it is told another: the dataset's
+#: own pose. Any variable :func:`pose_dims` accepts can be drawn instead.
 POSE_FEATURE = "position"
 #: Its companion, when the dataset has one: points below ``pose_hide_threshold``
 #: are dropped, exactly as the video overlay drops them.
@@ -182,10 +188,9 @@ def pose_dims(store, feature: str = POSE_FEATURE) -> PoseDims | None:
 def skeleton_plot_types(app_state, feature: str) -> list[str]:
     """The skeleton plot types the add-panel popup offers for *feature*.
 
-    Only ``position`` qualifies; 3D only when the pose has a z axis.
+    Any variable shaped like a pose qualifies (:func:`pose_dims`), whatever its
+    name; 3D only when it has a z axis.
     """
-    if feature != POSE_FEATURE:
-        return []
     dims = pose_dims(getattr(app_state, "data_loader", None), feature)
     if dims is None:
         return []
@@ -284,7 +289,7 @@ def _keypoint_columns(plot_data, dims: PoseDims) -> np.ndarray:
     if len(labels) == data.shape[1] and set(labels) == set(keypoints):
         data = data[:, [labels.index(k) for k in keypoints]]
     if data.shape[1] != len(keypoints):
-        raise ValueError(f"{POSE_FEATURE} selected as {data.shape}, expected {len(keypoints)} keypoint columns")
+        raise ValueError(f"Pose selected as {data.shape}, expected {len(keypoints)} keypoint columns")
     return data
 
 
@@ -363,6 +368,9 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
     #: Emitted with ``self`` when the user pinned this panel through its own
     #: individual combo; the owner re-titles it and moves the labelling subject.
     pin_changed = Signal(object)
+    #: Emitted with ``self`` after the user zoomed, panned or orbited; the owner
+    #: mirrors the view onto the other skeleton plots while views are synced.
+    view_changed = Signal(object)
 
     #: Monotonic counter so every instance's dock gets a unique objectName.
     _dock_seq = 0
@@ -377,6 +385,8 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._apply_default_width = True
 
         self._store = None
+        #: The pose variable this panel draws.
+        self.feature = POSE_FEATURE
         self._dims: PoseDims | None = None
         #: ``(T, I, K, D)`` for the shown individuals over the window, and its clock.
         self._coords: np.ndarray | None = None
@@ -406,8 +416,27 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self.cb_flip_y = QCheckBox("Flip Y")
         self.cb_flip_y.setToolTip("Image coordinates grow downwards; flip so the pose is upright (2D only)")
         view_row.addWidget(self.cb_flip_y)
+        self.cb_sync = QCheckBox("Sync views")
+        self.cb_sync.setToolTip(
+            "Mirror zoom/pan (2D) and camera angle (3D) across all open skeleton plots of the same type"
+        )
+        self.cb_sync.setChecked(bool(app_state.get_with_default("space_sync_views")))
+        self.cb_sync.toggled.connect(self._on_sync_toggled)
+        app_state.space_sync_views_changed.connect(self._on_sync_setting_changed)
+        view_row.addWidget(self.cb_sync)
         view_row.addStretch()
         controls.addLayout(view_row)
+
+        feature_row = QHBoxLayout()
+        feature_row.setContentsMargins(0, 0, 0, 0)
+        feature_row.setSpacing(6)
+        feature_row.addWidget(QLabel("Feature"))
+        self.feature_combo = QComboBox()
+        self.feature_combo.setToolTip("The pose this panel draws: any variable with x/y(/z) and keypoints")
+        self.feature_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.feature_combo.currentTextChanged.connect(self._on_feature_picked)
+        feature_row.addWidget(self.feature_combo)
+        controls.addLayout(feature_row)
 
         geometry_row = QHBoxLayout()
         geometry_row.setContentsMargins(0, 0, 0, 0)
@@ -417,6 +446,8 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self.geometry_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         geometry_row.addWidget(self.geometry_combo)
         controls.addLayout(geometry_row)
+        self.grid_controls = GridControls(app_state)
+        controls.addWidget(self.grid_controls)
 
         mesh_row = QHBoxLayout()
         mesh_row.setContentsMargins(0, 0, 0, 0)
@@ -486,6 +517,13 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._restyle_timer.setInterval(50)
         self._restyle_timer.timeout.connect(self._draw)
 
+        # Emitted after the canvas has processed the interaction: the 3D events
+        # reach the event filter before the camera moves.
+        self._view_sync_timer = QTimer(self)
+        self._view_sync_timer.setSingleShot(True)
+        self._view_sync_timer.setInterval(0)
+        self._view_sync_timer.timeout.connect(lambda: self.view_changed.emit(self))
+
         self.cb_3d.toggled.connect(self._on_view_changed)
         self.cb_flip_y.toggled.connect(self._on_view_changed)
         self.individual_combo.currentIndexChanged.connect(self._on_individual_combo)
@@ -498,6 +536,8 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
                 getattr(app_state, f"{name}_changed").connect(self._on_skeleton_changed)
             for name in _REFERENCE_SETTINGS:
                 getattr(app_state, f"{name}_changed").connect(self._draw_references)
+            app_state.space_grid_visible_changed.connect(self._draw_grid)
+            app_state.space_grid_spacing_changed.connect(self._draw_grid)
             app_state.pose_hide_threshold_changed.connect(self._on_data_changed)
 
         self._ensure_canvas(False)
@@ -532,7 +572,8 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
     def refresh_title(self) -> None:
         """Re-title the dock: its name, then which individual it shows and why."""
         if self.dock_widget is not None:
-            self.dock_widget.setWindowTitle(self._dock_name + self.app_state.panel_mode_suffix(self))
+            name = self._dock_name if self.feature == POSE_FEATURE else f"{self._dock_name}: {self.feature}"
+            self.dock_widget.setWindowTitle(name + self.app_state.panel_mode_suffix(self))
 
     def _apply_default_dock_width(self):
         dock = self.dock_widget
@@ -552,11 +593,36 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             return False
         if event.type() == QEvent.MouseButtonPress:
             self.clicked.emit()
+        elif event.type() in (QEvent.MouseMove, QEvent.Wheel, QEvent.MouseButtonRelease):
+            # The 3D canvas has no view-changed signal: an orbit or a zoom is
+            # read from its input events (moves arrive only with a button held).
+            if self.is_3d and obj is self.canvas:
+                self._view_sync_timer.start()
         return False
 
     def mousePressEvent(self, event):
         self.clicked.emit()
         super().mousePressEvent(event)
+
+    # ------------------------------------------------------------------
+    # View sync across skeleton plots
+    # ------------------------------------------------------------------
+
+    def _on_sync_toggled(self, checked: bool) -> None:
+        self.app_state.space_sync_views = checked
+
+    def _on_sync_setting_changed(self, value) -> None:
+        self.cb_sync.blockSignals(True)
+        self.cb_sync.setChecked(bool(value))
+        self.cb_sync.blockSignals(False)
+
+    def capture_view_state(self) -> dict | None:
+        """The frame this panel shows: 2D axis ranges or the 3D camera."""
+        return capture_view(self.canvas)
+
+    def apply_view_state(self, view: dict) -> None:
+        """Adopt another panel's frame; a no-op across the 2D/3D boundary."""
+        restore_view(self.canvas, view)
 
     # ------------------------------------------------------------------
     # The panel's individual
@@ -619,12 +685,41 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
     def set_store(self, store) -> None:
         """Bind the loader (again on every trial: the dataset behind it changed)."""
         self._store = store
-        dims = pose_dims(store)
+        dims = pose_dims(store, self.feature)
         if dims != self._dims:
             self._dims = dims
             self._rebuild_controls()
+        self._refill_feature_combo()
         self._cache_key = None
         self._connections = None
+
+    def _refill_feature_combo(self) -> None:
+        """Every pose-shaped variable of the dataset, the drawn one selected."""
+        store = self._store
+        names = [f for f in getattr(store, "features", []) if pose_dims(store, f) is not None]
+        if self.feature not in names:
+            names.insert(0, self.feature)  # absent from this dataset: still named, never silently swapped
+        self.feature_combo.blockSignals(True)
+        self.feature_combo.clear()
+        self.feature_combo.addItems(names)
+        self.feature_combo.setCurrentText(self.feature)
+        self.feature_combo.blockSignals(False)
+
+    def _on_feature_picked(self, name: str) -> None:
+        if name and name != self.feature:
+            self.set_feature(name)
+            self._fit_view()
+            self._draw()
+
+    def set_feature(self, name: str) -> None:
+        """Draw *name* instead: its dims, its controls, its title."""
+        self.feature = name
+        self._dims = pose_dims(self._store, name)
+        self._rebuild_controls()
+        self._refill_feature_combo()
+        self._cache_key = None
+        self._connections = None
+        self.refresh_title()
 
     def _refill_mesh_menu(self) -> None:
         """The project's parts as checkable entries, the checked ones by name."""
@@ -761,6 +856,15 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
     def _draw_references(self, *_args) -> None:
         draw_reference_geometry(self.canvas, self.app_state)
 
+    def _draw_grid(self, *_args) -> None:
+        """(Re)draw the grid under the window's pose — see :func:`~ethograph.gui.plots_space.draw_grid`."""
+        lo = hi = None
+        cube = self._coords
+        if cube is not None:
+            flat = cube.reshape(-1, cube.shape[-1])
+            lo, hi = data_box(flat[:, 0], flat[:, 1], flat[:, 2] if flat.shape[1] > 2 else np.zeros(1))
+        draw_grid(self.canvas, self.app_state, lo, hi)
+
     def _ensure_data(self) -> bool:
         """Load the whole window once and index into it per tick — a select()
         per time-marker tick would re-query the backend at frame rate."""
@@ -778,6 +882,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             bounds.end_s,
             getattr(self.app_state, "trials_sel", None),
             dims,
+            self.feature,
         )
         if key == self._cache_key and self._coords is not None:
             return True
@@ -794,7 +899,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         for i, individual in enumerate(shown):
             for d, axis in enumerate(dims.axes):
                 selection = {**selection_for(individual), dims.space_dim: axis}
-                plot_data = store.select(POSE_FEATURE, selection, t0=bounds.start_s, t1=bounds.end_s)
+                plot_data = store.select(self.feature, selection, t0=bounds.start_s, t1=bounds.end_s)
                 if plot_data is None or plot_data.data is None:
                     self._coords = self._time = None
                     return False
@@ -810,7 +915,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
 
         # The video overlay's confidence filter, applied to the same points.
         threshold = float(getattr(self.app_state, "pose_hide_threshold", 0.0) or 0.0)
-        if threshold > 0.0 and CONFIDENCE_FEATURE in list(getattr(store, "features", [])):
+        if threshold > 0.0 and self._has_confidence():
             for i, individual in enumerate(shown):
                 conf = store.select(CONFIDENCE_FEATURE, selection_for(individual), t0=bounds.start_s, t1=bounds.end_s)
                 if conf is None or conf.data is None:
@@ -823,6 +928,14 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         self._cache_key = key
         self._fit_view()
         return True
+
+    def _has_confidence(self) -> bool:
+        """Whether the dataset's ``confidence`` scores this pose's own keypoints."""
+        dims, store = self._dims, self._store
+        if dims is None or store is None or CONFIDENCE_FEATURE not in list(getattr(store, "features", [])):
+            return False
+        scored = (store.feature_dims(CONFIDENCE_FEATURE) or {}).get(dims.keypoint_dim, ())
+        return tuple(scored) == dims.keypoints
 
     def _connections_now(self) -> list[tuple[str, str]]:
         if self._connections is None:
@@ -930,6 +1043,9 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
             plot_item = self.canvas.getPlotItem()
             plot_item.setAspectLocked(True)
             plot_item.vb.invertY(self.cb_flip_y.isChecked())
+            # Manually only: a programmatic range (fit, incoming sync) must not
+            # re-broadcast, or two synced panels loop.
+            plot_item.vb.sigRangeChangedManually.connect(self._view_sync_timer.start)
         self._points_item = None
         self._gl_edges_item = None
         self._edge_items = {}
@@ -939,6 +1055,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         for child in self.canvas.findChildren(QWidget):
             child.installEventFilter(self)
         self._draw_references()
+        self._draw_grid()
         return True
 
     def _fit_view(self) -> None:
@@ -947,6 +1064,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         cube = self._coords
         if cube is None or self.canvas is None or not np.isfinite(cube).any():
             return
+        self._draw_grid()
         flat = cube.reshape(-1, cube.shape[-1])
         if self.is_3d:
             z = flat[:, 2] if flat.shape[1] > 2 else np.zeros(len(flat))
@@ -1102,6 +1220,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
 
     def skeleton_settings(self) -> dict:
         return {
+            "feature": self.feature,
             "view_3d": self.cb_3d.isChecked(),
             "flip_y": self.cb_flip_y.isChecked(),
             "all_individuals": self.cb_all_individuals.isChecked(),
@@ -1111,6 +1230,7 @@ class SkeletonPlot(IndividualPinMixin, QWidget):
         }
 
     def apply_skeleton_settings(self, settings: dict) -> None:
+        self.set_feature(str(settings.get("feature") or POSE_FEATURE))
         for widget, value in (
             (self.cb_flip_y, settings.get("flip_y")),
             (self.cb_all_individuals, settings.get("all_individuals")),

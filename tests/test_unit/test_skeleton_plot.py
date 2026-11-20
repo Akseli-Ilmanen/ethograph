@@ -64,12 +64,11 @@ def test_a_2d_position_is_offered_in_2d_only():
     assert skeleton_plot_types(state, "position") == [SKELETON_2D]
 
 
-def test_only_position_is_offered():
-    """Another variable — however it is shaped — is a trajectory, never a body."""
+def test_the_shape_not_the_name_makes_a_pose():
     state = _state(_dataset(["x", "y", "z"]))
     assert skeleton_plot_types(state, "speed") == []
-    renamed = _state(_dataset(["x", "y"]).rename({"position": "beak_position"}))
-    assert skeleton_plot_types(renamed, "beak_position") == []
+    renamed = _state(_dataset(["x", "y", "z"]).rename({"position": "position_3d"}))
+    assert skeleton_plot_types(renamed, "position_3d") == [SKELETON_2D, SKELETON_3D]
 
 
 def test_the_popup_offers_skeleton_beside_space():
@@ -295,6 +294,36 @@ def test_an_extra_dim_combo_picks_which_pose_is_drawn(panel):
     assert plot.skeleton_settings()["dims"] == {"position_type": "absolute"}
 
 
+def test_a_restored_panel_draws_the_variable_it_was_saved_with(qtbot, tmp_path, monkeypatch):
+    from ethograph.gui.app_state import ObservableAppState
+    from ethograph.gui.plots_skeleton import SkeletonPlot
+
+    ds = _dataset(["x", "y", "z"])
+    ds["position_3d"] = ds["position"] + 1000.0
+    state = ObservableAppState()
+    state._yaml_path = str(tmp_path / "gui_settings.yaml")  # never touch the real settings
+    state.pose_hide_threshold = 0.0
+    state.data_loader = _state(ds).data_loader
+    monkeypatch.setattr(ObservableAppState, "window_bounds", property(lambda _self: TimeRange(0.0, 1.0)))
+    plot = SkeletonPlot(shell=None, app_state=state)
+    qtbot.addWidget(plot)
+    plot.set_store(state.data_loader)
+
+    plot.apply_skeleton_settings({"feature": "position_3d"})
+    plot.individual_combo.setCurrentText("a")
+    plot.set_time(0.0)
+    expected = ds["position_3d"].sel(time=0.0, individual="a").transpose("keypoint", "space").values
+    assert np.allclose(plot.current_frame().points, expected)
+    assert plot.skeleton_settings()["feature"] == "position_3d"
+
+    combo = plot.feature_combo
+    assert combo.currentText() == "position_3d", "the dropdown names what is drawn"
+    assert [combo.itemText(i) for i in range(combo.count())] == ["position", "position_3d"], "poses only"
+    combo.setCurrentText("position")
+    expected = ds["position"].sel(time=0.0, individual="a").transpose("keypoint", "space").values
+    assert np.allclose(plot.current_frame().points, expected)
+
+
 def test_settings_round_trip(panel):
     plot, _ = panel
     plot.cb_flip_y.setChecked(True)
@@ -317,3 +346,60 @@ def test_the_shared_pose_controls_drive_the_panel(panel):
     )
     assert plot.hidden_keypoints() == {"tail"}
     assert plot.color_by() == COLOR_BY_INDIVIDUAL
+
+
+def test_the_grid_sits_on_multiples_of_its_spacing_and_reaches_past_the_data():
+    from ethograph.gui.plots_space import grid_lines
+
+    lines = grid_lines(np.array([0.2, -0.3, 0.7]), np.array([1.1, 0.4, 2.0]), 0.5)
+    assert set(np.round(lines[:, 0], 6)) == {0.0, 0.5, 1.0, 1.5}
+    assert set(np.round(lines[:, 1], 6)) == {-0.5, 0.0, 0.5}
+    assert set(np.round(lines[:, 2], 6)) == {0.5}, "one floor, at the multiple below the lowest point"
+
+
+def test_a_tiny_spacing_is_widened_and_auto_picks_a_round_one(panel):
+    from ethograph.gui.plots_space import GRID_MAX_LINES, grid_spacing
+
+    state = panel[0].app_state
+    state.space_grid_spacing = 0.001
+    assert grid_spacing(state, 1000.0) == 1000.0 / GRID_MAX_LINES
+    state.space_grid_spacing = 0.0
+    assert 0.0 < grid_spacing(state, 1000.0) <= 1000.0
+
+
+def test_the_grid_checkbox_draws_and_removes_the_floor(panel):
+    plot, _ = panel
+    plot.cb_3d.setChecked(True)
+    if not plot.is_3d:
+        pytest.skip("OpenGL unavailable")
+    plot.set_time(0.0)
+
+    def floors():
+        return [item for item in plot.canvas.items if getattr(item, "_is_grid", False)]
+
+    assert floors() == []
+    plot.grid_controls.checkbox.setChecked(True)
+    assert len(floors()) == 1
+    plot.grid_controls.spacing_spin.setValue(5.0)
+    assert len(floors()) == 1, "a new spacing replaces the floor, never stacks a second"
+    plot.grid_controls.checkbox.setChecked(False)
+    assert floors() == []
+
+
+def test_synced_skeleton_plots_share_one_view_and_unsynced_ones_do_not(moll2025_gui):
+    _, meta = moll2025_gui
+    data, state = meta.data_widget, meta.app_state
+    first = data.add_skeleton_plot()
+    second = data.add_skeleton_plot()
+
+    state.space_sync_views = True
+    first.canvas.getPlotItem().vb.setRange(xRange=(10.0, 20.0), yRange=(30.0, 40.0), padding=0)
+    first.view_changed.emit(first)
+    assert second.capture_view_state() == first.capture_view_state()
+
+    second.cb_sync.setChecked(False)
+    assert state.space_sync_views is False, "the checkbox is the one setting, on every panel"
+    before = second.capture_view_state()
+    first.canvas.getPlotItem().vb.setRange(xRange=(100.0, 200.0), yRange=(300.0, 400.0), padding=0)
+    first.view_changed.emit(first)
+    assert second.capture_view_state() == before

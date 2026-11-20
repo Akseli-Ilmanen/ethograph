@@ -566,7 +566,7 @@ class MetaWidget(GridSectionContainer):
                 self.data_widget.add_space_plot(feature=name, view_3d=plot_type == "Space (3D)")
                 notify(f"{plot_type}: {name}")
             elif plot_type.startswith("Skeleton"):
-                self.data_widget.add_skeleton_plot(view_3d=plot_type == "Skeleton (3D)")
+                self.data_widget.add_skeleton_plot(view_3d=plot_type == "Skeleton (3D)", feature=name)
                 notify(f"{plot_type}: {name}")
         elif kind == "audio":
             # The popup only lists mics that exist in the alignment.

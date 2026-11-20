@@ -20,7 +20,7 @@ typing. Feature plot-type options are gated by data shape ``(T, N)``:
 * ``Radial`` — needs the feature's dims to pin down to ONE column whose values
   span a full turn (360° or 2π), which is what distinguishes a heading from any
   other 1-D signal.
-* ``Skeleton (2D)`` / ``Skeleton (3D)`` — only the dataset's ``position``
+* ``Skeleton (2D)`` / ``Skeleton (3D)`` — any variable shaped like a pose
   (a ``space`` dim with x/y(/z) and a keypoint dim): the pose at one instant.
 """
 
@@ -134,8 +134,8 @@ def allowed_plot_types(kind: str, name: str, app_state) -> list[str]:
         # feature, and gating on N == 1 hid the option from exactly those.
         if feature_angular_unit(app_state, name) is not None:
             options.append("Radial")
-        # The pose itself, drawn as points + bones at the time marker — only
-        # for the dataset's ``position``; any other variable is a trajectory.
+        # The pose itself, drawn as points + bones at the time marker — for
+        # any variable shaped like one, whatever it is called.
         options += skeleton_plot_types(app_state, name)
         return options
     return []

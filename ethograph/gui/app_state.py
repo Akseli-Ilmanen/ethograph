@@ -538,6 +538,10 @@ class AppStateSpec:
         "space_sync_views": (bool, True, True),
         "space_hide_zeros": (bool, False, True),
         "space_library_geometry": (str | None, None, True, SCOPE_LOCAL),
+        # Grid lines behind every space and skeleton plot. The spacing is in the
+        # data's own units, so it belongs to the dataset; 0 picks a round one.
+        "space_grid_visible": (bool, False, True),
+        "space_grid_spacing": (float, 0.0, True, SCOPE_LOCAL),
         # Which of the project's calibration/*.toml this dataset was filmed with;
         # only consulted when the project holds several.
         "calibration_name": (str | None, None, True, SCOPE_LOCAL),

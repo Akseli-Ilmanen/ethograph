@@ -63,7 +63,7 @@ from .app_constants import (
 from .individual_colors import decorate_individual_combo
 from .make_pretty import clean_display_labels
 from .plots_radial import RadialPlot
-from .plots_skeleton import SkeletonPlot
+from .plots_skeleton import POSE_FEATURE, SkeletonPlot
 from .plots_space import SpacePlot
 from .plots_spectrogram import SharedAudioCache
 from .pose_controls import PoseControls
@@ -4001,12 +4001,20 @@ class DataWidget(QWidget):
     # Skeleton plots — the pose at the marker; instances like radial plots
     # ------------------------------------------------------------------
 
-    def add_skeleton_plot(self, view_3d: bool = False, focus: bool = True, default_width: bool = True):
-        """Create a new skeleton-plot panel: ``position``'s keypoints + bones at the time marker."""
+    def add_skeleton_plot(
+        self,
+        view_3d: bool = False,
+        focus: bool = True,
+        default_width: bool = True,
+        feature: str = POSE_FEATURE,
+    ):
+        """Create a new skeleton-plot panel: *feature*'s keypoints + bones at the time marker."""
         kp = SkeletonPlot(self.shell, self.app_state)
+        kp.set_feature(feature)
         kp._apply_default_width = default_width
         kp.closed.connect(self.remove_skeleton_plot)
         kp.pin_changed.connect(self._on_panel_pinned_itself)
+        kp.view_changed.connect(self._sync_skeleton_views)
         self.skeleton_plots.append(kp)
         self._canonicalize_skeleton_dock_names()
         kp.dock_object_name = f"SkeletonPlotDock_{len(self.skeleton_plots) - 1}"
@@ -4014,6 +4022,7 @@ class DataWidget(QWidget):
         if not self._skeleton_signals_connected:
             self._skeleton_signals_connected = True
             self.plot_container.time_marker_updated.connect(self._on_time_for_skeleton_plots)
+            self.app_state.space_sync_views_changed.connect(self._align_skeleton_views)
 
         ps = getattr(self, "plot_settings_widget", None)
         if ps is not None and getattr(ps, "skeletonplot_panel", None) is not None:
@@ -4025,6 +4034,11 @@ class DataWidget(QWidget):
         kp.set_store(self._space_store())
         kp.show()
         kp.configure(view_3d=view_3d)
+        # A new panel adopts the frame of the latest open one of its type.
+        for other in reversed(self.skeleton_plots[:-1]):
+            if other.is_3d == kp.is_3d:
+                self._sync_skeleton_views(other)
+                break
 
         self.set_active_skeleton_plot(kp)
         if focus and self.meta_widget is not None and hasattr(self.meta_widget, "_on_plot_focus"):
@@ -4056,6 +4070,22 @@ class DataWidget(QWidget):
         for other in self.skeleton_plots:
             other.controls_widget.setVisible(other is kp)
 
+    def _sync_skeleton_views(self, source: SkeletonPlot) -> None:
+        """Mirror the zoom/pan/orbit of *source* onto every other skeleton plot of its type."""
+        if not self.app_state.get_with_default("space_sync_views"):
+            return
+        view = source.capture_view_state()
+        if view is None:
+            return
+        for kp in self.skeleton_plots:
+            if kp is not source:
+                kp.apply_view_state(view)
+
+    def _align_skeleton_views(self, *_args) -> None:
+        """Bring every skeleton plot to the active one's frame (sync turned on, or a new trial was framed)."""
+        if self.active_skeleton_plot is not None:
+            self._sync_skeleton_views(self.active_skeleton_plot)
+
     def _canonicalize_skeleton_dock_names(self):
         for i, kp in enumerate(self.skeleton_plots):
             if kp.dock_widget is not None:
@@ -4071,6 +4101,7 @@ class DataWidget(QWidget):
         for kp in self.skeleton_plots:
             kp.set_store(self._space_store())
             kp.refresh()
+        self._align_skeleton_views()
 
     def skeleton_layout_state(self) -> list[dict]:
         self._canonicalize_skeleton_dock_names()

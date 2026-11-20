@@ -26,7 +26,7 @@ from .app_state import AppStateSpec
 from .heatmap_sort import SORT_MODES
 from .notify import notify
 from .plots_heatmap import AUTO_COLORMAP
-from .plots_space import LibraryGeometryCombo
+from .plots_space import GridControls, LibraryGeometryCombo
 from .plots_spectrogram import auto_levels_db
 
 HEATMAP_COLORMAPS = [
@@ -496,6 +496,10 @@ class PlotSettingsWidget(QWidget):
         group_layout.addWidget(QLabel("Library geometry:"), row, 0)
         self.space_library_combo = LibraryGeometryCombo(self.app_state)
         group_layout.addWidget(self.space_library_combo, row, 1, 1, 3)
+
+        row += 1
+        self.space_grid_controls = GridControls(self.app_state)
+        group_layout.addWidget(self.space_grid_controls, row, 0, 1, 4)
 
         main_layout.addWidget(self.spaceplot_panel)
 

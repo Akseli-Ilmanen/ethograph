@@ -31,7 +31,7 @@ from ethograph.gui.app_constants import MEDIA_VIEW_MIN_HEIGHT, MEDIA_VIEW_MIN_WI
 from ethograph.gui.plots_base import IndividualPinMixin
 from ethograph.gui.plots_lineplot import MultiColoredLineItem
 from ethograph.gui.project import project_dir_of
-from ethograph.gui.space_shapes import Shape, axis_ticks, parse_shapes, shape_wireframe
+from ethograph.gui.space_shapes import Shape, axis_ticks, nice_step, parse_shapes, shape_wireframe
 from ethograph.io.catalog import INDIVIDUAL_DIMS, DataLoader
 from ethograph.io.session_layout import settings_dir
 from ethograph.utils.paths import defaults_dir
@@ -530,6 +530,155 @@ def make_space_widget(view_3d: bool) -> tuple[QWidget, bool]:
     return widget, False
 
 
+#: The most lines a grid draws along one axis: a spacing far below the data's
+#: extent is widened to this, never drawn as a solid sheet.
+GRID_MAX_LINES = 200
+_GRID_RGBA = (0.45, 0.45, 0.45, 0.45)
+
+
+def grid_spacing(app_state, extent: float) -> float:
+    """The user's spacing in data units, or a round one for *extent* when it is 0 (auto)."""
+    spacing = float(app_state.get_with_default("space_grid_spacing") or 0.0)
+    if spacing <= 0.0:
+        spacing = nice_step(extent, target=10)
+    return max(spacing, extent / GRID_MAX_LINES)
+
+
+def grid_lines(lo: np.ndarray, hi: np.ndarray, spacing: float) -> np.ndarray:
+    """Segment endpoints ``(2N, 3)`` of a floor grid under the box *lo*..*hi*.
+
+    The lines sit on multiples of *spacing* and reach one past the box, so a
+    line stays where it is while the data moves; the floor is the multiple at
+    or below the lowest z.
+    """
+    x0, y0, z0 = np.floor(lo / spacing) * spacing
+    x1, y1 = np.ceil(hi[:2] / spacing) * spacing
+    xs = np.arange(x0, x1 + spacing / 2, spacing)
+    ys = np.arange(y0, y1 + spacing / 2, spacing)
+    along_y = [((x, y0, z0), (x, y1, z0)) for x in xs]
+    along_x = [((x0, y, z0), (x1, y, z0)) for y in ys]
+    return np.array(along_y + along_x, dtype=np.float32).reshape(-1, 3)
+
+
+def draw_grid(widget, app_state, lo=None, hi=None) -> None:
+    """(Re)draw the grid on a 2D or 3D canvas, or remove it when it is switched off.
+
+    2D: the plot's own grid, on the user's spacing. 3D: a floor under the data
+    box *lo*..*hi* (x, y, z) — without a box there is nothing to put it under.
+    """
+    if widget is None:
+        return
+    visible = bool(app_state.get_with_default("space_grid_visible"))
+    if not isinstance(widget, gl.GLViewWidget):
+        plot_item = widget.getPlotItem()
+        plot_item.showGrid(x=visible, y=visible, alpha=0.35)
+        spacing = float(app_state.get_with_default("space_grid_spacing") or 0.0)
+        for name in ("bottom", "left"):
+            if visible and spacing > 0.0:
+                plot_item.getAxis(name).setTickSpacing(major=spacing, minor=spacing)
+            else:
+                plot_item.getAxis(name).setTickSpacing()
+        return
+    for item in list(widget.items):
+        if getattr(item, "_is_grid", False):
+            widget.removeItem(item)
+    if not visible or lo is None or hi is None:
+        return
+    lo, hi = np.asarray(lo, dtype=float), np.asarray(hi, dtype=float)
+    if not (np.isfinite(lo).all() and np.isfinite(hi).all()):
+        return
+    spacing = grid_spacing(app_state, float((hi[:2] - lo[:2]).max()))
+    grid = gl.GLLinePlotItem(
+        pos=grid_lines(lo, hi, spacing),
+        color=_GRID_RGBA,
+        width=1,
+        antialias=True,
+        mode="lines",
+        glOptions="translucent",
+    )
+    grid._is_grid = True
+    widget.addItem(grid)
+
+
+def data_box(*axes) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
+    """``(lo, hi)`` over x, y, z arrays, ignoring NaNs; ``(None, None)`` when an axis has no finite value."""
+    columns = [np.asarray(a, dtype=float) for a in axes]
+    if any(not np.isfinite(c).any() for c in columns):
+        return None, None
+    return np.array([np.nanmin(c) for c in columns]), np.array([np.nanmax(c) for c in columns])
+
+
+class GridControls(QWidget):
+    """Grid on/off and its spacing, for every space and skeleton plot at once.
+
+    Every copy is bound to ``app_state.space_grid_visible`` /
+    ``space_grid_spacing``, like :class:`LibraryGeometryCombo`.
+    """
+
+    def __init__(self, app_state, parent=None):
+        super().__init__(parent)
+        self.app_state = app_state
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+        self.checkbox = QCheckBox("Grid")
+        self.checkbox.setToolTip("Grid lines behind the data: the plot's grid in 2D, a floor under the data in 3D")
+        row.addWidget(self.checkbox)
+        row.addWidget(QLabel("Spacing"))
+        self.spacing_spin = QDoubleSpinBox()
+        self.spacing_spin.setRange(0.0, 1e6)
+        self.spacing_spin.setDecimals(3)
+        self.spacing_spin.setSpecialValueText("auto")
+        self.spacing_spin.setToolTip("Distance between grid lines, in the data's own units (auto picks a round one)")
+        row.addWidget(self.spacing_spin, 1)
+        self._sync()
+        self.checkbox.toggled.connect(self._on_toggled)
+        self.spacing_spin.valueChanged.connect(self._on_spacing)
+        app_state.space_grid_visible_changed.connect(self._sync)
+        app_state.space_grid_spacing_changed.connect(self._sync)
+
+    def _sync(self, *_args) -> None:
+        for widget in (self.checkbox, self.spacing_spin):
+            widget.blockSignals(True)
+        self.checkbox.setChecked(bool(self.app_state.get_with_default("space_grid_visible")))
+        self.spacing_spin.setValue(float(self.app_state.get_with_default("space_grid_spacing") or 0.0))
+        for widget in (self.checkbox, self.spacing_spin):
+            widget.blockSignals(False)
+
+    def _on_toggled(self, checked: bool) -> None:
+        self.app_state.space_grid_visible = checked
+
+    def _on_spacing(self, value: float) -> None:
+        self.app_state.space_grid_spacing = float(value)
+
+
+def capture_view(widget) -> dict | None:
+    """The coordinate frame a 2D or 3D canvas shows: its axis ranges or its camera."""
+    if widget is None:
+        return None
+    if isinstance(widget, gl.GLViewWidget):
+        return {"mode": "3d", "camera": widget.cameraParams()}
+    xr, yr = widget.getPlotItem().vb.viewRange()
+    return {"mode": "2d", "x": tuple(xr), "y": tuple(yr)}
+
+
+def restore_view(widget, view: dict) -> None:
+    """Adopt a captured frame; a no-op when its 2D/3D mode is not the canvas's."""
+    if widget is None:
+        return
+    is_gl = isinstance(widget, gl.GLViewWidget)
+    if view["mode"] == "3d" and is_gl:
+        cam = view["camera"]
+        widget.setCameraPosition(
+            pos=cam.get("center"),
+            distance=cam.get("distance"),
+            elevation=cam.get("elevation"),
+            azimuth=cam.get("azimuth"),
+        )
+    elif view["mode"] == "2d" and not is_gl:
+        widget.getPlotItem().vb.setRange(xRange=view["x"], yRange=view["y"], padding=0)
+
+
 def auto_camera_3d(gl_widget, X, Y, Z):
     """Set a reasonable default camera for 3D data."""
     cx, cy, cz = float(np.nanmean(X)), float(np.nanmean(Y)), float(np.nanmean(Z))
@@ -770,6 +919,8 @@ class SpacePlot(IndividualPinMixin, QWidget):
         app_state.space_library_geometry_changed.connect(self._on_settings_changed)
         # A shape being edited redraws only the geometry, per keystroke.
         app_state.space_geometry_preview_changed.connect(self._draw_references)
+        app_state.space_grid_visible_changed.connect(self._draw_grid)
+        app_state.space_grid_spacing_changed.connect(self._draw_grid)
 
         self._set_3d_visible(False)
         super().hide()
@@ -1335,6 +1486,7 @@ class SpacePlot(IndividualPinMixin, QWidget):
 
         self._trajectory_pos = (data_x, data_y, data_z)
         self._trajectory_times = times
+        self._draw_grid()
         self.is_3d = use_3d
 
         if self._last_highlight is not None and self.color_variable() is None:
@@ -1459,6 +1611,14 @@ class SpacePlot(IndividualPinMixin, QWidget):
         """(Re)draw all reference geometry items — see :func:`draw_reference_geometry`."""
         draw_reference_geometry(self.space_widget, self.app_state)
 
+    def _draw_grid(self, *_args) -> None:
+        """(Re)draw the grid under the trajectory — see :func:`draw_grid`."""
+        lo = hi = None
+        if self._trajectory_pos is not None:
+            x, y, z = self._trajectory_pos
+            lo, hi = data_box(x, y, np.zeros(1) if z is None else z)
+        draw_grid(self.space_widget, self.app_state, lo, hi)
+
     def set_live_points(self, points: np.ndarray | None, colors: list[str] | None = None) -> None:
         """Draw transient points ``(N, 3)`` in x/y/z over the plot; ``None`` removes them.
 
@@ -1567,30 +1727,11 @@ class SpacePlot(IndividualPinMixin, QWidget):
 
     def _capture_ranges(self) -> dict | None:
         """Snapshot the current axis ranges (2D) or camera position (3D)."""
-        if self.space_widget is None:
-            return None
-        if isinstance(self.space_widget, gl.GLViewWidget):
-            opts = self.space_widget.cameraParams()
-            return {"mode": "3d", "camera": opts}
-        vb = self.space_widget.getPlotItem().vb
-        xr, yr = vb.viewRange()
-        return {"mode": "2d", "x": tuple(xr), "y": tuple(yr)}
+        return capture_view(self.space_widget)
 
     def _restore_ranges(self, ranges: dict):
         """Restore previously captured axis ranges."""
-        if self.space_widget is None:
-            return
-        if ranges["mode"] == "3d" and isinstance(self.space_widget, gl.GLViewWidget):
-            cam = ranges["camera"]
-            self.space_widget.setCameraPosition(
-                pos=cam.get("center"),
-                distance=cam.get("distance"),
-                elevation=cam.get("elevation"),
-                azimuth=cam.get("azimuth"),
-            )
-        elif ranges["mode"] == "2d" and not isinstance(self.space_widget, gl.GLViewWidget):
-            vb = self.space_widget.getPlotItem().vb
-            vb.setRange(xRange=ranges["x"], yRange=ranges["y"], padding=0)
+        restore_view(self.space_widget, ranges)
 
     # --- Highlight / time marker -------------------------------------------
 
