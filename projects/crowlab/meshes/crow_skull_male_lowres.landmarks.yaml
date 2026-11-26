@@ -1,5 +1,7 @@
 # Keypoints in this mesh's coordinates (mm; beak along +x, dorsal +z, left +y).
 # Estimated by eye from the mesh; refine for a tighter fit. Three or more are needed.
+# The eyes are often hidden and guessed, so they pull less; a landmark more than
+# `outlier` mm from its keypoint is left out of that frame's fit.
 landmarks:
   beakTip: [33.5, -0.2, -8.9]
   beakBase: [-13.5, 0.0, -1.1]
@@ -8,3 +10,5 @@ landmarks:
   leye: [-25.7, 12.3, -12.3]
   reye: [-25.7, -12.3, -12.3]
   headPost: [-38.0, 0.0, 6.5]
+weights: {leye: 0.2, reye: 0.2}
+outlier: 10.0

@@ -545,26 +545,29 @@ def grid_spacing(app_state, extent: float) -> float:
 
 
 def grid_lines(lo: np.ndarray, hi: np.ndarray, spacing: float) -> np.ndarray:
-    """Segment endpoints ``(2N, 3)`` of a floor grid under the box *lo*..*hi*.
+    """Segment endpoints ``(2N, 3)`` of a 3D grid around the box *lo*..*hi*.
 
-    The lines sit on multiples of *spacing* and reach one past the box, so a
-    line stays where it is while the data moves; the floor is the multiple at
-    or below the lowest z.
+    Three faces of the box, meeting at its low corner: the floor (lowest z) and
+    the two walls rising from it (lowest x, lowest y) — squares in every plane,
+    so height reads as well as position. The lines sit on multiples of
+    *spacing* and reach one past the box, so a line stays where it is while
+    the data moves.
     """
     x0, y0, z0 = np.floor(lo / spacing) * spacing
-    x1, y1 = np.ceil(hi[:2] / spacing) * spacing
-    xs = np.arange(x0, x1 + spacing / 2, spacing)
-    ys = np.arange(y0, y1 + spacing / 2, spacing)
-    along_y = [((x, y0, z0), (x, y1, z0)) for x in xs]
-    along_x = [((x0, y, z0), (x1, y, z0)) for y in ys]
-    return np.array(along_y + along_x, dtype=np.float32).reshape(-1, 3)
+    x1, y1, z1 = np.ceil(hi / spacing) * spacing
+    xs, ys, zs = (np.arange(a, b + spacing / 2, spacing) for a, b in ((x0, x1), (y0, y1), (z0, z1)))
+    floor = [((x, y0, z0), (x, y1, z0)) for x in xs] + [((x0, y, z0), (x1, y, z0)) for y in ys]
+    wall_x = [((x0, y, z0), (x0, y, z1)) for y in ys] + [((x0, y0, z), (x0, y1, z)) for z in zs]
+    wall_y = [((x, y0, z0), (x, y0, z1)) for x in xs] + [((x0, y0, z), (x1, y0, z)) for z in zs]
+    return np.array(floor + wall_x + wall_y, dtype=np.float32).reshape(-1, 3)
 
 
 def draw_grid(widget, app_state, lo=None, hi=None) -> None:
     """(Re)draw the grid on a 2D or 3D canvas, or remove it when it is switched off.
 
-    2D: the plot's own grid, on the user's spacing. 3D: a floor under the data
-    box *lo*..*hi* (x, y, z) — without a box there is nothing to put it under.
+    2D: the plot's own grid, on the user's spacing. 3D: a floor and two walls
+    around the data box *lo*..*hi* (x, y, z) — without a box there is nothing
+    to put them around.
     """
     if widget is None:
         return
@@ -587,7 +590,7 @@ def draw_grid(widget, app_state, lo=None, hi=None) -> None:
     lo, hi = np.asarray(lo, dtype=float), np.asarray(hi, dtype=float)
     if not (np.isfinite(lo).all() and np.isfinite(hi).all()):
         return
-    spacing = grid_spacing(app_state, float((hi[:2] - lo[:2]).max()))
+    spacing = grid_spacing(app_state, float((hi - lo).max()))
     grid = gl.GLLinePlotItem(
         pos=grid_lines(lo, hi, spacing),
         color=_GRID_RGBA,
@@ -622,7 +625,7 @@ class GridControls(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(6)
         self.checkbox = QCheckBox("Grid")
-        self.checkbox.setToolTip("Grid lines behind the data: the plot's grid in 2D, a floor under the data in 3D")
+        self.checkbox.setToolTip("Grid lines behind the data: the plot's grid in 2D, a floor and two walls in 3D")
         row.addWidget(self.checkbox)
         row.addWidget(QLabel("Spacing"))
         self.spacing_spin = QDoubleSpinBox()

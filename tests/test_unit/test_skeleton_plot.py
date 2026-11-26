@@ -354,7 +354,12 @@ def test_the_grid_sits_on_multiples_of_its_spacing_and_reaches_past_the_data():
     lines = grid_lines(np.array([0.2, -0.3, 0.7]), np.array([1.1, 0.4, 2.0]), 0.5)
     assert set(np.round(lines[:, 0], 6)) == {0.0, 0.5, 1.0, 1.5}
     assert set(np.round(lines[:, 1], 6)) == {-0.5, 0.0, 0.5}
-    assert set(np.round(lines[:, 2], 6)) == {0.5}, "one floor, at the multiple below the lowest point"
+    assert set(np.round(lines[:, 2], 6)) == {0.5, 1.0, 1.5, 2.0}, "the walls rise from the floor past the top"
+    on_floor = np.isclose(lines[:, 2].reshape(-1, 2), 0.5).all(axis=1)
+    on_wall = np.isclose(lines[:, 0].reshape(-1, 2), 0.0).all(axis=1) | np.isclose(
+        lines[:, 1].reshape(-1, 2), -0.5
+    ).all(axis=1)
+    assert (on_floor | on_wall).all(), "every line lies in the floor or a wall, none through the data"
 
 
 def test_a_tiny_spacing_is_widened_and_auto_picks_a_round_one(panel):
